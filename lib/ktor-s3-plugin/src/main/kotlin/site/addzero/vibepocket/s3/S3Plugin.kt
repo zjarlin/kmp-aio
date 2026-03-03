@@ -26,7 +26,7 @@ class S3Starter : AppStarter {
     }
 
     override fun Application.onInstall() {
-        val s3ConfigSection = environment.config.configOrNull("s3") ?: return
+        val s3ConfigSection = environment.config.config("s3") ?: return
         install(createApplicationPlugin(name = "S3AutoConfiguration") {
             val s3Config = S3Config(
                 endpoint = s3ConfigSection.propertyOrNull("endpoint")?.getString() ?: "https://s3.cstcloud.cn",
@@ -37,12 +37,9 @@ class S3Starter : AppStarter {
             )
 
             val credentials = AwsBasicCredentials.create(s3Config.accessKey, s3Config.secretKey)
-            val s3Client = S3Client.builder()
-                .endpointOverride(URI.create(s3Config.endpoint))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                .region(Region.of(s3Config.region))
-                .forcePathStyle(true)
-                .build()
+            val s3Client = S3Client.builder().endpointOverride(URI.create(s3Config.endpoint))
+                .credentialsProvider(StaticCredentialsProvider.create(credentials)).region(Region.of(s3Config.region))
+                .forcePathStyle(true).build()
 
             val s3Service = S3Service(s3Client, s3Config)
 

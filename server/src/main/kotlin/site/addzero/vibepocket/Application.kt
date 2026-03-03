@@ -1,6 +1,7 @@
 package site.addzero.vibepocket
 
 import io.ktor.server.application.*
+import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.routing.*
@@ -8,6 +9,7 @@ import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import site.addzero.vibepocket.di.AppKoinApplication
+import site.addzero.vibepocket.routes.ioc.generated.iocModule
 
 /**
  * EngineMain 入口 — Ktor 自动加载 application.conf，
@@ -31,10 +33,28 @@ fun Application.module() {
 
 /**
  * 桌面端内嵌启动入口（非阻塞），返回 server 实例。
+ * 从 application.conf 读取端口配置，支持环境变量覆盖。
  */
 fun ktorApplication(
-    port: Int = SERVER_PORT,
-    host: String = "0.0.0.0",
+    configPath: String? = null,
+    host: String? = null,
+    port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
-    return embeddedServer(Netty, port = port, host = host, module = Application::module)
+    // 加载配置（优先使用指定路径，否则从 classpath 加载 application.conf）
+    val config = configPath?.let {
+        ApplicationConfig(it)
+    } ?: ApplicationConfigFactory.load()
+
+    // 优先级：参数 > 环境变量 > 配置文件 > 默认值
+    val finalHost = host
+        ?: System.getenv("SERVER_HOST")
+        ?: config.propertyOrNull("ktor.deployment.host")?.getString()
+        ?: "0.0.0.0"
+
+    val finalPort = port
+        ?: System.getenv("SERVER_PORT")?.toIntOrNull()
+        ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
+        ?: 8080
+
+    return embeddedServer(Netty, port = finalPort, host = finalHost, module = Application::module)
 }

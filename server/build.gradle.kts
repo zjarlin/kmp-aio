@@ -15,7 +15,7 @@ ksp {
 }
 
 dependencies {
-    ksp("site.addzero:entity2iso-processor:2026.02.28")
+//    ksp("site.addzero:entity2iso-processor:2026.02.28")
 
     implementation("site.addzero:tool-api-music-search:2026.01.20")
     implementation("site.addzero:tool-api-suno:2026.02.06")

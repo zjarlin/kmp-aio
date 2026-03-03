@@ -17,17 +17,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.PlaylistPlay
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Explore
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -186,9 +185,9 @@ private fun SidebarPanel(modifier: Modifier = Modifier) {
 
         // 导航项
         SidebarNavItem("Home", Icons.Default.Home, selectedItem == "Home") { selectedItem = "Home" }
-        SidebarNavItem("Library", Icons.Default.LibraryMusic, selectedItem == "Library") { selectedItem = "Library" }
-        SidebarNavItem("Playlists", Icons.Default.PlaylistPlay, selectedItem == "Playlists") { selectedItem = "Playlists" }
-        SidebarNavItem("Explore", Icons.Default.Explore, selectedItem == "Explore") { selectedItem = "Explore" }
+        SidebarNavItem("Library", Icons.Default.MusicNote, selectedItem == "Library") { selectedItem = "Library" }
+        SidebarNavItem("Playlists", Icons.Default.QueueMusic, selectedItem == "Playlists") { selectedItem = "Playlists" }
+        SidebarNavItem("Explore", Icons.Default.Language, selectedItem == "Explore") { selectedItem = "Explore" }
         SidebarNavItem("Settings", Icons.Default.Settings, selectedItem == "Settings") { selectedItem = "Settings" }
 
         Spacer(modifier = Modifier.weight(1f))
