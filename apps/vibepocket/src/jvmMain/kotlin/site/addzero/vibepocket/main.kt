@@ -21,7 +21,7 @@ fun main() = application {
             server.stop(1000, 2000)
             exitApplication()
         },
-        title = "Vibepocket",
+        title = "VibePocket",
     ) {
         App()
     }

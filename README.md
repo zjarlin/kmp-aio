@@ -1,100 +1,143 @@
-This is a Kotlin Multiplatform project targeting Android, iOS, Web, Desktop (JVM), Server.
+# VibePocket - Kotlin Multiplatform Monorepo
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-    - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-    - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-      For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-      the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-      Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-      folder is the appropriate location.
+VibePocket 是一个基于 Kotlin Multiplatform 的 Monorepo 项目，采用模块化架构，支持快速复制业务模块创建新应用。
 
-* [/iosApp](./iosApp/iosApp) contains iOS applications. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+## 项目结构
 
-* [/server](./server/src/main/kotlin) is for the Ktor server application.
+```
+vibepocket/
+├── apps/                      # 业务应用模块（可复制粘贴创建新应用）
+│   ├── README.md             # 应用开发指南
+│   ├── template/             # 应用模板（复制此目录创建新应用）
+│   └── vibepocket/           # VibePocket 音乐播放器应用
+│
+├── lib/                       # 共享库模块
+│   ├── glass-components/     # UI 组件库
+│   ├── shadcn-ui-kmp/        # shadcn 风格 UI 组件
+│   ├── api-*/                # 业务 API 库
+│   ├── starter-*/            # Ktor Starter 模块
+│   └── ...
+│
+├── server/                    # Ktor 后端服务
+├── shared/                    # 共享代码（KMP）
+├── iosApp/                    # iOS 原生入口
+├── checkouts/                 # Git 子模块
+│   └── build-logic/          # Gradle 构建逻辑
+└── openapi-codegen/          # OpenAPI 代码生成
+```
 
-* [/shared](./shared/src) is for the code that will be shared between all targets in the project.
-  The most important subfolder is [commonMain](./shared/src/commonMain/kotlin). If preferred, you
-  can add code to the platform-specific folders here too.
+## Monorepo 特点
 
-### Build and Run Android Application
+### 1. 应用即模块
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
+每个应用都是 `apps/` 下的独立模块，可复制粘贴快速创建：
 
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+```bash
+# 创建新应用只需复制模板
+cp -r apps/template apps/myapp
 
-### Build and Run Desktop (JVM) Application
+# 修改配置
+# - apps/myapp/build.gradle.kts 中的 appName, appNamespace
+# - 修改包名和主类
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
+# 构建新应用
+./gradlew :apps:myapp:package
+```
 
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
+### 2. 打包输出
 
-### Build and Run Server
+每个应用独立打包，输出文件使用模块名：
 
-To build and run the development version of the server, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
+```
+apps/myapp/build/compose-binaries/
+├── myapp-1.0.0.dmg          # macOS
+├── myapp-1.0.0.msi          # Windows
+└── myapp_1.0.0_amd64.deb    # Linux
+```
 
-- on macOS/Linux
-  ```shell
-  ./gradlew :server:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :server:run
-  ```
+### 3. 模块自动发现
 
-### Build and Run Web Application
+项目使用 `modules-buddy` Gradle 插件自动发现模块，无需手动在 `settings.gradle.kts` 中 `include`。
 
-To build and run the development version of the web app, use the run configuration from the run widget
-in your IDE's toolbar or run it directly from the terminal:
+## 快速开始
 
-- for the Wasm target (faster, modern browsers):
-    - on macOS/Linux
-      ```shell
-      ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
-      ```
-    - on Windows
-      ```shell
-      .\gradlew.bat :composeApp:wasmJsBrowserDevelopmentRun
-      ```
-- for the JS target (slower, supports older browsers):
-    - on macOS/Linux
-      ```shell
-      ./gradlew :composeApp:jsBrowserDevelopmentRun
-      ```
-    - on Windows
-      ```shell
-      .\gradlew.bat :composeApp:jsBrowserDevelopmentRun
-      ```
+### 运行 VibePocket 应用
 
-### Build and Run iOS Application
+```bash
+# 桌面端（JVM）
+./gradlew :apps:vibepocket:run
 
-To build and run the development version of the iOS app, use the run configuration from the run widget
-in your IDE’s toolbar or open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+# 打包所有平台
+./gradlew :apps:vibepocket:package
 
----
+# 仅打包 macOS
+./gradlew :apps:vibepocket:packageDmg
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html),
-[Compose Multiplatform](https://github.com/JetBrains/compose-multiplatform/#compose-multiplatform),
-[Kotlin/Wasm](https://kotl.in/wasm/)…
+# 仅打包 Windows
+./gradlew :apps:vibepocket:packageMsi
 
-We would appreciate your feedback on Compose/Web and Kotlin/Wasm in the public Slack
-channel [#compose-web](https://slack-chats.kotlinlang.org/c/compose-web).
-If you face any issues, please report them on [YouTrack](https://youtrack.jetbrains.com/newIssue?project=CMP).
+# 仅打包 Linux
+./gradlew :apps:vibepocket:packageDeb
+```
+
+### 运行后端服务
+
+```bash
+./gradlew :server:run
+```
+
+### 创建新应用
+
+详见 [apps/README.md](./apps/README.md)
+
+## 技术栈
+
+- **UI**: Compose Multiplatform (Desktop/JVM)
+- **后端**: Ktor + Jimmer + Exposed
+- **数据库**: PostgreSQL / SQLite
+- **依赖注入**: Koin
+- **网络**: Ktor Client + Ktorfit
+- **构建**: Gradle + Kotlin DSL
+
+## 模块说明
+
+### apps/ - 业务应用
+
+| 模块 | 说明 |
+|------|------|
+| `apps/template` | 应用模板，复制创建新应用 |
+| `apps/vibepocket` | VibePocket 音乐播放器 |
+
+### lib/ - 共享库
+
+| 模块 | 说明 |
+|------|------|
+| `lib/glass-components` | Glassmorphism 风格 UI 组件 |
+| `lib/shadcn-ui-kmp` | shadcn 风格 UI 组件 |
+| `lib/api-netease` | 网易云音乐 API |
+| `lib/api-suno` | Suno AI 音乐 API |
+| `lib/starter-*` | Ktor Starter 模块 |
+
+### server/ - 后端服务
+
+Ktor 后端服务，支持独立部署或内嵌到桌面端。
+
+## 开发指南
+
+### 添加新应用
+
+1. 复制 `apps/template` 到 `apps/{your-app-name}`
+2. 修改 `build.gradle.kts` 中的 `appName` 和 `appNamespace`
+3. 重命名源代码包路径
+4. 添加业务依赖
+5. 运行 `./gradlew :apps:{your-app-name}:run`
+
+### 添加新库
+
+1. 在 `lib/` 下创建新模块
+2. 创建 `build.gradle.kts`
+3. 插件会自动发现并注册模块
+
+## 许可证
+
+MIT License

@@ -30,6 +30,7 @@ dependencies {
     implementation(projects.lib.starterStatuspages)
     implementation(projects.lib.starterBanner)
     implementation(projects.lib.starterOpenapi)
+    implementation(projects.lib.starterFlyway)
 
     // 业务 lib 模块
     implementation(projects.shared)

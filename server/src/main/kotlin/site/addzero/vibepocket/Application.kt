@@ -3,7 +3,9 @@ package site.addzero.vibepocket
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
+import io.ktor.server.netty.EngineMain
+import io.ktor.server.netty.Netty
+import io.ktor.server.netty.NettyApplicationEngine
 import io.ktor.server.routing.*
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.starter.koin.installKoin
@@ -15,7 +17,7 @@ import site.addzero.vibepocket.routes.ioc.generated.iocModule
  * EngineMain 入口 — Ktor 自动加载 application.conf，
  * 读取 ktor.application.modules 配置调用 Application.module()。
  */
-fun main(args: Array<String>) = io.ktor.server.netty.EngineMain.main(args)
+fun main(args: Array<String>) = EngineMain.main(args)
 
 /**
  * 由 application.conf 中 ktor.application.modules 指定调用。
@@ -43,7 +45,7 @@ fun ktorApplication(
     // 加载配置（优先使用指定路径，否则从 classpath 加载 application.conf）
     val config = configPath?.let {
         ApplicationConfig(it)
-    } ?: ApplicationConfigFactory.load()
+    } ?: ApplicationConfig.load()
 
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val finalHost = host
