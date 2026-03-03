@@ -17,8 +17,8 @@ plugins {
 }
 
 // 应用配置
-val appName = "vibepocket"
-val appNamespace = "site.addzero.vibepocket"
+val appName = project.name
+val appNamespace = "site.addzero.${project.name}"
 
 dependencies {
     kspCommonMainMetadata(libs.site.addzero.ioc.processor)

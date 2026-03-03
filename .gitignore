@@ -21,3 +21,4 @@ node_modules/
 .kiro
 /kotlin-js-store/wasm/yarn.lock
 /.gradle-user-home/
+/.claude/

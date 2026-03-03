@@ -19,9 +19,9 @@ plugins {
 }
 
 // ==================== 应用配置（修改这里）====================
-val appName = "APP_TEMPLATE_NAME"           // 应用名，决定打包文件名
-val appNamespace = "site.addzero.template"  // 包名
-val appVersion = "1.0.0"
+val appName = project.name
+val appNamespace = "site.addzero.${project.name}"
+val appVersion = project.version.toString()
 // ===========================================================
 
 dependencies {
