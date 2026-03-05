@@ -4,6 +4,34 @@
 
 ---
 
+## 📑 目录
+
+- [核心设计](#一核心设计决策必读)
+- [技术架构](#二技术架构)
+- [核心同步算法](#三核心同步算法)
+- [功能模块](#四功能模块)
+  - [同步引擎](#41-同步引擎-syncenginekt)
+  - [状态管理](#42-状态管理-appstatekt)
+  - [事件总线](#43-事件总线-eventbuskt)
+  - [数据库](#44-数据库-databasekt--databaseimplkt)
+  - [存储客户端](#45-存储客户端)
+    - [S3存储](#s3存储-s3storageclientkt)
+    - [SSH存储](#ssh存储-sshstorageclientkt)
+    - [故障转移](#故障转移-failoverstorageclientkt)
+  - [UI组件](#46-ui组件)
+    - [分阶段进度条](#分阶段进度条-stagedprogressindicatorkt)
+    - [冲突解决对话框](#冲突解决对话框-conflictresolutiondialogkt)
+  - [安全加密](#47-安全加密-encryptionmanagerkt)
+  - [自动更新](#48-自动更新-updatecheckerktskipversion)
+  - [原生集成](#49-原生集成)
+    - [macOS-Finder扩展](#macos-findersyncswift)
+    - [Windows-Shell扩展](#windows-shellext)
+- [MVP交付计划](#五mvp-交付计划)
+- [代码结构](#八代码结构已落地)
+- [待决策事项](#九待决策事项)
+
+---
+
 ## 初衷：为什么要有这个工具？
 
 你有没有想过，有些东西**本该只存在一份**？
@@ -180,6 +208,8 @@ CREATE TABLE sync_history (
 
 ### 3.1 增量检测流程
 
+**源码**: [`SyncEngine.kt`](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt)
+
 ```kotlin
 class SyncEngine(
     private val db: Database,
@@ -244,6 +274,8 @@ class SyncEngine(
 
 ### 3.2 冲突解决策略
 
+**源码**: [`ConflictResolutionDialog.kt`](src/jvmMain/kotlin/com/moveoff/ui/components/ConflictResolutionDialog.kt) | [`SyncEngine.resolveConflict()`](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt)
+
 ```kotlin
 sealed class ConflictResolution {
     data class UseLocal(val backupRemote: Boolean = true) : ConflictResolution()
@@ -273,6 +305,8 @@ suspend fun resolveConflict(
 ```
 
 ### 3.3 大文件分片与断点续传
+
+**源码**: [`S3StorageClient.kt`](src/jvmMain/kotlin/com/moveoff/storage/S3StorageClient.kt) (multipartUpload方法) | [`SSHStorageClient.kt`](src/jvmMain/kotlin/com/moveoff/storage/SSHStorageClient.kt) (ProgressTransferListener)
 
 ```kotlin
 class MultipartUploader(
@@ -320,6 +354,11 @@ class MultipartUploader(
 
 ### 4.1 状态图标（复刻坚果云）
 
+**源码**:
+- macOS: [`FinderSync.swift`](native/macos/MoveOffFinderExtension/FinderSync.swift) (badgeIdentifier)
+- Windows: [`MoveOffIconOverlay.cpp`](native/windows/MoveOffIconOverlay/) (IShellIconOverlayIdentifier)
+- Linux: [`moveoff_extension.py`](native/linux/nautilus/moveoff_extension.py)
+
 | 图标 | 含义 | 技术实现 |
 |-----|-----|---------|
 | ✓ 绿色 | 已同步 | macOS: Finder Sync Extension + xattr标记；Windows: Shell Icon Overlay |
@@ -329,6 +368,11 @@ class MultipartUploader(
 | ☁ 灰色 | 仅云端有（按需下载）| 本地只有占位符 |
 
 ### 4.2 右键菜单集成
+
+**源码**:
+- macOS: [`FinderSync.swift`](native/macos/MoveOffFinderExtension/FinderSync.swift) (menu方法)
+- Windows: [`MoveOffShellExt.cpp`](native/windows/MoveOffShellExt/MoveOffShellExt.cpp) (IContextMenu)
+- Linux: [`moveoff_extension.py`](native/linux/nautilus/moveoff_extension.py)
 
 ```kotlin
 // macOS: Finder Sync Extension (Swift)
@@ -352,28 +396,28 @@ class FinderSync: FIFinderSync {
 ## 五、MVP 交付计划
 
 ### 阶段1：基础同步（核心）
-- [ ] S3连接配置（支持MinIO/阿里云OSS/AWS）
-- [ ] 本地SQLite元数据管理
-- [ ] 基础增量同步算法（upload/download/delete）
-- [ ] 简单的冲突检测（timestamp-based）
-- [ ] 系统托盘 + 基础UI面板
+- [x] S3连接配置（支持MinIO/阿里云OSS/AWS）→ [`S3StorageClient.kt`](src/jvmMain/kotlin/com/moveoff/storage/S3StorageClient.kt) [`S3Config`](src/jvmMain/kotlin/com/moveoff/storage/S3StorageClient.kt#L15)
+- [x] 本地SQLite元数据管理 → [`Database.kt`](src/commonMain/kotlin/com/moveoff/db/Database.kt) [`DatabaseImpl.kt`](src/jvmMain/kotlin/com/moveoff/db/DatabaseImpl.kt)
+- [x] 基础增量同步算法（upload/download/delete）→ [`SyncEngine.kt`](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt)
+- [x] 简单的冲突检测（timestamp-based）→ [`SyncEngine.kt`](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt#L548)
+- [x] 系统托盘 + 基础UI面板 → [`EnhancedTrayManager.kt`](src/jvmMain/kotlin/com/moveoff/system/EnhancedTrayManager.kt) [`MainWindow.kt`](src/jvmMain/kotlin/com/moveoff/ui/MainWindow.kt)
 
 ### 阶段2：用户体验
-- [ ] 分阶段进度条（扫描/传输/验证）
-- [ ] 大文件分片上传/断点续传
-- [ ] Finder/Explorer状态图标
-- [ ] 右键菜单集成
-- [ ] 冲突解决对话框
+- [x] [分阶段进度条](src/jvmMain/kotlin/com/moveoff/ui/components/StagedProgressIndicator.kt)（扫描/传输/验证）
+- [x] [大文件分片上传](src/jvmMain/kotlin/com/moveoff/storage/S3StorageClient.kt)/[断点续传](src/jvmMain/kotlin/com/moveoff/storage/SSHStorageClient.kt)
+- [x] Finder/Explorer[状态图标](native/macos/MoveOffFinderExtension/FinderSync.swift)
+- [x] [右键菜单集成](native/windows/MoveOffShellExt/MoveOffShellExt.cpp)
+- [x] [冲突解决对话框](src/jvmMain/kotlin/com/moveoff/ui/components/ConflictResolutionDialog.kt)
 
 ### 阶段3：高级功能
 - [ ] 版本历史（基于S3版本控制）
 - [ ] 选择性同步（忽略某些文件/目录）
 - [ ] 局域网P2P传输（同一网络下直连）
-- [ ] SSH备用协议
+- [x] [SSH备用协议](src/jvmMain/kotlin/com/moveoff/storage/SSHStorageClient.kt)
 - [ ] 文件去重（基于内容哈希）
 
 ### 阶段4：企业级
-- [ ] E2E加密（客户端加密后上传）
+- [x] [E2E加密](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt)（客户端加密后上传）
 - [ ] 团队共享空间
 - [ ] 操作审计日志
 - [ ] 智能同步策略（按网络类型调整）
@@ -421,48 +465,63 @@ class FinderSync: FIFinderSync {
 apps/moveoff/
 ├── src/commonMain/kotlin/com/moveoff/     # 共享业务逻辑
 │   ├── state/
-│   │   └── AppState.kt                    # 全局状态管理（SyncStatus、AppStateManager）
+│   │   └── [AppState.kt](src/commonMain/kotlin/com/moveoff/state/AppState.kt)                    # 全局状态管理（SyncStatus、AppStateManager）
 │   ├── event/
-│   │   └── EventBus.kt                    # 全局事件总线（UIEvent、EventBus、EventShortcuts）
+│   │   └── [EventBus.kt](src/commonMain/kotlin/com/moveoff/event/EventBus.kt)                    # 全局事件总线（UIEvent、EventBus、EventShortcuts）
 │   ├── progress/
-│   │   └── ProgressTracker.kt             # 进度追踪
+│   │   └── [ProgressTracker.kt](src/commonMain/kotlin/com/moveoff/progress/ProgressTracker.kt)             # 进度追踪
 │   ├── sync/
-│   │   └── SyncEngine.kt                  # 同步引擎核心（检测、计划、执行、冲突解决）
+│   │   ├── [SyncEngine.kt](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt)                  # 同步引擎核心
+│   │   └── [api/StorageClient.kt](src/commonMain/kotlin/com/moveoff/sync/api/StorageClient.kt)             # 存储客户端接口
 │   ├── model/
-│   │   └── Models.kt                      # 数据模型
+│   │   └── [Models.kt](src/commonMain/kotlin/com/moveoff/model/Models.kt)                      # 数据模型
 │   ├── db/
-│   │   └── Database.kt                    # 数据库接口（文件记录、同步队列）
-│   └── storage/
-│       └── SettingsStorage.kt             # 设置存储
+│   │   └── [Database.kt](src/commonMain/kotlin/com/moveoff/db/Database.kt)                    # 数据库接口
+│   ├── storage/
+│   │   └── [SettingsStorage.kt](src/commonMain/kotlin/com/moveoff/storage/SettingsStorage.kt)             # 设置存储
+│   └── security/
+│       ├── [EncryptionManager.kt](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt)        # 端到端加密
+│       └── [KeyStoreManager.kt](src/jvmMain/kotlin/com/moveoff/security/KeyStoreManager.kt)              # 密钥存储（JVM）
 │
 ├── src/jvmMain/kotlin/com/moveoff/        # 桌面端实现
 │   ├── system/
-│   │   ├── EnhancedTrayManager.kt         # 增强系统托盘（动态图标、通知、徽章）
-│   │   ├── WindowManager.kt               # 窗口管理器（主窗口、设置、冲突、悬浮进度、Toast）
-│   │   ├── GlobalShortcutManager.kt       # 全局快捷键（JNativeHook）
-│   │   └── TrayManager.kt                 # 基础托盘（旧，已废弃）
+│   │   ├── [EnhancedTrayManager.kt](src/jvmMain/kotlin/com/moveoff/system/EnhancedTrayManager.kt)         # 增强系统托盘
+│   │   ├── [WindowManager.kt](src/jvmMain/kotlin/com/moveoff/system/WindowManager.kt)               # 窗口管理器
+│   │   ├── [GlobalShortcutManager.kt](src/jvmMain/kotlin/com/moveoff/system/GlobalShortcutManager.kt)       # 全局快捷键
+│   │   └── [TrayManager.kt](src/jvmMain/kotlin/com/moveoff/system/TrayManager.kt)                 # 基础托盘（旧）
 │   ├── ui/
-│   │   ├── MainWindow.kt                  # 主窗口UI（左侧导航+右侧内容+底部任务栏）
+│   │   ├── [MainWindow.kt](src/jvmMain/kotlin/com/moveoff/ui/MainWindow.kt)                  # 主窗口UI
 │   │   ├── screens/                       # 各页面屏幕
 │   │   └── theme/                         # 主题配置
 │   ├── ui/components/
-│   │   ├── FileManagerComponents.kt       # 文件管理器组件（状态图标、列表/网格）
-│   │   └── DragAndDropComponents.kt       # 拖拽上传功能
+│   │   ├── [FileManagerComponents.kt](src/jvmMain/kotlin/com/moveoff/ui/components/FileManagerComponents.kt)       # 文件管理器组件
+│   │   ├── [DragAndDropComponents.kt](src/jvmMain/kotlin/com/moveoff/ui/components/DragAndDropComponents.kt)       # 拖拽上传
+│   │   ├── [StagedProgressIndicator.kt](src/jvmMain/kotlin/com/moveoff/ui/components/StagedProgressIndicator.kt)     # 分阶段进度条
+│   │   └── [ConflictResolutionDialog.kt](src/jvmMain/kotlin/com/moveoff/ui/components/ConflictResolutionDialog.kt)    # 冲突解决对话框
 │   ├── db/
-│   │   └── DatabaseImpl.kt                # SQLite数据库实现（JDBC + HikariCP）
+│   │   └── [DatabaseImpl.kt](src/jvmMain/kotlin/com/moveoff/db/DatabaseImpl.kt)                # SQLite实现
 │   ├── storage/
-│   │   └── S3StorageClient.kt             # S3存储客户端（含分片上传）
+│   │   ├── [S3StorageClient.kt](src/jvmMain/kotlin/com/moveoff/storage/S3StorageClient.kt)             # S3客户端
+│   │   └── [SSHStorageClient.kt](src/jvmMain/kotlin/com/moveoff/storage/SSHStorageClient.kt)            # SSH/SFTP客户端
 │   ├── server/
-│   │   └── LocalServer.kt                 # 本地HTTP服务器（API + WebSocket）
-│   └── Main.kt                            # 应用入口（整合所有组件）
+│   │   └── [LocalServer.kt](src/jvmMain/kotlin/com/moveoff/server/LocalServer.kt)                 # 本地HTTP服务器
+│   ├── update/
+│   │   └── [UpdateChecker.kt](src/jvmMain/kotlin/com/moveoff/update/UpdateChecker.kt)               # 自动更新
+│   └── [Main.kt](src/jvmMain/kotlin/com/moveoff/Main.kt)                            # 应用入口
 │
 ├── native/
 │   ├── macos/                             # macOS原生扩展
-│   │   └── MoveOffFinderExtension/        # Finder Sync Extension (Swift)
+│   │   └── MoveOffFinderExtension/
+│   │       └── [FinderSync.swift](native/macos/MoveOffFinderExtension/FinderSync.swift)          # Finder Sync Extension
 │   ├── windows/                           # Windows原生扩展
-│   │   └── MoveOffShellExt/               # Shell Context Menu (C++)
-│   └── README.md                          # 原生扩展编译说明
-│
+│   │   ├── MoveOffShellExt/
+│   │   │   ├── [MoveOffShellExt.cpp](native/windows/MoveOffShellExt/MoveOffShellExt.cpp)      # 右键菜单扩展
+│   │   │   └── [MoveOffShellExt.h](native/windows/MoveOffShellExt/MoveOffShellExt.h)        # 头文件
+│   │   └── MoveOffIconOverlay/            # 图标覆盖（状态徽章）
+│   ├── linux/                             # Linux原生扩展
+│   │   └── nautilus/
+│   │       └── [moveoff_extension.py](native/linux/nautilus/moveoff_extension.py)       # Nautilus扩展
+│   └── [README.md](native/README.md)                          # 原生扩展编译说明
 └── docs/
     └── UI_ARCHITECTURE.md                 # UI架构设计文档
 ```
@@ -481,43 +540,49 @@ apps/moveoff/
 **已完成功能**：
 
 **UI层**：
-- ✅ 全局状态管理（AppStateManager）
-- ✅ 事件总线（EventBus）
-- ✅ 增强系统托盘（EnhancedTrayManager）
-- ✅ 窗口管理器（WindowManager）
-- ✅ 悬浮进度窗口（FloatingProgressWindow）
-- ✅ Toast通知（ToastManager）
-- ✅ 冲突解决窗口（ConflictResolutionWindow）
-- ✅ 文件管理器（FileManager）- 列表/网格视图、状态图标、右键菜单
-- ✅ 设置面板（SettingsScreen）- S3配置、同步策略、主题设置
+- ✅ [全局状态管理（AppStateManager）](src/commonMain/kotlin/com/moveoff/state/AppState.kt)
+- ✅ [事件总线（EventBus）](src/commonMain/kotlin/com/moveoff/event/EventBus.kt)
+- ✅ [增强系统托盘（EnhancedTrayManager）](src/jvmMain/kotlin/com/moveoff/system/EnhancedTrayManager.kt)
+- ✅ [窗口管理器（WindowManager）](src/jvmMain/kotlin/com/moveoff/system/WindowManager.kt)
+- ✅ [悬浮进度窗口（FloatingProgressWindow）](src/jvmMain/kotlin/com/moveoff/system/WindowManager.kt#L227)
+- ✅ [Toast通知（ToastManager）](src/jvmMain/kotlin/com/moveoff/system/WindowManager.kt#L419)
+- ✅ [冲突解决窗口（ConflictResolutionWindow）](src/jvmMain/kotlin/com/moveoff/ui/components/ConflictResolutionDialog.kt)
+- ✅ [分阶段进度条（StagedProgressIndicator）](src/jvmMain/kotlin/com/moveoff/ui/components/StagedProgressIndicator.kt)
+- ✅ [文件管理器（FileManager）](src/jvmMain/kotlin/com/moveoff/ui/screens/FileManagerScreen.kt) - 列表/网格视图、状态图标、右键菜单
+- ✅ [设置面板（SettingsScreen）](src/jvmMain/kotlin/com/moveoff/ui/screens/SettingsScreen.kt) - S3配置、同步策略、主题设置
 
 **数据层**：
-- ✅ SQLite数据库（DatabaseImpl）- files表、sync_queue表
-- ✅ 文件记录CRUD操作
-- ✅ 同步队列管理
-- ✅ 统计查询
+- ✅ [SQLite数据库（DatabaseImpl）](src/jvmMain/kotlin/com/moveoff/db/DatabaseImpl.kt) - files表、sync_queue表
+- ✅ [文件记录CRUD操作](src/commonMain/kotlin/com/moveoff/db/Database.kt)
+- ✅ [同步队列管理](src/commonMain/kotlin/com/moveoff/db/Database.kt#L166)
+- ✅ [统计查询](src/commonMain/kotlin/com/moveoff/db/Database.kt#L222)
 
 **同步层**：
-- ✅ 同步引擎（SyncEngine）
-- ✅ 本地文件系统扫描
-- ✅ 远程变化检测（StorageClient抽象）
-- ✅ 冲突检测算法
-- ✅ 同步计划生成与执行
-- ✅ S3存储客户端（含分片上传Multipart Upload）
+- ✅ [同步引擎（SyncEngine）](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt)
+- ✅ [本地文件系统扫描](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt#L573)
+- ✅ [远程变化检测](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt#L206)
+- ✅ [冲突检测算法](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt#L548)
+- ✅ [同步计划生成与执行](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt#L350)
+- ✅ [S3存储客户端](src/jvmMain/kotlin/com/moveoff/storage/S3StorageClient.kt)（含分片上传）
+- ✅ [SSH/SFTP存储客户端](src/jvmMain/kotlin/com/moveoff/storage/SSHStorageClient.kt)
+- ✅ [故障转移客户端（FailoverStorageClient）](src/commonMain/kotlin/com/moveoff/sync/FailoverStorageClient.kt)
 
 **服务层**：
-- ✅ 本地HTTP服务器（LocalServer）
+- ✅ [本地HTTP服务器（LocalServer）](src/jvmMain/kotlin/com/moveoff/server/LocalServer.kt)
 - ✅ RESTful API（/api/sync/*, /api/files, /api/conflicts）
 - ✅ WebSocket实时推送
 
 **交互功能**：
-- ✅ 全局快捷键（JNativeHook）- Cmd/Ctrl+Shift+M/S/P
-- ✅ 拖拽上传 - 支持文件/文件夹拖入文件管理器
-- ✅ 原生系统集成框架 - Finder/Explorer右键菜单（需要编译安装原生扩展）
+- ✅ [全局快捷键（GlobalShortcutManager）](src/jvmMain/kotlin/com/moveoff/system/GlobalShortcutManager.kt) - Cmd/Ctrl+Shift+M/S/P
+- ✅ [拖拽上传](src/jvmMain/kotlin/com/moveoff/ui/components/DragAndDropComponents.kt) - 支持文件/文件夹拖入
+- ✅ [原生系统集成框架](native/) - Finder/Explorer右键菜单
 
-**待实现**：
-1. ✅ **SSH备用协议** - SFTP客户端实现
-2. **端到端加密** - 客户端加密
-3. ✅ **自动更新机制** - 版本检查、下载、安装
+**安全功能**：
+- ✅ [端到端加密（EncryptionManager）](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt) - AES-256-GCM
+- ✅ [密钥安全存储（KeyStoreManager）](src/jvmMain/kotlin/com/moveoff/security/KeyStoreManager.kt) - PKCS12密钥库
+- ✅ [加密存储包装器（EncryptedStorageClient）](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt#L238)
 
-你希望继续推进哪个部分？
+**自动更新**：
+- ✅ [自动更新检查器（UpdateChecker）](src/jvmMain/kotlin/com/moveoff/update/UpdateChecker.kt) - 版本检查、下载、安装
+- ✅ [跳过版本持久化（skipVersion）](src/jvmMain/kotlin/com/moveoff/update/UpdateChecker.kt#L414)
+

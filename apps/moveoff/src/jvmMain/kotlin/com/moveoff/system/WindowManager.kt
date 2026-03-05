@@ -7,11 +7,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
+import com.moveoff.db.ConflictResolution
 import com.moveoff.event.EventBus
 import com.moveoff.event.UIEvent
+import com.moveoff.model.Conflict
+import com.moveoff.model.ConflictStrategy
 import com.moveoff.state.ActiveWindow
 import com.moveoff.state.AppStateManager
+import com.moveoff.sync.SyncEngineManager
+import com.moveoff.ui.components.ConflictResolutionDialog
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -340,7 +346,7 @@ fun ConflictResolutionWindow(
 }
 
 /**
- * 冲突解决内容（简化版）
+ * 冲突解决内容 - 使用 ConflictResolutionDialog
  */
 @Composable
 private fun ConflictResolutionContent(
@@ -348,56 +354,73 @@ private fun ConflictResolutionContent(
     onResolve: (String) -> Unit,
     onCancel: () -> Unit
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-    ) {
-        Text(
-            text = "文件冲突",
-            style = MaterialTheme.typography.headlineSmall
+    // 获取冲突详情
+    val scope = rememberCoroutineScope()
+    var conflict by remember { mutableStateOf<Conflict?>(null) }
+
+    LaunchedEffect(conflictId) {
+        // 从数据库或状态管理器获取冲突信息
+        // 这里简化处理，实际应该从数据库查询
+        conflict = loadConflictById(conflictId)
+    }
+
+    conflict?.let { c ->
+        ConflictResolutionDialog(
+            conflict = c,
+            onResolve = { strategy, rememberChoice ->
+                // 转换策略
+                val resolution = when (strategy) {
+                    ConflictStrategy.OVERWRITE -> ConflictResolution.USE_LOCAL
+                    ConflictStrategy.SKIP -> ConflictResolution.USE_REMOTE
+                    ConflictStrategy.RENAME -> ConflictResolution.KEEP_BOTH
+                }
+
+                // 应用解决策略
+                scope.launch {
+                    try {
+                        SyncEngineManager.get().resolveConflict(c.path, resolution)
+                        onResolve(strategy.name)
+                    } catch (e: Exception) {
+                        // 处理错误
+                    }
+                }
+
+                // 如果选择了记住，保存默认策略
+                if (rememberChoice) {
+                    // TODO: 保存默认冲突解决策略到设置
+                }
+            },
+            onCancel = onCancel,
+            onSkip = onCancel
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = "文件在本地和远程都有修改，请选择保留哪个版本：",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // TODO: 显示文件对比
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+    } ?: run {
+        // 加载中或冲突不存在
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            Button(
-                onClick = { onResolve("local") },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("使用本地版本")
-            }
-            Button(
-                onClick = { onResolve("remote") },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("使用远程版本")
-            }
-            OutlinedButton(
-                onClick = { onResolve("both") },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("保留两者")
-            }
-        }
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        TextButton(
-            onClick = onCancel,
-            modifier = Modifier.align(Alignment.End)
-        ) {
-            Text("稍后处理")
+            CircularProgressIndicator()
         }
     }
+}
+
+/**
+ * 根据 ID 加载冲突信息
+ * 实际应该从数据库查询
+ */
+private fun loadConflictById(conflictId: String): Conflict? {
+    // TODO: 从数据库查询冲突信息
+    // 临时返回示例数据
+    return Conflict(
+        id = conflictId,
+        path = "/Users/example/MoveOff/document.txt",
+        localVersion = "v1.2",
+        remoteVersion = "v1.3",
+        localSize = 1024,
+        remoteSize = 2048,
+        localMtime = System.currentTimeMillis() - 3600000,
+        remoteMtime = System.currentTimeMillis() - 1800000
+    )
 }
 
 /**

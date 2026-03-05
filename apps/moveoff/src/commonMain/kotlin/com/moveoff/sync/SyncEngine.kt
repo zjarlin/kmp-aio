@@ -570,6 +570,133 @@ class SyncEngine(
     }
 
     /**
+     * 解决文件冲突
+     *
+     * @param path 冲突文件路径
+     * @param resolution 解决策略
+     */
+    suspend fun resolveConflict(
+        path: String,
+        resolution: ConflictResolution
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val record = database.getFileRecord(path)
+                ?: return@withContext Result.failure(IllegalStateException("文件记录不存在: $path"))
+
+            if (record.syncState != SyncState.CONFLICT) {
+                return@withContext Result.failure(IllegalStateException("文件不是冲突状态: $path"))
+            }
+
+            when (resolution) {
+                ConflictResolution.USE_LOCAL -> {
+                    // 使用本地版本，强制上传
+                    database.updateSyncState(path, SyncState.PENDING_UPLOAD)
+                    // 触发上传
+                    uploadFile(path)
+                }
+                ConflictResolution.USE_REMOTE -> {
+                    // 使用远程版本，强制下载
+                    database.updateSyncState(path, SyncState.PENDING_DOWNLOAD)
+                    // 触发下载
+                    downloadFile(path)
+                }
+                ConflictResolution.KEEP_BOTH -> {
+                    // 保留两者，重命名本地文件
+                    val localFile = java.io.File(syncRoot, path)
+                    val renamedPath = "$path.conflict-${System.currentTimeMillis()}"
+                    val renamedFile = java.io.File(syncRoot, renamedPath)
+
+                    if (localFile.renameTo(renamedFile)) {
+                        // 原路径标记为下载远程版本
+                        database.updateSyncState(path, SyncState.PENDING_DOWNLOAD)
+                        // 重命名的文件标记为上传
+                        database.updateLocalInfo(
+                            path = renamedPath,
+                            mtime = renamedFile.lastModified(),
+                            size = renamedFile.length(),
+                            hash = computeFileHash(renamedFile)
+                        )
+                        database.updateSyncState(renamedPath, SyncState.PENDING_UPLOAD)
+
+                        // 触发下载和上传
+                        downloadFile(path)
+                        uploadFile(renamedPath)
+                    }
+                }
+                ConflictResolution.MERGE -> {
+                    // 合并策略（仅文本文件支持）
+                    // TODO: 实现三路合并
+                    return@withContext Result.failure(NotImplementedError("合并功能尚未实现"))
+                }
+            }
+
+            // 更新冲突计数
+            val conflicts = database.getFileRecordsByState(SyncState.CONFLICT)
+            AppStateManager.setConflictCount(conflicts.size)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * 上传文件
+     */
+    private suspend fun uploadFile(path: String) {
+        val fullPath = java.io.File(syncRoot, path).absolutePath
+        val result = storageClient.uploadObject(
+            localPath = fullPath,
+            remotePath = path
+        ) { transferred, total ->
+            // 更新进度
+            val progress = if (total > 0) transferred.toFloat() / total else 0f
+            AppStateManager.updateProgress(progress, "上传: $path")
+        }
+
+        if (result.success) {
+            database.updateRemoteInfo(
+                path = path,
+                etag = result.etag ?: "",
+                versionId = result.versionId,
+                mtime = System.currentTimeMillis(),
+                size = java.io.File(fullPath).length()
+            )
+            database.updateSyncState(path, SyncState.SYNCED, System.currentTimeMillis())
+        } else {
+            throw IllegalStateException("上传失败: ${result.error}")
+        }
+    }
+
+    /**
+     * 下载文件
+     */
+    private suspend fun downloadFile(path: String) {
+        val fullPath = java.io.File(syncRoot, path).absolutePath
+        val result = storageClient.downloadObject(
+            remotePath = path,
+            localPath = fullPath
+        ) { downloaded, total ->
+            // 更新进度
+            val progress = if (total > 0) downloaded.toFloat() / total else 0f
+            AppStateManager.updateProgress(progress, "下载: $path")
+        }
+
+        if (result.success) {
+            val localFile = java.io.File(fullPath)
+            database.updateLocalInfo(
+                path = path,
+                mtime = localFile.lastModified(),
+                size = localFile.length(),
+                hash = computeFileHash(localFile)
+            )
+            database.updateSyncState(path, SyncState.SYNCED, System.currentTimeMillis())
+        } else {
+            throw IllegalStateException("下载失败: ${result.error}")
+        }
+    }
+
+    /**
      * 扫描本地文件
      */
     private fun scanLocalFiles(dir: java.io.File): Map<String, FileInfo> {

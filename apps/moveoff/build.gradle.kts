@@ -11,10 +11,6 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-koin")
-
-    id("site.addzero.buildlogic.kmp.kmp-ktor-server")
-
-
     id("site.addzero.buildlogic.kmp.kmp-filekit")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
@@ -38,6 +34,7 @@ kotlin {
 //        implementation("site.addzero:api-netease:2026.02.17")
 //        implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
     }
+
     sourceSets {
         jvmMain.dependencies {
             // Ktor Server (内嵌本地服务器)
@@ -58,6 +55,7 @@ kotlin {
 
             // JNativeHook - 全局快捷键
             implementation("com.github.kwhat:jnativehook:2.2.2")
+        }
     }
 }
 
