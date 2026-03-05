@@ -1,6 +1,6 @@
 package com.moveoff.storage
 
-import com.moveoff.sync.*
+import com.moveoff.sync.api.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
@@ -220,20 +220,18 @@ class SSHStorageClient(
 
         val fullRemotePath = buildRemotePath(remotePath)
         val remoteDir = fullRemotePath.substringBeforeLast('/', config.remoteRootPath)
+        val totalBytes = file.length()
 
         try {
             // 确保远程目录存在
             sftp.mkdirs(remoteDir)
 
-            // 上传文件（带进度跟踪）
-            val totalBytes = file.length()
-            var uploadedBytes = 0L
-
-            // 使用SFTP的put方法，但包装一个带进度回调的TransferListener
+            // 使用带进度回调的 TransferListener
             val tempRemotePath = "$fullRemotePath.tmp"
+            val progressListener = ProgressTransferListener(totalBytes, progress)
 
             // 先上传到临时文件
-            sftp.put(localPath, tempRemotePath)
+            sftp.put(localPath, tempRemotePath, progressListener)
 
             // 重命名为最终文件名
             try {
@@ -250,6 +248,7 @@ class SSHStorageClient(
 
             // 获取上传后文件的属性
             val stat = sftp.stat(fullRemotePath)
+            progress(totalBytes, totalBytes) // 确保进度到100%
 
             UploadResult(
                 success = true,
@@ -280,14 +279,16 @@ class SSHStorageClient(
             val localFile = File(localPath)
             localFile.parentFile?.mkdirs()
 
-            // 下载文件
-            sftp.get(fullRemotePath, localPath)
+            // 下载文件（带进度）
+            val progressListener = ProgressTransferListener(totalBytes, progress)
+            sftp.get(fullRemotePath, localPath, progressListener)
 
             // 验证下载的文件大小
             val downloadedFile = File(localPath)
             if (downloadedFile.length() != totalBytes) {
                 return@withContext DownloadResult(success = false, error = "文件大小不匹配")
             }
+            progress(totalBytes, totalBytes) // 确保进度到100%
 
             DownloadResult(success = true, bytesDownloaded = totalBytes)
         } catch (e: Exception) {
@@ -404,6 +405,39 @@ class SSHStorageClient(
             true
         } catch (e: Exception) {
             false
+        }
+    }
+}
+
+/**
+ * 进度传输监听器 - 用于 SFTP 上传/下载进度跟踪
+ */
+private class ProgressTransferListener(
+    private val totalBytes: Long,
+    private val progressCallback: (Long, Long) -> Unit
+) : net.schmizz.sshj.xfer.TransferListener {
+    override fun onDirectoryTreeEnter(dirName: String?): net.schmizz.sshj.xfer.TransferListener = this
+    override fun onDirectoryTreeExit() {}
+
+    override fun file(name: String?, size: Long): net.schmizz.sshj.xfer.FileTransferListener {
+        return object : net.schmizz.sshj.xfer.FileTransferListener {
+            private var transferred = 0L
+
+            override fun started() {}
+
+            override fun reportProgress(transferredSinceLast: Long): Boolean {
+                transferred += transferredSinceLast
+                progressCallback(transferred.coerceAtMost(totalBytes), totalBytes)
+                return true // 继续传输
+            }
+
+            override fun completed() {
+                progressCallback(totalBytes, totalBytes)
+            }
+
+            override fun failed(cause: Throwable?) {
+                // 失败时保持当前进度，不回调错误
+            }
         }
     }
 }

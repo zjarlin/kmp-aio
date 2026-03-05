@@ -6,6 +6,7 @@ import com.moveoff.model.Conflict
 import com.moveoff.model.ConflictStrategy
 import com.moveoff.state.AppStateManager
 import com.moveoff.state.SyncStatus
+import com.moveoff.sync.api.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,48 +45,6 @@ data class SyncResult(
     val conflicts: Int = 0,
     val errors: List<String> = emptyList(),
     val durationMs: Long = 0
-)
-
-/**
- * 存储客户端接口 - 抽象S3/SSH等存储后端
- */
-interface StorageClient {
-    suspend fun listObjects(prefix: String? = null): List<RemoteObject>
-    suspend fun uploadObject(localPath: String, remotePath: String, progress: (Long, Long) -> Unit): UploadResult
-    suspend fun downloadObject(remotePath: String, localPath: String, progress: (Long, Long) -> Unit): DownloadResult
-    suspend fun deleteObject(remotePath: String): Boolean
-    suspend fun getObjectMetadata(remotePath: String): RemoteObject?
-    suspend fun testConnection(): Boolean
-}
-
-/**
- * 远程对象元数据
- */
-data class RemoteObject(
-    val key: String,
-    val size: Long,
-    val etag: String,
-    val versionId: String? = null,
-    val lastModified: Long
-)
-
-/**
- * 上传结果
- */
-data class UploadResult(
-    val success: Boolean,
-    val etag: String? = null,
-    val versionId: String? = null,
-    val error: String? = null
-)
-
-/**
- * 下载结果
- */
-data class DownloadResult(
-    val success: Boolean,
-    val bytesDownloaded: Long = 0,
-    val error: String? = null
 )
 
 /**

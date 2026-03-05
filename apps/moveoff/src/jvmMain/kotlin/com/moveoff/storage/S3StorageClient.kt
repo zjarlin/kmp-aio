@@ -5,7 +5,7 @@ import aws.sdk.kotlin.services.s3.model.*
 import aws.smithy.kotlin.runtime.content.ByteStream
 import aws.smithy.kotlin.runtime.content.asByteStream
 import aws.smithy.kotlin.runtime.content.toByteArray
-import com.moveoff.sync.*
+import com.moveoff.sync.api.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.callbackFlow
 import java.io.File
@@ -125,14 +125,18 @@ class S3StorageClient(
             remotePath
         }
 
+        val totalBytes = file.length()
+
         return try {
             // 小文件直接上传
-            if (file.length() < 5 * 1024 * 1024) { // 5MB
+            if (totalBytes < 5 * 1024 * 1024) { // 5MB
+                progress(0, totalBytes) // 开始上传
                 val result = client.putObject {
                     bucket = config.bucket
                     key = fullKey
                     body = file.asByteStream()
                 }
+                progress(totalBytes, totalBytes) // 上传完成
 
                 UploadResult(
                     success = true,

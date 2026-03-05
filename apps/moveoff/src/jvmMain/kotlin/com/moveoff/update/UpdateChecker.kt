@@ -5,6 +5,7 @@ import com.moveoff.event.UIEvent
 import com.moveoff.model.UpdateChannel
 import com.moveoff.model.UpdateSettings
 import com.moveoff.model.VersionInfo
+import com.moveoff.storage.SettingsStorage
 import com.moveoff.storage.getSettingsDirectory
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -414,7 +415,13 @@ class UpdateChecker(
      * 跳过此版本
      */
     fun skipVersion(version: String) {
-        // TODO: 保存到设置中
+        // 保存跳过的版本到设置
+        val settings = SettingsStorage.loadSettings()
+        val newSettings = settings.copy(
+            updateSettings = settings.updateSettings.copy(skipVersion = version)
+        )
+        SettingsStorage.saveSettings(newSettings)
+        println("已跳过版本: $version")
         _availableUpdate.value = null
     }
 
