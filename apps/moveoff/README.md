@@ -1,275 +1,477 @@
-# MoveOff 开源工具 - 技术设计与需求升级文档
+# MoveOff - S3优先的跨平台文件同步工具
 
-> 基于 Kotlin Multiplatform（KMP）构建跨平台桌面工具，采用「共享业务逻辑 + 原生系统集成」模式，目标是提供接近 JetBrains Toolbox 的迁移与文件托管体验。
+> 基于 Kotlin Multiplatform 构建的类坚果云/Dropbox文件同步工具。采用**S3协议优先、SSH备用**的存储策略，服务器端零部署，客户端通过本地SQLite维护同步状态，实现双向增量同步与冲突检测。
 
-## 一、核心技术栈定版（Kotlin Multiplatform）
-
-### 1.1 整体技术架构
-
-MoveOff 采用 KMP 架构，将可复用逻辑放在共享层，平台差异能力在桌面端做原生桥接，保证一致交互与系统级能力。
-
-| 分层 | 技术选型 | 职责 |
-| --- | --- | --- |
-| 共享层（Common） | Kotlin/JVM + Kotlin Coroutines | 核心业务逻辑（SSH 连接、文件传输、进度计算、存储策略）、数据模型、通用工具类 |
-| 桌面端 UI 层 | macOS：Compose for Desktop + Swift Interop（右键菜单）<br>Windows：Compose for Desktop + JNA（注册表 / 右键菜单） | 复刻 JetBrains Toolbox 风格面板、进度窗口、配置界面；系统级右键菜单集成 |
-| 底层依赖 | 文件传输：sshj（SFTP/SSH） + rsync 封装<br>加密存储：macOS Keychain（Swift）、Windows DPAPI（JNA）<br>进程管理：Kotlin Coroutines + 后台服务<br>挂载远程目录：SSHFS（macOS/Linux）、WinFsp（Windows） | 底层 IO、系统交互、安全存储、后台任务与目录挂载 |
-
-### 1.2 关键依赖说明
-
-| 依赖库 | 用途 | 优势 |
-| --- | --- | --- |
-| `org.jetbrains.compose.desktop` | 跨平台桌面 UI（Compose for Desktop） | JetBrains 技术栈一致，便于复刻 Toolbox 交互风格，Kotlin 全栈开发 |
-| `com.hierynomus:sshj` | SSH/SFTP 客户端 | 跨平台、纯 JVM、无外部二进制依赖，支持细粒度传输监听 |
-| `org.jetbrains.kotlinx:kotlinx-coroutines-core` | 协程调度与并发控制 | 非阻塞 IO、UI 无卡顿、任务可取消/暂停/恢复 |
-| `net.java.dev.jna:jna` | Windows 系统能力调用 | 注册表写入、托盘能力、DPAPI 调用、右键菜单集成 |
-| `com.github.winterreisender:sshfs-jna` | SSHFS 挂载封装 | 提供按需访问基础能力，接近 OneDrive/Toolbox “本地可见、远程实际存储”体验 |
+**📖 架构文档**：
+- [UI架构设计](docs/UI_ARCHITECTURE.md) - 系统托盘、Compose UI、窗口管理完整设计
 
 ---
 
-## 二、需求升级：JetBrains Toolbox 风格面板 + 服务器文件管理
+## 一、核心设计决策（必读）
 
-### 2.1 核心面板设计（复刻 Toolbox 风格）
+### 1.1 为什么必须有本地数据库？
 
-整体采用「顶部入口 + 左侧导航 + 右侧工作区 + 底部任务栏」四区布局，保持低干扰、可恢复、强反馈。
+**我必须直接告诉你**：声称"不需要本地数据库"的同步工具要么功能受限，要么隐藏了实现（如用文件属性/xattr）。双向同步的本质是**检测变化的方向**，这需要"上次同步时的状态"作为基准。
 
-#### 2.1.1 面板布局（顶部菜单栏 + 左侧导航 + 右侧内容区）
+| 场景 | 无数据库的问题 | 有数据库的解决方案 |
+|-----|--------------|------------------|
+| 你修改了文件A | 不知道这是"修改"还是"新建" | DB记录了旧mtime/size，对比即知变化 |
+| 远程也有更新 | 无法判断冲突 | DB记录远程ETag，对比发现两边都变 |
+| 你删除了文件B | 无法区分"本地删除"还是"远程新增" | DB有B的记录但本地不存在=本地删除 |
+| 离线后恢复 | 无法知道离线期间发生了什么 | DB队列记录待同步操作 |
 
-| 区域 | 功能 | 交互参考（Toolbox） |
-| --- | --- | --- |
-| 顶部菜单栏（系统托盘） | macOS：菜单栏图标 + 下拉面板<br>Windows：系统托盘 + 右键菜单<br>核心入口：打开面板 / 挂载远程目录 / 设置 / 退出 | 点击图标直达主面板，常驻后台、低打扰 |
-| 左侧导航栏 | 1）快速迁移<br>2）服务器管理<br>3）文件管理<br>4）迁移记录<br>5）设置 | 极简导航，图标 + 文本，Hover 高亮，选中态清晰 |
-| 右侧内容区 | 展示对应业务页，核心为「文件管理面板」 | 卡片式信息布局，优先操作效率与状态反馈 |
+**结论**：本地SQLite必需，但只存元数据（路径、哈希、时间戳），不存文件内容。
 
-#### 2.1.2 服务器托管文件管理面板（核心升级）
+### 1.2 S3 vs SSH 的权衡
 
-| 功能点 | 交互设计 | 技术实现 |
-| --- | --- | --- |
-| 目录树可视化 | 左侧目录树（按后缀/标签分类），右侧文件列表（名称、大小、上传时间、状态） | SSHJ 遍历远程目录；Compose 树形与虚拟列表渲染 |
-| 文件操作 | 下载回本地（带进度）<br>预览（按需挂载）<br>删除（二次确认）<br>重命名/移动（拖拽）<br>标签编辑（同步目录） | SFTP 原子操作 + 协程回调 + 拖拽事件映射 |
-| 筛选/搜索 | 按后缀、标签、文件名搜索；按大小/上传时间排序 | 本地缓存元数据 + 远程增量同步 |
-| 空间统计 | 展示已用/总空间；按后缀/标签分类占比 | 远程容量信息采集 + Compose 图表组件展示 |
+| 维度 | S3（优先） | SSH（备用） |
+|-----|-----------|------------|
+| **服务器要求** | 只需S3兼容存储（MinIO/OSS/COS），服务器零部署 | 需sshd运行，可用rsync增量 |
+| **并发写入** | 依赖S3版本ID + 客户端冲突检测 | sftp原子操作，但无全局锁 |
+| **变更通知** | 需轮询ListObjects或S3 Event→SNS→客户端 | 无原生通知，需轮询 |
+| **增量同步** | 基于ETag/Last-Modified对比 | rsync的块级增量，更高效 |
+| **大文件** | 分片上传（Multipart） | sftp直接流传输 |
+| **成本** | API调用次数计费 | 只耗流量 |
 
-### 2.2 核心交互升级（贴合 Toolbox 体验）
-
-#### 2.2.1 右键菜单 + 面板联动
-
-1. 用户在 Finder/Explorer 多选文件。  
-2. 触发 `MoveOff - 释放空间`。  
-3. 主面板自动聚焦并切至「迁移确认页」（嵌入右侧内容区，非阻塞弹窗）。  
-4. 确认后进入「进度页」，实时展示每文件与总任务进度。  
-5. 完成后自动刷新「文件管理」列表并生成迁移记录。
-
-#### 2.2.2 后台任务管理（Toolbox 风格）
-
-- 面板底部显示任务栏：当前任务 + 队列任务。  
-- 单任务支持：暂停、恢复、取消、重试。  
-- 点击任务展开：进度、速度、剩余时间、失败原因、文件明细。  
-- 完成/失败后显示轻量通知（Toast），不打断当前操作。
-
-#### 2.2.3 极简配置流程（首次启动引导）
-
-首次启动提供 3 步配置向导：
-
-1. 添加 SSH 服务器（地址、端口、认证方式）。  
-2. 配置远程根目录与存储策略（默认按后缀分类）。  
-3. 选择本地处理策略（删除原文件 / 保留快捷方式）。  
-
-完成后自动进入「快速迁移」页，并提示可通过右键或拖拽触发迁移。
+**策略**：S3为默认协议，SSH用于局域网高速传输或S3不可用时降级。
 
 ---
 
-## 三、核心功能技术实现细节
+## 二、技术架构
 
-### 3.1 进度条精准控制（耗时 IO 操作可视化）
+### 2.1 整体架构
 
-基于 Kotlin 协程 + SSHJ 监听实现「分阶段、高精度、可聚合」进度体系，支持单任务与并行任务统一展示。
-
-#### 3.1.1 分阶段进度模型
-
-将一次迁移拆分为可观测阶段，避免“长时间卡在 0%/99%”：
-
-| 阶段 | 含义 | 权重 |
-| --- | --- | --- |
-| `PRECHECK` | SSH 连接、权限、目标路径预检 | 5% |
-| `SCAN_LOCAL` | 本地文件扫描、大小统计、冲突检查 | 10% |
-| `TRANSFER` | 实际上传（字节流传输） | 70% |
-| `VERIFY` | 远端校验（大小/哈希/可读性） | 10% |
-| `FINALIZE` | 元数据写入、索引更新、任务落库 | 5% |
-
-总进度计算公式：
-
-```text
-overall = sum(doneStageWeight) + currentStageWeight * currentStageProgress(0..1)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         客户端（每太机器）                        │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────┐ │
+│  │ Compose UI  │  │ 同步引擎     │  │ 状态管理     │  │ 系统集成 │ │
+│  │ - 主面板    │◄─┤ - 差异检测   │◄─┤ - SQLite    │◄─┤ - 右键菜单│ │
+│  │ - 进度窗口  │  │ - 上传下载   │  │ - 待同步队列  │  │ - 状态图标│ │
+│  │ - 冲突解决  │  │ - 冲突处理   │  │ - 历史版本   │  │ - 托盘   │ │
+│  └─────────────┘  └──────┬──────┘  └─────────────┘  └────┬────┘ │
+│                          │                                │      │
+└──────────────────────────┼────────────────────────────────┼──────┘
+                           │                                │
+                    S3 API │ HTTPS                         │ JNA/Swift
+                           ▼                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        存储层                                    │
+│  ┌─────────────────┐           ┌─────────────────────────────┐  │
+│  │ S3兼容对象存储   │           │ 可选：SSH/SFTP服务器         │  │
+│  │ - 文件内容       │           │ - rsync增量传输              │  │
+│  │ - 版本控制       │           │ - 直接文件系统访问            │  │
+│  └─────────────────┘           └─────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-#### 3.1.2 Kotlin 参考实现（可直接迁移到 shared 层）
+### 2.2 同步状态机
 
-```kotlin
-package com.moveoff.progress
+```
+                    ┌──────────┐
+    本地修改 ──────►│ 待上传   │──────► 上传中 ──────► 已同步 ◄──────┐
+                    │ (local)  │         │            │   │        │
+                    └──────────┘         │            │   │        │
+                                         ▼            │   ▼        │
+                                      上传失败 ────────┘  远程修改 ──┤
+                                                         (冲突)     │
+                                          ▲                        │
+                                          └────────── 冲突解决 ─────┘
 
-import kotlin.math.roundToInt
-import kotlin.math.max
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-
-enum class TransferStage(val weight: Double) {
-    PRECHECK(0.05),
-    SCAN_LOCAL(0.10),
-    TRANSFER(0.70),
-    VERIFY(0.10),
-    FINALIZE(0.05)
-}
-
-data class StageUpdate(
-    val taskId: String,
-    val fileName: String,
-    val stage: TransferStage,
-    val stageProgress: Double,
-    val transferredBytes: Long = 0L,
-    val totalBytes: Long = 0L,
-    val speedBytesPerSec: Long = 0L,
-    val etaSeconds: Long = 0L
-)
-
-data class TaskProgress(
-    val taskId: String,
-    val fileName: String,
-    val stage: TransferStage,
-    val stagePercent: Int,
-    val overallPercent: Int,
-    val transferredBytes: Long,
-    val totalBytes: Long,
-    val speedBytesPerSec: Long,
-    val etaSeconds: Long
-)
-
-class ProgressTracker {
-    private val order = TransferStage.entries
-    private val _state = MutableStateFlow<Map<String, TaskProgress>>(emptyMap())
-    val state: StateFlow<Map<String, TaskProgress>> = _state.asStateFlow()
-
-    fun update(event: StageUpdate) {
-        val normalized = event.stageProgress.coerceIn(0.0, 1.0)
-        val completedWeight = order
-            .takeWhile { it != event.stage }
-            .sumOf { it.weight }
-
-        val overall = ((completedWeight + event.stage.weight * normalized) * 100.0)
-            .coerceIn(0.0, 100.0)
-            .roundToInt()
-
-        val stagePercent = (normalized * 100.0).roundToInt().coerceIn(0, 100)
-        val snapshot = TaskProgress(
-            taskId = event.taskId,
-            fileName = event.fileName,
-            stage = event.stage,
-            stagePercent = stagePercent,
-            overallPercent = overall,
-            transferredBytes = max(0L, event.transferredBytes),
-            totalBytes = max(0L, event.totalBytes),
-            speedBytesPerSec = max(0L, event.speedBytesPerSec),
-            etaSeconds = max(0L, event.etaSeconds)
-        )
-
-        _state.value = _state.value.toMutableMap().apply {
-            this[event.taskId] = snapshot
-        }
-    }
-}
+    远程修改 ──────► 待下载 ──────► 下载中 ──────► 已同步
+    (检测到)         (remote)
 ```
 
-#### 3.1.3 SSHJ 进度事件接入方式
+### 2.3 本地SQLite Schema
 
-接入策略：将 SSHJ 字节回调统一转为 `StageUpdate`，由 `ProgressTracker` 聚合后推送给 UI。
+```sql
+-- 文件元数据表（核心）
+CREATE TABLE files (
+    id INTEGER PRIMARY KEY,
+    path TEXT UNIQUE NOT NULL,           -- 相对路径
+    local_mtime INTEGER,                  -- 本地修改时间
+    local_size INTEGER,
+    local_hash TEXT,                      -- SHA-256内容哈希
+
+    remote_etag TEXT,                     -- S3 ETag或远程标识
+    remote_version_id TEXT,               -- S3版本ID（用于冲突检测）
+    remote_mtime INTEGER,                 -- 服务器上的修改时间
+    remote_size INTEGER,
+
+    sync_state TEXT,                      -- synced/pending_upload/pending_download/conflict
+    last_sync_time INTEGER,               -- 上次成功同步时间
+    conflict_strategy TEXT                -- local_wins/remote_wins/keep_both
+);
+
+-- 待同步队列（支持断点续传）
+CREATE TABLE sync_queue (
+    id INTEGER PRIMARY KEY,
+    file_id INTEGER REFERENCES files(id),
+    operation TEXT,                       -- upload/download/delete
+    status TEXT,                          -- pending/running/paused/failed
+    progress_bytes INTEGER,               -- 已传输字节（断点续传）
+    total_bytes INTEGER,
+    retry_count INTEGER DEFAULT 0,
+    error_message TEXT,
+    created_at INTEGER,
+    updated_at INTEGER
+);
+
+-- 同步历史（用于审计和撤销）
+CREATE TABLE sync_history (
+    id INTEGER PRIMARY KEY,
+    operation TEXT,
+    path TEXT,
+    details TEXT,
+    success BOOLEAN,
+    timestamp INTEGER
+);
+```
+
+---
+
+## 三、核心同步算法
+
+### 3.1 增量检测流程
 
 ```kotlin
-suspend fun uploadWithProgress(
-    emitter: (StageUpdate) -> Unit
+class SyncEngine(
+    private val db: Database,
+    private val s3: S3Client,
+    private val localFs: LocalFileSystem
 ) {
-    emitter(StageUpdate(taskId, fileName, TransferStage.PRECHECK, 1.0))
-    emitter(StageUpdate(taskId, fileName, TransferStage.SCAN_LOCAL, 1.0))
+    suspend fun detectChanges(): SyncPlan {
+        val plan = SyncPlan()
 
-    val total = fileSize
-    var transferred = 0L
-    val startedAt = System.nanoTime()
+        // 1. 扫描本地文件系统，与DB对比
+        localFs.walkSyncDir().forEach { localFile ->
+            val record = db.getFile(localFile.path)
+            when {
+                record == null -> plan.toUpload.add(localFile) // 新增
+                record.local_mtime != localFile.mtime ||
+                    record.local_size != localFile.size -> {
+                    // 可能修改，需计算哈希确认
+                    if (record.local_hash != localFile.computeHash()) {
+                        plan.toUpload.add(localFile)
+                    }
+                }
+            }
+        }
 
-    while (transferred < total) {
-        val chunk = nextChunkSize()
-        transferred = (transferred + chunk).coerceAtMost(total)
-        val elapsedSec = ((System.nanoTime() - startedAt) / 1_000_000_000.0).coerceAtLeast(0.001)
-        val speed = (transferred / elapsedSec).toLong()
-        val remain = (total - transferred).coerceAtLeast(0L)
-        val eta = if (speed > 0) remain / speed else 0L
+        // 2. 检测本地删除（DB中有记录但文件不存在）
+        db.getAllFiles().forEach { record ->
+            if (!localFs.exists(record.path) && record.sync_state == "synced") {
+                plan.toDeleteRemote.add(record)
+            }
+        }
 
-        emitter(
-            StageUpdate(
-                taskId = taskId,
-                fileName = fileName,
-                stage = TransferStage.TRANSFER,
-                stageProgress = transferred.toDouble() / total.toDouble(),
-                transferredBytes = transferred,
-                totalBytes = total,
-                speedBytesPerSec = speed,
-                etaSeconds = eta
-            )
-        )
+        // 3. 获取远程变更（带分页，支持大目录）
+        val remoteFiles = s3.listAllObjects(prefix = db.syncRoot)
+        remoteFiles.forEach { remote ->
+            val record = db.getFile(remote.key)
+            when {
+                record == null -> plan.toDownload.add(remote) // 远程新增
+                record.remote_etag != remote.etag ||
+                record.remote_version_id != remote.versionId -> {
+                    // 远程修改，检查本地是否也修改
+                    if (record.local_mtime > record.last_sync_time) {
+                        plan.conflicts.add(Conflict(record, remote))
+                    } else {
+                        plan.toDownload.add(remote)
+                    }
+                }
+            }
+        }
+
+        // 4. 检测远程删除
+        val remotePaths = remoteFiles.map { it.key }.toSet()
+        db.getAllFiles().forEach { record ->
+            if (record.path !in remotePaths && record.sync_state == "synced") {
+                plan.toDeleteLocal.add(record)
+            }
+        }
+
+        return plan
     }
-
-    emitter(StageUpdate(taskId, fileName, TransferStage.VERIFY, 1.0))
-    emitter(StageUpdate(taskId, fileName, TransferStage.FINALIZE, 1.0))
 }
 ```
 
-> 实际项目中可将 `while` 替换为 SSHJ 的传输监听回调；核心点是保持 `TRANSFER` 阶段按“已传输字节/总字节”实时换算。
+### 3.2 冲突解决策略
 
-#### 3.1.4 多任务总进度聚合
+```kotlin
+sealed class ConflictResolution {
+    data class UseLocal(val backupRemote: Boolean = true) : ConflictResolution()
+    data class UseRemote(val backupLocal: Boolean = true) : ConflictResolution()
+    object KeepBoth : ConflictResolution()
+    class Merge(val merger: FileMerger) : ConflictResolution() // 文本文件尝试合并
+}
 
-当有并发任务时，建议用「按文件大小加权」而不是简单平均：
-
-```text
-queueOverall = Σ(taskOverall * taskTotalBytes) / Σ(taskTotalBytes)
+suspend fun resolveConflict(
+    conflict: Conflict,
+    strategy: ConflictStrategy
+): ConflictResolution {
+    return when (strategy) {
+        ConflictStrategy.AUTO -> {
+            // 启发式策略：
+            // 1. 如果一方是删除，优先保留存在的一方
+            // 2. 文本文件尝试三路合并（如果有共同祖先）
+            // 3. 否则使用timestamp大的
+            autoResolve(conflict)
+        }
+        ConflictStrategy.LOCAL_WINS -> ConflictResolution.UseLocal()
+        ConflictStrategy.REMOTE_WINS -> ConflictResolution.UseRemote()
+        ConflictStrategy.KEEP_BOTH -> ConflictResolution.KeepBoth
+        ConflictStrategy.ASK_USER -> showConflictDialog(conflict)
+    }
+}
 ```
 
-这样可避免小文件大量完成导致总进度虚高，保证与真实剩余时间更一致。
+### 3.3 大文件分片与断点续传
 
-#### 3.1.5 UI 展示建议（Compose）
+```kotlin
+class MultipartUploader(
+    private val s3: S3Client,
+    private val chunkSize: Long = 8 * 1024 * 1024 // 8MB
+) {
+    suspend fun uploadWithResume(
+        file: File,
+        remotePath: String,
+        progress: (Progress) -> Unit
+    ) {
+        // 检查是否有未完成的分片上传
+        val existingUpload = db.getPendingMultipart(remotePath)
 
-- 主进度条：展示 `overallPercent`。  
-- 子进度信息：阶段名、速度、剩余时间、已传输/总大小。  
-- 刷新节流：UI 层建议 `100~200ms` 采样一次，既流畅又不过度刷新。  
-- 失败态：保留最后快照与错误原因，支持“从失败文件重试”。
+        val uploadId = existingUpload?.uploadId
+            ?: s3.initiateMultipartUpload(remotePath)
+
+        val completedParts = existingUpload?.completedParts ?: mutableListOf()
+        val totalParts = (file.size + chunkSize - 1) / chunkSize
+
+        for (partNum in 1..totalParts) {
+            if (partNum in completedParts) continue
+
+            val etag = s3.uploadPart(
+                uploadId = uploadId,
+                partNumber = partNum,
+                data = file.readChunk(partNum, chunkSize)
+            )
+
+            completedParts.add(CompletedPart(partNum, etag))
+            db.saveMultipartProgress(remotePath, uploadId, completedParts)
+
+            progress(Progress(partNum, totalParts, partNum * chunkSize, file.size))
+        }
+
+        s3.completeMultipartUpload(uploadId, completedParts)
+        db.clearMultipartProgress(remotePath)
+    }
+}
+```
 
 ---
 
-## 四、MVP 交付范围（建议）
+## 四、系统级集成
 
-### 4.1 第一阶段（可上线）
+### 4.1 状态图标（复刻坚果云）
 
-1. 右键触发迁移 + 主面板联动。  
-2. 单服务器连接管理（密码或密钥）。  
-3. 文件上传、下载、删除、重命名。  
-4. 分阶段进度条与后台任务栏。  
-5. 基础迁移记录与错误重试。
+| 图标 | 含义 | 技术实现 |
+|-----|-----|---------|
+| ✓ 绿色 | 已同步 | macOS: Finder Sync Extension + xattr标记；Windows: Shell Icon Overlay |
+| ↻ 蓝色 | 同步中 | 实时更新，通过本地socket与主进程通信 |
+| ⚠ 黄色 | 等待同步 | 队列中待处理 |
+| ✕ 红色 | 冲突/错误 | 需要用户处理 |
+| ☁ 灰色 | 仅云端有（按需下载）| 本地只有占位符 |
 
-### 4.2 第二阶段（体验增强）
+### 4.2 右键菜单集成
 
-1. 多服务器分组与标签同步。  
-2. SSHFS/WinFsp 挂载预览。  
-3. 空间统计图与智能清理建议。  
-4. 冲突策略（覆盖、跳过、重命名）可配置。  
-5. 增量同步与断点续传。
+```kotlin
+// macOS: Finder Sync Extension (Swift)
+class FinderSync: FIFinderSync {
+    override func menu(for menuKind: FIMenuKind) -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(withTitle: "MoveOff - 立即同步", action: #selector(syncNow))
+        menu.addItem(withTitle: "MoveOff - 释放本地空间", action: #selector(evictLocal))
+        menu.addItem(withTitle: "MoveOff - 查看版本历史", action: #selector(showHistory))
+        return menu
+    }
+}
+
+// Windows: 注册表 + COM Shell Extension
+// HKEY_CLASSES_ROOT\*\shell\MoveOff
+// HKEY_CLASSES_ROOT\Directory\shell\MoveOff
+```
 
 ---
 
-## 五、验收标准（针对 3.1）
+## 五、MVP 交付计划
 
-- 大文件（>2GB）迁移时，进度持续变化，不出现长时间停滞。  
-- 进度值单调递增，最终准确收敛到 `100%`。  
-- 速度与剩余时间可随网络变化动态调整。  
-- 并发任务总进度与实际完成时间误差可控（建议 <10%）。  
-- 任务暂停/恢复/取消后，进度状态与 UI 显示一致。
+### 阶段1：基础同步（核心）
+- [ ] S3连接配置（支持MinIO/阿里云OSS/AWS）
+- [ ] 本地SQLite元数据管理
+- [ ] 基础增量同步算法（upload/download/delete）
+- [ ] 简单的冲突检测（timestamp-based）
+- [ ] 系统托盘 + 基础UI面板
+
+### 阶段2：用户体验
+- [ ] 分阶段进度条（扫描/传输/验证）
+- [ ] 大文件分片上传/断点续传
+- [ ] Finder/Explorer状态图标
+- [ ] 右键菜单集成
+- [ ] 冲突解决对话框
+
+### 阶段3：高级功能
+- [ ] 版本历史（基于S3版本控制）
+- [ ] 选择性同步（忽略某些文件/目录）
+- [ ] 局域网P2P传输（同一网络下直连）
+- [ ] SSH备用协议
+- [ ] 文件去重（基于内容哈希）
+
+### 阶段4：企业级
+- [ ] E2E加密（客户端加密后上传）
+- [ ] 团队共享空间
+- [ ] 操作审计日志
+- [ ] 智能同步策略（按网络类型调整）
 
 ---
 
-如果你愿意，我下一步可以直接补一版 `build.gradle.kts` + KMP 模块骨架，把 `3.1` 的 `ProgressTracker` 变成可运行 demo（含 Compose 进度面板）。
+## 六、竞品技术参考
+
+### 坚果云
+- 协议：WebDAV + 私有扩展
+- 冲突：基于文件版本号
+- 锁机制：上传前获取文件锁
+
+### Dropbox
+- 协议：私有二进制协议
+- 同步：块级去重（4MB块），只传变化的块
+- 数据库：本地SQLite存储文件哈希索引
+
+### Syncthing（开源）
+- 协议：Block Exchange Protocol v1
+- 发现：全球发现服务器 + 本地广播
+- 同步：无中心服务器，纯P2P
+
+### rclone
+- 策略：mtime或checksum对比
+- 优势：支持40+种存储后端
+- 缺点：无实时同步，需定时任务
+
+---
+
+## 七、风险与应对
+
+| 风险 | 影响 | 应对策略 |
+|-----|-----|---------|
+| S3 ListObjects在大目录下慢 | 首次同步或全量检测卡顿 | 1. 分页加载 + 并发；2. 使用S3 Inventory；3. 本地缓存目录树 |
+| 多客户端并发写入冲突 | 数据丢失 | 1. S3版本控制必开；2. 客户端冲突检测；3. 文件级锁（用S3对象锁）|
+| 本地DB损坏 | 丢失同步状态，可能重复上传/下载 | 1. 定期备份DB到S3；2. DB损坏时全量对比重建 |
+| 网络中断 | 同步中断 | 1. 断点续传；2. 指数退避重试；3. 离线队列 |
+
+---
+
+## 八、代码结构（已落地）
+
+```
+apps/moveoff/
+├── src/commonMain/kotlin/com/moveoff/     # 共享业务逻辑
+│   ├── state/
+│   │   └── AppState.kt                    # 全局状态管理（SyncStatus、AppStateManager）
+│   ├── event/
+│   │   └── EventBus.kt                    # 全局事件总线（UIEvent、EventBus、EventShortcuts）
+│   ├── progress/
+│   │   └── ProgressTracker.kt             # 进度追踪
+│   ├── sync/
+│   │   └── SyncEngine.kt                  # 同步引擎核心（检测、计划、执行、冲突解决）
+│   ├── model/
+│   │   └── Models.kt                      # 数据模型
+│   ├── db/
+│   │   └── Database.kt                    # 数据库接口（文件记录、同步队列）
+│   └── storage/
+│       └── SettingsStorage.kt             # 设置存储
+│
+├── src/jvmMain/kotlin/com/moveoff/        # 桌面端实现
+│   ├── system/
+│   │   ├── EnhancedTrayManager.kt         # 增强系统托盘（动态图标、通知、徽章）
+│   │   ├── WindowManager.kt               # 窗口管理器（主窗口、设置、冲突、悬浮进度、Toast）
+│   │   ├── GlobalShortcutManager.kt       # 全局快捷键（JNativeHook）
+│   │   └── TrayManager.kt                 # 基础托盘（旧，已废弃）
+│   ├── ui/
+│   │   ├── MainWindow.kt                  # 主窗口UI（左侧导航+右侧内容+底部任务栏）
+│   │   ├── screens/                       # 各页面屏幕
+│   │   └── theme/                         # 主题配置
+│   ├── ui/components/
+│   │   ├── FileManagerComponents.kt       # 文件管理器组件（状态图标、列表/网格）
+│   │   └── DragAndDropComponents.kt       # 拖拽上传功能
+│   ├── db/
+│   │   └── DatabaseImpl.kt                # SQLite数据库实现（JDBC + HikariCP）
+│   ├── storage/
+│   │   └── S3StorageClient.kt             # S3存储客户端（含分片上传）
+│   ├── server/
+│   │   └── LocalServer.kt                 # 本地HTTP服务器（API + WebSocket）
+│   └── Main.kt                            # 应用入口（整合所有组件）
+│
+├── native/
+│   ├── macos/                             # macOS原生扩展
+│   │   └── MoveOffFinderExtension/        # Finder Sync Extension (Swift)
+│   ├── windows/                           # Windows原生扩展
+│   │   └── MoveOffShellExt/               # Shell Context Menu (C++)
+│   └── README.md                          # 原生扩展编译说明
+│
+└── docs/
+    └── UI_ARCHITECTURE.md                 # UI架构设计文档
+```
+
+---
+
+## 九、待决策事项
+
+1. **冲突默认策略**：你倾向于自动解决（保留较新的）还是总是询问用户？
+2. **版本历史保留期**：S3版本控制保留多少天？这直接影响存储成本。
+3. **是否支持"云盘模式"（按需下载）**：像OneDrive那样，本地只显示占位符，双击才下载？
+4. **加密需求**：端到端加密会增加复杂度和CPU消耗，是否需要？
+
+---
+
+**已完成功能**：
+
+**UI层**：
+- ✅ 全局状态管理（AppStateManager）
+- ✅ 事件总线（EventBus）
+- ✅ 增强系统托盘（EnhancedTrayManager）
+- ✅ 窗口管理器（WindowManager）
+- ✅ 悬浮进度窗口（FloatingProgressWindow）
+- ✅ Toast通知（ToastManager）
+- ✅ 冲突解决窗口（ConflictResolutionWindow）
+- ✅ 文件管理器（FileManager）- 列表/网格视图、状态图标、右键菜单
+- ✅ 设置面板（SettingsScreen）- S3配置、同步策略、主题设置
+
+**数据层**：
+- ✅ SQLite数据库（DatabaseImpl）- files表、sync_queue表
+- ✅ 文件记录CRUD操作
+- ✅ 同步队列管理
+- ✅ 统计查询
+
+**同步层**：
+- ✅ 同步引擎（SyncEngine）
+- ✅ 本地文件系统扫描
+- ✅ 远程变化检测（StorageClient抽象）
+- ✅ 冲突检测算法
+- ✅ 同步计划生成与执行
+- ✅ S3存储客户端（含分片上传Multipart Upload）
+
+**服务层**：
+- ✅ 本地HTTP服务器（LocalServer）
+- ✅ RESTful API（/api/sync/*, /api/files, /api/conflicts）
+- ✅ WebSocket实时推送
+
+**交互功能**：
+- ✅ 全局快捷键（JNativeHook）- Cmd/Ctrl+Shift+M/S/P
+- ✅ 拖拽上传 - 支持文件/文件夹拖入文件管理器
+- ✅ 原生系统集成框架 - Finder/Explorer右键菜单（需要编译安装原生扩展）
+
+**待实现**：
+1. **SSH备用协议** - SFTP客户端实现
+2. **端到端加密** - 客户端加密
+3. **自动更新机制**
+
+你希望继续推进哪个部分？

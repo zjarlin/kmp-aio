@@ -36,10 +36,24 @@ kotlin {
     }
     sourceSets {
         jvmMain.dependencies {
+            // Ktor Server (内嵌本地服务器)
             implementation(libs.io.ktor.ktor.server.netty.jvm)
-            // 桌面端内嵌 Ktor 后端
-            implementation(project(":server"))
-        }
+            implementation(libs.io.ktor.ktor.server.content.negotiation.jvm)
+            implementation(libs.io.ktor.ktor.server.websockets.jvm)
+            implementation(libs.io.ktor.ktor.server.cio.jvm)
+            implementation(libs.io.ktor.ktor.serialization.kotlinx.json.jvm)
+            implementation(libs.io.ktor.ktor.server.cors.jvm)
+
+            // SQLite JDBC驱动
+            implementation("org.xerial:sqlite-jdbc:3.45.1.0")
+            // HikariCP连接池
+            implementation("com.zaxxer:HikariCP:5.1.0")
+
+            // AWS SDK for Kotlin S3
+            implementation("aws.sdk.kotlin:s3:1.0.0")
+
+            // JNativeHook - 全局快捷键
+            implementation("com.github.kwhat:jnativehook:2.2.2")
     }
 }
 
