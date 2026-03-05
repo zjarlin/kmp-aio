@@ -1,7 +1,5 @@
 package com.moveoff.event
 
-import com.moveoff.model.Conflict
-import com.moveoff.state.SyncStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -31,8 +29,8 @@ sealed class UIEvent {
     data class SyncResumed(val message: String? = null) : UIEvent()
 
     // ========== 冲突事件 ==========
-    data class ConflictDetected(val conflicts: List<Conflict>) : UIEvent()
-    data class ConflictResolved(val conflictId: String, val resolution: ConflictResolution) : UIEvent()
+    data class ConflictDetected(val conflicts: List<com.moveoff.model.Conflict>) : UIEvent()
+    data class ConflictResolved(val conflictId: String, val resolution: com.moveoff.db.ConflictResolution) : UIEvent()
 
     // ========== 窗口事件 ==========
     object WindowShouldShow : UIEvent()
@@ -68,6 +66,17 @@ sealed class UIEvent {
     data class StorageBackendRecovered(val backendType: String) : UIEvent()
     data class FailoverActivated(val fromBackend: String, val toBackend: String) : UIEvent()
     data class FailoverRecovered(val primaryBackend: String) : UIEvent()
+
+    // ========== 更新事件 ==========
+    data class UpdateAvailable(
+        val version: String,
+        val releaseNotes: String,
+        val mandatory: Boolean
+    ) : UIEvent()
+    data class UpdateDownloadProgress(val percentage: Int) : UIEvent()
+    data class UpdateDownloaded(val filePath: String) : UIEvent()
+    data class UpdateInstalled(val version: String) : UIEvent()
+    data class UpdateError(val message: String) : UIEvent()
 }
 
 /**
@@ -78,16 +87,6 @@ enum class NotificationType {
     SUCCESS,
     WARNING,
     ERROR
-}
-
-/**
- * 冲突解决方式
- */
-enum class ConflictResolution {
-    USE_LOCAL,      // 使用本地版本
-    USE_REMOTE,     // 使用远程版本
-    KEEP_BOTH,      // 保留两者
-    MERGE           // 尝试合并（文本文件）
 }
 
 /**

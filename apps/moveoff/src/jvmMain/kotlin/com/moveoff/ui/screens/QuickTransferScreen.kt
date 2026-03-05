@@ -29,12 +29,9 @@ import com.moveoff.progress.*
 import com.moveoff.ui.MainViewModel
 import com.moveoff.ui.components.EmptyState
 import com.moveoff.ui.components.FileItemCard
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.launch
 import java.awt.datatransfer.DataFlavor
 import java.io.File
-
-private val logger = KotlinLogging.logger {}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -73,7 +70,8 @@ fun QuickTransferScreen(viewModel: MainViewModel) {
                         false
                     }
                 } catch (e: Exception) {
-                    logger.error(e) { "Failed to handle drop" }
+                    println("Failed to handle drop: ${e.message}")
+                    e.printStackTrace()
                     false
                 }
             }

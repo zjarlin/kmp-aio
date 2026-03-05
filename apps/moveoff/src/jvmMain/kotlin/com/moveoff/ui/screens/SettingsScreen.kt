@@ -16,6 +16,8 @@ import com.moveoff.model.*
 import com.moveoff.storage.S3Config
 import com.moveoff.storage.SSHConfig
 import com.moveoff.storage.SSHAuthType
+import com.moveoff.update.UpdateCheckerManager
+import com.moveoff.update.UpdateState
 import com.moveoff.ui.MainViewModel
 import com.moveoff.ui.components.SectionTitle
 import kotlinx.coroutines.launch
@@ -310,6 +312,12 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 )
             }
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Update Section
+        SectionTitle(title = "自动更新", icon = Icons.Default.Update)
+        UpdateSettingsCard(viewModel)
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -678,6 +686,182 @@ fun S3StorageSettingsCard() {
 private sealed class TestStatus {
     object Success : TestStatus()
     data class Failed(val message: String) : TestStatus()
+}
+
+@Composable
+fun UpdateSettingsCard(viewModel: MainViewModel) {
+    val settings by viewModel.settings.collectAsState()
+    val updateSettings = settings.updateSettings
+    val scope = rememberCoroutineScope()
+
+    var isChecking by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Auto check
+            SettingSwitch(
+                title = "自动检查更新",
+                description = "启动时和每天自动检查新版本",
+                checked = updateSettings.checkUpdatesAutomatically,
+                onCheckedChange = {
+                    viewModel.updateSettings(
+                        settings.copy(
+                            updateSettings = updateSettings.copy(
+                                checkUpdatesAutomatically = it
+                            )
+                        )
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Update channel
+            Text(
+                text = "更新通道",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row {
+                UpdateChannelOption(
+                    channel = UpdateChannel.STABLE,
+                    currentChannel = updateSettings.updateChannel,
+                    onSelect = {
+                        viewModel.updateSettings(
+                            settings.copy(
+                                updateSettings = updateSettings.copy(
+                                    updateChannel = it
+                                )
+                            )
+                        )
+                    }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                UpdateChannelOption(
+                    channel = UpdateChannel.BETA,
+                    currentChannel = updateSettings.updateChannel,
+                    onSelect = {
+                        viewModel.updateSettings(
+                            settings.copy(
+                                updateSettings = updateSettings.copy(
+                                    updateChannel = it
+                                )
+                            )
+                        )
+                    }
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                UpdateChannelOption(
+                    channel = UpdateChannel.DEV,
+                    currentChannel = updateSettings.updateChannel,
+                    onSelect = {
+                        viewModel.updateSettings(
+                            settings.copy(
+                                updateSettings = updateSettings.copy(
+                                    updateChannel = it
+                                )
+                            )
+                        )
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            Divider()
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Auto download
+            SettingSwitch(
+                title = "自动下载更新",
+                description = "发现新版本后自动下载（不会自动安装）",
+                checked = updateSettings.downloadUpdatesAutomatically,
+                onCheckedChange = {
+                    viewModel.updateSettings(
+                        settings.copy(
+                            updateSettings = updateSettings.copy(
+                                downloadUpdatesAutomatically = it
+                            )
+                        )
+                    )
+                }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "当前版本",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "v1.0.0 (${updateSettings.updateChannel.name})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isChecking = true
+                            try {
+                                val checker = UpdateCheckerManager.get()
+                                checker.checkForUpdate()
+                            } catch (e: Exception) {
+                                // 处理错误
+                            } finally {
+                                isChecking = false
+                            }
+                        }
+                    },
+                    enabled = !isChecking
+                ) {
+                    if (isChecking) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("检查中...")
+                    } else {
+                        Icon(Icons.Default.Refresh, null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("立即检查")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun UpdateChannelOption(
+    channel: UpdateChannel,
+    currentChannel: UpdateChannel,
+    onSelect: (UpdateChannel) -> Unit
+) {
+    val text = when (channel) {
+        UpdateChannel.STABLE -> "稳定版"
+        UpdateChannel.BETA -> "测试版"
+        UpdateChannel.DEV -> "开发版"
+    }
+
+    FilterChip(
+        selected = channel == currentChannel,
+        onClick = { onSelect(channel) },
+        label = { Text(text) }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

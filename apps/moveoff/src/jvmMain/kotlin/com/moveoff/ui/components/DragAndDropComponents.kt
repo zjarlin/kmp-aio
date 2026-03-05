@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import java.awt.Window
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,17 +38,18 @@ enum class DragState {
 
 /**
  * 拖拽上传区域
+ * @param window Compose 窗口实例，用于设置拖放目标
  */
 @Composable
 fun DragDropUploadArea(
     modifier: Modifier = Modifier,
+    window: Window? = null,
     onFilesDropped: (List<File>) -> Unit = {}
 ) {
     var dragState by remember { mutableStateOf(DragState.NONE) }
 
     // 设置拖拽监听
-    LaunchedEffect(Unit) {
-        val window = androidx.compose.ui.window.LocalWindow.current
+    LaunchedEffect(window) {
         window?.let { setupDropTarget(it, { state -> dragState = state }, onFilesDropped) }
     }
 

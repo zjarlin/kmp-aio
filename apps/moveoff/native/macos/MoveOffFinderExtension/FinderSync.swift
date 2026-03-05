@@ -1,296 +1,274 @@
-import Cocoa
+import Foundation
 import FinderSync
 
-// MARK: - XPC Protocol
-@objc protocol MoveOffXPCProtocol {
-    func getFileStatus(_ path: String, reply: @escaping (Int) -> Void)
-    func triggerSync(_ path: String)
-    func showInApp(_ path: String)
-}
-
-// MARK: - Finder Sync Provider
+/**
+ * MoveOff Finder Sync Extension
+ *
+ * 在 Finder 中显示文件同步状态和右键菜单
+ */
 class FinderSync: FIFinderSync {
 
-    var xpcConnection: NSXPCConnection?
-    var syncedFolderURL: URL?
-
-    // 状态图标
-    let syncedBadge = NSImage(named: NSImage.statusAvailableName)
-    let syncingBadge = NSImage(named: NSImage.statusPartiallyAvailableName)
-    let conflictBadge = NSImage(named: NSImage.statusUnavailableName)
-    let pendingBadge = NSImage(named: NSImage.statusNoneName)
+    private var ipcClient: IPCClient?
+    private let socketPath: String
 
     override init() {
+        // 获取 socket 路径
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        self.socketPath = homeDir.appendingPathComponent(".moveoff/ipc.sock").path
+
         super.init()
 
-        NSLog("MoveOff FinderSync init")
+        // 初始化 IPC 客户端
+        self.ipcClient = IPCClient(socketPath: socketPath)
 
-        // 设置监控的目录
-        setupSyncedFolder()
-
-        // 建立 XPC 连接
-        setupXPCConnection()
-    }
-
-    // MARK: - Setup
-
-    func setupSyncedFolder() {
-        // 从用户默认值读取同步目录
-        if let syncPath = UserDefaults.standard.string(forKey: "moveoff_sync_path") {
-            syncedFolderURL = URL(fileURLWithPath: syncPath)
-        } else {
-            // 默认使用 ~/MoveOff
-            let home = FileManager.default.homeDirectoryForCurrentUser
-            syncedFolderURL = home.appendingPathComponent("MoveOff")
+        // 设置观察的目录（同步根目录）
+        if let syncRoot = getSyncRoot() {
+            FIFinderSyncController.default().directoryURLs = [syncRoot]
         }
 
-        if let url = syncedFolderURL {
-            FIFinderSyncController.default().directoryURLs = [url]
-            NSLog("Monitoring directory: \(url.path)")
-        }
+        NSLog("MoveOff FinderSync 已初始化")
     }
 
-    func setupXPCConnection() {
-        let connection = NSXPCConnection(machServiceName: "site.addzero.moveoff.xpc", options: [])
-        connection.remoteObjectInterface = NSXPCInterface(with: MoveOffXPCProtocol.self)
-        connection.resume()
-        xpcConnection = connection
-    }
-
-    // MARK: - Badge Management
-
-    override func badgeIdentifier(for url: URL) -> String {
-        guard let syncedFolder = syncedFolderURL else { return "" }
-
-        // 只处理同步目录下的文件
-        let path = url.path
-        guard path.hasPrefix(syncedFolder.path) else { return "" }
-
-        // 异步获取状态，这里返回默认状态
-        // 实际状态通过 requestBadgeIdentifier(for:) 更新
-        return getBadgeIdentifierForPath(path)
-    }
-
-    func getBadgeIdentifierForPath(_ path: String) -> String {
-        // 从 XPC 获取文件状态
-        guard let proxy = xpcConnection?.remoteObjectProxy as? MoveOffXPCProtocol else {
-            return ""
-        }
-
-        var badgeId = ""
-        let semaphore = DispatchSemaphore(value: 0)
-
-        proxy.getFileStatus(path) { status in
-            badgeId = self.badgeIdentifierForStatus(status)
-            semaphore.signal()
-        }
-
-        _ = semaphore.wait(timeout: .now() + 0.1)
-        return badgeId
-    }
-
-    func badgeIdentifierForStatus(_ status: Int) -> String {
-        switch status {
-        case 0: return "synced"
-        case 1: return "syncing"
-        case 2: return "pending_upload"
-        case 3: return "pending_download"
-        case 4: return "conflict"
-        case 5: return "error"
-        default: return ""
-        }
-    }
-
-    // MARK: - Menu Items
+    // MARK: - 菜单配置
 
     override func menu(for menuKind: FIMenuKind) -> NSMenu {
         let menu = NSMenu(title: "MoveOff")
 
         // 获取选中的文件
-        let controller = FIFinderSyncController.default()
-        guard let urls = controller.selectedItemURLs(), !urls.isEmpty else {
+        let target = FIFinderSyncController.default().targetedURL()
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+
+        // 检查是否在同步目录内
+        guard let path = target?.path, isInSyncDirectory(path) else {
             return menu
         }
 
-        let firstURL = urls[0]
-        let status = getFileStatus(firstURL.path)
+        // 添加菜单项
+        menu.addItem(withTitle: "MoveOff - 立即同步", action: #selector(syncNow), keyEquivalent: "")
+        menu.addItem(withTitle: "MoveOff - 在应用中显示", action: #selector(showInApp), keyEquivalent: "")
+        menu.addItem(NSMenuItem.separator())
 
-        // 根据状态添加不同的菜单项
-        switch menuKind {
-        case .contextualMenuForContainer,
-             .contextualMenuForItems:
-            // 上下文菜单
-            addContextMenuItems(to: menu, for: urls, status: status)
-
-        case .toolbarItemMenu:
-            // 工具栏菜单
-            addToolbarMenuItems(to: menu, for: urls)
-
-        default:
-            break
+        // 如果有冲突，添加解决冲突菜单
+        if hasConflict(items.first?.path ?? path) {
+            menu.addItem(withTitle: "MoveOff - 解决冲突", action: #selector(resolveConflict), keyEquivalent: "")
         }
+
+        menu.addItem(withTitle: "MoveOff - 获取共享链接", action: #selector(getShareLink), keyEquivalent: "")
 
         return menu
     }
 
-    func addContextMenuItems(to menu: NSMenu, for urls: [URL], status: Int) {
-        // 同步状态
-        let statusItem = NSMenuItem(
-            title: statusTitle(for: status),
-            action: nil,
-            keyEquivalent: ""
-        )
-        statusItem.isEnabled = false
-        menu.addItem(statusItem)
+    // MARK: - 状态徽章
 
-        menu.addItem(NSMenuItem.separator())
-
-        // 立即同步
-        let syncItem = NSMenuItem(
-            title: "立即同步",
-            action: #selector(syncNow(_:)),
-            keyEquivalent: ""
-        )
-        syncItem.target = self
-        menu.addItem(syncItem)
-
-        // 解决冲突
-        if status == 4 { // CONFLICT
-            let resolveItem = NSMenuItem(
-                title: "解决冲突...",
-                action: #selector(resolveConflict(_:)),
-                keyEquivalent: ""
-            )
-            resolveItem.target = self
-            menu.addItem(resolveItem)
+    override func badgeIdentifier(for url: URL) -> String {
+        guard isInSyncDirectory(url.path) else {
+            return ""
         }
 
-        menu.addItem(NSMenuItem.separator())
+        // 查询文件状态
+        if let status = getFileStatus(url.path) {
+            switch status {
+            case "SYNCED":
+                return "Synced"
+            case "SYNCING":
+                return "Syncing"
+            case "PENDING_UPLOAD", "PENDING_DOWNLOAD":
+                return "Pending"
+            case "CONFLICT":
+                return "Conflict"
+            case "ERROR":
+                return "Error"
+            default:
+                return ""
+            }
+        }
 
-        // 在 MoveOff 中显示
-        let showItem = NSMenuItem(
-            title: "在 MoveOff 中显示",
-            action: #selector(showInApp(_:)),
-            keyEquivalent: ""
-        )
-        showItem.target = self
-        menu.addItem(showItem)
+        return ""
+    }
 
-        // 共享链接
-        if status == 0 { // SYNCED
-            let shareItem = NSMenuItem(
-                title: "获取共享链接",
-                action: #selector(getShareLink(_:)),
-                keyEquivalent: ""
-            )
-            shareItem.target = self
-            menu.addItem(shareItem)
+    // MARK: - 操作回调
+
+    @objc func syncNow() {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        guard let path = items.first?.path else { return }
+
+        ipcClient?.send(message: [
+            "action": "TRIGGER_SYNC",
+            "path": path
+        ]) { response in
+            NSLog("同步响应: \(response)")
         }
     }
 
-    func addToolbarMenuItems(to menu: NSMenu, for urls: [URL]) {
-        let syncItem = NSMenuItem(
-            title: "同步选中项",
-            action: #selector(syncNow(_:)),
-            keyEquivalent: ""
-        )
-        syncItem.target = self
-        menu.addItem(syncItem)
+    @objc func showInApp() {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        guard let path = items.first?.path else { return }
 
-        let showItem = NSMenuItem(
-            title: "在 MoveOff 中打开",
-            action: #selector(showInApp(_:)),
-            keyEquivalent: ""
-        )
-        showItem.target = self
-        menu.addItem(showItem)
-    }
-
-    // MARK: - Actions
-
-    @objc func syncNow(_ sender: AnyObject?) {
-        guard let urls = FIFinderSyncController.default().selectedItemURLs(),
-              let firstURL = urls.first else { return }
-
-        guard let proxy = xpcConnection?.remoteObjectProxy as? MoveOffXPCProtocol else {
-            return
+        ipcClient?.send(message: [
+            "action": "SHOW_IN_APP",
+            "path": path
+        ]) { response in
+            NSLog("显示响应: \(response)")
         }
-
-        proxy.triggerSync(firstURL.path)
-
-        // 显示通知
-        showNotification(title: "MoveOff", message: "已开始同步 \(firstURL.lastPathComponent)")
     }
 
-    @objc func resolveConflict(_ sender: AnyObject?) {
-        guard let urls = FIFinderSyncController.default().selectedItemURLs(),
-              let firstURL = urls.first else { return }
+    @objc func resolveConflict() {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        guard let path = items.first?.path else { return }
 
-        guard let proxy = xpcConnection?.remoteObjectProxy as? MoveOffXPCProtocol else {
-            return
+        ipcClient?.send(message: [
+            "action": "RESOLVE_CONFLICT",
+            "path": path
+        ]) { response in
+            NSLog("解决冲突响应: \(response)")
         }
-
-        proxy.showInApp(firstURL.path)
     }
 
-    @objc func showInApp(_ sender: AnyObject?) {
-        guard let urls = FIFinderSyncController.default().selectedItemURLs(),
-              let firstURL = urls.first else { return }
+    @objc func getShareLink() {
+        let items = FIFinderSyncController.default().selectedItemURLs() ?? []
+        guard let path = items.first?.path else { return }
 
-        guard let proxy = xpcConnection?.remoteObjectProxy as? MoveOffXPCProtocol else {
-            return
+        ipcClient?.send(message: [
+            "action": "GET_SHARE_LINK",
+            "path": path
+        ]) { response in
+            NSLog("共享链接响应: \(response)")
         }
-
-        proxy.showInApp(firstURL.path)
     }
 
-    @objc func getShareLink(_ sender: AnyObject?) {
-        guard let urls = FIFinderSyncController.default().selectedItemURLs(),
-              let firstURL = urls.first else { return }
+    // MARK: - 辅助方法
 
-        // TODO: 获取共享链接
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString("https://moveoff.example.com/s/xxx", forType: .string)
-
-        showNotification(title: "MoveOff", message: "共享链接已复制到剪贴板")
+    private func getSyncRoot() -> URL? {
+        let homeDir = FileManager.default.homeDirectoryForCurrentUser
+        let syncPath = homeDir.appendingPathComponent("MoveOff")
+        return syncPath
     }
 
-    // MARK: - Helpers
+    private func isInSyncDirectory(_ path: String) -> Bool {
+        guard let syncRoot = getSyncRoot()?.path else { return false }
+        return path.hasPrefix(syncRoot)
+    }
 
-    func getFileStatus(_ path: String) -> Int {
-        guard let proxy = xpcConnection?.remoteObjectProxy as? MoveOffXPCProtocol else {
-            return -1
-        }
-
-        var status = -1
+    private func getFileStatus(_ path: String) -> String? {
+        // 同步查询文件状态
+        var status: String?
         let semaphore = DispatchSemaphore(value: 0)
 
-        proxy.getFileStatus(path) { s in
-            status = s
+        ipcClient?.send(message: [
+            "action": "GET_FILE_STATUS",
+            "path": path
+        ]) { response in
+            if let dict = response as? [String: Any] {
+                status = dict["status"] as? String
+            }
             semaphore.signal()
         }
 
-        _ = semaphore.wait(timeout: .now() + 0.5)
+        semaphore.wait(timeout: .now() + 1.0)
         return status
     }
 
-    func statusTitle(for status: Int) -> String {
-        switch status {
-        case 0: return "✓ 已同步"
-        case 1: return "⟳ 同步中..."
-        case 2: return "↑ 等待上传"
-        case 3: return "↓ 等待下载"
-        case 4: return "⚠ 冲突"
-        case 5: return "✕ 错误"
-        default: return "MoveOff"
+    private func hasConflict(_ path: String) -> Bool {
+        return getFileStatus(path) == "CONFLICT"
+    }
+}
+
+// MARK: - IPC 客户端
+
+class IPCClient {
+    private let socketPath: String
+    private var socket: Int32 = -1
+
+    init(socketPath: String) {
+        self.socketPath = socketPath
+    }
+
+    deinit {
+        close()
+    }
+
+    func connect() -> Bool {
+        // 创建 Unix Domain Socket
+        socket = Darwin.socket(AF_UNIX, SOCK_STREAM, 0)
+        guard socket >= 0 else {
+            NSLog("创建 socket 失败")
+            return false
+        }
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        strncpy(&addr.sun_path.0, socketPath, MemoryLayout.size(ofValue: addr.sun_path) - 1)
+
+        let result = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { addrPtr in
+                Darwin.connect(socket, addrPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+
+        if result < 0 {
+            NSLog("连接 socket 失败: \(errno)")
+            close()
+            return false
+        }
+
+        return true
+    }
+
+    func send(message: [String: String], completion: @escaping (Any?) -> Void) {
+        guard connect() else {
+            completion(nil)
+            return
+        }
+
+        defer { close() }
+
+        // 序列化消息
+        do {
+            let data = try JSONSerialization.data(withJSONObject: message)
+            var jsonString = String(data: data, encoding: .utf8)!
+            jsonString += "\n"
+
+            // 发送消息
+            guard let sendData = jsonString.data(using: .utf8) else {
+                completion(nil)
+                return
+            }
+
+            sendData.withUnsafeBytes { ptr in
+                _ = Darwin.send(socket, ptr.baseAddress, sendData.count, 0)
+            }
+
+            // 接收响应
+            var buffer = Data()
+            let tempBuffer = UnsafeMutablePointer<UInt8>.allocate(capacity: 4096)
+            defer { tempBuffer.deallocate() }
+
+            while true {
+                let bytesRead = Darwin.recv(socket, tempBuffer, 4096, 0)
+                if bytesRead <= 0 { break }
+                buffer.append(tempBuffer, count: bytesRead)
+                if buffer.contains(10) { break } // 遇到换行符
+            }
+
+            // 解析响应
+            if let responseString = String(data: buffer, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               let responseData = responseString.data(using: .utf8) {
+                let response = try JSONSerialization.jsonObject(with: responseData)
+                completion(response)
+            } else {
+                completion(nil)
+            }
+
+        } catch {
+            NSLog("发送消息失败: \(error)")
+            completion(nil)
         }
     }
 
-    func showNotification(title: String, message: String) {
-        let notification = NSUserNotification()
-        notification.title = title
-        notification.informativeText = message
-        NSUserNotificationCenter.default.deliver(notification)
+    func close() {
+        if socket >= 0 {
+            Darwin.close(socket)
+            socket = -1
+        }
     }
 }

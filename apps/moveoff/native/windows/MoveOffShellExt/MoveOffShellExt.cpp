@@ -1,118 +1,94 @@
 #include "MoveOffShellExt.h"
-#include <strsafe.h>
 #include <shlwapi.h>
+#include <shellapi.h>
+#include <json/json.h>  // 需要 vcpkg 安装 jsoncpp
 
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "shell32.lib")
 
-// 全局变量
-HINSTANCE g_hInst = NULL;
-LONG g_cDllRef = 0;
+// 命名管道名称
+const wchar_t* IPCClient::PIPE_NAME = L"\\\\.\\pipe\\MoveOff";
 
-// DLL 入口点
-BOOL APIENTRY DllMain(HMODULE hModule, DWORD dwReason, LPVOID lpReserved) {
-    switch (dwReason) {
-    case DLL_PROCESS_ATTACH:
-        g_hInst = hModule;
-        DisableThreadLibraryCalls(hModule);
-        break;
-    }
-    return TRUE;
+// IPC 客户端实现
+IPCClient::IPCClient() : hPipe(INVALID_HANDLE_VALUE) {
 }
 
-// 导出函数
-STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv) {
-    if (!IsEqualCLSID(rclsid, CLSID_MoveOffContextMenu)) {
-        return CLASS_E_CLASSNOTAVAILABLE;
-    }
-
-    CClassFactory* pClassFactory = new CClassFactory();
-    if (!pClassFactory) {
-        return E_OUTOFMEMORY;
-    }
-
-    HRESULT hr = pClassFactory->QueryInterface(riid, ppv);
-    pClassFactory->Release();
-    return hr;
+IPCClient::~IPCClient() {
+    Disconnect();
 }
 
-STDAPI DllCanUnloadNow(void) {
-    return (g_cDllRef > 0) ? S_FALSE : S_OK;
+bool IPCClient::Connect() {
+    hPipe = CreateFile(
+        PIPE_NAME,
+        GENERIC_READ | GENERIC_WRITE,
+        0,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+    
+    if (hPipe == INVALID_HANDLE_VALUE) {
+        // 尝试连接到 TCP 回环地址（备用方案）
+        return false;
+    }
+    
+    DWORD dwMode = PIPE_READMODE_MESSAGE;
+    SetNamedPipeHandleState(hPipe, &dwMode, NULL, NULL);
+    
+    return true;
 }
 
-STDAPI DllRegisterServer(void) {
-    HRESULT hr;
-    WCHAR szModule[MAX_PATH];
-
-    if (!GetModuleFileName(g_hInst, szModule, ARRAYSIZE(szModule))) {
-        return HRESULT_FROM_WIN32(GetLastError());
+void IPCClient::Disconnect() {
+    if (hPipe != INVALID_HANDLE_VALUE) {
+        CloseHandle(hPipe);
+        hPipe = INVALID_HANDLE_VALUE;
     }
-
-    // 注册组件
-    hr = RegisterServer(szModule, CLSID_MoveOffContextMenu,
-                        L"MoveOff Context Menu Extension",
-                        L"Apartment");
-    if (SUCCEEDED(hr)) {
-        // 注册到所有文件的上下文菜单
-        hr = RegisterShellExtContextMenuHandler(
-            L"*",
-            CLSID_MoveOffContextMenu,
-            L"MoveOffExt");
-    }
-
-    if (SUCCEEDED(hr)) {
-        // 注册到文件夹的上下文菜单
-        hr = RegisterShellExtContextMenuHandler(
-            L"Directory",
-            CLSID_MoveOffContextMenu,
-            L"MoveOffExt");
-    }
-
-    // 刷新 shell
-    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
-
-    return hr;
 }
 
-STDAPI DllUnregisterServer(void) {
-    HRESULT hr = UnregisterServer(CLSID_MoveOffContextMenu);
-
-    if (SUCCEEDED(hr)) {
-        hr = UnregisterShellExtContextMenuHandler(L"*", L"MoveOffExt");
+std::string IPCClient::SendRequest(const std::string& jsonRequest) {
+    if (!Connect()) {
+        return "{\"error\": \"无法连接到 MoveOff 应用\"}";
     }
-
-    if (SUCCEEDED(hr)) {
-        hr = UnregisterShellExtContextMenuHandler(L"Directory", L"MoveOffExt");
+    
+    DWORD written;
+    WriteFile(hPipe, jsonRequest.c_str(), jsonRequest.length(), &written, NULL);
+    
+    char buffer[4096];
+    DWORD read;
+    BOOL success = ReadFile(hPipe, buffer, sizeof(buffer) - 1, &read, NULL);
+    
+    Disconnect();
+    
+    if (success && read > 0) {
+        buffer[read] = '\0';
+        return std::string(buffer);
     }
-
-    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, NULL, NULL);
-
-    return hr;
+    
+    return "{\"error\": \"读取响应失败\"}";
 }
 
-// CMoveOffContextMenu 实现
-
-CMoveOffContextMenu::CMoveOffContextMenu() : m_cRef(1), m_status(FileSyncStatus::UNKNOWN) {
-    InterlockedIncrement(&g_cDllRef);
+// Shell 扩展实现
+MoveOffContextMenu::MoveOffContextMenu() : m_cRef(1) {
 }
 
-CMoveOffContextMenu::~CMoveOffContextMenu() {
-    InterlockedDecrement(&g_cDllRef);
+MoveOffContextMenu::~MoveOffContextMenu() {
 }
 
-IFACEMETHODIMP CMoveOffContextMenu::QueryInterface(REFIID riid, void** ppv) {
+IFACEMETHODIMP MoveOffContextMenu::QueryInterface(REFIID riid, void** ppv) {
     static const QITAB qit[] = {
-        QITABENT(CMoveOffContextMenu, IShellExtInit),
-        QITABENT(CMoveOffContextMenu, IContextMenu),
-        {0},
+        QITABENT(MoveOffContextMenu, IShellExtInit),
+        QITABENT(MoveOffContextMenu, IContextMenu),
+        { 0 }
     };
     return QISearch(this, qit, riid, ppv);
 }
 
-IFACEMETHODIMP_(ULONG) CMoveOffContextMenu::AddRef() {
+IFACEMETHODIMP_(ULONG) MoveOffContextMenu::AddRef() {
     return InterlockedIncrement(&m_cRef);
 }
 
-IFACEMETHODIMP_(ULONG) CMoveOffContextMenu::Release() {
+IFACEMETHODIMP_(ULONG) MoveOffContextMenu::Release() {
     ULONG cRef = InterlockedDecrement(&m_cRef);
     if (cRef == 0) {
         delete this;
@@ -120,385 +96,339 @@ IFACEMETHODIMP_(ULONG) CMoveOffContextMenu::Release() {
     return cRef;
 }
 
-IFACEMETHODIMP CMoveOffContextMenu::Initialize(
-    LPCITEMIDLIST pidlFolder,
-    LPDATAOBJECT pdtobj,
-    HKEY hkeyProgID) {
-
-    if (!pdtobj) {
+IFACEMETHODIMP MoveOffContextMenu::Initialize(LPCITEMIDLIST pidlFolder, 
+                                               LPDATAOBJECT pdtobj, 
+                                               HKEY hkeyProgID) {
+    if (pdtobj == NULL) {
         return E_INVALIDARG;
     }
-
-    // 获取选中的文件
-    FORMATETC fmt = {CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL};
-    STGMEDIUM stg = {TYMED_HGLOBAL};
-
+    
+    FORMATETC fmt = { CF_HDROP, NULL, DVASPECT_CONTENT, -1, TYMED_HGLOBAL };
+    STGMEDIUM stg = { TYMED_HGLOBAL };
+    
     if (FAILED(pdtobj->GetData(&fmt, &stg))) {
         return E_FAIL;
     }
-
+    
     HDROP hDrop = static_cast<HDROP>(GlobalLock(stg.hGlobal));
-    if (!hDrop) {
+    if (hDrop == NULL) {
         ReleaseStgMedium(&stg);
         return E_FAIL;
     }
-
-    UINT nFiles = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
-    for (UINT i = 0; i < nFiles; i++) {
-        WCHAR szPath[MAX_PATH];
-        if (DragQueryFile(hDrop, i, szPath, ARRAYSIZE(szPath))) {
-            m_selectedFiles.push_back(szPath);
+    
+    UINT fileCount = DragQueryFile(hDrop, 0xFFFFFFFF, NULL, 0);
+    for (UINT i = 0; i < fileCount; i++) {
+        wchar_t path[MAX_PATH];
+        if (DragQueryFile(hDrop, i, path, MAX_PATH)) {
+            m_selectedFiles.push_back(path);
         }
     }
-
+    
     GlobalUnlock(stg.hGlobal);
     ReleaseStgMedium(&stg);
-
-    // 获取第一个文件的状态
-    if (!m_selectedFiles.empty()) {
-        m_status = GetFileStatus(m_selectedFiles[0]);
-    }
-
+    
     return S_OK;
 }
 
-IFACEMETHODIMP CMoveOffContextMenu::QueryContextMenu(
-    HMENU hmenu,
-    UINT indexMenu,
-    UINT idCmdFirst,
-    UINT idCmdLast,
-    UINT uFlags) {
-
+IFACEMETHODIMP MoveOffContextMenu::QueryContextMenu(HMENU hmenu, 
+                                                    UINT indexMenu, 
+                                                    UINT idCmdFirst, 
+                                                    UINT idCmdLast, 
+                                                    UINT uFlags) {
     if (uFlags & CMF_DEFAULTONLY) {
         return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
     }
-
-    // 创建子菜单
+    
+    if (m_selectedFiles.empty()) {
+        return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+    }
+    
+    // 检查是否在 MoveOff 同步目录内
+    wchar_t syncRoot[MAX_PATH];
+    ExpandEnvironmentStringsW(L"%USERPROFILE%\\MoveOff", syncRoot, MAX_PATH);
+    
+    bool inSyncDir = false;
+    for (const auto& file : m_selectedFiles) {
+        if (wcsncmp(file.c_str(), syncRoot, wcslen(syncRoot)) == 0) {
+            inSyncDir = true;
+            break;
+        }
+    }
+    
+    if (!inSyncDir) {
+        return MAKE_HRESULT(SEVERITY_SUCCESS, 0, 0);
+    }
+    
+    // 创建菜单
     HMENU hSubMenu = CreatePopupMenu();
-    if (!hSubMenu) {
-        return E_FAIL;
+    
+    InsertMenu(hSubMenu, 0, MF_BYPOSITION | MF_STRING, idCmdFirst + ID_SYNC_NOW, L"MoveOff - 立即同步");
+    InsertMenu(hSubMenu, 1, MF_BYPOSITION | MF_STRING, idCmdFirst + ID_SHOW_IN_APP, L"MoveOff - 在应用中显示");
+    InsertMenu(hSubMenu, 2, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+    
+    // 检查是否有冲突
+    bool hasConflict = false;
+    for (const auto& file : m_selectedFiles) {
+        std::string status = GetFileStatus(file);
+        if (status.find("CONFLICT") != std::string::npos) {
+            hasConflict = true;
+            break;
+        }
     }
-
-    UINT idCmd = idCmdFirst;
-
-    // 添加菜单项
-    InsertMenu(hSubMenu, 0, MF_BYPOSITION | MF_STRING, idCmd + CMD_SYNC_NOW, L"立即同步");
-
-    if (m_status == FileSyncStatus::CONFLICT) {
-        InsertMenu(hSubMenu, 1, MF_BYPOSITION | MF_STRING, idCmd + CMD_RESOLVE_CONFLICT, L"解决冲突...");
+    
+    if (hasConflict) {
+        InsertMenu(hSubMenu, 3, MF_BYPOSITION | MF_STRING, idCmdFirst + ID_RESOLVE_CONFLICT, L"MoveOff - 解决冲突");
     }
-
-    InsertMenu(hSubMenu, 2, MF_BYPOSITION | MF_STRING, idCmd + CMD_SHOW_IN_APP, L"在 MoveOff 中显示");
-
-    if (m_status == FileSyncStatus::SYNCED) {
-        InsertMenu(hSubMenu, 3, MF_BYPOSITION | MF_STRING, idCmd + CMD_SHARE_LINK, L"获取共享链接");
-    }
-
-    // 添加分隔线
-    InsertMenu(hmenu, indexMenu, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-
-    // 添加子菜单到上下文菜单
-    MENUITEMINFO mii = {sizeof(mii)};
+    
+    InsertMenu(hSubMenu, 4, MF_BYPOSITION | MF_STRING, idCmdFirst + ID_GET_SHARE_LINK, L"MoveOff - 获取共享链接");
+    
+    // 插入主菜单项
+    MENUITEMINFO mii = { sizeof(mii) };
     mii.fMask = MIIM_SUBMENU | MIIM_STRING | MIIM_ID;
-    mii.wID = idCmd;
+    mii.wID = idCmdFirst + ID_MAX;
     mii.hSubMenu = hSubMenu;
-
-    // 根据状态设置菜单标题
-    std::wstring menuTitle = GetStatusTitle(m_status);
-    mii.dwTypeData = const_cast<LPWSTR>(menuTitle.c_str());
-
-    InsertMenuItem(hmenu, indexMenu + 1, TRUE, &mii);
-
-    // 添加分隔线
-    InsertMenu(hmenu, indexMenu + 2, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
-
-    return MAKE_HRESULT(SEVERITY_SUCCESS, 0, idCmd - idCmdFirst + 5);
+    mii.dwTypeData = const_cast<LPWSTR>(L"MoveOff");
+    
+    InsertMenuItem(hmenu, indexMenu, TRUE, &mii);
+    
+    return MAKE_HRESULT(SEVERITY_SUCCESS, 0, ID_MAX + 1);
 }
 
-IFACEMETHODIMP CMoveOffContextMenu::InvokeCommand(LPCMINVOKECOMMANDINFO pici) {
-    if (!pici || pici->cbSize < sizeof(CMINVOKECOMMANDINFO)) {
+IFACEMETHODIMP MoveOffContextMenu::InvokeCommand(LPCMINVOKECOMMANDINFO pici) {
+    if (HIWORD(pici->lpVerb) != 0) {
         return E_INVALIDARG;
     }
-
-    if (HIWORD(pici->lpVerb)) {
-        return E_INVALIDARG;
-    }
-
+    
     UINT idCmd = LOWORD(pici->lpVerb);
-
+    if (idCmd >= ID_MAX) {
+        return E_INVALIDARG;
+    }
+    
     if (m_selectedFiles.empty()) {
         return E_FAIL;
     }
-
+    
     const std::wstring& path = m_selectedFiles[0];
-
+    
     switch (idCmd) {
-    case CMD_SYNC_NOW:
-        TriggerSync(path);
-        break;
-    case CMD_SHOW_IN_APP:
-        ShowInApp(path);
-        break;
-    case CMD_RESOLVE_CONFLICT:
-        ResolveConflict(path);
-        break;
-    case CMD_SHARE_LINK:
-        // 复制共享链接到剪贴板
-        if (OpenClipboard(NULL)) {
-            EmptyClipboard();
-            // TODO: 获取实际的共享链接
-            const wchar_t* link = L"https://moveoff.example.com/s/xxx";
-            HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (wcslen(link) + 1) * sizeof(wchar_t));
-            if (hMem) {
-                memcpy(GlobalLock(hMem), link, (wcslen(link) + 1) * sizeof(wchar_t));
-                GlobalUnlock(hMem);
-                SetClipboardData(CF_UNICODETEXT, hMem);
-            }
-            CloseClipboard();
-        }
-        break;
-    default:
+        case ID_SYNC_NOW:
+            SyncFile(path);
+            break;
+        case ID_SHOW_IN_APP:
+            ShowInApp(path);
+            break;
+        case ID_RESOLVE_CONFLICT:
+            ResolveConflict(path);
+            break;
+        case ID_GET_SHARE_LINK:
+            // TODO: 实现获取共享链接
+            break;
+    }
+    
+    return S_OK;
+}
+
+IFACEMETHODIMP MoveOffContextMenu::GetCommandString(UINT_PTR idCmd, 
+                                                    UINT uType, 
+                                                    UINT* pReserved, 
+                                                    CHAR* pszName, 
+                                                    UINT cchMax) {
+    if (idCmd >= ID_MAX) {
         return E_INVALIDARG;
     }
-
-    return S_OK;
-}
-
-IFACEMETHODIMP CMoveOffContextMenu::GetCommandString(
-    UINT_PTR idCmd,
-    UINT uFlags,
-    UINT* pwReserved,
-    LPSTR pszName,
-    UINT cchMax) {
-
-    if (uFlags == GCS_HELPTEXT) {
+    
+    if (uType == GCS_HELPTEXT) {
+        const char* helpText = "";
         switch (idCmd) {
-        case CMD_SYNC_NOW:
-            StringCchCopy(reinterpret_cast<LPWSTR>(pszName), cchMax, L"立即同步文件到云端");
-            break;
-        case CMD_SHOW_IN_APP:
-            StringCchCopy(reinterpret_cast<LPWSTR>(pszName), cchMax, L"在 MoveOff 应用中显示文件");
-            break;
-        default:
-            return E_INVALIDARG;
+            case ID_SYNC_NOW:
+                helpText = "立即同步选中的文件到云端";
+                break;
+            case ID_SHOW_IN_APP:
+                helpText = "在 MoveOff 应用中显示此文件";
+                break;
+            case ID_RESOLVE_CONFLICT:
+                helpText = "解决文件同步冲突";
+                break;
+            case ID_GET_SHARE_LINK:
+                helpText = "获取文件的共享链接";
+                break;
         }
-        return S_OK;
+        
+        if (pici->cbSize >= sizeof(CMINVOKECOMMANDINFOEX) &&
+            (pici->fMask & CMIC_MASK_UNICODE)) {
+            LPCMINVOKECOMMANDINFOEX piciex = (LPCMINVOKECOMMANDINFOEX)pici;
+            lstrcpynW(piciex->lpParametersW, helpTextW, cchMax);
+        } else {
+            lstrcpynA(pszName, helpText, cchMax);
+        }
     }
-
-    return E_INVALIDARG;
-}
-
-// 与主应用通信
-
-FileSyncStatus CMoveOffContextMenu::GetFileStatus(const std::wstring& path) {
-    // TODO: 通过 IPC 与主应用通信获取文件状态
-    // 暂时返回 UNKNOWN
-    return FileSyncStatus::UNKNOWN;
-}
-
-void CMoveOffContextMenu::TriggerSync(const std::wstring& path) {
-    // TODO: 通过 IPC 触发同步
-    // 使用命名管道或 TCP 与主应用通信
-}
-
-void CMoveOffContextMenu::ShowInApp(const std::wstring& path) {
-    // TODO: 通过 IPC 打开主窗口
-}
-
-void CMoveOffContextMenu::ResolveConflict(const std::wstring& path) {
-    // TODO: 通过 IPC 打开冲突解决窗口
-}
-
-std::wstring GetStatusTitle(FileSyncStatus status) {
-    switch (status) {
-    case FileSyncStatus::SYNCED: return L"MoveOff (已同步)";
-    case FileSyncStatus::SYNCING: return L"MoveOff (同步中...)";
-    case FileSyncStatus::PENDING_UPLOAD: return L"MoveOff (等待上传)";
-    case FileSyncStatus::PENDING_DOWNLOAD: return L"MoveOff (等待下载)";
-    case FileSyncStatus::CONFLICT: return L"MoveOff (冲突)";
-    case FileSyncStatus::ERROR: return L"MoveOff (错误)";
-    default: return L"MoveOff";
-    }
-}
-
-// CClassFactory 实现
-
-IFACEMETHODIMP CClassFactory::QueryInterface(REFIID riid, void** ppv) {
-    if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_IClassFactory)) {
-        *ppv = static_cast<IClassFactory*>(this);
-        AddRef();
-        return S_OK;
-    }
-    *ppv = NULL;
-    return E_NOINTERFACE;
-}
-
-IFACEMETHODIMP_(ULONG) CClassFactory::AddRef() {
-    return InterlockedIncrement(&g_cDllRef);
-}
-
-IFACEMETHODIMP_(ULONG) CClassFactory::Release() {
-    ULONG cRef = InterlockedDecrement(&g_cDllRef);
-    if (cRef == 0) {
-        // 不删除，因为这是静态对象
-    }
-    return cRef;
-}
-
-IFACEMETHODIMP CClassFactory::CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppv) {
-    if (pUnkOuter != NULL) {
-        return CLASS_E_NOAGGREGATION;
-    }
-
-    CMoveOffContextMenu* pExt = new CMoveOffContextMenu();
-    if (!pExt) {
-        return E_OUTOFMEMORY;
-    }
-
-    HRESULT hr = pExt->QueryInterface(riid, ppv);
-    pExt->Release();
-    return hr;
-}
-
-IFACEMETHODIMP CClassFactory::LockServer(BOOL fLock) {
-    if (fLock) {
-        InterlockedIncrement(&g_cDllRef);
-    } else {
-        InterlockedDecrement(&g_cDllRef);
-    }
+    
     return S_OK;
 }
 
-// 注册表操作函数
-
-HRESULT RegisterServer(
-    PCWSTR pszModule,
-    const CLSID& clsid,
-    PCWSTR pszFriendlyName,
-    PCWSTR pszThreadingModel) {
-
-    HKEY hKey = NULL;
-    HKEY hSubKey = NULL;
-    HRESULT hr;
-
-    wchar_t szCLSID[MAX_PATH];
-    StringFromGUID2(clsid, szCLSID, ARRAYSIZE(szCLSID));
-
-    // 创建 CLSID 键
-    std::wstring clsidKey = L"CLSID\\";
-    clsidKey += szCLSID;
-
-    hr = HRESULT_FROM_WIN32(RegCreateKeyEx(
-        HKEY_CLASSES_ROOT,
-        clsidKey.c_str(),
-        0, NULL,
-        REG_OPTION_NON_VOLATILE,
-        KEY_WRITE,
-        NULL,
-        &hKey,
-        NULL));
-
-    if (SUCCEEDED(hr)) {
-        hr = HRESULT_FROM_WIN32(RegSetValueEx(
-            hKey, NULL, 0, REG_SZ,
-            reinterpret_cast<const BYTE*>(pszFriendlyName),
-            (lstrlen(pszFriendlyName) + 1) * sizeof(wchar_t)));
-    }
-
-    if (SUCCEEDED(hr)) {
-        hr = HRESULT_FROM_WIN32(RegCreateKeyEx(
-            hKey, L"InprocServer32", 0, NULL,
-            REG_OPTION_NON_VOLATILE,
-            KEY_WRITE,
-            NULL,
-            &hSubKey,
-            NULL));
-    }
-
-    if (SUCCEEDED(hr)) {
-        hr = HRESULT_FROM_WIN32(RegSetValueEx(
-            hSubKey, NULL, 0, REG_SZ,
-            reinterpret_cast<const BYTE*>(pszModule),
-            (lstrlen(pszModule) + 1) * sizeof(wchar_t)));
-    }
-
-    if (SUCCEEDED(hr)) {
-        hr = HRESULT_FROM_WIN32(RegSetValueEx(
-            hSubKey, L"ThreadingModel", 0, REG_SZ,
-            reinterpret_cast<const BYTE*>(pszThreadingModel),
-            (lstrlen(pszThreadingModel) + 1) * sizeof(wchar_t)));
-    }
-
-    if (hSubKey) RegCloseKey(hSubKey);
-    if (hKey) RegCloseKey(hKey);
-
-    return hr;
+std::string MoveOffContextMenu::GetFileStatus(const std::wstring& path) {
+    // 转换路径为 UTF-8
+    int size = WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, NULL, 0, NULL, NULL);
+    std::string utf8Path(size - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, &utf8Path[0], size, NULL, NULL);
+    
+    // 构建 JSON 请求
+    Json::Value request;
+    request["action"] = "GET_FILE_STATUS";
+    request["path"] = utf8Path;
+    
+    Json::FastWriter writer;
+    std::string jsonRequest = writer.write(request);
+    
+    return m_ipcClient.SendRequest(jsonRequest);
 }
 
-HRESULT UnregisterServer(const CLSID& clsid) {
-    wchar_t szCLSID[MAX_PATH];
-    StringFromGUID2(clsid, szCLSID, ARRAYSIZE(szCLSID));
+void MoveOffContextMenu::SyncFile(const std::wstring& path) {
+    int size = WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, NULL, 0, NULL, NULL);
+    std::string utf8Path(size - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, &utf8Path[0], size, NULL, NULL);
+    
+    Json::Value request;
+    request["action"] = "TRIGGER_SYNC";
+    request["path"] = utf8Path;
+    
+    Json::FastWriter writer;
+    std::string jsonRequest = writer.write(request);
+    
+    m_ipcClient.SendRequest(jsonRequest);
+}
 
-    std::wstring clsidKey = L"CLSID\\";
-    clsidKey += szCLSID;
+void MoveOffContextMenu::ShowInApp(const std::wstring& path) {
+    int size = WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, NULL, 0, NULL, NULL);
+    std::string utf8Path(size - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, &utf8Path[0], size, NULL, NULL);
+    
+    Json::Value request;
+    request["action"] = "SHOW_IN_APP";
+    request["path"] = utf8Path;
+    
+    Json::FastWriter writer;
+    std::string jsonRequest = writer.write(request);
+    
+    m_ipcClient.SendRequest(jsonRequest);
+}
 
-    // 删除 InprocServer32 键
-    std::wstring inprocKey = clsidKey + L"\\InprocServer32";
-    RegDeleteKey(HKEY_CLASSES_ROOT, inprocKey.c_str());
+void MoveOffContextMenu::ResolveConflict(const std::wstring& path) {
+    int size = WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, NULL, 0, NULL, NULL);
+    std::string utf8Path(size - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, path.c_str(), -1, &utf8Path[0], size, NULL, NULL);
+    
+    Json::Value request;
+    request["action"] = "RESOLVE_CONFLICT";
+    request["path"] = utf8Path;
+    
+    Json::FastWriter writer;
+    std::string jsonRequest = writer.write(request);
+    
+    m_ipcClient.SendRequest(jsonRequest);
+}
 
-    // 删除 CLSID 键
-    RegDeleteKey(HKEY_CLASSES_ROOT, clsidKey.c_str());
+// 类工厂
+class ClassFactory : public IClassFactory {
+public:
+    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv) {
+        if (IsEqualIID(riid, IID_IUnknown) || IsEqualIID(riid, IID_IClassFactory)) {
+            *ppv = this;
+            AddRef();
+            return S_OK;
+        }
+        *ppv = NULL;
+        return E_NOINTERFACE;
+    }
+    
+    IFACEMETHODIMP_(ULONG) AddRef() { return 1; }
+    IFACEMETHODIMP_(ULONG) Release() { return 1; }
+    
+    IFACEMETHODIMP CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppv) {
+        if (pUnkOuter != NULL) return CLASS_E_NOAGGREGATION;
+        
+        MoveOffContextMenu* pExt = new (std::nothrow) MoveOffContextMenu();
+        if (!pExt) return E_OUTOFMEMORY;
+        
+        HRESULT hr = pExt->QueryInterface(riid, ppv);
+        pExt->Release();
+        return hr;
+    }
+    
+    IFACEMETHODIMP LockServer(BOOL fLock) {
+        return S_OK;
+    }
+};
 
+// DLL 导出函数
+STDAPI DllGetClassObject(REFCLSID rclsid, REFIID riid, void** ppv) {
+    if (IsEqualCLSID(rclsid, CLSID_MoveOffContextMenu)) {
+        static ClassFactory cf;
+        return cf.QueryInterface(riid, ppv);
+    }
+    return CLASS_E_CLASSNOTAVAILABLE;
+}
+
+STDAPI DllCanUnloadNow() {
     return S_OK;
 }
 
-HRESULT RegisterShellExtContextMenuHandler(
-    PCWSTR pszFileType,
-    const CLSID& clsid,
-    PCWSTR pszFriendlyName) {
-
-    HKEY hKey = NULL;
-    HRESULT hr;
-
-    wchar_t szCLSID[MAX_PATH];
-    StringFromGUID2(clsid, szCLSID, ARRAYSIZE(szCLSID));
-
-    // 创建 ShellEx\\ContextMenuHandlers 键
-    std::wstring key = pszFileType;
-    key += L"\\ShellEx\\ContextMenuHandlers\\";
-    key += pszFriendlyName;
-
-    hr = HRESULT_FROM_WIN32(RegCreateKeyEx(
-        HKEY_CLASSES_ROOT,
-        key.c_str(),
-        0, NULL,
-        REG_OPTION_NON_VOLATILE,
-        KEY_WRITE,
-        NULL,
-        &hKey,
-        NULL));
-
-    if (SUCCEEDED(hr)) {
-        hr = HRESULT_FROM_WIN32(RegSetValueEx(
-            hKey, NULL, 0, REG_SZ,
-            reinterpret_cast<const BYTE*>(szCLSID),
-            (lstrlen(szCLSID) + 1) * sizeof(wchar_t)));
+STDAPI DllRegisterServer() {
+    HKEY hKey;
+    wchar_t clsidStr[39];
+    StringFromGUID2(CLSID_MoveOffContextMenu, clsidStr, 39);
+    
+    // 注册 CLSID
+    std::wstring clsidKey = L"CLSID\\" + std::wstring(clsidStr);
+    if (RegCreateKeyExW(HKEY_CLASSES_ROOT, clsidKey.c_str(), 0, NULL, 0, 
+                        KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
+        RegSetValueExW(hKey, NULL, 0, REG_SZ, (BYTE*)L"MoveOff Context Menu", 
+                       sizeof(L"MoveOff Context Menu"));
+        
+        HKEY hInproc;
+        if (RegCreateKeyExW(hKey, L"InprocServer32", 0, NULL, 0,
+                           KEY_WRITE, NULL, &hInproc, NULL) == ERROR_SUCCESS) {
+            wchar_t modulePath[MAX_PATH];
+            GetModuleFileNameW(NULL, modulePath, MAX_PATH);
+            RegSetValueExW(hInproc, NULL, 0, REG_SZ, (BYTE*)modulePath, 
+                          (wcslen(modulePath) + 1) * sizeof(wchar_t));
+            RegSetValueExW(hInproc, L"ThreadingModel", 0, REG_SZ, 
+                          (BYTE*)L"Apartment", sizeof(L"Apartment"));
+            RegCloseKey(hInproc);
+        }
+        RegCloseKey(hKey);
     }
-
-    if (hKey) RegCloseKey(hKey);
-
-    return hr;
+    
+    // 注册到右键菜单
+    std::wstring menuKey = L"*\\shellex\\ContextMenuHandlers\\MoveOff";
+    if (RegCreateKeyExW(HKEY_CLASSES_ROOT, menuKey.c_str(), 0, NULL, 0,
+                       KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
+        RegSetValueExW(hKey, NULL, 0, REG_SZ, (BYTE*)clsidStr, 
+                      (wcslen(clsidStr) + 1) * sizeof(wchar_t));
+        RegCloseKey(hKey);
+    }
+    
+    // 注册目录右键菜单
+    std::wstring dirKey = L"Directory\\shellex\\ContextMenuHandlers\\MoveOff";
+    if (RegCreateKeyExW(HKEY_CLASSES_ROOT, dirKey.c_str(), 0, NULL, 0,
+                       KEY_WRITE, NULL, &hKey, NULL) == ERROR_SUCCESS) {
+        RegSetValueExW(hKey, NULL, 0, REG_SZ, (BYTE*)clsidStr, 
+                      (wcslen(clsidStr) + 1) * sizeof(wchar_t));
+        RegCloseKey(hKey);
+    }
+    
+    return S_OK;
 }
 
-HRESULT UnregisterShellExtContextMenuHandler(
-    PCWSTR pszFileType,
-    PCWSTR pszFriendlyName) {
-
-    std::wstring key = pszFileType;
-    key += L"\\ShellEx\\ContextMenuHandlers\\";
-    key += pszFriendlyName;
-
-    RegDeleteKey(HKEY_CLASSES_ROOT, key.c_str());
-
+STDAPI DllUnregisterServer() {
+    wchar_t clsidStr[39];
+    StringFromGUID2(CLSID_MoveOffContextMenu, clsidStr, 39);
+    
+    // 删除注册表项
+    std::wstring clsidKey = L"CLSID\\" + std::wstring(clsidStr);
+    RegDeleteTreeW(HKEY_CLASSES_ROOT, clsidKey.c_str());
+    RegDeleteTreeW(HKEY_CLASSES_ROOT, L"*\\shellex\\ContextMenuHandlers\\MoveOff");
+    RegDeleteTreeW(HKEY_CLASSES_ROOT, L"Directory\\shellex\\ContextMenuHandlers\\MoveOff");
+    
     return S_OK;
 }

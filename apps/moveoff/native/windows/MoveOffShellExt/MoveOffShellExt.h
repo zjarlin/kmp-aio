@@ -5,68 +5,63 @@
 #include <string>
 #include <vector>
 
-// {YOUR-GUID-HERE-REPLACE-THIS}
-// 使用 guidgen 生成新的 GUID
-const CLSID CLSID_MoveOffContextMenu =
-    {0x12345678, 0x1234, 0x1234, {0x12, 0x34, 0x12, 0x34, 0x56, 0x78, 0x90, 0xAB}};
+// {B8A4C3D2-E5F6-4A7B-8C9D-0E1F2A3B4C5D} - 生成新的 GUID 替换此值
+const CLSID CLSID_MoveOffContextMenu = 
+    {0xB8A4C3D2, 0xE5F6, 0x4A7B, {0x8C, 0x9D, 0x0E, 0x1F, 0x2A, 0x3B, 0x4C, 0x5D}};
 
-// 文件同步状态
-enum class FileSyncStatus {
-    UNKNOWN = -1,
-    SYNCED = 0,
-    SYNCING = 1,
-    PENDING_UPLOAD = 2,
-    PENDING_DOWNLOAD = 3,
-    CONFLICT = 4,
-    ERROR = 5
+// IPC 客户端类
+class IPCClient {
+public:
+    IPCClient();
+    ~IPCClient();
+    
+    bool Connect();
+    void Disconnect();
+    std::string SendRequest(const std::string& jsonRequest);
+    
+private:
+    HANDLE hPipe;
+    static const wchar_t* PIPE_NAME;
 };
 
-// 上下文菜单扩展类
-class CMoveOffContextMenu : public IShellExtInit, public IContextMenu {
+// Shell 扩展类
+class MoveOffContextMenu : public IShellExtInit, public IContextMenu {
 public:
-    CMoveOffContextMenu();
-    ~CMoveOffContextMenu();
-
+    MoveOffContextMenu();
+    
     // IUnknown
     IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv);
     IFACEMETHODIMP_(ULONG) AddRef();
     IFACEMETHODIMP_(ULONG) Release();
-
+    
     // IShellExtInit
     IFACEMETHODIMP Initialize(LPCITEMIDLIST pidlFolder, LPDATAOBJECT pdtobj, HKEY hkeyProgID);
-
+    
     // IContextMenu
     IFACEMETHODIMP QueryContextMenu(HMENU hmenu, UINT indexMenu, UINT idCmdFirst, UINT idCmdLast, UINT uFlags);
     IFACEMETHODIMP InvokeCommand(LPCMINVOKECOMMANDINFO pici);
-    IFACEMETHODIMP GetCommandString(UINT_PTR idCmd, UINT uFlags, UINT* pwReserved, LPSTR pszName, UINT cchMax);
+    IFACEMETHODIMP GetCommandString(UINT_PTR idCmd, UINT uType, UINT* pReserved, CHAR* pszName, UINT cchMax);
+
+protected:
+    ~MoveOffContextMenu();
 
 private:
     LONG m_cRef;
     std::vector<std::wstring> m_selectedFiles;
-    FileSyncStatus m_status;
-
-    // 与主应用通信
-    FileSyncStatus GetFileStatus(const std::wstring& path);
-    void TriggerSync(const std::wstring& path);
+    IPCClient m_ipcClient;
+    
+    // 辅助方法
+    std::string GetFileStatus(const std::wstring& path);
+    void SyncFile(const std::wstring& path);
     void ShowInApp(const std::wstring& path);
     void ResolveConflict(const std::wstring& path);
-
+    
     // 菜单项 ID
-    static const UINT CMD_SYNC_NOW = 0;
-    static const UINT CMD_SHOW_IN_APP = 1;
-    static const UINT CMD_RESOLVE_CONFLICT = 2;
-    static const UINT CMD_SHARE_LINK = 3;
-};
-
-// 类工厂
-class CClassFactory : public IClassFactory {
-public:
-    // IUnknown
-    IFACEMETHODIMP QueryInterface(REFIID riid, void** ppv);
-    IFACEMETHODIMP_(ULONG) AddRef();
-    IFACEMETHODIMP_(ULONG) Release();
-
-    // IClassFactory
-    IFACEMETHODIMP CreateInstance(IUnknown* pUnkOuter, REFIID riid, void** ppv);
-    IFACEMETHODIMP LockServer(BOOL fLock);
+    enum {
+        ID_SYNC_NOW = 0,
+        ID_SHOW_IN_APP,
+        ID_RESOLVE_CONFLICT,
+        ID_GET_SHARE_LINK,
+        ID_MAX
+    };
 };

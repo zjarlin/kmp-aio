@@ -95,8 +95,9 @@ object NativeIntegration {
     }
 
     private fun startMacOSCommunication() {
-        // 通过 XPC 或 Socket 与 Finder 扩展通信
-        // TODO: 实现与 Swift 扩展的通信机制
+        // 启动 IPC 服务器处理 Finder Extension 请求
+        IPCServerManager.start()
+        println("IPC 服务器已启动，Finder Extension 可以通过 Unix Socket 连接")
     }
 
     private fun updateMacOSFileStatus(path: String, status: FileSyncStatus) {
@@ -108,17 +109,27 @@ object NativeIntegration {
 
     private fun initializeWindows() {
         try {
-            // 注册 Shell 扩展
-            registerShellExtension()
+            // 启动 IPC 服务器（使用 TCP 端口，Windows 不支持 Unix Domain Socket）
+            IPCServerManager.start()
+            println("Windows IPC 服务器已启动，Shell Extension 可以通过命名管道或 TCP 连接")
+
+            // 检查 Shell 扩展是否已注册
+            if (!isShellExtensionRegistered()) {
+                println("警告: Shell 扩展未注册，请运行 regsvr32 MoveOffShellExt.dll 注册")
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    private fun registerShellExtension() {
-        // 检查注册表项是否存在
-        val regPath = "HKCR\\CLSID\\{Your-GUID-Here}"
-        // TODO: 实现注册表检查和注册
+    private fun isShellExtensionRegistered(): Boolean {
+        return try {
+            // 检查注册表中是否存在 MoveOff 的 Context Menu Handler
+            val process = ProcessBuilder("reg", "query", "HKEY_CLASSES_ROOT\\*\\shellex\\ContextMenuHandlers\\MoveOff").start()
+            process.waitFor() == 0
+        } catch (e: Exception) {
+            false
+        }
     }
 
     private fun updateWindowsFileStatus(path: String, status: FileSyncStatus) {

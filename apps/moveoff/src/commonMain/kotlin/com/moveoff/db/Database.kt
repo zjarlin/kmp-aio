@@ -243,7 +243,8 @@ interface Database {
 enum class ConflictResolution {
     USE_LOCAL,
     USE_REMOTE,
-    KEEP_BOTH
+    KEEP_BOTH,
+    MERGE           // 尝试合并（文本文件）
 }
 
 /**

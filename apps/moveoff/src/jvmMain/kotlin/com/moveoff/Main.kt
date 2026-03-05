@@ -20,6 +20,8 @@ import com.moveoff.ui.MainWindow
 import com.moveoff.storage.SSHStorageClient
 import com.moveoff.storage.SSHConfig
 import com.moveoff.storage.SSHAuthType
+import com.moveoff.storage.SettingsStorage
+import com.moveoff.update.UpdateCheckerManager
 import kotlinx.coroutines.*
 import java.io.File
 
@@ -122,6 +124,20 @@ fun main() = application {
             println("本地服务器已启动: http://127.0.0.1:18475")
         } catch (e: Exception) {
             println("本地服务器启动失败: ${e.message}")
+        }
+    }
+
+    // ========== 4. 初始化自动更新检查 ==========
+    LaunchedEffect(Unit) {
+        try {
+            val settings = SettingsStorage.loadSettings()
+            UpdateCheckerManager.initialize(
+                currentVersion = "1.0.0", // 应该从构建配置读取
+                updateSettings = settings.updateSettings
+            )
+            println("自动更新检查器已初始化")
+        } catch (e: Exception) {
+            println("自动更新检查器初始化失败: ${e.message}")
         }
     }
 
@@ -236,7 +252,7 @@ fun main() = application {
         )
     }
 
-    // ========== 8. 资源清理 ==========
+    // ========== 9. 资源清理 ==========
     DisposableEffect(Unit) {
         onDispose {
             GlobalShortcutManagerInstance.unregister()
@@ -244,6 +260,7 @@ fun main() = application {
             LocalServerManager.stop()
             SyncEngineManager.stop()
             FailoverStorageManager.stop()
+            UpdateCheckerManager.stop()
             DatabaseManager.close()
         }
     }

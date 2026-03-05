@@ -42,6 +42,7 @@ class EnhancedTrayManager(
     // 当前图标状态
     private var currentIconState: TrayIconState = TrayIconState.IDLE
 
+
     // 当前徽章数字
     private var currentBadge: Int = 0
 

@@ -115,7 +115,52 @@ data class AppSettings(
     val language: String = "zh-CN",
     val autoStart: Boolean = false,
     val showNotifications: Boolean = true,
-    val maxConcurrentTransfers: Int = 3
+    val maxConcurrentTransfers: Int = 3,
+    val updateSettings: UpdateSettings = UpdateSettings()
+)
+
+@Serializable
+data class UpdateSettings(
+    val checkUpdatesAutomatically: Boolean = true,
+    val updateChannel: UpdateChannel = UpdateChannel.STABLE,
+    val downloadUpdatesAutomatically: Boolean = false,
+    val installUpdatesAutomatically: Boolean = false,
+    val lastCheckTime: Long = 0,
+    val skipVersion: String? = null
+)
+
+@Serializable
+enum class UpdateChannel {
+    STABLE,      // 稳定版
+    BETA,        // 测试版
+    DEV          // 开发版
+}
+
+@Serializable
+data class VersionInfo(
+    val version: String,
+    val versionCode: Int,
+    val releaseDate: String,
+    val releaseNotes: String,
+    val downloadUrl: String,
+    val mandatory: Boolean = false,
+    val minVersion: String? = null
+)
+
+/**
+ * 冲突信息 - 用于UI显示
+ */
+@Serializable
+data class Conflict(
+    val id: String = generateId(),
+    val path: String,
+    val localVersion: String,
+    val remoteVersion: String,
+    val localSize: Long = 0,
+    val remoteSize: Long = 0,
+    val localMtime: Long = 0,
+    val remoteMtime: Long = 0,
+    val timestamp: Long = System.currentTimeMillis()
 )
 
 @Serializable

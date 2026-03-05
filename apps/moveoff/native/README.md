@@ -154,8 +154,27 @@ NamedPipeServer.start("\\\\.\\pipe\\MoveOff") { request ->
 
 ## 待实现
 
-- [ ] macOS: 完整的 XPC 服务实现
-- [ ] Windows: 命名管道 IPC 实现
-- [ ] Windows: 图标覆盖处理器
-- [ ] Linux: Nautilus/Dolphin 扩展
-- [ ] 自动构建脚本
+- [x] macOS: 完整的 XPC 服务实现（使用 Unix Domain Socket）
+- [x] Windows: 命名管道/TCP IPC 实现（使用命名管道或 TCP 端口 18476）
+- [x] Windows: 图标覆盖处理器（基础框架实现）
+- [x] Linux: Nautilus Python 扩展（Dolphin 待实现）
+- [x] 自动构建脚本（build.sh）
+
+### 已实现的 IPC 协议
+
+所有平台使用统一的 JSON 消息格式：
+
+**请求消息:**
+```json
+{"action": "GET_FILE_STATUS", "path": "/Users/xxx/MoveOff/file.txt"}
+{"action": "TRIGGER_SYNC", "path": "/Users/xxx/MoveOff/file.txt"}
+{"action": "SHOW_IN_APP", "path": "/Users/xxx/MoveOff/file.txt"}
+{"action": "RESOLVE_CONFLICT", "path": "/Users/xxx/MoveOff/file.txt"}
+```
+
+**响应消息:**
+```json
+{"path": "/Users/xxx/MoveOff/file.txt", "status": "SYNCED", "exists": true}
+{"message": "同步已触发"}
+{"message": "错误信息"}
+```

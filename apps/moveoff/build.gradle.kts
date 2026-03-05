@@ -11,6 +11,10 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-koin")
+
+    id("site.addzero.buildlogic.kmp.kmp-ktor-server")
+
+
     id("site.addzero.buildlogic.kmp.kmp-filekit")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
@@ -21,28 +25,28 @@ val appName = project.name
 val appNamespace = "site.addzero.${project.name}"
 
 dependencies {
-    kspCommonMainMetadata(libs.site.addzero.ioc.processor)
+//    kspCommonMainMetadata(libs.site.addzero.ioc.processor)
 }
 
 kotlin {
     dependencies {
-        implementation(libs.site.addzero.ioc.core)
+//        implementation(libs.site.addzero.ioc.core)
         implementation(libs.site.addzero.network.starter)
-        implementation(project(":lib:glass-components"))
+//        implementation(project(":lib:glass-components"))
         implementation(project(":lib:shadcn-ui-kmp"))
-        implementation(project(":lib:api-suno"))
-        implementation("site.addzero:api-netease:2026.02.17")
-        implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
+//        implementation(project(":lib:api-suno"))
+//        implementation("site.addzero:api-netease:2026.02.17")
+//        implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
     }
     sourceSets {
         jvmMain.dependencies {
             // Ktor Server (内嵌本地服务器)
-            implementation(libs.io.ktor.ktor.server.netty.jvm)
-            implementation(libs.io.ktor.ktor.server.content.negotiation.jvm)
-            implementation(libs.io.ktor.ktor.server.websockets.jvm)
-            implementation(libs.io.ktor.ktor.server.cio.jvm)
-            implementation(libs.io.ktor.ktor.serialization.kotlinx.json.jvm)
-            implementation(libs.io.ktor.ktor.server.cors.jvm)
+//            implementation(libs.io.ktor.ktor.server.netty.jvm)
+//            implementation(libs.io.ktor.ktor.server.content.negotiation.jvm)
+//            implementation(libs.io.ktor.ktor.server.websockets.jvm)
+//            implementation(libs.io.ktor.ktor.server.cio.jvm)
+//            implementation(libs.io.ktor.ktor.serialization.kotlinx.json.jvm)
+//            implementation(libs.io.ktor.ktor.server.cors.jvm)
 
             // SQLite JDBC驱动
             implementation("org.xerial:sqlite-jdbc:3.45.1.0")

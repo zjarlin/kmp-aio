@@ -2,6 +2,7 @@ package com.moveoff.sync
 
 import com.moveoff.db.*
 import com.moveoff.event.*
+import com.moveoff.model.Conflict
 import com.moveoff.model.ConflictStrategy
 import com.moveoff.state.AppStateManager
 import com.moveoff.state.SyncStatus
@@ -590,7 +591,7 @@ class SyncEngine(
         // 发送冲突事件
         EventBus.emit(UIEvent.ConflictDetected(
             conflicts.map {
-                com.moveoff.model.Conflict(
+                Conflict(
                     id = generateConflictId(),
                     path = it.path,
                     localVersion = "",
