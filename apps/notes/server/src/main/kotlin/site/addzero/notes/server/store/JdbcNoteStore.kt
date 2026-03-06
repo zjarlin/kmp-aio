@@ -1,3 +1,5 @@
+@file:Suppress("SqlNoDataSourceInspection", "SqlResolve")
+
 package site.addzero.notes.server.store
 
 import site.addzero.notes.server.model.NotePayload
@@ -10,7 +12,7 @@ class JdbcNoteStore(
     private val jdbcUrl: String,
     private val username: String?,
     private val password: String?,
-    private val enabled: Boolean
+    enabled: Boolean
 ) {
     private var ready = false
     private var initError = ""
@@ -19,16 +21,15 @@ class JdbcNoteStore(
         if (!enabled) {
             ready = false
             initError = "数据源被禁用"
-            return
-        }
-
-        runCatching {
-            Class.forName(driverClassName)
-            initializeSchema()
-            ready = true
-        }.onFailure { throwable ->
-            ready = false
-            initError = throwable.message.orEmpty().ifBlank { "初始化失败" }
+        } else {
+            runCatching {
+                Class.forName(driverClassName)
+                initializeSchema()
+                ready = true
+            }.onFailure { throwable ->
+                ready = false
+                initError = throwable.message.orEmpty().ifBlank { "初始化失败" }
+            }
         }
     }
 
@@ -124,7 +125,7 @@ class JdbcNoteStore(
         private const val SELECT_SQL = """
             select id, path, title, markdown, pinned, version
             from notes
-            order by pinned desc, version desc, title asc
+            order by pinned desc, version desc, title
         """
 
         private const val UPSERT_SQL = """

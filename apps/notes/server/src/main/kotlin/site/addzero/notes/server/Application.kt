@@ -1,12 +1,12 @@
 package site.addzero.notes.server
 
+import com.typesafe.config.ConfigFactory
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.server.application.Application
-import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.config.ApplicationConfig
-import io.ktor.server.config.propertyOrNull
+import io.ktor.server.config.HoconApplicationConfig
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.EngineMain
@@ -22,6 +22,7 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import site.addzero.notes.server.routes.noteRoutes
 import site.addzero.notes.server.store.NoteStoreRegistry
+import java.io.File
 
 fun main(args: Array<String>) = EngineMain.main(args)
 
@@ -65,7 +66,7 @@ fun notesKtorApplication(
     host: String? = null,
     port: Int? = null
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
-    val config = configPath?.let { path -> ApplicationConfig(path) } ?: ApplicationConfig.load()
+    val config = loadApplicationConfig(configPath)
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
@@ -83,4 +84,17 @@ fun notesKtorApplication(
         port = finalPort,
         module = Application::module
     )
+}
+
+private fun loadApplicationConfig(configPath: String?): ApplicationConfig {
+    if (configPath.isNullOrBlank()) {
+        return HoconApplicationConfig(ConfigFactory.load())
+    }
+
+    val parsed = ConfigFactory
+        .parseFile(File(configPath))
+        .withFallback(ConfigFactory.load())
+        .resolve()
+
+    return HoconApplicationConfig(parsed)
 }
