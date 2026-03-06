@@ -21,9 +21,16 @@
   - [UI组件](#46-ui组件)
     - [分阶段进度条](#分阶段进度条-stagedprogressindicatorkt)
     - [冲突解决对话框](#冲突解决对话框-conflictresolutiondialogkt)
+    - [版本历史](#版本历史-versionhistoryscreenkt)
+    - [选择性同步](#选择性同步-selectivesyncscreenkt)
+    - [文件去重](#文件去重-deduplicationscreenkt)
+    - [P2P传输](#p2p传输-p2ptransferscreenkt)
+    - [智能同步策略](#智能同步策略-smartsyncscreenkt)
   - [安全加密](#47-安全加密-encryptionmanagerkt)
   - [自动更新](#48-自动更新-updatecheckerktskipversion)
-  - [原生集成](#49-原生集成)
+  - [团队共享](#49-团队共享)
+  - [操作审计](#410-操作审计-auditloggerkt)
+  - [原生集成](#411-原生集成)
     - [macOS-Finder扩展](#macos-findersyncswift)
     - [Windows-Shell扩展](#windows-shellext)
 - [MVP交付计划](#五mvp-交付计划)
@@ -410,17 +417,18 @@ class FinderSync: FIFinderSync {
 - [x] [冲突解决对话框](src/jvmMain/kotlin/com/moveoff/ui/components/ConflictResolutionDialog.kt)
 
 ### 阶段3：高级功能
-- [ ] 版本历史（基于S3版本控制）
-- [ ] 选择性同步（忽略某些文件/目录）
-- [ ] 局域网P2P传输（同一网络下直连）
+- [x] [版本历史](src/commonMain/kotlin/com/moveoff/version/VersionHistory.kt)（基于S3版本控制）
+- [x] [选择性同步](src/commonMain/kotlin/com/moveoff/sync/SyncFilter.kt)（忽略某些文件/目录）
+- [x] [局域网P2P传输](src/commonMain/kotlin/com/moveoff/p2p/P2PManager.kt)（同一网络下直连）
 - [x] [SSH备用协议](src/jvmMain/kotlin/com/moveoff/storage/SSHStorageClient.kt)
-- [ ] 文件去重（基于内容哈希）
+- [x] [文件去重](src/commonMain/kotlin/com/moveoff/dedup/DeduplicationManager.kt)（基于内容哈希）
 
 ### 阶段4：企业级
 - [x] [E2E加密](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt)（客户端加密后上传）
-- [ ] 团队共享空间
-- [ ] 操作审计日志
-- [ ] 智能同步策略（按网络类型调整）
+- [x] [团队共享空间](src/commonMain/kotlin/com/moveoff/team/TeamSpaceManager.kt) - 成员管理、权限控制
+- [x] [操作审计日志](src/commonMain/kotlin/com/moveoff/audit/AuditLogger.kt) - 操作记录、审计查询
+- [x] [智能同步策略](src/commonMain/kotlin/com/moveoff/sync/SmartSyncManager.kt)（按网络类型调整）
+- [x] [局域网P2P传输](src/commonMain/kotlin/com/moveoff/p2p/P2PManager.kt) - mDNS发现、直连传输
 
 ---
 
@@ -472,6 +480,7 @@ apps/moveoff/
 │   │   └── [ProgressTracker.kt](src/commonMain/kotlin/com/moveoff/progress/ProgressTracker.kt)             # 进度追踪
 │   ├── sync/
 │   │   ├── [SyncEngine.kt](src/commonMain/kotlin/com/moveoff/sync/SyncEngine.kt)                  # 同步引擎核心
+│   │   ├── [SyncFilter.kt](src/commonMain/kotlin/com/moveoff/sync/SyncFilter.kt)                  # 选择性同步过滤器
 │   │   └── [api/StorageClient.kt](src/commonMain/kotlin/com/moveoff/sync/api/StorageClient.kt)             # 存储客户端接口
 │   ├── model/
 │   │   └── [Models.kt](src/commonMain/kotlin/com/moveoff/model/Models.kt)                      # 数据模型
@@ -479,9 +488,19 @@ apps/moveoff/
 │   │   └── [Database.kt](src/commonMain/kotlin/com/moveoff/db/Database.kt)                    # 数据库接口
 │   ├── storage/
 │   │   └── [SettingsStorage.kt](src/commonMain/kotlin/com/moveoff/storage/SettingsStorage.kt)             # 设置存储
-│   └── security/
-│       ├── [EncryptionManager.kt](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt)        # 端到端加密
-│       └── [KeyStoreManager.kt](src/jvmMain/kotlin/com/moveoff/security/KeyStoreManager.kt)              # 密钥存储（JVM）
+│   ├── security/
+│   │   ├── [EncryptionManager.kt](src/commonMain/kotlin/com/moveoff/security/EncryptionManager.kt)        # 端到端加密
+│   │   └── [KeyStoreManager.kt](src/jvmMain/kotlin/com/moveoff/security/KeyStoreManager.kt)              # 密钥存储（JVM）
+│   ├── version/
+│   │   └── [VersionHistory.kt](src/commonMain/kotlin/com/moveoff/version/VersionHistory.kt)              # 版本历史管理
+│   ├── dedup/
+│   │   └── [DeduplicationManager.kt](src/commonMain/kotlin/com/moveoff/dedup/DeduplicationManager.kt)          # 文件去重管理
+│   ├── p2p/
+│   │   └── [P2PManager.kt](src/commonMain/kotlin/com/moveoff/p2p/P2PManager.kt)                    # 局域网P2P传输
+│   ├── team/
+│   │   └── [TeamSpaceManager.kt](src/commonMain/kotlin/com/moveoff/team/TeamSpaceManager.kt)              # 团队共享空间
+│   └── audit/
+│       └── [AuditLogger.kt](src/commonMain/kotlin/com/moveoff/audit/AuditLogger.kt)                 # 操作审计日志
 │
 ├── src/jvmMain/kotlin/com/moveoff/        # 桌面端实现
 │   ├── system/
@@ -498,6 +517,13 @@ apps/moveoff/
 │   │   ├── [DragAndDropComponents.kt](src/jvmMain/kotlin/com/moveoff/ui/components/DragAndDropComponents.kt)       # 拖拽上传
 │   │   ├── [StagedProgressIndicator.kt](src/jvmMain/kotlin/com/moveoff/ui/components/StagedProgressIndicator.kt)     # 分阶段进度条
 │   │   └── [ConflictResolutionDialog.kt](src/jvmMain/kotlin/com/moveoff/ui/components/ConflictResolutionDialog.kt)    # 冲突解决对话框
+│   ├── ui/screens/
+│   │   ├── [FileManagerScreen.kt](src/jvmMain/kotlin/com/moveoff/ui/screens/FileManagerScreen.kt)           # 文件管理器屏幕
+│   │   ├── [VersionHistoryScreen.kt](src/jvmMain/kotlin/com/moveoff/ui/screens/VersionHistoryScreen.kt)        # 版本历史屏幕
+│   │   ├── [SelectiveSyncScreen.kt](src/jvmMain/kotlin/com/moveoff/ui/screens/SelectiveSyncScreen.kt)         # 选择性同步屏幕
+│   │   ├── [DeduplicationScreen.kt](src/jvmMain/kotlin/com/moveoff/ui/screens/DeduplicationScreen.kt)         # 文件去重屏幕
+│   │   ├── [P2PTransferScreen.kt](src/jvmMain/kotlin/com/moveoff/ui/screens/P2PTransferScreen.kt)           # P2P传输屏幕
+│   │   └── [SmartSyncScreen.kt](src/jvmMain/kotlin/com/moveoff/ui/screens/SmartSyncScreen.kt)             # 智能同步设置屏幕
 │   ├── db/
 │   │   └── [DatabaseImpl.kt](src/jvmMain/kotlin/com/moveoff/db/DatabaseImpl.kt)                # SQLite实现
 │   ├── storage/
@@ -585,4 +611,16 @@ apps/moveoff/
 **自动更新**：
 - ✅ [自动更新检查器（UpdateChecker）](src/jvmMain/kotlin/com/moveoff/update/UpdateChecker.kt) - 版本检查、下载、安装
 - ✅ [跳过版本持久化（skipVersion）](src/jvmMain/kotlin/com/moveoff/update/UpdateChecker.kt#L414)
+
+**版本控制**：
+- ✅ [版本历史管理器（VersionHistoryManager）](src/commonMain/kotlin/com/moveoff/version/VersionHistory.kt) - 版本列表、恢复、清理
+- ✅ [版本历史UI（VersionHistoryScreen）](src/jvmMain/kotlin/com/moveoff/ui/screens/VersionHistoryScreen.kt) - 版本列表界面
+
+**选择性同步**：
+- ✅ [同步过滤器（SyncFilter）](src/commonMain/kotlin/com/moveoff/sync/SyncFilter.kt) - 忽略规则（类似.gitignore）
+- ✅ [选择性同步UI（SelectiveSyncScreen）](src/jvmMain/kotlin/com/moveoff/ui/screens/SelectiveSyncScreen.kt) - 规则配置界面
+
+**文件去重**：
+- ✅ [去重管理器（DeduplicationManager）](src/commonMain/kotlin/com/moveoff/dedup/DeduplicationManager.kt) - 重复文件检测
+- ✅ [去重UI（DeduplicationScreen）](src/jvmMain/kotlin/com/moveoff/ui/screens/DeduplicationScreen.kt) - 去重操作界面
 

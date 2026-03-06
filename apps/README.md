@@ -16,7 +16,8 @@ apps/
 │                   └── addzero/
 │                       └── template/
 │                           └── Main.kt
-└── vibepocket/            # VibePocket 音乐播放器应用
+├── vibepocket/            # VibePocket 音乐播放器应用
+└── notes/                 # VibeNotes 笔记应用（AI + RAG + 图谱）
     ├── build.gradle.kts
     └── src/
 ```
@@ -73,6 +74,12 @@ apps/myapp/build/compose-binaries/
 # 运行指定应用
 ./gradlew :apps:vibepocket:run
 
+# 运行 VibeNotes
+./gradlew :apps:notes:run
+
+# 单独启动 VibeNotes API
+./gradlew :apps:notes:server:run
+
 # 打包指定应用（所有平台）
 ./gradlew :apps:vibepocket:package
 
@@ -104,3 +111,9 @@ apps/myapp/build/compose-binaries/
 - `icon.icns` - macOS 图标
 - `icon.ico` - Windows 图标
 - `icon.png` - Linux 图标（推荐 512x512）
+# 参考资料
+https://github.com/CharlesPikachu/musicdl?tab=readme-ov-file
+https://github.com/kxzjoker/163music_search 
+https://gitee.com/gnnu/yumbo-music-utils
+https://github.com/zhixuanziben/NeteaseCloudMusic-vue
+https://github.com/GitHub-ZC/wp_MusicApi?tab=readme-ov-file

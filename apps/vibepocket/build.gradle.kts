@@ -26,7 +26,7 @@ kotlin {
             implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
         }
         jvmMain.dependencies {
-            implementation(project(":server"))
+            implementation(project(":apps:vibepocket:server"))
         }
     }
 }

@@ -33,7 +33,8 @@ dependencies {
     implementation(projects.lib.starterFlyway)
 
     // 业务 lib 模块
-    implementation(projects.shared)
+
+    implementation(project(":apps:vibepocket:shared"))
     implementation(projects.lib.ktorJimmerPlugin)
     implementation(projects.lib.ktorS3Plugin)
     implementation(libs.org.xerial.sqlite.jdbc.v3)

@@ -31,6 +31,11 @@
  * 3. 合并双方变更，检测冲突
  * 4. 生成并执行同步计划
  *
+ * ## 文件过滤
+ * - [SyncFilter] - 同步过滤器，支持.gitignore风格规则
+ * - [SyncPattern] - 单个过滤规则
+ * - [SyncRules] - 规则配置（全局+本地）
+ *
  * ## 状态机
  * IDLE → SCANNING → (UPLOADING/DOWNLOADING) → IDLE
  *                    ↓

@@ -1,15 +1,15 @@
-# VibePocket - Kotlin Multiplatform Monorepo
+# kmp-aio - Kotlin Multiplatform Monorepo
 
-VibePocket 是一个基于 Kotlin Multiplatform 的 Monorepo 项目，采用模块化架构，支持快速复制业务模块创建新应用。
+kmp-aio 是一个基于 Kotlin Multiplatform 的 Monorepo 项目，采用模块化架构，支持快速复制业务模块创建新应用。
 
 ## 项目结构
 
 ```
-vibepocket/
+kmp-aio/
 ├── apps/                      # 业务应用模块（可复制粘贴创建新应用）
 │   ├── README.md             # 应用开发指南
 │   ├── template/             # 应用模板（复制此目录创建新应用）
-│   └── vibepocket/           # VibePocket 音乐播放器应用
+│   └── kmp-aio/           # kmp-aio 音乐播放器应用
 │
 ├── lib/                       # 共享库模块
 │   ├── glass-components/     # UI 组件库
@@ -61,23 +61,23 @@ apps/myapp/build/compose-binaries/
 
 ## 快速开始
 
-### 运行 VibePocket 应用
+### 运行 kmp-aio 应用
 
 ```bash
 # 桌面端（JVM）
-./gradlew :apps:vibepocket:run
+./gradlew :apps:kmp-aio:run
 
 # 打包所有平台
-./gradlew :apps:vibepocket:package
+./gradlew :apps:kmp-aio:package
 
 # 仅打包 macOS
-./gradlew :apps:vibepocket:packageDmg
+./gradlew :apps:kmp-aio:packageDmg
 
 # 仅打包 Windows
-./gradlew :apps:vibepocket:packageMsi
+./gradlew :apps:kmp-aio:packageMsi
 
 # 仅打包 Linux
-./gradlew :apps:vibepocket:packageDeb
+./gradlew :apps:kmp-aio:packageDeb
 ```
 
 ### 运行后端服务
@@ -106,7 +106,7 @@ apps/myapp/build/compose-binaries/
 | 模块 | 说明 |
 |------|------|
 | `apps/template` | 应用模板，复制创建新应用 |
-| `apps/vibepocket` | VibePocket 音乐播放器 |
+| `apps/kmp-aio` | kmp-aio 音乐播放器 |
 
 ### lib/ - 共享库
 

@@ -39,6 +39,12 @@ kotlin {
 
             // JNativeHook - 全局快捷键
             implementation("com.github.kwhat:jnativehook:2.2.2")
+
+            // SSHJ - SSH/SFTP 客户端
+            implementation("com.hierynomus:sshj:0.38.0")
+
+            // JmDNS - mDNS 服务发现 (P2P)
+            implementation("org.jmdns:jmdns:3.5.9")
         }
     }
 }
