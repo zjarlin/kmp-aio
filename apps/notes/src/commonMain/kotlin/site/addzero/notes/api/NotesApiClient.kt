@@ -3,6 +3,10 @@ package site.addzero.notes.api
 import de.jensklingenberg.ktorfit.Ktorfit
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.client.plugins.defaultRequest
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
@@ -15,6 +19,11 @@ object NotesApiClient {
     }
 
     private val httpClient = HttpClient {
+        defaultRequest {
+            contentType(ContentType.Application.Json)
+            headers.remove(HttpHeaders.Accept)
+            headers.append(HttpHeaders.Accept, ContentType.Application.Json.toString())
+        }
         install(ContentNegotiation) {
             json(json)
         }

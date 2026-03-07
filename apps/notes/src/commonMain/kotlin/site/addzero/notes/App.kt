@@ -18,12 +18,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,6 +46,16 @@ import site.addzero.notes.markdown.MarkdownPreview
 import site.addzero.notes.model.DataSourceHealth
 import site.addzero.notes.model.KnowledgeGraph
 import site.addzero.notes.model.Note
+import site.addzero.component.glass.GlassButton
+import site.addzero.component.glass.GlassCard
+import site.addzero.component.glass.GlassListItem
+import site.addzero.component.glass.GlassSearchField
+import site.addzero.component.glass.GlassTextArea
+import site.addzero.component.glass.GlassTextField
+import site.addzero.component.glass.GlassTheme
+import site.addzero.component.glass.LiquidGlassButton
+import site.addzero.component.glass.LiquidGlassCard
+import site.addzero.component.glass.NeonGlassCard
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
@@ -190,7 +196,7 @@ private fun NotesRoot(repository: NoteRepository) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
+                .background(GlassTheme.DarkBackground)
         ) {
             NavigationPanel(
                 workspacePage = workspacePage,
@@ -342,7 +348,7 @@ private fun DividerColumn() {
         modifier = Modifier
             .width(1.dp)
             .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.outlineVariant)
+            .background(GlassTheme.GlassBorder.copy(alpha = 0.25f))
     )
 }
 
@@ -356,64 +362,63 @@ private fun NavigationPanel(
     onSelectFilter: (FolderFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(8.dp),
+        primaryColor = GlassTheme.NeonPurple,
+        secondaryColor = GlassTheme.NeonCyan
     ) {
-        Text(
-            text = "VibeNotes",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "AI + RAG + 图谱",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Button(
-            onClick = onSelectHome,
-            modifier = Modifier.fillMaxWidth()
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(if (workspacePage == WorkspacePage.GRAPH_HOME) "● 首页图谱" else "首页图谱")
-        }
-        Button(
-            onClick = onSelectEditor,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (workspacePage == WorkspacePage.NOTE_EDITOR) "● 笔记编辑" else "笔记编辑")
-        }
+            Text(
+                text = "VibeNotes",
+                style = MaterialTheme.typography.titleLarge,
+                color = GlassTheme.TextPrimary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "AI + RAG + 图谱",
+                style = MaterialTheme.typography.labelMedium,
+                color = GlassTheme.TextSecondary
+            )
+            LiquidGlassButton(
+                text = if (workspacePage == WorkspacePage.GRAPH_HOME) "● 首页图谱" else "首页图谱",
+                onClick = onSelectHome,
+                modifier = Modifier.fillMaxWidth()
+            )
+            GlassButton(
+                text = if (workspacePage == WorkspacePage.NOTE_EDITOR) "● 笔记编辑" else "笔记编辑",
+                onClick = onSelectEditor,
+                modifier = Modifier.fillMaxWidth()
+            )
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text("笔记分组", style = MaterialTheme.typography.titleSmall)
-        FolderFilter.entries.forEach { filter ->
-            val selected = folderFilter == filter
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primaryContainer
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onSelectFilter(filter) }
-            ) {
-                Text(
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "笔记分组",
+                style = MaterialTheme.typography.titleSmall,
+                color = GlassTheme.TextPrimary
+            )
+            FolderFilter.entries.forEach { filter ->
+                val selected = folderFilter == filter
+                GlassButton(
                     text = if (selected) "✓ ${filter.label}" else filter.label,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.bodyMedium
+                    onClick = { onSelectFilter(filter) },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = notice,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = notice,
+                style = MaterialTheme.typography.bodySmall,
+                color = GlassTheme.TextTertiary
+            )
+        }
     }
 }
 
@@ -428,93 +433,79 @@ private fun NotesListPanel(
     onSelectNote: (Note) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(8.dp),
+        primaryColor = GlassTheme.NeonCyan,
+        secondaryColor = GlassTheme.NeonPurple
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "笔记列表",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Button(onClick = onCreateNote, enabled = !busy) {
-                Text("新建")
-            }
-        }
-
-        OutlinedTextField(
-            value = query,
-            onValueChange = onQueryChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("过滤标题/路径/正文") },
-            singleLine = true
-        )
-
-        if (notes.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "暂无笔记，点击“新建”开始",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            return
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(notes, key = { note -> note.id }) { note ->
-                val selected = note.id == selectedNoteId
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onSelectNote(note) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "笔记列表",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = GlassTheme.TextPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+                LiquidGlassButton(
+                    text = "新建",
+                    onClick = onCreateNote,
+                    enabled = !busy
+                )
+            }
+
+            GlassSearchField(
+                value = query,
+                onValueChange = onQueryChange,
+                onSearch = {},
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "过滤标题/路径/正文"
+            )
+
+            if (notes.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                if (selected) {
-                                    MaterialTheme.colorScheme.primaryContainer
-                                } else {
-                                    MaterialTheme.colorScheme.surface
-                                }
+                    Text(
+                        text = "暂无笔记，点击“新建”开始",
+                        color = GlassTheme.TextTertiary
+                    )
+                }
+                return@LiquidGlassCard
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(notes, key = { note -> note.id }) { note ->
+                    val selected = note.id == selectedNoteId
+                    GlassListItem(
+                        title = (if (note.pinned) "📌 " else "") + note.title,
+                        subtitle = note.path,
+                        isSelected = selected,
+                        onClick = { onSelectNote(note) },
+                        trailing = {
+                            Text(
+                                text = noteSummary(note.markdown),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = GlassTheme.TextTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
-                            .padding(10.dp)
-                    ) {
-                        Text(
-                            text = (if (note.pinned) "📌 " else "") + note.title,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = note.path,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = noteSummary(note.markdown),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                        }
+                    )
                 }
             }
         }
@@ -541,153 +532,149 @@ private fun EditorPanel(
     onOrganize: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(8.dp),
+        primaryColor = GlassTheme.NeonPurple,
+        secondaryColor = GlassTheme.NeonCyan
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = "编辑器",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onSync, enabled = !busy) { Text("同步") }
-                Button(onClick = onSave, enabled = note != null && !busy) { Text("保存") }
-                Button(onClick = onOrganize, enabled = note != null && !busy) { Text("一键整理") }
-            }
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            sourceHealth.forEach { health ->
-                val color = if (health.available) Color(0xFFD9F5DE) else Color(0xFFFFE1E1)
-                Surface(
-                    color = color,
-                    shape = RoundedCornerShape(999.dp)
-                ) {
-                    Text(
-                        text = "${health.type}: ${if (health.available) "OK" else "OFF"}",
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                        style = MaterialTheme.typography.labelSmall
-                    )
-                }
-            }
-        }
-
-        if (note == null) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "请选择笔记进行编辑",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "编辑器",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = GlassTheme.TextPrimary,
+                    fontWeight = FontWeight.SemiBold
                 )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GlassButton(text = "同步", onClick = onSync, enabled = !busy)
+                    GlassButton(text = "保存", onClick = onSave, enabled = note != null && !busy)
+                    LiquidGlassButton(text = "一键整理", onClick = onOrganize, enabled = note != null && !busy)
+                }
             }
-            return
-        }
 
-        OutlinedTextField(
-            value = titleInput,
-            onValueChange = onTitleChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("标题") },
-            singleLine = true
-        )
-        OutlinedTextField(
-            value = pathInput,
-            onValueChange = onPathChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("路径（可用于 @路径 引用）") },
-            singleLine = true
-        )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                sourceHealth.forEach { health ->
+                    GlassCard(shape = RoundedCornerShape(999.dp)) {
+                        Text(
+                            text = "${health.type}: ${if (health.available) "OK" else "OFF"}",
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (health.available) Color(0xFF67E6A5) else Color(0xFFFF7F8A)
+                        )
+                    }
+                }
+            }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EditorViewMode.entries.forEach { mode ->
-                val active = mode == editorViewMode
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (active) {
-                        MaterialTheme.colorScheme.primaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    modifier = Modifier.clickable { onViewModeChange(mode) }
+            if (note == null) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = mode.label,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        text = "请选择笔记进行编辑",
+                        color = GlassTheme.TextTertiary
                     )
                 }
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            Button(onClick = onTogglePinned, enabled = !busy) {
-                Text(if (note.pinned) "取消置顶" else "置顶")
-            }
-            Button(onClick = onDelete, enabled = !busy) {
-                Text("删除")
-            }
-        }
-
-        when (editorViewMode) {
-            EditorViewMode.EDIT -> {
-                OutlinedTextField(
-                    value = markdownInput,
-                    onValueChange = onMarkdownChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    label = { Text("Markdown（支持 @thisFile / @路径）") }
-                )
+                return@LiquidGlassCard
             }
 
-            EditorViewMode.PREVIEW -> {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    tonalElevation = 1.dp
-                ) {
-                    MarkdownPreview(markdown = markdownInput)
+            GlassTextField(
+                value = titleInput,
+                onValueChange = onTitleChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "标题"
+            )
+            GlassTextField(
+                value = pathInput,
+                onValueChange = onPathChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "路径（可用于 @路径 引用）"
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                EditorViewMode.entries.forEach { mode ->
+                    val active = mode == editorViewMode
+                    GlassButton(
+                        text = if (active) "● ${mode.label}" else mode.label,
+                        onClick = { onViewModeChange(mode) }
+                    )
                 }
+                Spacer(modifier = Modifier.weight(1f))
+                GlassButton(
+                    text = if (note.pinned) "取消置顶" else "置顶",
+                    onClick = onTogglePinned,
+                    enabled = !busy
+                )
+                GlassButton(text = "删除", onClick = onDelete, enabled = !busy)
             }
 
-            EditorViewMode.SPLIT -> {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
+            when (editorViewMode) {
+                EditorViewMode.EDIT -> {
+                    GlassTextArea(
                         value = markdownInput,
                         onValueChange = onMarkdownChange,
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        label = { Text("Markdown") }
+                            .fillMaxWidth()
+                            .weight(1f),
+                        placeholder = "Markdown（支持 @thisFile / @路径）"
                     )
-                    Surface(
+                }
+
+                EditorViewMode.PREVIEW -> {
+                    LiquidGlassCard(
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        shape = RoundedCornerShape(12.dp),
-                        tonalElevation = 1.dp
+                            .fillMaxWidth()
+                            .weight(1f),
+                        primaryColor = GlassTheme.NeonCyan,
+                        secondaryColor = GlassTheme.NeonPurple,
+                        shape = RoundedCornerShape(16.dp)
                     ) {
                         MarkdownPreview(markdown = markdownInput)
+                    }
+                }
+
+                EditorViewMode.SPLIT -> {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        GlassTextArea(
+                            value = markdownInput,
+                            onValueChange = onMarkdownChange,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            placeholder = "Markdown"
+                        )
+                        LiquidGlassCard(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight(),
+                            primaryColor = GlassTheme.NeonCyan,
+                            secondaryColor = GlassTheme.NeonPurple,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            MarkdownPreview(markdown = markdownInput)
+                        }
                     }
                 }
             }
@@ -705,82 +692,94 @@ private fun KnowledgeGraphHome(
     onOpenNote: (Note) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
+    LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(8.dp),
+        primaryColor = GlassTheme.NeonCyan,
+        secondaryColor = GlassTheme.NeonPurple
     ) {
-        Text(
-            text = "知识图谱首页",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "RAG 检索入口：大屏搜笔记 + 图谱关系浏览",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            label = { Text("图谱检索（关键词、路径、正文）") }
-        )
-
-        KnowledgeGraphCanvas(
-            graph = graph,
-            selectedNoteId = selectedNoteId,
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(320.dp)
-        )
-
-        Text(
-            text = "检索结果（${hits.size}）",
-            style = MaterialTheme.typography.titleSmall
-        )
-
-        if (hits.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "暂无结果，试试换个关键词",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            return
-        }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(hits, key = { hit -> hit.note.id }) { hit ->
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onOpenNote(hit.note) }
+            Text(
+                text = "知识图谱首页",
+                style = MaterialTheme.typography.titleLarge,
+                color = GlassTheme.TextPrimary,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "RAG 检索入口：大屏搜笔记 + 图谱关系浏览",
+                style = MaterialTheme.typography.bodyMedium,
+                color = GlassTheme.TextSecondary
+            )
+
+            GlassSearchField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                onSearch = {},
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "图谱检索（关键词、路径、正文）"
+            )
+
+            KnowledgeGraphCanvas(
+                graph = graph,
+                selectedNoteId = selectedNoteId,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(320.dp)
+            )
+
+            Text(
+                text = "检索结果（${hits.size}）",
+                style = MaterialTheme.typography.titleSmall,
+                color = GlassTheme.TextPrimary
+            )
+
+            if (hits.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        Text(
-                            text = hit.note.title,
-                            style = MaterialTheme.typography.titleSmall
-                        )
-                        Text(
-                            text = "${hit.note.path} · score=${hit.score}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            text = hit.reason,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Text(
+                        text = "暂无结果，试试换个关键词",
+                        color = GlassTheme.TextTertiary
+                    )
+                }
+                return@LiquidGlassCard
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(hits, key = { hit -> hit.note.id }) { hit ->
+                    NeonGlassCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenNote(hit.note) },
+                        glowColor = GlassTheme.NeonCyan
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = hit.note.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = GlassTheme.TextPrimary
+                            )
+                            Text(
+                                text = "${hit.note.path} · score=${hit.score}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = GlassTheme.TextSecondary
+                            )
+                            Text(
+                                text = hit.reason,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GlassTheme.TextTertiary
+                            )
+                        }
                     }
                 }
             }
@@ -797,12 +796,12 @@ private fun KnowledgeGraphCanvas(
     if (graph.nodes.isEmpty()) {
         Box(
             modifier = modifier
-                .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
+                .background(GlassTheme.GlassSurface, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = "暂无节点，创建笔记并使用 @路径 建立关系",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = GlassTheme.TextTertiary
             )
         }
         return
@@ -813,7 +812,7 @@ private fun KnowledgeGraphCanvas(
 
     Box(
         modifier = modifier
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
+            .background(GlassTheme.GlassSurface.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
             .padding(8.dp)
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -867,9 +866,8 @@ private fun BusyOverlay() {
             .background(Color(0x2B000000)),
         contentAlignment = Alignment.Center
     ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 4.dp
+        LiquidGlassCard(
+            shape = RoundedCornerShape(14.dp)
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -877,7 +875,7 @@ private fun BusyOverlay() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                Text("处理中...")
+                Text("处理中...", color = GlassTheme.TextPrimary)
             }
         }
     }

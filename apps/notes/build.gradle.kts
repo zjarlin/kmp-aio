@@ -4,6 +4,9 @@ plugins {
 
 kotlin {
     sourceSets {
+        commonMain.dependencies {
+            implementation(project(":lib:glass-components"))
+        }
         jvmMain.dependencies {
             implementation(project(":apps:notes:server"))
         }
