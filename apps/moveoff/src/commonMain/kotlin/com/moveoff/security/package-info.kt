@@ -19,10 +19,10 @@
  * ```
  *
  * ## 核心组件
- * - [EncryptionManager] - 加密/解密操作
+ * - `EncryptionManager`（jvmMain）- 加密/解密操作
  * - [KeyStoreManager] - 密钥安全存储 (expect/actual)
- * - [EncryptedStorageClient] - 透明加密存储包装器
- * - [EncryptionHeader] - 加密文件头部信息
+ * - `EncryptedStorageClient`（jvmMain）- 透明加密存储包装器
+ * - `EncryptionHeader`（jvmMain）- 加密文件头部信息
  *
  * ## 使用示例
  * ### 加密文件

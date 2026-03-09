@@ -4,6 +4,7 @@ import com.typesafe.config.ConfigFactory
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
 import io.ktor.server.application.Application
+import io.ktor.server.application.ApplicationStopping
 import io.ktor.server.application.install
 import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.HoconApplicationConfig
@@ -28,6 +29,9 @@ fun main(args: Array<String>) = EngineMain.main(args)
 
 fun Application.module() {
     val stores = NoteStoreRegistry()
+    monitor.subscribe(ApplicationStopping) {
+        stores.close()
+    }
 
     install(ContentNegotiation) {
         json(

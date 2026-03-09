@@ -34,3 +34,21 @@ data class OrganizeResult(
     val usedReferences: List<String>,
     val missingReferences: List<String>
 )
+
+data class StorageSettings(
+    val activeSource: DataSourceType = DataSourceType.SQLITE,
+    val sqlitePath: String = "",
+    val sqliteDefaultPath: String = "",
+    val postgresUrl: String = "",
+    val postgresUser: String = "",
+    val postgresConfigured: Boolean = false,
+    val postgresAvailable: Boolean = false
+)
+
+data class StorageSettingsUpdate(
+    val activeSource: DataSourceType,
+    val sqlitePath: String,
+    val postgresUrl: String,
+    val postgresUser: String,
+    val postgresPassword: String
+)

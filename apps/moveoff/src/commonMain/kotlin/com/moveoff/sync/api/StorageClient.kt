@@ -9,7 +9,7 @@ package com.moveoff.sync.api
  * ## 实现类
  * - [com.moveoff.storage.S3StorageClient] - S3 协议实现
  * - [com.moveoff.storage.SSHStorageClient] - SSH/SFTP 实现
- * - [com.moveoff.sync.FailoverStorageClient] - 故障转移包装器
+ * - `FailoverStorageClient`（jvmMain）- 故障转移包装器
  *
  * @since 1.0.0
  */

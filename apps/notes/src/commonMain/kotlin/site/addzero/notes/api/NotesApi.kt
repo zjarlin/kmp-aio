@@ -12,6 +12,14 @@ interface NotesApi {
         @Path("source") source: String
     ): DataSourceHealthPayload
 
+    @GET("api/notes/settings")
+    suspend fun storageSettings(): StorageSettingsPayload
+
+    @PUT("api/notes/settings")
+    suspend fun updateStorageSettings(
+        @Body request: StorageSettingsUpdateRequest
+    ): StorageSettingsPayload
+
     @GET("api/notes/{source}")
     suspend fun listNotes(
         @Path("source") source: String

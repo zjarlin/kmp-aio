@@ -2,13 +2,12 @@ package com.moveoff.storage
 
 import com.moveoff.model.AppSettings
 import com.moveoff.model.json
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.encodeToString
 import java.io.File
+import java.util.logging.Level
+import java.util.logging.Logger
 
-private val logger = KotlinLogging.logger {}
-
-expect fun getSettingsDirectory(): File
+private val logger: Logger = Logger.getLogger("com.moveoff.storage.SettingsStorage")
 
 object SettingsStorage {
     private val settingsFile by lazy {
@@ -26,7 +25,7 @@ object SettingsStorage {
                 AppSettings()
             }
         } catch (e: Exception) {
-            logger.error(e) { "Failed to load settings" }
+            logger.log(Level.SEVERE, "Failed to load settings", e)
             AppSettings()
         }
     }
@@ -35,9 +34,9 @@ object SettingsStorage {
         try {
             val content = json.encodeToString(settings)
             settingsFile.writeText(content)
-            logger.info { "Settings saved to ${settingsFile.absolutePath}" }
+            logger.info("Settings saved to ${settingsFile.absolutePath}")
         } catch (e: Exception) {
-            logger.error(e) { "Failed to save settings" }
+            logger.log(Level.SEVERE, "Failed to save settings", e)
         }
     }
 }

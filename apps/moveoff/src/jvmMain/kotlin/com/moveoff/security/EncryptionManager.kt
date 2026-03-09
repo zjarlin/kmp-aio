@@ -1,15 +1,16 @@
 package com.moveoff.security
 
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.*
 import java.security.*
 import java.security.spec.*
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.crypto.*
 import javax.crypto.spec.*
 
-private val logger = KotlinLogging.logger {}
+private val logger: Logger = Logger.getLogger("com.moveoff.security.EncryptionManager")
 
 /**
  * 加密配置
@@ -59,14 +60,14 @@ data class EncryptionHeader(
             // 读取 magic
             val magic = ByteArray(4)
             if (dataIn.read(magic) != 4 || !magic.contentEquals(MAGIC)) {
-                logger.error { "Invalid magic number, not a MoveOff encrypted file" }
+                logger.severe("Invalid magic number, not a MoveOff encrypted file")
                 return null
             }
 
             // 读取版本
             val version = dataIn.readByte()
             if (version != CURRENT_VERSION) {
-                logger.error { "Unsupported encryption version: $version" }
+                logger.severe("Unsupported encryption version: $version")
                 return null
             }
 
@@ -206,10 +207,10 @@ class EncryptionManager(
                 }
             }
 
-            logger.info { "File encrypted successfully: ${inputFile.name} -> ${outputFile.name}" }
+            logger.info("File encrypted successfully: ${inputFile.name} -> ${outputFile.name}")
             Result.success(Unit)
         } catch (e: Exception) {
-            logger.error(e) { "Failed to encrypt file: ${inputFile.name}" }
+            logger.log(Level.SEVERE, "Failed to encrypt file: ${inputFile.name}", e)
             Result.failure(e)
         }
     }
@@ -242,7 +243,7 @@ class EncryptionManager(
                         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(config.tagLength, header.iv))
                         String(cipher.doFinal(encrypted), Charsets.UTF_8)
                     } catch (e: Exception) {
-                        logger.warn { "Failed to decrypt file name, password might be wrong" }
+                        logger.warning("Failed to decrypt file name, password might be wrong")
                         null
                     }
                 }
@@ -260,14 +261,14 @@ class EncryptionManager(
                     }
                 }
 
-                logger.info { "File decrypted successfully: ${inputFile.name} -> ${outputFile.name}" }
+                logger.info("File decrypted successfully: ${inputFile.name} -> ${outputFile.name}")
                 Result.success(originalFileName)
             }
         } catch (e: AEADBadTagException) {
-            logger.error(e) { "Authentication failed, file may be tampered or password is wrong" }
+            logger.log(Level.SEVERE, "Authentication failed, file may be tampered or password is wrong", e)
             Result.failure(SecurityException("解密失败：认证标签不匹配，密码错误或文件被篡改", e))
         } catch (e: Exception) {
-            logger.error(e) { "Failed to decrypt file: ${inputFile.name}" }
+            logger.log(Level.SEVERE, "Failed to decrypt file: ${inputFile.name}", e)
             Result.failure(e)
         }
     }
@@ -314,33 +315,6 @@ class EncryptionManager(
         cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(config.tagLength, iv))
         return cipher.doFinal(encrypted)
     }
-}
-
-/**
- * 密钥管理器 - 管理加密密钥的存储和检索
- *
- * 注意：密钥存储需要平台特定的安全存储实现（如 macOS Keychain、Windows DPAPI、Linux Keyring）
- */
-expect class KeyStoreManager() {
-    /**
-     * 存储密钥
-     */
-    fun storeKey(keyId: String, keyData: ByteArray): Boolean
-
-    /**
-     * 检索密钥
-     */
-    fun retrieveKey(keyId: String): ByteArray?
-
-    /**
-     * 删除密钥
-     */
-    fun deleteKey(keyId: String): Boolean
-
-    /**
-     * 检查密钥是否存在
-     */
-    fun hasKey(keyId: String): Boolean
 }
 
 /**
@@ -464,5 +438,3 @@ class EncryptedStorageClient(
             ?: delegate.getObjectMetadata(remotePath)
     }
 }
-
-import java.io.File

@@ -43,19 +43,19 @@ import site.addzero.notes.ai.RagSearchHit
 import site.addzero.notes.data.NoteRepository
 import site.addzero.notes.graph.KnowledgeGraphBuilder
 import site.addzero.notes.markdown.MarkdownPreview
-import site.addzero.notes.model.DataSourceHealth
+import site.addzero.notes.model.DataSourceType
 import site.addzero.notes.model.KnowledgeGraph
 import site.addzero.notes.model.Note
-import site.addzero.component.glass.GlassButton
-import site.addzero.component.glass.GlassCard
-import site.addzero.component.glass.GlassListItem
-import site.addzero.component.glass.GlassSearchField
-import site.addzero.component.glass.GlassTextArea
-import site.addzero.component.glass.GlassTextField
-import site.addzero.component.glass.GlassTheme
-import site.addzero.component.glass.LiquidGlassButton
-import site.addzero.component.glass.LiquidGlassCard
-import site.addzero.component.glass.NeonGlassCard
+import site.addzero.notes.model.StorageSettings
+import site.addzero.notes.model.StorageSettingsUpdate
+import site.addzero.notes.ui.components.GlassButton
+import site.addzero.notes.ui.components.GlassListItem
+import site.addzero.notes.ui.components.GlassSearchField
+import site.addzero.notes.ui.components.GlassTextArea
+import site.addzero.notes.ui.components.GlassTextField
+import site.addzero.notes.ui.components.GlassTheme
+import site.addzero.notes.ui.components.LiquidGlassButton
+import site.addzero.notes.ui.components.LiquidGlassCard
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
@@ -63,7 +63,8 @@ import kotlin.math.sin
 
 private enum class WorkspacePage {
     GRAPH_HOME,
-    NOTE_EDITOR
+    NOTE_EDITOR,
+    GLOBAL_SETTINGS
 }
 
 private enum class FolderFilter(val label: String) {
@@ -104,16 +105,19 @@ private fun NotesRoot(repository: NoteRepository) {
     var titleInput by remember { mutableStateOf("") }
     var pathInput by remember { mutableStateOf("") }
     var markdownInput by remember { mutableStateOf("") }
-    var sourceHealth by remember { mutableStateOf<List<DataSourceHealth>>(emptyList()) }
+    var storageSettings by remember { mutableStateOf(StorageSettings()) }
+    var postgresPasswordInput by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("准备就绪") }
     var busy by remember { mutableStateOf(false) }
 
+    suspend fun refreshStorageSettings() {
+        storageSettings = repository.storageSettings()
+    }
+
     suspend fun refresh(preferredNoteId: String?) {
         val latest = repository.listNotes()
-        val health = repository.dataSourceHealth()
 
         notes = latest
-        sourceHealth = health
 
         val fallbackId = latest.firstOrNull()?.id
         val nextSelected = preferredNoteId
@@ -142,7 +146,10 @@ private fun NotesRoot(repository: NoteRepository) {
 
     LaunchedEffect(Unit) {
         busy = true
-        runCatching { refresh(null) }
+        runCatching {
+            refreshStorageSettings()
+            refresh(null)
+        }
             .onSuccess { notice = "已载入 ${notes.size} 条笔记" }
             .onFailure { throwable -> notice = "初始化失败：${throwable.message.orEmpty()}" }
         busy = false
@@ -204,6 +211,7 @@ private fun NotesRoot(repository: NoteRepository) {
                 notice = notice,
                 onSelectHome = { workspacePage = WorkspacePage.GRAPH_HOME },
                 onSelectEditor = { workspacePage = WorkspacePage.NOTE_EDITOR },
+                onSelectSettings = { workspacePage = WorkspacePage.GLOBAL_SETTINGS },
                 onSelectFilter = { nextFilter -> folderFilter = nextFilter },
                 modifier = Modifier.width(180.dp)
             )
@@ -250,14 +258,13 @@ private fun NotesRoot(repository: NoteRepository) {
                     },
                     modifier = Modifier.fillMaxSize()
                 )
-            } else {
+            } else if (workspacePage == WorkspacePage.NOTE_EDITOR) {
                 EditorPanel(
                     note = selectedNote,
                     titleInput = titleInput,
                     pathInput = pathInput,
                     markdownInput = markdownInput,
                     editorViewMode = editorViewMode,
-                    sourceHealth = sourceHealth,
                     busy = busy,
                     onTitleChange = { titleInput = it },
                     onPathChange = { pathInput = it },
@@ -333,6 +340,49 @@ private fun NotesRoot(repository: NoteRepository) {
                     },
                     modifier = Modifier.fillMaxSize()
                 )
+            } else {
+                StorageSettingsPanel(
+                    settings = storageSettings,
+                    postgresPassword = postgresPasswordInput,
+                    busy = busy,
+                    onActiveSourceChange = { source ->
+                        storageSettings = storageSettings.copy(activeSource = source)
+                    },
+                    onSqlitePathChange = { path ->
+                        storageSettings = storageSettings.copy(sqlitePath = path)
+                    },
+                    onPostgresUrlChange = { url ->
+                        storageSettings = storageSettings.copy(postgresUrl = url)
+                    },
+                    onPostgresUserChange = { user ->
+                        storageSettings = storageSettings.copy(postgresUser = user)
+                    },
+                    onPostgresPasswordChange = { password ->
+                        postgresPasswordInput = password
+                    },
+                    onApply = {
+                        runAction {
+                            val updated = repository.updateStorageSettings(
+                                StorageSettingsUpdate(
+                                    activeSource = storageSettings.activeSource,
+                                    sqlitePath = storageSettings.sqlitePath,
+                                    postgresUrl = storageSettings.postgresUrl,
+                                    postgresUser = storageSettings.postgresUser,
+                                    postgresPassword = postgresPasswordInput
+                                )
+                            )
+                            storageSettings = updated
+                            postgresPasswordInput = ""
+                            refresh(selectedNoteId)
+                            notice = if (updated.activeSource == DataSourceType.SQLITE) {
+                                "存储方式已切换为 SQLite"
+                            } else {
+                                "存储方式已切换为 PostgreSQL"
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
 
@@ -359,15 +409,14 @@ private fun NavigationPanel(
     notice: String,
     onSelectHome: () -> Unit,
     onSelectEditor: () -> Unit,
+    onSelectSettings: () -> Unit,
     onSelectFilter: (FolderFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(8.dp),
-        primaryColor = GlassTheme.NeonPurple,
-        secondaryColor = GlassTheme.NeonCyan
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -394,6 +443,11 @@ private fun NavigationPanel(
             GlassButton(
                 text = if (workspacePage == WorkspacePage.NOTE_EDITOR) "● 笔记编辑" else "笔记编辑",
                 onClick = onSelectEditor,
+                modifier = Modifier.fillMaxWidth()
+            )
+            GlassButton(
+                text = if (workspacePage == WorkspacePage.GLOBAL_SETTINGS) "● 全局设置" else "全局设置",
+                onClick = onSelectSettings,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -436,9 +490,7 @@ private fun NotesListPanel(
     LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(8.dp),
-        primaryColor = GlassTheme.NeonCyan,
-        secondaryColor = GlassTheme.NeonPurple
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -519,7 +571,6 @@ private fun EditorPanel(
     pathInput: String,
     markdownInput: String,
     editorViewMode: EditorViewMode,
-    sourceHealth: List<DataSourceHealth>,
     busy: Boolean,
     onTitleChange: (String) -> Unit,
     onPathChange: (String) -> Unit,
@@ -535,9 +586,7 @@ private fun EditorPanel(
     LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(8.dp),
-        primaryColor = GlassTheme.NeonPurple,
-        secondaryColor = GlassTheme.NeonCyan
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -560,22 +609,6 @@ private fun EditorPanel(
                     GlassButton(text = "同步", onClick = onSync, enabled = !busy)
                     GlassButton(text = "保存", onClick = onSave, enabled = note != null && !busy)
                     LiquidGlassButton(text = "一键整理", onClick = onOrganize, enabled = note != null && !busy)
-                }
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                sourceHealth.forEach { health ->
-                    GlassCard(shape = RoundedCornerShape(999.dp)) {
-                        Text(
-                            text = "${health.type}: ${if (health.available) "OK" else "OFF"}",
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (health.available) Color(0xFF67E6A5) else Color(0xFFFF7F8A)
-                        )
-                    }
                 }
             }
 
@@ -642,8 +675,6 @@ private fun EditorPanel(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
-                        primaryColor = GlassTheme.NeonCyan,
-                        secondaryColor = GlassTheme.NeonPurple,
                         shape = RoundedCornerShape(16.dp)
                     ) {
                         MarkdownPreview(markdown = markdownInput)
@@ -669,14 +700,138 @@ private fun EditorPanel(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight(),
-                            primaryColor = GlassTheme.NeonCyan,
-                            secondaryColor = GlassTheme.NeonPurple,
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             MarkdownPreview(markdown = markdownInput)
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StorageSettingsPanel(
+    settings: StorageSettings,
+    postgresPassword: String,
+    busy: Boolean,
+    onActiveSourceChange: (DataSourceType) -> Unit,
+    onSqlitePathChange: (String) -> Unit,
+    onPostgresUrlChange: (String) -> Unit,
+    onPostgresUserChange: (String) -> Unit,
+    onPostgresPasswordChange: (String) -> Unit,
+    onApply: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LiquidGlassCard(
+        modifier = modifier
+            .fillMaxHeight()
+            .padding(8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "全局设置",
+                style = MaterialTheme.typography.titleLarge,
+                color = GlassTheme.TextPrimary,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = "存储方式默认使用 SQLite，可切换到 PostgreSQL",
+                style = MaterialTheme.typography.bodyMedium,
+                color = GlassTheme.TextSecondary
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GlassButton(
+                    text = if (settings.activeSource == DataSourceType.SQLITE) "● SQLite" else "SQLite",
+                    onClick = { onActiveSourceChange(DataSourceType.SQLITE) },
+                    enabled = !busy
+                )
+                GlassButton(
+                    text = if (settings.activeSource == DataSourceType.POSTGRES) "● PostgreSQL" else "PostgreSQL",
+                    onClick = { onActiveSourceChange(DataSourceType.POSTGRES) },
+                    enabled = !busy
+                )
+            }
+
+            Text(
+                text = "SQLite 存储路径",
+                style = MaterialTheme.typography.titleSmall,
+                color = GlassTheme.TextPrimary
+            )
+            GlassTextField(
+                value = settings.sqlitePath,
+                onValueChange = onSqlitePathChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = if (settings.sqliteDefaultPath.isBlank()) {
+                    "~/.vibepocket/notes/vibenotes-server.db"
+                } else {
+                    settings.sqliteDefaultPath
+                },
+                enabled = !busy
+            )
+            Text(
+                text = "默认路径：${settings.sqliteDefaultPath.ifBlank { "~/.vibepocket/notes/vibenotes-server.db" }}",
+                style = MaterialTheme.typography.bodySmall,
+                color = GlassTheme.TextTertiary
+            )
+
+            Text(
+                text = "PostgreSQL 连接",
+                style = MaterialTheme.typography.titleSmall,
+                color = GlassTheme.TextPrimary
+            )
+            GlassTextField(
+                value = settings.postgresUrl,
+                onValueChange = onPostgresUrlChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "jdbc:postgresql://127.0.0.1:5432/vibenotes",
+                enabled = !busy
+            )
+            GlassTextField(
+                value = settings.postgresUser,
+                onValueChange = onPostgresUserChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "postgres",
+                enabled = !busy
+            )
+            GlassTextField(
+                value = postgresPassword,
+                onValueChange = onPostgresPasswordChange,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "postgres 密码（不填则保持原值）",
+                enabled = !busy
+            )
+            Text(
+                text = if (settings.postgresAvailable) {
+                    "PostgreSQL 当前可连接"
+                } else {
+                    "PostgreSQL 当前不可连接或未配置"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = GlassTheme.TextTertiary
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                LiquidGlassButton(
+                    text = "应用设置",
+                    onClick = onApply,
+                    enabled = !busy
+                )
             }
         }
     }
@@ -695,9 +850,7 @@ private fun KnowledgeGraphHome(
     LiquidGlassCard(
         modifier = modifier
             .fillMaxHeight()
-            .padding(8.dp),
-        primaryColor = GlassTheme.NeonCyan,
-        secondaryColor = GlassTheme.NeonPurple
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -757,11 +910,10 @@ private fun KnowledgeGraphHome(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(hits, key = { hit -> hit.note.id }) { hit ->
-                    NeonGlassCard(
+                    LiquidGlassCard(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onOpenNote(hit.note) },
-                        glowColor = GlassTheme.NeonCyan
+                            .clickable { onOpenNote(hit.note) }
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Text(

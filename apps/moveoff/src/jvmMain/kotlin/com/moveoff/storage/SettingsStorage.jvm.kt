@@ -2,7 +2,7 @@ package com.moveoff.storage
 
 import java.io.File
 
-actual fun getSettingsDirectory(): File {
+fun getSettingsDirectory(): File {
     val userHome = System.getProperty("user.home")
     return when {
         System.getProperty("os.name").contains("Mac", ignoreCase = true) ->

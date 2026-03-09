@@ -28,3 +28,23 @@ data class DataSourceHealthPayload(
     val available: Boolean,
     val message: String
 )
+
+@Serializable
+data class StorageSettingsPayload(
+    val activeSource: String,
+    val sqlitePath: String,
+    val sqliteDefaultPath: String,
+    val postgresUrl: String,
+    val postgresUser: String,
+    val postgresConfigured: Boolean,
+    val postgresAvailable: Boolean
+)
+
+@Serializable
+data class StorageSettingsUpdateRequest(
+    val activeSource: String,
+    val sqlitePath: String,
+    val postgresUrl: String,
+    val postgresUser: String,
+    val postgresPassword: String = ""
+)

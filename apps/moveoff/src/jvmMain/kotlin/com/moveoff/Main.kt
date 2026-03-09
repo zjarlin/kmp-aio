@@ -1,7 +1,6 @@
 package com.moveoff
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -12,7 +11,6 @@ import com.moveoff.db.DatabaseManager
 import com.moveoff.event.EventBus
 import com.moveoff.event.UIEvent
 import com.moveoff.server.LocalServerManager
-import com.moveoff.state.AppStateManager
 import com.moveoff.storage.S3StorageClient
 import com.moveoff.sync.SyncEngineManager
 import com.moveoff.sync.FailoverStorageManager
@@ -44,7 +42,7 @@ fun main() = application {
     // ========== 1. 初始化数据库 ==========
     LaunchedEffect(Unit) {
         try {
-            val db = DatabaseManager.initialize()
+            DatabaseManager.initialize()
             println("数据库初始化成功: ${DatabaseImpl.getDefaultDbPath()}")
         } catch (e: Exception) {
             println("数据库初始化失败: ${e.message}")
@@ -205,9 +203,9 @@ fun main() = application {
             },
             onPauseResume = {
                 try {
-                    val syncEngine = SyncEngineManager.get()
+                    SyncEngineManager.get()
                     // TODO: 检查当前状态决定暂停还是恢复
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     // 忽略
                 }
             },
@@ -240,7 +238,7 @@ fun main() = application {
         ConflictResolutionWindow(
             conflictId = windowManager.currentConflictId ?: "",
             onCloseRequest = { windowManager.closeConflictWindow() },
-            onResolve = { resolution ->
+            onResolve = { _ ->
                 // TODO: 处理冲突解决
                 windowManager.closeConflictWindow()
             }

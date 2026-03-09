@@ -5,7 +5,7 @@ import com.moveoff.event.UIEvent
 import com.moveoff.sync.api.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 存储后端类型
@@ -41,12 +41,15 @@ class FailoverStorageClient(
 ) : StorageClient {
 
     private val _currentBackend = MutableStateFlow(primaryType)
+    @Suppress("unused")
     val currentBackend: StateFlow<StorageBackendType> = _currentBackend.asStateFlow()
 
     private val _backendStates = MutableStateFlow<Map<StorageBackendType, StorageBackendState>>(emptyMap())
+    @Suppress("unused")
     val backendStates: StateFlow<Map<StorageBackendType, StorageBackendState>> = _backendStates.asStateFlow()
 
     private val _isFailoverActive = MutableStateFlow(false)
+    @Suppress("unused")
     val isFailoverActive: StateFlow<Boolean> = _isFailoverActive.asStateFlow()
 
     private var healthCheckJob: Job? = null
@@ -54,10 +57,13 @@ class FailoverStorageClient(
 
     init {
         // 初始化状态
-        _backendStates.value = mapOf(
-            primaryType to StorageBackendState(primaryType, true),
-            fallbackType to StorageBackendState(fallbackType ?: StorageBackendType.SSH, true)
+        val initialStates = mutableMapOf<StorageBackendType, StorageBackendState>(
+            primaryType to StorageBackendState(primaryType, true)
         )
+        fallbackType?.let { type ->
+            initialStates[type] = StorageBackendState(type, true)
+        }
+        _backendStates.value = initialStates
     }
 
     /**
@@ -68,7 +74,7 @@ class FailoverStorageClient(
         healthCheckJob = scope.launch {
             while (isActive) {
                 checkHealth()
-                delay(healthCheckIntervalMs)
+                delay(healthCheckIntervalMs.milliseconds)
             }
         }
     }
@@ -88,7 +94,7 @@ class FailoverStorageClient(
         // 检查主后端
         val primaryHealthy = try {
             primaryClient.testConnection()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
 
@@ -99,7 +105,7 @@ class FailoverStorageClient(
             val fallbackHealthy = fallbackClient?.let { client ->
                 try {
                     client.testConnection()
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     false
                 }
             } ?: false
@@ -191,6 +197,7 @@ class FailoverStorageClient(
     /**
      * 手动切换到指定后端
      */
+    @Suppress("unused")
     fun switchBackend(type: StorageBackendType): Boolean {
         return synchronized(mutex) {
             val states = _backendStates.value
@@ -297,6 +304,7 @@ class FailoverStorageClient(
     /**
      * 获取存储后端统计信息
      */
+    @Suppress("unused")
     fun getStats(): FailoverStats {
         return FailoverStats(
             currentBackend = _currentBackend.value,

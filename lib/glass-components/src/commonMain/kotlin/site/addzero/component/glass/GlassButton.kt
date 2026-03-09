@@ -131,8 +131,8 @@ fun NeonGlassButton(
  * @param onClick 点击回调
  * @param modifier 外部修饰符
  * @param enabled 是否启用，默认 true
- * @param primaryColor 主渐变色，默认 [GlassTheme.NeonPurple]
- * @param secondaryColor 副渐变色，默认 [GlassTheme.NeonCyan]
+ * @param primaryColor 主表面色，默认 [GlassTheme.WaterSurfacePrimary]
+ * @param secondaryColor 次表面色，默认 [GlassTheme.WaterSurfaceSecondary]
  * @param shape 按钮形状，默认 16dp 圆角
  */
 @Composable
@@ -141,8 +141,8 @@ fun LiquidGlassButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    primaryColor: Color = GlassTheme.NeonPurple,
-    secondaryColor: Color = GlassTheme.NeonCyan,
+    primaryColor: Color = GlassTheme.WaterSurfacePrimary,
+    secondaryColor: Color = GlassTheme.WaterSurfaceSecondary,
     shape: Shape = RoundedRectangle(16.dp),
 ) {
     val interactionSource = remember { MutableInteractionSource() }

@@ -68,16 +68,16 @@ fun NeonGlassCard(
  * 对齐 macOS 26 Liquid Glass 设计语言。
  *
  * @param modifier 外部修饰符
- * @param primaryColor 主渐变色，默认 [GlassTheme.NeonPurple]
- * @param secondaryColor 副渐变色，默认 [GlassTheme.NeonCyan]
+ * @param primaryColor 主表面色，默认 [GlassTheme.WaterSurfacePrimary]
+ * @param secondaryColor 次表面色，默认 [GlassTheme.WaterSurfaceSecondary]
  * @param shape 卡片形状，默认 24dp 圆角
  * @param content 卡片内容
  */
 @Composable
 fun LiquidGlassCard(
     modifier: Modifier = Modifier,
-    primaryColor: Color = GlassTheme.NeonPurple,
-    secondaryColor: Color = GlassTheme.NeonCyan,
+    primaryColor: Color = GlassTheme.WaterSurfacePrimary,
+    secondaryColor: Color = GlassTheme.WaterSurfaceSecondary,
     shape: Shape = RoundedRectangle(24.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {

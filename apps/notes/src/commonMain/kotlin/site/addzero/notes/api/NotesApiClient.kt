@@ -19,6 +19,7 @@ object NotesApiClient {
     }
 
     private val httpClient = HttpClient {
+        expectSuccess = true
         defaultRequest {
             contentType(ContentType.Application.Json)
             headers.remove(HttpHeaders.Accept)

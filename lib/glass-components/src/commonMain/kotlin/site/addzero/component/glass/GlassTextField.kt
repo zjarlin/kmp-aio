@@ -49,7 +49,7 @@ fun GlassTextField(
             color = GlassTheme.TextPrimary,
             fontSize = 14.sp,
         ),
-        cursorBrush = SolidColor(GlassTheme.NeonCyan),
+        cursorBrush = SolidColor(GlassTheme.WaterRefractionEdgeStrong),
         modifier = modifier,
         decorationBox = { innerTextField ->
             Box(
@@ -103,7 +103,7 @@ fun GlassTextArea(
             fontSize = 14.sp,
             lineHeight = 20.sp,
         ),
-        cursorBrush = SolidColor(GlassTheme.NeonCyan),
+        cursorBrush = SolidColor(GlassTheme.WaterRefractionEdgeStrong),
         modifier = modifier,
         decorationBox = { innerTextField ->
             Box(
@@ -158,7 +158,7 @@ fun GlassSearchField(
             color = GlassTheme.TextPrimary,
             fontSize = 14.sp,
         ),
-        cursorBrush = SolidColor(GlassTheme.NeonCyan),
+        cursorBrush = SolidColor(GlassTheme.WaterRefractionEdgeStrong),
         modifier = modifier,
         decorationBox = { innerTextField ->
             Box(

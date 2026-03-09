@@ -32,6 +32,22 @@ object GlassTheme {
     /** 玻璃阴影色 */
     val GlassShadow = Color(0x20000000)
 
+    // ── 无色水玻璃 Token ───────────────────────────────────
+    /** 无色液态玻璃主表面（中性白） */
+    val WaterSurfacePrimary = Color(0x14FFFFFF)
+
+    /** 无色液态玻璃次表面（更浅） */
+    val WaterSurfaceSecondary = Color(0x0DFFFFFF)
+
+    /** 边缘折射高光（强） */
+    val WaterRefractionEdgeStrong = Color(0xCCFFFFFF)
+
+    /** 边缘折射高光（弱） */
+    val WaterRefractionEdgeSoft = Color(0x55FFFFFF)
+
+    /** 内缘折射线（用于双层边缘） */
+    val WaterRefractionInner = Color(0x33FFFFFF)
+
     // ── JetBrains 紫色系 ────────────────────────────────────
     /** JetBrains 主紫色 */
     val JBPurple = Color(0xFF6B57FF)

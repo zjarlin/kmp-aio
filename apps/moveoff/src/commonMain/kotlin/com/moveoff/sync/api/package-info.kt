@@ -14,7 +14,7 @@
  * ## 实现类
  * - [com.moveoff.desktop.storage.S3StorageClient] - S3 协议实现
  * - [com.moveoff.desktop.storage.SSHStorageClient] - SSH/SFTP 实现
- * - [com.moveoff.sync.FailoverStorageClient] - 故障转移包装器
+ * - `FailoverStorageClient`（jvmMain）- 故障转移包装器
  *
  * ## 扩展方式
  * 实现 [StorageClient] 接口即可添加新的存储后端：

@@ -1,15 +1,16 @@
 package com.moveoff.p2p
 
-import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.*
 import java.net.*
+import java.util.logging.Level
+import java.util.logging.Logger
 import javax.jmdns.*
 
-private val logger = KotlinLogging.logger {}
+private val logger: Logger = Logger.getLogger(P2PManager::class.java.name)
 private val json = Json { ignoreUnknownKeys = true }
 
 /**
@@ -167,9 +168,9 @@ class P2PManager(
             // 启动TCP服务器
             startServer()
 
-            logger.info { "P2P服务已启动: $serviceName on port $transferPort" }
+            logger.info("P2P服务已启动: $serviceName on port $transferPort")
         } catch (e: Exception) {
-            logger.error(e) { "P2P服务启动失败" }
+            logger.log(Level.SEVERE, "P2P服务启动失败", e)
         }
     }
 
@@ -200,7 +201,7 @@ class P2PManager(
         } catch (_: Exception) {}
         serverSocket = null
 
-        logger.info { "P2P服务已停止" }
+        logger.info("P2P服务已停止")
     }
 
     /**
@@ -228,7 +229,7 @@ class P2PManager(
                     }
                 })
             } catch (e: Exception) {
-                logger.error(e) { "服务发现启动失败" }
+                logger.log(Level.SEVERE, "服务发现启动失败", e)
             }
         }
     }
@@ -239,15 +240,14 @@ class P2PManager(
     private fun resolveService(event: ServiceEvent) {
         try {
             val info = event.info ?: return
-            val props = info.textString
 
             // 解析属性
-            val id = info.propertyString("id") ?: return
+            val id = info.getPropertyString("id") ?: return
             if (id == nodeId) return // 忽略自己
 
-            val name = info.propertyString("name") ?: "Unknown"
-            val type = info.propertyString("type")?.let {
-                DeviceType.values().find { t -> t.name == it }
+            val name = info.getPropertyString("name") ?: "Unknown"
+            val type = info.getPropertyString("type")?.let {
+                DeviceType.entries.find { t -> t.name == it }
             } ?: DeviceType.UNKNOWN
 
             val node = P2PNode(
@@ -260,9 +260,9 @@ class P2PManager(
             )
 
             addNode(node)
-            logger.debug { "发现节点: ${node.name} (${node.host}:${node.port})" }
+            logger.fine("发现节点: ${node.name} (${node.host}:${node.port})")
         } catch (e: Exception) {
-            logger.error(e) { "解析服务信息失败" }
+            logger.log(Level.SEVERE, "解析服务信息失败", e)
         }
     }
 
@@ -295,11 +295,13 @@ class P2PManager(
                         val socket = serverSocket?.accept() ?: break
                         launch { handleIncomingConnection(socket) }
                     } catch (e: Exception) {
-                        if (isActive) logger.error(e) { "接受连接失败" }
+                        if (isActive) {
+                            logger.log(Level.SEVERE, "接受连接失败", e)
+                        }
                     }
                 }
             } catch (e: Exception) {
-                logger.error(e) { "TCP服务器启动失败" }
+                logger.log(Level.SEVERE, "TCP服务器启动失败", e)
             }
         }
     }
@@ -309,7 +311,7 @@ class P2PManager(
      */
     private suspend fun handleIncomingConnection(socket: Socket) = withContext(Dispatchers.IO) {
         try {
-            socket.use { sock -
+            socket.use { sock ->
                 val reader = BufferedReader(InputStreamReader(sock.getInputStream()))
                 val writer = PrintWriter(sock.getOutputStream(), true)
 
@@ -317,7 +319,7 @@ class P2PManager(
                 val requestJson = reader.readLine() ?: return@withContext
                 val request = json.decodeFromString<P2PTransferRequest>(requestJson)
 
-                logger.info { "收到传输请求: ${request.fileName} (${request.fileSize} bytes)" }
+                logger.info("收到传输请求: ${request.fileName} (${request.fileSize} bytes)")
 
                 // TODO: 显示用户确认对话框
                 val accepted = true
@@ -336,7 +338,7 @@ class P2PManager(
                 }
             }
         } catch (e: Exception) {
-            logger.error(e) { "处理传入连接失败" }
+            logger.log(Level.SEVERE, "处理传入连接失败", e)
         }
     }
 
@@ -352,8 +354,8 @@ class P2PManager(
             val file = java.io.File(syncDir, request.filePath)
             file.parentFile?.mkdirs()
 
-            socket.getInputStream().use { input -
-                file.outputStream().use { output -
+            socket.getInputStream().use { input ->
+                file.outputStream().use { output ->
                     val buffer = ByteArray(8192)
                     var totalRead = 0L
                     var read: Int
@@ -383,9 +385,9 @@ class P2PManager(
                 }
             }
 
-            logger.info { "文件接收完成: ${request.fileName}" }
+            logger.info("文件接收完成: ${request.fileName}")
         } catch (e: Exception) {
-            logger.error(e) { "接收文件失败" }
+            logger.log(Level.SEVERE, "接收文件失败", e)
         }
     }
 
@@ -412,7 +414,7 @@ class P2PManager(
             // 连接目标节点
             val socket = Socket(node.host, node.port)
 
-            socket.use { sock -
+            socket.use { sock ->
                 val writer = PrintWriter(sock.getOutputStream(), true)
                 val reader = BufferedReader(InputStreamReader(sock.getInputStream()))
 
@@ -431,8 +433,8 @@ class P2PManager(
                 val startTime = System.currentTimeMillis()
                 var totalSent = 0L
 
-                localFile.inputStream().use { input -
-                    sock.getOutputStream().use { output -
+                localFile.inputStream().use { input ->
+                    sock.getOutputStream().use { output ->
                         val buffer = ByteArray(8192)
                         var read: Int
 
@@ -449,7 +451,11 @@ class P2PManager(
                                     fileSize = localFile.length(),
                                     transferred = totalSent,
                                     speed = speed,
-                                    eta = if (speed > 0) (localFile.length() - totalSent) / speed else 0
+                                    eta = if (speed > 0) {
+                                        ((localFile.length() - totalSent) / speed).toLong()
+                                    } else {
+                                        0L
+                                    }
                                 )
                             )
                         }
@@ -457,12 +463,12 @@ class P2PManager(
                 }
 
                 val duration = System.currentTimeMillis() - startTime
-                logger.info { "文件发送完成: ${localFile.name} (${duration}ms)" }
+                logger.info("文件发送完成: ${localFile.name} (${duration}ms)")
 
                 P2PTransferResult.Success(duration, totalSent)
             }
         } catch (e: Exception) {
-            logger.error(e) { "发送文件失败" }
+            logger.log(Level.SEVERE, "发送文件失败", e)
             P2PTransferResult.Error(e.message ?: "发送失败")
         }
     }
@@ -471,21 +477,21 @@ class P2PManager(
      * 计算文件哈希
      */
     private fun computeFileHash(file: java.io.File): String {
-        return java.security.MessageDigest.getInstance("SHA-256").use { digest -
-            file.inputStream().use { input -
-                val buffer = ByteArray(8192)
-                var read: Int
-                while (input.read(buffer).also { read = it } > 0) {
-                    digest.update(buffer, 0, read)
-                }
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            var read: Int
+            while (input.read(buffer).also { read = it } > 0) {
+                digest.update(buffer, 0, read)
             }
-            digest.digest().joinToString("") { "%02x".format(it) }
         }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     /**
      * 获取或创建会话
      */
+    @Suppress("unused")
     fun getSession(nodeId: String): P2PSession? {
         return synchronized(sessionsLock) {
             sessions[nodeId]

@@ -120,62 +120,117 @@ fun Modifier.neonGlassEffect(
 /**
  * 液态玻璃效果修饰符。
  *
- * 对齐 macOS 26 Liquid Glass 设计语言：在深色底层上叠加多层半透明渐变，
- * 并使用多色渐变边框模拟光线折射高光效果，营造流动的液态玻璃质感。
+ * 对齐 macOS 26 Liquid Glass 设计语言：在深色底层上叠加无色半透明层，
+ * 并强化边缘折射高光，营造“无色水玻璃”的折射质感。
  *
  * 实现细节：
  * 1. 深色底层 ([GlassTheme.DarkSurface]) 保证可读性
- * 2. 多层线性渐变叠加 — 主色 → 副色 → 主色，模拟液态流动
- * 3. 内部微光层 ([drawBehind]) — 从左上角扩散的白色微光，模拟光线折射
- * 4. 多色渐变边框 — 白色 → 主色 → 副色 → 白色，模拟玻璃边缘的光折射高光
+ * 2. 多层无色半透明叠加，模拟液体厚度
+ * 3. 内部微光层 ([drawBehind])，模拟水体内的散射
+ * 4. 双层边缘折射线（顶边/左边/右下边），强调光线折射
  *
  * @param shape 裁剪形状，默认 24dp 圆角（液态玻璃通常使用更大圆角）
- * @param primaryColor 主渐变色，默认 [GlassTheme.NeonPurple]
- * @param secondaryColor 副渐变色，默认 [GlassTheme.NeonCyan]
+ * @param primaryColor 主表面色，默认 [GlassTheme.WaterSurfacePrimary]
+ * @param secondaryColor 次表面色，默认 [GlassTheme.WaterSurfaceSecondary]
  */
 fun Modifier.liquidGlassEffect(
     shape: Shape = RoundedRectangle(24.dp),
-    primaryColor: Color = GlassTheme.NeonPurple,
-    secondaryColor: Color = GlassTheme.NeonCyan,
+    primaryColor: Color = GlassTheme.WaterSurfacePrimary,
+    secondaryColor: Color = GlassTheme.WaterSurfaceSecondary,
 ): Modifier {
     return this
         .clip(shape)
         // 深色底层
-        .background(GlassTheme.DarkSurface)
-        // 多层渐变叠加 — 模拟液态玻璃的流动色彩（降低 alpha 保证文字对比度）
+        .background(GlassTheme.DarkSurface.copy(alpha = 0.92f))
+        // 无色多层叠加 — 模拟水体厚度
         .background(
             brush = Brush.linearGradient(
                 colors = listOf(
-                    primaryColor.copy(alpha = 0.10f),
-                    secondaryColor.copy(alpha = 0.05f),
-                    primaryColor.copy(alpha = 0.03f),
+                    Color.White.copy(alpha = 0.10f),
+                    primaryColor.copy(alpha = 0.85f),
+                    secondaryColor.copy(alpha = 0.70f),
+                    Color.White.copy(alpha = 0.04f),
                 )
             )
         )
-        // 内部微光层 — 模拟光线折射的微妙高光
+        // 内部微光层 + 边缘折射线
         .drawBehind {
             drawRect(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color.White.copy(alpha = 0.04f),
+                        Color.White.copy(alpha = 0.16f),
                         Color.Transparent,
                     ),
-                    center = Offset(size.width * 0.3f, size.height * 0.2f),
-                    radius = size.minDimension * 0.8f,
+                    center = Offset(size.width * 0.22f, size.height * 0.12f),
+                    radius = size.minDimension * 0.95f,
                 )
             )
+
+            val strong = GlassTheme.WaterRefractionEdgeStrong
+            val soft = GlassTheme.WaterRefractionEdgeSoft
+            val strokeTop = 1.6.dp.toPx()
+            val strokeSide = 1.2.dp.toPx()
+
+            // 顶边折射高光
+            drawLine(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        strong,
+                        soft,
+                        Color.Transparent,
+                    )
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(size.width, 0f),
+                strokeWidth = strokeTop,
+            )
+
+            // 左边折射高光
+            drawLine(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        strong.copy(alpha = 0.9f),
+                        soft,
+                        Color.Transparent,
+                    )
+                ),
+                start = Offset(0f, 0f),
+                end = Offset(0f, size.height),
+                strokeWidth = strokeSide,
+            )
+
+            // 右下边反向折射线
+            drawLine(
+                brush = Brush.linearGradient(
+                    colors = listOf(
+                        Color.Transparent,
+                        soft.copy(alpha = 0.8f),
+                        strong.copy(alpha = 0.65f),
+                    ),
+                    start = Offset(size.width * 0.55f, size.height),
+                    end = Offset(size.width, size.height * 0.55f),
+                ),
+                start = Offset(size.width * 0.55f, size.height),
+                end = Offset(size.width, size.height * 0.55f),
+                strokeWidth = strokeSide,
+            )
         }
-        // 光折射边框 — 多色渐变模拟玻璃边缘的光线折射高光
+        // 主边缘折射
         .border(
-            width = 1.5.dp,
+            width = 1.4.dp,
             brush = Brush.linearGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.6f),
-                    primaryColor.copy(alpha = 0.4f),
-                    secondaryColor.copy(alpha = 0.3f),
-                    Color.White.copy(alpha = 0.1f),
+                    GlassTheme.WaterRefractionEdgeStrong,
+                    GlassTheme.WaterRefractionEdgeSoft,
+                    Color.Transparent,
                 )
             ),
+            shape = shape,
+        )
+        // 内缘折射
+        .border(
+            width = 0.6.dp,
+            color = GlassTheme.WaterRefractionInner,
             shape = shape,
         )
 }

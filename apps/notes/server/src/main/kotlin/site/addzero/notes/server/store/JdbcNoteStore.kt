@@ -2,9 +2,10 @@
 
 package site.addzero.notes.server.store
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import site.addzero.notes.server.model.NotePayload
 import java.sql.Connection
-import java.sql.DriverManager
 
 class JdbcNoteStore(
     private val source: String,
@@ -13,9 +14,12 @@ class JdbcNoteStore(
     private val username: String?,
     private val password: String?,
     enabled: Boolean
-) {
+) : AutoCloseable {
+    private val sqliteSource = source.equals("sqlite", ignoreCase = true)
+
     private var ready = false
     private var initError = ""
+    private var dataSource: HikariDataSource? = null
 
     init {
         if (!enabled) {
@@ -24,11 +28,14 @@ class JdbcNoteStore(
         } else {
             runCatching {
                 Class.forName(driverClassName)
+                dataSource = createDataSource()
                 initializeSchema()
                 ready = true
             }.onFailure { throwable ->
                 ready = false
                 initError = throwable.message.orEmpty().ifBlank { "初始化失败" }
+                runCatching { dataSource?.close() }
+                dataSource = null
             }
         }
     }
@@ -103,11 +110,48 @@ class JdbcNoteStore(
     }
 
     private fun openConnection(): Connection {
-        return if (username == null) {
-            DriverManager.getConnection(jdbcUrl)
-        } else {
-            DriverManager.getConnection(jdbcUrl, username, password)
+        val ds = dataSource
+        check(ds != null) { "数据源连接池不可用：$source - $initError" }
+        return ds.connection
+    }
+
+    private fun createDataSource(): HikariDataSource {
+        val config = HikariConfig().apply {
+            poolName = "notes-$source-pool"
+            driverClassName = this@JdbcNoteStore.driverClassName
+            jdbcUrl = this@JdbcNoteStore.jdbcUrl
+            if (!username.isNullOrBlank()) {
+                this.username = username
+            }
+            if (!password.isNullOrBlank()) {
+                this.password = password
+            }
+
+            connectionTimeout = 5_000
+            validationTimeout = 3_000
+            maxLifetime = 30 * 60 * 1000L
+            connectionTestQuery = "select 1"
+
+            if (sqliteSource) {
+                maximumPoolSize = 1
+                minimumIdle = 1
+                idleTimeout = 0
+            } else {
+                maximumPoolSize = 8
+                minimumIdle = 1
+                idleTimeout = 120_000
+            }
         }
+        return HikariDataSource(config)
+    }
+
+    override fun close() {
+        val ds = dataSource
+        dataSource = null
+        if (ds != null) {
+            runCatching { ds.close() }
+        }
+        ready = false
     }
 
     private companion object {

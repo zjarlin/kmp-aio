@@ -11,10 +11,21 @@ import io.ktor.server.routing.route
 import site.addzero.notes.server.model.DataSourceHealthPayload
 import site.addzero.notes.server.model.NotePayload
 import site.addzero.notes.server.model.NoteUpsertRequest
+import site.addzero.notes.server.model.StorageSettingsUpdateRequest
 import site.addzero.notes.server.store.NoteStoreRegistry
 
 fun Route.noteRoutes(registry: NoteStoreRegistry) {
     route("/api/notes") {
+        get("/settings") {
+            call.respond(registry.readSettings())
+        }
+
+        put("/settings") {
+            val request = call.receive<StorageSettingsUpdateRequest>()
+            val updated = registry.updateSettings(request)
+            call.respond(updated)
+        }
+
         get("/{source}/health") {
             val source = call.parameters["source"].orEmpty()
             val store = registry.resolve(source)

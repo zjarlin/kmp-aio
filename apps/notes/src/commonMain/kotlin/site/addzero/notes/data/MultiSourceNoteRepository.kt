@@ -2,28 +2,25 @@ package site.addzero.notes.data
 
 import kotlin.random.Random
 import site.addzero.notes.ai.ReferenceTokenParser
+import site.addzero.notes.api.NotesApiClient
+import site.addzero.notes.api.StorageSettingsPayload
+import site.addzero.notes.api.StorageSettingsUpdateRequest
 import site.addzero.notes.model.DataSourceHealth
+import site.addzero.notes.model.DataSourceType
 import site.addzero.notes.model.Note
+import site.addzero.notes.model.StorageSettings
+import site.addzero.notes.model.StorageSettingsUpdate
 import site.addzero.notes.model.SyncResult
 
 class MultiSourceNoteRepository(
     private val local: NoteDataSource,
     private val remote: NoteDataSource
 ) : NoteRepository {
+    private var activeSourceType: DataSourceType = DataSourceType.SQLITE
 
     override suspend fun listNotes(): List<Note> {
-        val localNotes = runCatching { local.fetchNotes() }.getOrDefault(emptyList())
-        val remoteNotes = if (remoteAvailable()) {
-            runCatching { remote.fetchNotes() }.getOrDefault(emptyList())
-        } else {
-            emptyList()
-        }
-
-        val merged = mergeNotes(localNotes, remoteNotes)
-        merged.forEach { note ->
-            runCatching { local.upsertNote(note) }
-        }
-        return merged
+        val notes = activeDataSource().fetchNotes()
+        return sortNotes(notes)
     }
 
     override suspend fun createNote(): Note {
@@ -36,26 +33,18 @@ class MultiSourceNoteRepository(
             pinned = false,
             version = 1L
         )
-        local.upsertNote(note)
-        if (remoteAvailable()) {
-            runCatching { remote.upsertNote(note) }
-        }
+        activeDataSource().upsertNote(note)
         return note
     }
 
     override suspend fun saveNote(note: Note): Note {
-        val localNotes = runCatching { local.fetchNotes() }.getOrDefault(emptyList())
-        val remoteNotes = if (remoteAvailable()) {
-            runCatching { remote.fetchNotes() }.getOrDefault(emptyList())
-        } else {
-            emptyList()
-        }
-        val allNotes = mergeNotes(localNotes, remoteNotes)
+        val currentNotes = runCatching { activeDataSource().fetchNotes() }
+            .getOrDefault(emptyList())
 
-        val previous = allNotes.firstOrNull { item -> item.id == note.id }
+        val previous = currentNotes.firstOrNull { item -> item.id == note.id }
         val nextVersion = maxOf(previous?.version ?: 0L, note.version) + 1L
         val normalizedPath = sanitizePath(note.path, note.title)
-        val uniquePath = makeUniquePath(normalizedPath, allNotes, note.id)
+        val uniquePath = makeUniquePath(normalizedPath, currentNotes, note.id)
         val normalizedTitle = normalizeTitle(note.title, note.markdown)
 
         val normalized = note.copy(
@@ -63,10 +52,7 @@ class MultiSourceNoteRepository(
             path = uniquePath,
             version = nextVersion
         )
-        local.upsertNote(normalized)
-        if (remoteAvailable()) {
-            runCatching { remote.upsertNote(normalized) }
-        }
+        activeDataSource().upsertNote(normalized)
         return normalized
     }
 
@@ -76,10 +62,7 @@ class MultiSourceNoteRepository(
     }
 
     override suspend fun deleteNote(noteId: String) {
-        local.deleteNote(noteId)
-        if (remoteAvailable()) {
-            runCatching { remote.deleteNote(noteId) }
-        }
+        activeDataSource().deleteNote(noteId)
     }
 
     override suspend fun sync(): SyncResult {
@@ -132,8 +115,41 @@ class MultiSourceNoteRepository(
         return listOf(local.health(), remote.health())
     }
 
-    private suspend fun remoteAvailable(): Boolean {
-        return remote.health().available
+    override suspend fun storageSettings(): StorageSettings {
+        val payload = NotesApiClient.notesApi().storageSettings()
+        val mapped = payload.toStorageSettings()
+        activeSourceType = mapped.activeSource
+        return mapped
+    }
+
+    override suspend fun updateStorageSettings(update: StorageSettingsUpdate): StorageSettings {
+        val payload = NotesApiClient.notesApi().updateStorageSettings(
+            StorageSettingsUpdateRequest(
+                activeSource = update.activeSource.toApiSource(),
+                sqlitePath = update.sqlitePath,
+                postgresUrl = update.postgresUrl,
+                postgresUser = update.postgresUser,
+                postgresPassword = update.postgresPassword
+            )
+        )
+        val mapped = payload.toStorageSettings()
+        activeSourceType = mapped.activeSource
+        return mapped
+    }
+
+    private fun activeDataSource(): NoteDataSource {
+        return when (activeSourceType) {
+            DataSourceType.SQLITE -> local
+            DataSourceType.POSTGRES -> remote
+        }
+    }
+
+    private fun sortNotes(notes: List<Note>): List<Note> {
+        return notes.sortedWith(
+            compareByDescending<Note> { note -> note.pinned }
+                .thenByDescending { note -> note.version }
+                .thenBy { note -> note.title.lowercase() }
+        )
     }
 
     private fun mergeNotes(localNotes: List<Note>, remoteNotes: List<Note>): List<Note> {
@@ -153,13 +169,7 @@ class MultiSourceNoteRepository(
             merged[note.id] = winner
         }
 
-        return merged
-            .values
-            .sortedWith(
-                compareByDescending<Note> { note -> note.pinned }
-                    .thenByDescending { note -> note.version }
-                    .thenBy { note -> note.title.lowercase() }
-            )
+        return sortNotes(merged.values.toList())
     }
 
     private fun generateId(): String {
@@ -212,6 +222,32 @@ class MultiSourceNoteRepository(
                 return candidate
             }
             index += 1
+        }
+    }
+
+    private fun StorageSettingsPayload.toStorageSettings(): StorageSettings {
+        return StorageSettings(
+            activeSource = activeSource.toSourceType(),
+            sqlitePath = sqlitePath,
+            sqliteDefaultPath = sqliteDefaultPath,
+            postgresUrl = postgresUrl,
+            postgresUser = postgresUser,
+            postgresConfigured = postgresConfigured,
+            postgresAvailable = postgresAvailable
+        )
+    }
+
+    private fun String.toSourceType(): DataSourceType {
+        return when (lowercase()) {
+            "postgres" -> DataSourceType.POSTGRES
+            else -> DataSourceType.SQLITE
+        }
+    }
+
+    private fun DataSourceType.toApiSource(): String {
+        return when (this) {
+            DataSourceType.SQLITE -> "sqlite"
+            DataSourceType.POSTGRES -> "postgres"
         }
     }
 }

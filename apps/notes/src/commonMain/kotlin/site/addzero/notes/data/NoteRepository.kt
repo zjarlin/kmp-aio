@@ -2,6 +2,8 @@ package site.addzero.notes.data
 
 import site.addzero.notes.model.DataSourceHealth
 import site.addzero.notes.model.Note
+import site.addzero.notes.model.StorageSettings
+import site.addzero.notes.model.StorageSettingsUpdate
 import site.addzero.notes.model.SyncResult
 
 interface NoteRepository {
@@ -18,4 +20,8 @@ interface NoteRepository {
     suspend fun sync(): SyncResult
 
     suspend fun dataSourceHealth(): List<DataSourceHealth>
+
+    suspend fun storageSettings(): StorageSettings
+
+    suspend fun updateStorageSettings(update: StorageSettingsUpdate): StorageSettings
 }

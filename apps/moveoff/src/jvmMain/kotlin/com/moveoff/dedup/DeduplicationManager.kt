@@ -1,6 +1,5 @@
 package com.moveoff.dedup
 
-import com.moveoff.db.Database
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.File
@@ -81,10 +80,7 @@ sealed class DedupActionResult {
  *
  * 基于内容哈希检测和删除重复文件
  */
-class DeduplicationManager(
-    private val database: Database,
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-) {
+class DeduplicationManager {
     private val _progress = MutableStateFlow<DedupProgress?>(null)
     val progress: StateFlow<DedupProgress?> = _progress.asStateFlow()
 
@@ -102,101 +98,110 @@ class DeduplicationManager(
         rootDir: String,
         minFileSize: Long = 1024,
         excludePatterns: List<String> = emptyList()
-    ): Result<DedupScanResult> = withContext(Dispatchers.IO) {
-        try {
-            val root = File(rootDir)
-            if (!root.exists() || !root.isDirectory) {
-                return@withContext Result.failure(IllegalArgumentException("无效的目录: $rootDir"))
-            }
+    ): Result<DedupScanResult> {
+        val currentJob = currentCoroutineContext()[Job]
+        scanJob = currentJob
 
-            val startTime = System.currentTimeMillis()
-            _progress.value = DedupProgress("", 0, 0, null, DedupStage.SCANNING)
+        return try {
+            withContext(Dispatchers.IO) {
+                val root = File(rootDir)
+                if (!root.exists() || !root.isDirectory) {
+                    return@withContext Result.failure(IllegalArgumentException("无效的目录: $rootDir"))
+                }
 
-            // 1. 收集所有文件
-            val allFiles = mutableListOf<File>()
-            root.walkTopDown()
-                .filter { it.isFile }
-                .filter { it.length() >= minFileSize }
-                .filter { file ->
-                    excludePatterns.none { pattern ->
-                        file.path.matches(Regex(pattern.replace("*", ".*")))
+                val startTime = System.currentTimeMillis()
+                _progress.value = DedupProgress("", 0, 0, null, DedupStage.SCANNING)
+
+                // 1. 收集所有文件
+                val allFiles = mutableListOf<File>()
+                root.walkTopDown()
+                    .filter { it.isFile }
+                    .filter { it.length() >= minFileSize }
+                    .filter { file ->
+                        excludePatterns.none { pattern ->
+                            file.path.matches(Regex(pattern.replace("*", ".*")))
+                        }
+                    }
+                    .toCollection(allFiles)
+
+                val totalFiles = allFiles.size
+                var processedCount = 0
+
+                // 2. 按大小分组（快速预筛选）
+                val sizeGroups = allFiles.groupBy { it.length() }
+                    .filter { it.value.size > 1 }
+
+                // 3. 计算完整哈希
+                _progress.value = DedupProgress("", 0, totalFiles, null, DedupStage.HASHING)
+
+                val hashMap = mutableMapOf<String, MutableList<File>>()
+
+                sizeGroups.values.flatten().forEach { file ->
+                    processedCount++
+                    _progress.value = DedupProgress(
+                        currentFile = file.name,
+                        processedCount = processedCount,
+                        totalCount = totalFiles,
+                        currentHash = null,
+                        stage = DedupStage.HASHING
+                    )
+
+                    try {
+                        val hash = computeFileHash(file)
+                        hashMap.getOrPut(hash) { mutableListOf() }.add(file)
+                    } catch (_: Exception) {
+                        // 忽略无法读取的文件
+                    }
+
+                    // 每处理100个文件yield一次，避免阻塞
+                    if (processedCount % 100 == 0) {
+                        yield()
                     }
                 }
-                .toCollection(allFiles)
 
-            val totalFiles = allFiles.size
-            var processedCount = 0
+                // 4. 分析结果
+                _progress.value = DedupProgress("", processedCount, totalFiles, null, DedupStage.ANALYZING)
 
-            // 2. 按大小分组（快速预筛选）
-            val sizeGroups = allFiles.groupBy { it.length() }
-                .filter { it.value.size > 1 }
+                val duplicateGroups = hashMap
+                    .filter { it.value.size > 1 }
+                    .map { (hash, files) ->
+                        // 选择最老的文件作为原始文件
+                        val sortedFiles = files.sortedBy { it.lastModified() }
+                        DuplicateGroup(
+                            hash = hash,
+                            size = sortedFiles.first().length(),
+                            files = sortedFiles.mapIndexed { index, file ->
+                                DuplicateFile(
+                                    path = file.path,
+                                    lastModified = file.lastModified(),
+                                    isOriginal = index == 0
+                                )
+                            }
+                        )
+                    }
+                    .sortedByDescending { it.potentialSavings() }
 
-            // 3. 计算完整哈希
-            _progress.value = DedupProgress("", 0, totalFiles, null, DedupStage.HASHING)
+                val scanTime = System.currentTimeMillis() - startTime
 
-            val hashMap = mutableMapOf<String, MutableList<File>>()
+                _progress.value = DedupProgress("", processedCount, totalFiles, null, DedupStage.COMPLETED)
 
-            sizeGroups.values.flatten().forEach { file ->
-                processedCount++
-                _progress.value = DedupProgress(
-                    currentFile = file.name,
-                    processedCount = processedCount,
-                    totalCount = totalFiles,
-                    currentHash = null,
-                    stage = DedupStage.HASHING
-                )
-
-                try {
-                    val hash = computeFileHash(file)
-                    hashMap.getOrPut(hash) { mutableListOf() }.add(file)
-                } catch (e: Exception) {
-                    // 忽略无法读取的文件
-                }
-
-                // 每处理100个文件yield一次，避免阻塞
-                if (processedCount % 100 == 0) {
-                    yield()
-                }
-            }
-
-            // 4. 分析结果
-            _progress.value = DedupProgress("", processedCount, totalFiles, null, DedupStage.ANALYZING)
-
-            val duplicateGroups = hashMap
-                .filter { it.value.size > 1 }
-                .map { (hash, files) ->
-                    // 选择最老的文件作为原始文件
-                    val sortedFiles = files.sortedBy { it.lastModified() }
-                    DuplicateGroup(
-                        hash = hash,
-                        size = sortedFiles.first().length(),
-                        files = sortedFiles.mapIndexed { index, file ->
-                            DuplicateFile(
-                                path = file.path,
-                                lastModified = file.lastModified(),
-                                isOriginal = index == 0
-                            )
-                        }
+                Result.success(
+                    DedupScanResult(
+                        totalFiles = totalFiles,
+                        scannedFiles = processedCount,
+                        duplicateGroups = duplicateGroups,
+                        totalDuplicates = duplicateGroups.sumOf { it.files.size - 1 },
+                        potentialSavings = duplicateGroups.sumOf { it.potentialSavings() },
+                        scanTime = scanTime
                     )
-                }
-                .sortedByDescending { it.potentialSavings() }
-
-            val scanTime = System.currentTimeMillis() - startTime
-
-            _progress.value = DedupProgress("", processedCount, totalFiles, null, DedupStage.COMPLETED)
-
-            Result.success(
-                DedupScanResult(
-                    totalFiles = totalFiles,
-                    scannedFiles = processedCount,
-                    duplicateGroups = duplicateGroups,
-                    totalDuplicates = duplicateGroups.sumOf { it.files.size - 1 },
-                    potentialSavings = duplicateGroups.sumOf { it.potentialSavings() },
-                    scanTime = scanTime
                 )
-            )
+            }
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            if (scanJob === currentJob) {
+                scanJob = null
+            }
         }
     }
 
@@ -207,6 +212,7 @@ class DeduplicationManager(
      * @param dryRun 是否仅模拟运行（不实际删除）
      * @return 操作结果
      */
+    @Suppress("unused")
     suspend fun removeDuplicates(
         groups: List<DuplicateGroup>,
         dryRun: Boolean = false
@@ -346,7 +352,7 @@ class DeduplicationManager(
                                 File(backupPath).delete()
                                 linkedCount++
                                 savedSpace += group.size
-                            } catch (e: Exception) {
+                            } catch (_: Exception) {
                                 // 恢复备份
                                 File(backupPath).renameTo(dupFile)
                             }
@@ -365,16 +371,15 @@ class DeduplicationManager(
      * 计算文件哈希（SHA-256）
      */
     private fun computeFileHash(file: File): String {
-        return MessageDigest.getInstance("SHA-256").use { digest ->
-            file.inputStream().use { input ->
-                val buffer = ByteArray(8192)
-                var read: Int
-                while (input.read(buffer).also { read = it } > 0) {
-                    digest.update(buffer, 0, read)
-                }
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            var read: Int
+            while (input.read(buffer).also { read = it } > 0) {
+                digest.update(buffer, 0, read)
             }
-            digest.digest().joinToString("") { "%02x".format(it) }
         }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     /**
@@ -393,7 +398,7 @@ class DeduplicationManager(
                 file.delete()
             }
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
     }
@@ -401,6 +406,7 @@ class DeduplicationManager(
     /**
      * 取消当前扫描
      */
+    @Suppress("unused")
     fun cancelScan() {
         scanJob?.cancel()
         _progress.value = null
