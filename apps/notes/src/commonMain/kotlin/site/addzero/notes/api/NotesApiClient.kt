@@ -1,14 +1,13 @@
 package site.addzero.notes.api
 
 import de.jensklingenberg.ktorfit.Ktorfit
-import io.ktor.client.HttpClient
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.client.plugins.defaultRequest
-import io.ktor.http.ContentType
-import io.ktor.http.HttpHeaders
-import io.ktor.http.contentType
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.client.*
+import io.ktor.client.plugins.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import site.addzero.core.network.apiClient
 
 expect fun platformDefaultApiBaseUrl(): String
 
@@ -30,11 +29,19 @@ object NotesApiClient {
         }
     }
 
-    private var baseUrl: String = normalizeBaseUrl(platformDefaultApiBaseUrl())
-    private var api: NotesApi = createApi(baseUrl)
+
+    private var baseUrl = normalizeBaseUrl(platformDefaultApiBaseUrl())
+    private var api = createApi(baseUrl)
 
     fun currentBaseUrl(): String {
+        apiClient.config {
+            defaultRequest {
+                url(baseUrl)
+            }
+        }
+
         return baseUrl
+
     }
 
     fun setBaseUrl(value: String) {
@@ -51,10 +58,11 @@ object NotesApiClient {
     }
 
     private fun createApi(baseUrl: String): NotesApi {
-        return Ktorfit.Builder()
+        val build = Ktorfit.Builder()
             .baseUrl(baseUrl)
             .httpClient(httpClient)
             .build()
+        return build
             .createNotesApi()
     }
 

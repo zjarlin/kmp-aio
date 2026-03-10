@@ -2,6 +2,7 @@ package site.addzero.notes.server.store
 
 import site.addzero.notes.server.model.StorageSettingsPayload
 import site.addzero.notes.server.model.StorageSettingsUpdateRequest
+import site.addzero.notes.server.NotesEnv
 import java.io.File
 
 class NoteStoreRegistry {
@@ -148,12 +149,12 @@ class NoteStoreRegistry {
     }
 
     private fun resolveInitialSqlitePath(): String {
-        val configuredPath = System.getenv("NOTES_SERVER_SQLITE_PATH")?.trim().orEmpty()
+        val configuredPath = NotesEnv.read("NOTES_SERVER_SQLITE_PATH")?.trim().orEmpty()
         if (configuredPath.isNotBlank()) {
             return normalizeSqlitePathValue(configuredPath)
         }
 
-        val configured = System.getenv("NOTES_SERVER_SQLITE_URL")?.trim().orEmpty()
+        val configured = NotesEnv.read("NOTES_SERVER_SQLITE_URL")?.trim().orEmpty()
         if (configured.isNotBlank()) {
             return normalizeSqlitePathValue(configured)
         }
@@ -207,19 +208,19 @@ class NoteStoreRegistry {
     }
 
     private fun resolveInitialPostgresUrl(): String {
-        return System.getenv("NOTES_SERVER_POSTGRES_URL")?.trim().orEmpty()
+        return NotesEnv.read("NOTES_SERVER_POSTGRES_URL")?.trim().orEmpty()
     }
 
     private fun resolveInitialPostgresUser(): String {
-        return System.getenv("NOTES_SERVER_POSTGRES_USER")?.trim().orEmpty().ifBlank { "postgres" }
+        return NotesEnv.read("NOTES_SERVER_POSTGRES_USER")?.trim().orEmpty().ifBlank { "postgres" }
     }
 
     private fun resolveInitialPostgresPassword(): String {
-        return System.getenv("NOTES_SERVER_POSTGRES_PASSWORD")?.trim().orEmpty().ifBlank { "postgres" }
+        return NotesEnv.read("NOTES_SERVER_POSTGRES_PASSWORD")?.trim().orEmpty().ifBlank { "postgres" }
     }
 
     private fun resolveInitialActiveSource(): String {
-        val configured = System.getenv("NOTES_SERVER_ACTIVE_SOURCE")?.trim().orEmpty().lowercase()
+        val configured = NotesEnv.read("NOTES_SERVER_ACTIVE_SOURCE")?.trim().orEmpty().lowercase()
         return when (configured) {
             SOURCE_POSTGRES -> SOURCE_POSTGRES
             else -> SOURCE_SQLITE

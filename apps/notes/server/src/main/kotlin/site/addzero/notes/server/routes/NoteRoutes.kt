@@ -1,104 +1,111 @@
 package site.addzero.notes.server.routes
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.put
-import io.ktor.server.routing.route
-import site.addzero.notes.server.model.DataSourceHealthPayload
-import site.addzero.notes.server.model.NotePayload
-import site.addzero.notes.server.model.NoteUpsertRequest
-import site.addzero.notes.server.model.StorageSettingsUpdateRequest
+import io.ktor.http.*
+import io.ktor.server.application.*
+import io.ktor.server.response.*
+import org.springframework.web.bind.annotation.*
+import site.addzero.notes.server.model.*
 import site.addzero.notes.server.store.NoteStoreRegistry
 
-fun Route.noteRoutes(registry: NoteStoreRegistry) {
-    route("/api/notes") {
-        get("/settings") {
-            call.respond(registry.readSettings())
-        }
+@RestController
+@RequestMapping("/api/notes")
+class NoteRoutes(
+    private val registry: NoteStoreRegistry,
+) {
+    @GetMapping("/settings")
+    fun readSettings(): StorageSettingsPayload {
+        return registry.readSettings()
+    }
 
-        put("/settings") {
-            val request = call.receive<StorageSettingsUpdateRequest>()
-            val updated = registry.updateSettings(request)
-            call.respond(updated)
-        }
+    @PutMapping("/settings")
+    fun updateSettings(
+        @RequestBody request: StorageSettingsUpdateRequest,
+    ): StorageSettingsPayload {
+        return registry.updateSettings(request)
+    }
 
-        get("/{source}/health") {
-            val source = call.parameters["source"].orEmpty()
-            val store = registry.resolve(source)
-            if (store == null) {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    DataSourceHealthPayload(
-                        source = source,
-                        available = false,
-                        message = "unknown source"
-                    )
-                )
-                return@get
-            }
-            call.respond(
-                DataSourceHealthPayload(
-                    source = source,
-                    available = store.isReady(),
-                    message = store.healthMessage()
-                )
+    @GetMapping("/{source}/health")
+    fun readHealth(
+        call: ApplicationCall,
+        @PathVariable source: String,
+    ): DataSourceHealthPayload {
+        val store = registry.resolve(source)
+        if (store == null) {
+            call.response.status(HttpStatusCode.NotFound)
+            return DataSourceHealthPayload(
+                source = source,
+                available = false,
+                message = "unknown source",
             )
         }
 
-        get("/{source}") {
-            val source = call.parameters["source"].orEmpty()
-            val store = registry.resolve(source)
-            if (store == null) {
-                call.respond(HttpStatusCode.NotFound, emptyList<NotePayload>())
-                return@get
-            }
-            if (!store.isReady()) {
-                call.respond(HttpStatusCode.ServiceUnavailable, emptyList<NotePayload>())
-                return@get
-            }
-            call.respond(store.listNotes())
+        return DataSourceHealthPayload(
+            source = source,
+            available = store.isReady(),
+            message = store.healthMessage(),
+        )
+    }
+
+    @GetMapping("/{source}")
+    fun listNotes(
+        call: ApplicationCall,
+        @PathVariable source: String,
+    ): List<NotePayload> {
+        val store = registry.resolve(source)
+        if (store == null) {
+            call.response.status(HttpStatusCode.NotFound)
+            return emptyList()
+        }
+        if (!store.isReady()) {
+            call.response.status(HttpStatusCode.ServiceUnavailable)
+            return emptyList()
         }
 
-        put("/{source}/{id}") {
-            val source = call.parameters["source"].orEmpty()
-            val id = call.parameters["id"].orEmpty()
-            val store = registry.resolve(source)
-            if (store == null) {
-                call.respond(HttpStatusCode.NotFound)
-                return@put
-            }
-            if (!store.isReady()) {
-                call.respond(HttpStatusCode.ServiceUnavailable)
-                return@put
-            }
-            val request = call.receive<NoteUpsertRequest>()
-            val saved = store.upsertNote(
-                NotePayload(
-                    id = if (request.id.isBlank()) id else request.id,
-                    path = request.path,
-                    title = request.title,
-                    markdown = request.markdown,
-                    pinned = request.pinned,
-                    version = request.version
-                )
-            )
-            call.respond(saved)
+        return store.listNotes()
+    }
+
+    @PutMapping("/{source}/{id}")
+    suspend fun upsertNote(
+        call: ApplicationCall,
+        @PathVariable source: String,
+        @PathVariable id: String,
+        @RequestBody request: NoteUpsertRequest,
+    ) {
+        val store = registry.resolve(source)
+        if (store == null) {
+            call.respond(HttpStatusCode.NotFound)
+            return
+        }
+        if (!store.isReady()) {
+            call.respond(HttpStatusCode.ServiceUnavailable)
+            return
         }
 
-        delete("/{source}/{id}") {
-            val source = call.parameters["source"].orEmpty()
-            val id = call.parameters["id"].orEmpty()
-            val store = registry.resolve(source)
-            if (store == null) {
-                call.respond(HttpStatusCode.NotFound)
-                return@delete
-            }
-            store.deleteNote(id)
-            call.respond(HttpStatusCode.OK)
+        val saved = store.upsertNote(
+            NotePayload(
+                id = if (request.id.isBlank()) id else request.id,
+                path = request.path,
+                title = request.title,
+                markdown = request.markdown,
+                pinned = request.pinned,
+                version = request.version,
+            ),
+        )
+        call.respond(saved)
+    }
+
+    @DeleteMapping("/{source}/{id}")
+    suspend fun deleteNote(
+        call: ApplicationCall,
+        @PathVariable source: String,
+        @PathVariable id: String,
+    ) {
+        val store = registry.resolve(source)
+        if (store == null) {
+            call.respond(HttpStatusCode.NotFound)
+            return
         }
+
+        store.deleteNote(id)
     }
 }

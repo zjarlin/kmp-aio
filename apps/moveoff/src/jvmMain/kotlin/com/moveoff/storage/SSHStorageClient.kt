@@ -4,15 +4,12 @@ import com.moveoff.sync.api.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.connection.channel.direct.Session
 import net.schmizz.sshj.sftp.*
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.userauth.keyprovider.KeyProvider
-import net.schmizz.sshj.xfer.FilePermission
-import java.io.ByteArrayInputStream
+import net.schmizz.sshj.xfer.TransferListener
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.TimeUnit
 
 /**
  * SSH/SFTP 存储配置
@@ -231,7 +228,9 @@ class SSHStorageClient(
             val progressListener = ProgressTransferListener(totalBytes, progress)
 
             // 先上传到临时文件
-            sftp.put(localPath, tempRemotePath, progressListener)
+            withTransferListener(sftp, progressListener) {
+                sftp.put(localPath, tempRemotePath)
+            }
 
             // 重命名为最终文件名
             try {
@@ -281,7 +280,9 @@ class SSHStorageClient(
 
             // 下载文件（带进度）
             val progressListener = ProgressTransferListener(totalBytes, progress)
-            sftp.get(fullRemotePath, localPath, progressListener)
+            withTransferListener(sftp, progressListener) {
+                sftp.get(fullRemotePath, localPath)
+            }
 
             // 验证下载的文件大小
             val downloadedFile = File(localPath)
@@ -407,6 +408,21 @@ class SSHStorageClient(
             false
         }
     }
+
+    private inline fun <T> withTransferListener(
+        sftp: SFTPClient,
+        listener: TransferListener,
+        block: () -> T
+    ): T {
+        val transfer = sftp.fileTransfer
+        val previousListener = transfer.transferListener
+        return try {
+            transfer.transferListener = listener
+            block()
+        } finally {
+            transfer.transferListener = previousListener
+        }
+    }
 }
 
 /**
@@ -415,29 +431,12 @@ class SSHStorageClient(
 private class ProgressTransferListener(
     private val totalBytes: Long,
     private val progressCallback: (Long, Long) -> Unit
-) : net.schmizz.sshj.xfer.TransferListener {
-    override fun onDirectoryTreeEnter(dirName: String?): net.schmizz.sshj.xfer.TransferListener = this
-    override fun onDirectoryTreeExit() {}
+) : TransferListener {
+    override fun directory(name: String?): TransferListener = this
 
-    override fun file(name: String?, size: Long): net.schmizz.sshj.xfer.FileTransferListener {
-        return object : net.schmizz.sshj.xfer.FileTransferListener {
-            private var transferred = 0L
-
-            override fun started() {}
-
-            override fun reportProgress(transferredSinceLast: Long): Boolean {
-                transferred += transferredSinceLast
-                progressCallback(transferred.coerceAtMost(totalBytes), totalBytes)
-                return true // 继续传输
-            }
-
-            override fun completed() {
-                progressCallback(totalBytes, totalBytes)
-            }
-
-            override fun failed(cause: Throwable?) {
-                // 失败时保持当前进度，不回调错误
-            }
+    override fun file(name: String?, size: Long): net.schmizz.sshj.common.StreamCopier.Listener {
+        return net.schmizz.sshj.common.StreamCopier.Listener { transferred ->
+            progressCallback(transferred.coerceAtMost(totalBytes), totalBytes)
         }
     }
 }

@@ -79,8 +79,20 @@ sealed class FileChange {
     data class NewLocal(override val path: String, val size: Long, val mtime: Long) : FileChange()
     data class ModifiedLocal(override val path: String, val size: Long, val mtime: Long, val oldHash: String?) : FileChange()
     data class DeletedLocal(override val path: String) : FileChange()
-    data class NewRemote(override val path: String, val size: Long, val etag: String) : FileChange()
-    data class ModifiedRemote(override val path: String, val size: Long, val etag: String, val oldEtag: String?) : FileChange()
+    data class NewRemote(
+        override val path: String,
+        val size: Long,
+        val etag: String,
+        val mtime: Long
+    ) : FileChange()
+
+    data class ModifiedRemote(
+        override val path: String,
+        val size: Long,
+        val etag: String,
+        val oldEtag: String?,
+        val mtime: Long
+    ) : FileChange()
     data class DeletedRemote(override val path: String) : FileChange()
     data class Conflict(
         override val path: String,

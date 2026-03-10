@@ -219,7 +219,8 @@ class SyncEngine(
                         changes.add(FileChange.NewRemote(
                             path = remote.key,
                             size = remote.size,
-                            etag = remote.etag
+                            etag = remote.etag,
+                            mtime = remote.lastModified
                         ))
                     }
                     record.remoteEtag != remote.etag -> {
@@ -227,7 +228,8 @@ class SyncEngine(
                             path = remote.key,
                             size = remote.size,
                             etag = remote.etag,
-                            oldEtag = record.remoteEtag
+                            oldEtag = record.remoteEtag,
+                            mtime = remote.lastModified
                         ))
                     }
                 }
@@ -282,7 +284,7 @@ class SyncEngine(
                             conflicts.add(FileChange.Conflict(
                                 path = path,
                                 localMtime = local.mtime,
-                                remoteMtime = remote.lastModified,
+                                remoteMtime = remote.mtime,
                                 localSize = local.size,
                                 remoteSize = remote.size
                             ))
@@ -291,7 +293,7 @@ class SyncEngine(
                             conflicts.add(FileChange.Conflict(
                                 path = path,
                                 localMtime = local.mtime,
-                                remoteMtime = remote.lastModified,
+                                remoteMtime = remote.mtime,
                                 localSize = local.size,
                                 remoteSize = remote.size
                             ))
@@ -301,7 +303,7 @@ class SyncEngine(
                             conflicts.add(FileChange.Conflict(
                                 path = path,
                                 localMtime = 0,
-                                remoteMtime = remote.lastModified,
+                                remoteMtime = remote.mtime,
                                 localSize = 0,
                                 remoteSize = remote.size
                             ))
@@ -459,7 +461,7 @@ class SyncEngine(
                         path = change.path,
                         etag = change.etag,
                         versionId = null,
-                        mtime = change.lastModified,
+                        mtime = change.mtime,
                         size = change.size
                     )
                     database.updateSyncState(change.path, SyncState.SYNCED, System.currentTimeMillis())
@@ -537,9 +539,9 @@ class SyncEngine(
             if (record?.conflictStrategy == null) {
                 // 默认使用较新的文件
                 val strategy = if (conflict.localMtime > conflict.remoteMtime) {
-                    ConflictStrategy.USE_LOCAL
+                    ConflictStrategy.OVERWRITE
                 } else {
-                    ConflictStrategy.USE_REMOTE
+                    ConflictStrategy.SKIP
                 }
                 database.setConflictStrategy(conflict.path, strategy)
             }
@@ -720,16 +722,15 @@ class SyncEngine(
      * 计算文件哈希
      */
     private fun computeFileHash(file: java.io.File): String {
-        return java.security.MessageDigest.getInstance("SHA-256").use { digest ->
-            file.inputStream().use { input ->
-                val buffer = ByteArray(8192)
-                var read: Int
-                while (input.read(buffer).also { read = it } > 0) {
-                    digest.update(buffer, 0, read)
-                }
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(8192)
+            var read: Int
+            while (input.read(buffer).also { read = it } > 0) {
+                digest.update(buffer, 0, read)
             }
-            digest.digest().joinToString("") { "%02x".format(it) }
         }
+        return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
     private fun generateConflictId(): String {

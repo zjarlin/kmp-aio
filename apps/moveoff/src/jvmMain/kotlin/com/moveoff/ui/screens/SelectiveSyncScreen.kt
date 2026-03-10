@@ -69,7 +69,7 @@ fun SelectiveSyncScreen(
 
         // 规则列表
         Text(
-            text = "同步规则 (${rules.localPatterns.size + if (rules.enableDefaultRules) "默认" else ""})",
+            text = "同步规则 (${rules.localPatterns.size}${if (rules.enableDefaultRules) "+默认" else ""})",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium
         )

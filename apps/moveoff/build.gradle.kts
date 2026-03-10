@@ -14,6 +14,8 @@ kotlin {
     dependencies {
 //        implementation(project(":lib:glass-components"))
         implementation(project(":lib:shadcn-ui-kmp"))
+        implementation("io.github.oshai:kotlin-logging:7.0.3")
+        implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
 //        implementation(project(":lib:api-suno"))
 //        implementation("site.addzero:api-netease:2026.02.17")
 //        implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
@@ -22,12 +24,11 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             // Ktor Server (内嵌本地服务器)
-//            implementation(libs.io.ktor.ktor.server.netty.jvm)
-//            implementation(libs.io.ktor.ktor.server.content.negotiation.jvm)
-//            implementation(libs.io.ktor.ktor.server.websockets.jvm)
-//            implementation(libs.io.ktor.ktor.server.cio.jvm)
-//            implementation(libs.io.ktor.ktor.serialization.kotlinx.json.jvm)
-//            implementation(libs.io.ktor.ktor.server.cors.jvm)
+            implementation("io.ktor:ktor-server-cio-jvm:2.3.12")
+            implementation("io.ktor:ktor-server-content-negotiation-jvm:2.3.12")
+            implementation("io.ktor:ktor-server-websockets-jvm:2.3.12")
+            implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:2.3.12")
+            implementation("io.ktor:ktor-server-cors-jvm:2.3.12")
 
             // SQLite JDBC驱动
             implementation("org.xerial:sqlite-jdbc:3.45.1.0")
@@ -48,4 +49,3 @@ kotlin {
         }
     }
 }
-

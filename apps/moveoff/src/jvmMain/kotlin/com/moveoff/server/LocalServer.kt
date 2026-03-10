@@ -7,8 +7,6 @@ import com.moveoff.event.UIEvent
 import com.moveoff.state.AppStateManager
 import com.moveoff.sync.SyncEngine
 import com.moveoff.sync.SyncEngineManager
-import io.ktor.client.engine.cio.CIO
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -41,7 +39,7 @@ class LocalServer(
     private val port: Int = 18475,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 ) {
-    private var server: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
+    private var server: ApplicationEngine? = null
     private val connections = mutableSetOf<DefaultWebSocketServerSession>()
     private var isRunning = false
 

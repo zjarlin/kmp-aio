@@ -16,14 +16,8 @@ import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.ServerSocket
 import java.net.Socket
-import java.net.StandardProtocolFamily
-import java.net.UnixDomainSocketAddress
-import java.nio.channels.Channels
-import java.nio.channels.ServerSocketChannel
-import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
@@ -122,15 +116,7 @@ class IPCServer(
 
         serverJob = scope.launch {
             try {
-                val osName = System.getProperty("os.name").lowercase()
-                when {
-                    osName.contains("mac") || osName.contains("nix") || osName.contains("nux") -> {
-                        startUnixSocketServer()
-                    }
-                    else -> {
-                        startTcpServer(port)
-                    }
-                }
+                startTcpServer(port)
             } catch (e: Exception) {
                 println("IPC 服务器启动失败: ${e.message}")
                 e.printStackTrace()
@@ -159,41 +145,6 @@ class IPCServer(
     }
 
     /**
-     * Unix Domain Socket 服务器（macOS/Linux）
-     */
-    private suspend fun startUnixSocketServer() = withContext(Dispatchers.IO) {
-        try {
-            // 清理旧 socket 文件
-            val socketPath = Paths.get(SOCKET_PATH)
-            if (Files.exists(socketPath)) {
-                Files.delete(socketPath)
-            }
-            Files.createDirectories(socketPath.parent)
-
-            val address = UnixDomainSocketAddress.of(socketPath)
-            val serverChannel = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
-            serverChannel.bind(address)
-
-            _isRunning.value = true
-            println("Unix Domain Socket 服务器已启动: $SOCKET_PATH")
-
-            while (isActive) {
-                try {
-                    val clientChannel = serverChannel.accept()
-                    launch { handleUnixClient(clientChannel) }
-                } catch (e: Exception) {
-                    if (isActive) {
-                        println("接受连接失败: ${e.message}")
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            println("Unix Socket 服务器错误: ${e.message}")
-            e.printStackTrace()
-        }
-    }
-
-    /**
      * TCP 服务器（Windows 或其他平台）
      */
     private suspend fun startTcpServer(port: Int) = withContext(Dispatchers.IO) {
@@ -215,24 +166,6 @@ class IPCServer(
         } catch (e: Exception) {
             println("TCP 服务器错误: ${e.message}")
             e.printStackTrace()
-        }
-    }
-
-    /**
-     * 处理 Unix Socket 客户端
-     */
-    private suspend fun handleUnixClient(channel: SocketChannel) = withContext(Dispatchers.IO) {
-        try {
-            channel.use { ch ->
-                val reader = BufferedReader(InputStreamReader(Channels.newInputStream(ch), StandardCharsets.UTF_8))
-                val writer = PrintWriter(Channels.newOutputStream(ch), true)
-
-                val request = reader.readLine() ?: return@withContext
-                val response = processRequest(request)
-                writer.println(response)
-            }
-        } catch (e: Exception) {
-            println("处理 Unix 客户端错误: ${e.message}")
         }
     }
 

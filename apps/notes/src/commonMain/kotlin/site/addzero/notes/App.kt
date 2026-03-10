@@ -42,6 +42,7 @@ import site.addzero.notes.ai.RagSearchEngine
 import site.addzero.notes.ai.RagSearchHit
 import site.addzero.notes.data.NoteRepository
 import site.addzero.notes.graph.KnowledgeGraphBuilder
+import site.addzero.notes.markdown.LiveMarkdownEditor
 import site.addzero.notes.markdown.MarkdownPreview
 import site.addzero.notes.model.DataSourceType
 import site.addzero.notes.model.KnowledgeGraph
@@ -73,6 +74,7 @@ private enum class FolderFilter(val label: String) {
 }
 
 private enum class EditorViewMode(val label: String) {
+    LIVE("实时"),
     EDIT("编辑"),
     PREVIEW("预览"),
     SPLIT("分栏")
@@ -99,7 +101,7 @@ private fun NotesRoot(repository: NoteRepository) {
     var selectedNoteId by remember { mutableStateOf<String?>(null) }
     var folderFilter by remember { mutableStateOf(FolderFilter.ALL) }
     var workspacePage by remember { mutableStateOf(WorkspacePage.GRAPH_HOME) }
-    var editorViewMode by remember { mutableStateOf(EditorViewMode.SPLIT) }
+    var editorViewMode by remember { mutableStateOf(EditorViewMode.LIVE) }
     var noteSearchQuery by remember { mutableStateOf("") }
     var graphSearchQuery by remember { mutableStateOf("") }
     var titleInput by remember { mutableStateOf("") }
@@ -659,6 +661,18 @@ private fun EditorPanel(
             }
 
             when (editorViewMode) {
+                EditorViewMode.LIVE -> {
+                    LiveMarkdownEditor(
+                        value = markdownInput,
+                        onValueChange = onMarkdownChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
+                        placeholder = "Markdown（实时渲染，支持 @thisFile / @路径）",
+                        enabled = !busy
+                    )
+                }
+
                 EditorViewMode.EDIT -> {
                     GlassTextArea(
                         value = markdownInput,
@@ -677,7 +691,10 @@ private fun EditorPanel(
                             .weight(1f),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        MarkdownPreview(markdown = markdownInput)
+                        MarkdownPreview(
+                            markdown = markdownInput,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
                 }
 
@@ -702,7 +719,10 @@ private fun EditorPanel(
                                 .fillMaxHeight(),
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            MarkdownPreview(markdown = markdownInput)
+                            MarkdownPreview(
+                                markdown = markdownInput,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
                     }
                 }

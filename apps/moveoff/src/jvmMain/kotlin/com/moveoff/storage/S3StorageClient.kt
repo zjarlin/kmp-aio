@@ -1,13 +1,27 @@
 package com.moveoff.storage
 
+import aws.sdk.kotlin.runtime.auth.credentials.StaticCredentialsProvider
 import aws.sdk.kotlin.services.s3.S3Client
-import aws.sdk.kotlin.services.s3.model.*
+import aws.sdk.kotlin.services.s3.model.AbortMultipartUploadRequest
+import aws.sdk.kotlin.services.s3.model.CompleteMultipartUploadRequest
+import aws.sdk.kotlin.services.s3.model.CompletedPart
+import aws.sdk.kotlin.services.s3.model.CreateMultipartUploadRequest
+import aws.sdk.kotlin.services.s3.model.DeleteObjectRequest
+import aws.sdk.kotlin.services.s3.model.GetObjectRequest
+import aws.sdk.kotlin.services.s3.model.HeadBucketRequest
+import aws.sdk.kotlin.services.s3.model.HeadObjectRequest
+import aws.sdk.kotlin.services.s3.model.ListObjectsV2Request
+import aws.sdk.kotlin.services.s3.model.PutObjectRequest
+import aws.sdk.kotlin.services.s3.model.UploadPartRequest
 import aws.smithy.kotlin.runtime.content.ByteStream
 import aws.smithy.kotlin.runtime.content.asByteStream
-import aws.smithy.kotlin.runtime.content.toByteArray
-import com.moveoff.sync.api.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.callbackFlow
+import aws.smithy.kotlin.runtime.content.toFlow
+import aws.smithy.kotlin.runtime.net.url.Url
+import com.moveoff.sync.api.DownloadResult
+import com.moveoff.sync.api.RemoteObject
+import com.moveoff.sync.api.StorageClient
+import com.moveoff.sync.api.UploadResult
+import kotlinx.coroutines.flow.collect
 import java.io.File
 import java.io.RandomAccessFile
 
@@ -36,23 +50,16 @@ class S3StorageClient(
     /**
      * 初始化S3客户端
      */
-    private suspend fun getClient(): S3Client {
+    private fun getClient(): S3Client {
         if (s3Client == null) {
             s3Client = S3Client {
                 region = config.region
-                endpointUrl = kotlinx.coroutines.runBlocking {
-                    aws.smithy.kotlin.runtime.net.Url.parse(config.endpoint)
+                endpointUrl = Url.parse(config.endpoint)
+                credentialsProvider = StaticCredentialsProvider {
+                    accessKeyId = config.accessKey
+                    secretAccessKey = config.secretKey
                 }
-                credentialsProvider = aws.sdk.kotlin.services.s3.auth.credentials.AwsCredentialsProvider {
-                    aws.sdk.kotlin.services.s3.auth.credentials.AwsCredentials(
-                        accessKeyId = config.accessKey,
-                        secretAccessKey = config.secretKey
-                    )
-                }
-                // MinIO需要路径样式
-                if (config.forcePathStyle) {
-                    // 注意: AWS SDK Kotlin的配置方式可能不同，需要根据实际版本调整
-                }
+                forcePathStyle = config.forcePathStyle
             }
         }
         return s3Client!!
@@ -61,9 +68,11 @@ class S3StorageClient(
     override suspend fun testConnection(): Boolean {
         return try {
             val client = getClient()
-            client.headBucket {
-                bucket = config.bucket
-            }
+            client.headBucket(
+                HeadBucketRequest {
+                    bucket = config.bucket
+                }
+            )
             true
         } catch (e: Exception) {
             println("S3连接测试失败: ${e.message}")
@@ -83,12 +92,14 @@ class S3StorageClient(
         var continuationToken: String? = null
 
         do {
-            val response = client.listObjectsV2 {
-                bucket = config.bucket
-                this.prefix = fullPrefix
-                this.continuationToken = continuationToken
-                maxKeys = 1000
-            }
+            val response = client.listObjectsV2(
+                ListObjectsV2Request {
+                    bucket = config.bucket
+                    this.prefix = fullPrefix
+                    this.continuationToken = continuationToken
+                    maxKeys = 1000
+                }
+            )
 
             response.contents?.forEach { obj ->
                 objects.add(
@@ -130,13 +141,16 @@ class S3StorageClient(
         return try {
             // 小文件直接上传
             if (totalBytes < 5 * 1024 * 1024) { // 5MB
-                progress(0, totalBytes) // 开始上传
-                val result = client.putObject {
-                    bucket = config.bucket
-                    key = fullKey
-                    body = file.asByteStream()
-                }
-                progress(totalBytes, totalBytes) // 上传完成
+                progress(0, totalBytes)
+                val result = client.putObject(
+                    PutObjectRequest {
+                        bucket = config.bucket
+                        key = fullKey
+                        contentLength = totalBytes
+                        body = file.asByteStream()
+                    }
+                )
+                progress(totalBytes, totalBytes)
 
                 UploadResult(
                     success = true,
@@ -165,10 +179,12 @@ class S3StorageClient(
         val totalBytes = file.length()
 
         // 1. 初始化分片上传
-        val createResponse = client.createMultipartUpload {
-            bucket = config.bucket
-            this.key = key
-        }
+        val createResponse = client.createMultipartUpload(
+            CreateMultipartUploadRequest {
+                bucket = config.bucket
+                this.key = key
+            }
+        )
 
         val uploadId = createResponse.uploadId
             ?: return UploadResult(success = false, error = "无法获取uploadId")
@@ -195,13 +211,16 @@ class S3StorageClient(
                         buffer.copyOf(bytesRead)
                     }
 
-                    val uploadResponse = client.uploadPart {
-                        bucket = config.bucket
-                        this.key = key
-                        this.uploadId = uploadId
-                        this.partNumber = partNumber
-                        body = ByteStream.fromBytes(partData)
-                    }
+                    val uploadResponse = client.uploadPart(
+                        UploadPartRequest {
+                            bucket = config.bucket
+                            this.key = key
+                            this.uploadId = uploadId
+                            this.partNumber = partNumber
+                            contentLength = bytesRead.toLong()
+                            body = ByteStream.fromBytes(partData)
+                        }
+                    )
 
                     completedParts.add(
                         CompletedPart {
@@ -217,32 +236,36 @@ class S3StorageClient(
             }
 
             // 3. 完成分片上传
-            val completeResponse = client.completeMultipartUpload {
-                bucket = config.bucket
-                this.key = key
-                this.uploadId = uploadId
-                multipartUpload {
-                    parts = completedParts
+            val completeResponse = client.completeMultipartUpload(
+                CompleteMultipartUploadRequest {
+                    bucket = config.bucket
+                    this.key = key
+                    this.uploadId = uploadId
+                    multipartUpload {
+                        parts = completedParts.sortedBy { it.partNumber ?: Int.MAX_VALUE }
+                    }
                 }
-            }
+            )
 
-            UploadResult(
+            return UploadResult(
                 success = true,
                 etag = completeResponse.eTag?.trim('"'),
                 versionId = completeResponse.versionId
             )
-
         } catch (e: Exception) {
             // 发生错误，中止上传
             try {
-                client.abortMultipartUpload {
-                    bucket = config.bucket
-                    this.key = key
-                    this.uploadId = uploadId
-                }
-            } catch (_: Exception) {}
+                client.abortMultipartUpload(
+                    AbortMultipartUploadRequest {
+                        bucket = config.bucket
+                        this.key = key
+                        this.uploadId = uploadId
+                    }
+                )
+            } catch (_: Exception) {
+            }
 
-            UploadResult(success = false, error = "分片上传失败: ${e.message}")
+            return UploadResult(success = false, error = "分片上传失败: ${e.message}")
         }
     }
 
@@ -259,28 +282,31 @@ class S3StorageClient(
         }
 
         return try {
-            val response = client.getObject {
-                bucket = config.bucket
-                key = fullKey
-            }
-
-            val body = response.body
-                ?: return DownloadResult(success = false, error = "响应体为空")
-
-            val totalBytes = response.contentLength ?: 0
-            var downloadedBytes = 0L
-
-            // 写入文件
-            File(localPath).outputStream().use { output ->
-                body.collect { chunk ->
-                    output.write(chunk)
-                    downloadedBytes += chunk.size
-                    progress(downloadedBytes, totalBytes)
+            client.getObject(
+                GetObjectRequest {
+                    bucket = config.bucket
+                    key = fullKey
                 }
+            ) { response ->
+                val body = response.body
+                    ?: return@getObject DownloadResult(success = false, error = "响应体为空")
+
+                val totalBytes = response.contentLength ?: 0L
+                var downloadedBytes = 0L
+
+                val outputFile = File(localPath)
+                outputFile.parentFile?.mkdirs()
+
+                outputFile.outputStream().use { output ->
+                    body.toFlow().collect { chunk ->
+                        output.write(chunk)
+                        downloadedBytes += chunk.size.toLong()
+                        progress(downloadedBytes, totalBytes)
+                    }
+                }
+
+                DownloadResult(success = true, bytesDownloaded = downloadedBytes)
             }
-
-            DownloadResult(success = true, bytesDownloaded = downloadedBytes)
-
         } catch (e: Exception) {
             DownloadResult(success = false, error = e.message)
         }
@@ -295,10 +321,12 @@ class S3StorageClient(
         }
 
         return try {
-            client.deleteObject {
-                bucket = config.bucket
-                key = fullKey
-            }
+            client.deleteObject(
+                DeleteObjectRequest {
+                    bucket = config.bucket
+                    key = fullKey
+                }
+            )
             true
         } catch (e: Exception) {
             println("删除对象失败: ${e.message}")
@@ -315,10 +343,12 @@ class S3StorageClient(
         }
 
         return try {
-            val response = client.headObject {
-                bucket = config.bucket
-                key = fullKey
-            }
+            val response = client.headObject(
+                HeadObjectRequest {
+                    bucket = config.bucket
+                    key = fullKey
+                }
+            )
 
             RemoteObject(
                 key = remotePath,
@@ -327,7 +357,7 @@ class S3StorageClient(
                 versionId = response.versionId,
                 lastModified = response.lastModified?.epochSeconds ?: 0
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
     }

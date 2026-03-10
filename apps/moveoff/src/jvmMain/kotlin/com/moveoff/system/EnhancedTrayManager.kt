@@ -32,7 +32,7 @@ data class TrayMenuItem(
 /**
  * 增强的系统托盘管理器
  */
-class EnhancedTrayManager(
+open class EnhancedTrayManager(
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 ) {
     private var trayIcon: TrayIcon? = null
@@ -266,7 +266,7 @@ class EnhancedTrayManager(
         // 冲突提示（动态显示）
         popup.add(MenuItem("").apply {
             menuItems["conflicts"] = this
-            isVisible = false
+            isEnabled = false
             addActionListener { onShowMainWindow() }
         })
 

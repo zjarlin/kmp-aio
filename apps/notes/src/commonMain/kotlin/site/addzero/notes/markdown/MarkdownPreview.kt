@@ -1,7 +1,6 @@
 package site.addzero.notes.markdown
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -12,15 +11,17 @@ import com.mikepenz.markdown.m3.Markdown
 @Composable
 fun MarkdownPreview(
     markdown: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    emptyText: String = "Markdown 预览区",
+    emptyContentAlignment: Alignment = Alignment.Center
 ) {
     if (markdown.isBlank()) {
         Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
+            modifier = modifier,
+            contentAlignment = emptyContentAlignment
         ) {
             Text(
-                text = "Markdown 预览区",
+                text = emptyText,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -30,6 +31,6 @@ fun MarkdownPreview(
 
     Markdown(
         content = markdown,
-        modifier = modifier.fillMaxSize()
+        modifier = modifier
     )
 }

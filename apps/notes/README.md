@@ -97,7 +97,10 @@
 
 ### 客户端配置
 
-`NOTES_API_BASE_URL`：客户端 API 地址（桌面端默认 `http://127.0.0.1:18080/`）
+客户端默认从 `apps/notes/.env` 的 `BASE_URL` 生成 `BuildKonfig` 常量。
+
+- 改动 `BASE_URL` 后，需要重新编译客户端
+- Android / iOS / Wasm / Desktop 共用这份编译期配置
 
 ### 服务端配置
 
@@ -105,6 +108,15 @@
 
 - SQLite 默认使用 `apps/notes/server/build/vibenotes-server.db`
 - PostgreSQL 默认关闭（仅 SQLite 可用）
+
+服务端启动会自动读取 `apps/notes/.env`（或通过 `NOTES_SERVER_ENV_FILE` 指定文件），优先级如下：
+
+1. 进程环境变量（`System.getenv`）
+2. JVM 系统属性（`-DKEY=value`）
+3. `.env` 文件
+
+服务端只消费 `SERVER_HOST` / `SERVER_PORT`，但会自动把 `.env` 里的
+`BASE_HOST` / `BASE_PORT` 映射成对应的 `SERVER_*`，因此可以只维护一份 `BASE_*`。
 
 可选环境变量：
 

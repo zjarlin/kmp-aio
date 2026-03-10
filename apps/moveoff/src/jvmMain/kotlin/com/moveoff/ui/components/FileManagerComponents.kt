@@ -14,12 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerButton
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.awaitPointerEventScope
-import androidx.compose.ui.input.pointer.awaitPointerEvent
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.moveoff.db.*
@@ -75,6 +71,7 @@ enum class SortBy { NAME, SIZE, DATE, STATE }
 /**
  * 同步状态图标
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SyncStatusIcon(
     state: SyncState,
@@ -136,7 +133,7 @@ fun FileListItem(
     isSelected: Boolean,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
-    onRightClick: (androidx.compose.ui.geometry.Offset) -> Unit,
+    onRightClick: (Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when {
@@ -152,22 +149,8 @@ fun FileListItem(
             .combinedClickable(
                 onClick = onClick,
                 onDoubleClick = onDoubleClick,
-                onLongClick = { }
+                onLongClick = { onRightClick(Offset.Zero) }
             )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onDoubleTap = { onDoubleClick() },
-                    onPress = { offset ->
-                        val button = awaitPointerEventScope {
-                            awaitPointerEvent().buttons
-                        }
-                        if (button.isSecondaryPressed) {
-                            onRightClick(offset)
-                        }
-                    }
-                )
-            }
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -302,7 +285,7 @@ fun FileGridItem(
     isSelected: Boolean,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
-    onRightClick: (androidx.compose.ui.geometry.Offset) -> Unit,
+    onRightClick: (Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val backgroundColor = when {
@@ -329,22 +312,9 @@ fun FileGridItem(
             )
             .combinedClickable(
                 onClick = onClick,
-                onDoubleClick = onDoubleClick
+                onDoubleClick = onDoubleClick,
+                onLongClick = { onRightClick(Offset.Zero) }
             )
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onTap = { onClick() },
-                    onDoubleTap = { onDoubleClick() },
-                    onPress = { offset ->
-                        val button = awaitPointerEventScope {
-                            awaitPointerEvent().buttons
-                        }
-                        if (button.isSecondaryPressed) {
-                            onRightClick(offset)
-                        }
-                    }
-                )
-            }
             .padding(12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

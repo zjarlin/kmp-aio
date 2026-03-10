@@ -1,31 +1,26 @@
 package site.addzero.notes.server
 
 import com.typesafe.config.ConfigFactory
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
-import io.ktor.server.application.Application
-import io.ktor.server.application.ApplicationStopping
-import io.ktor.server.application.install
-import io.ktor.server.config.ApplicationConfig
-import io.ktor.server.config.HoconApplicationConfig
-import io.ktor.server.engine.EmbeddedServer
-import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.EngineMain
-import io.ktor.server.netty.Netty
-import io.ktor.server.netty.NettyApplicationEngine
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.cors.routing.CORS
-import io.ktor.server.plugins.swagger.swaggerUI
-import io.ktor.server.response.respondText
-import io.ktor.server.routing.get
-import io.ktor.server.routing.routing
-import io.ktor.serialization.kotlinx.json.json
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.config.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.swagger.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
-import site.addzero.notes.server.routes.noteRoutes
+import site.addzero.notes.server.generated.springktor.registerGeneratedSpringRoutes
 import site.addzero.notes.server.store.NoteStoreRegistry
 import java.io.File
 
-fun main(args: Array<String>) = EngineMain.main(args)
+fun main(args: Array<String>) {
+    NotesEnv.initialize()
+    EngineMain.main(args)
+}
 
 fun Application.module() {
     val stores = NoteStoreRegistry()
@@ -61,7 +56,7 @@ fun Application.module() {
             path = "swagger",
             swaggerFile = "openapi/documentation.yaml"
         )
-        noteRoutes(stores)
+        registerGeneratedSpringRoutes()
     }
 }
 
@@ -70,15 +65,16 @@ fun notesKtorApplication(
     host: String? = null,
     port: Int? = null
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+    NotesEnv.initialize()
     val config = loadApplicationConfig(configPath)
 
     val finalHost = host
-        ?: System.getenv("SERVER_HOST")
+        ?: NotesEnv.read("SERVER_HOST")
         ?: config.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val finalPort = port
-        ?: System.getenv("SERVER_PORT")?.toIntOrNull()
+        ?: NotesEnv.read("SERVER_PORT")?.toIntOrNull()
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: 18080
 
@@ -91,6 +87,8 @@ fun notesKtorApplication(
 }
 
 private fun loadApplicationConfig(configPath: String?): ApplicationConfig {
+    NotesEnv.initialize()
+
     if (configPath.isNullOrBlank()) {
         return HoconApplicationConfig(ConfigFactory.load())
     }
@@ -102,3 +100,4 @@ private fun loadApplicationConfig(configPath: String?): ApplicationConfig {
 
     return HoconApplicationConfig(parsed)
 }
+

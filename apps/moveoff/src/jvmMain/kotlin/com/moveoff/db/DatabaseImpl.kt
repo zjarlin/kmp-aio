@@ -325,6 +325,7 @@ class DatabaseImpl(
                     ConflictResolution.USE_LOCAL -> SyncState.PENDING_UPLOAD
                     ConflictResolution.USE_REMOTE -> SyncState.PENDING_DOWNLOAD
                     ConflictResolution.KEEP_BOTH -> SyncState.PENDING_UPLOAD
+                    ConflictResolution.MERGE -> SyncState.PENDING_UPLOAD
                 }
 
                 conn.prepareStatement(
