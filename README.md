@@ -9,7 +9,9 @@ kmp-aio/
 ├── apps/                      # 业务应用模块（可复制粘贴创建新应用）
 │   ├── README.md             # 应用开发指南
 │   ├── template/             # 应用模板（复制此目录创建新应用）
-│   └── kmp-aio/           # kmp-aio 音乐播放器应用
+│   ├── kcloud/               # KCloud 文件同步客户端
+│   ├── vibepocket/           # VibePocket 音乐播放器
+│   └── notes/                # Notes 笔记应用
 │
 ├── lib/                       # 共享库模块
 │   ├── glass-components/     # UI 组件库
@@ -106,7 +108,9 @@ apps/myapp/build/compose-binaries/
 | 模块 | 说明 |
 |------|------|
 | `apps/template` | 应用模板，复制创建新应用 |
-| `apps/kmp-aio` | kmp-aio 音乐播放器 |
+| `apps/kcloud` | KCloud 文件同步客户端 (Nextcloud-like) |
+| `apps/vibepocket` | VibePocket 音乐播放器 |
+| `apps/notes` | Notes 笔记应用 |
 
 ### lib/ - 共享库
 
