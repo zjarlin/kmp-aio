@@ -2,15 +2,33 @@ package com.kcloud.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.*
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -18,126 +36,54 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowState
-import androidx.compose.ui.window.application
-import com.kcloud.model.AppSettings
-import com.kcloud.model.ServerConfig
-import com.kcloud.model.Theme
-import com.kcloud.plugin.ui.SidebarContributor
-import com.kcloud.progress.ProgressTracker
-import com.kcloud.storage.SettingsStorage
+import com.kcloud.KCloudPluginRegistry
+import com.kcloud.KCloudShellState
+import com.kcloud.plugin.KCloudMenuNode
+import com.kcloud.plugin.ShellSettingsService
+import com.kcloud.plugin.ShellThemeMode
 import com.kcloud.ui.theme.MoveOffTheme
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import org.koin.compose.koinInject
-import androidx.compose.runtime.LaunchedEffect
-import org.koin.core.module.dsl.singleOf
-import org.koin.dsl.module
-import org.koin.mp.KoinPlatform
-import org.koin.core.context.startKoin
-import com.kcloud.ui.contributors.QuickTransferContributor
-import com.kcloud.ui.contributors.ServerManagementContributor
-import com.kcloud.ui.contributors.FileManagerContributor
-import com.kcloud.ui.contributors.TransferHistoryContributor
-import com.kcloud.ui.contributors.SettingsContributor
-
-// 注入所有 SidebarContributor
-val appModule = module {
-    // ViewModel
-    single { MainViewModel() }
-
-    // Contributors
-    singleOf(::QuickTransferContributor)
-    singleOf(::ServerManagementContributor)
-    singleOf(::FileManagerContributor)
-    singleOf(::TransferHistoryContributor)
-    singleOf(::SettingsContributor)
-}
-
-class MainViewModel {
-    private val _settings = MutableStateFlow(SettingsStorage.loadSettings())
-    val settings: StateFlow<AppSettings> = _settings.asStateFlow()
-
-    private val _selectedContributorId = MutableStateFlow<String>("quick-transfer")
-    val selectedContributorId: StateFlow<String> = _selectedContributorId.asStateFlow()
-
-    private val _selectedServer = MutableStateFlow<ServerConfig?>(null)
-    val selectedServer: StateFlow<ServerConfig?> = _selectedServer.asStateFlow()
-
-    val progressTracker = ProgressTracker()
-
-    fun selectContributor(id: String) {
-        _selectedContributorId.value = id
-    }
-
-    fun selectServer(server: ServerConfig?) {
-        _selectedServer.value = server
-    }
-
-    fun updateSettings(newSettings: AppSettings) {
-        _settings.value = newSettings
-        SettingsStorage.saveSettings(newSettings)
-    }
-
-    fun addServer(server: ServerConfig) {
-        val current = _settings.value
-        val updated = current.copy(servers = current.servers + server)
-        updateSettings(updated)
-    }
-
-    fun removeServer(serverId: String) {
-        val current = _settings.value
-        val updated = current.copy(servers = current.servers.filter { it.id != serverId })
-        updateSettings(updated)
-    }
-}
 
 @Composable
-fun MainWindow(viewModel: MainViewModel = koinInject()) {
-    val selectedId by viewModel.selectedContributorId.collectAsState()
-    val settings by viewModel.settings.collectAsState()
-    val queueProgress by viewModel.progressTracker.queueProgress.collectAsState()
+fun MainWindow(
+    pluginRegistry: KCloudPluginRegistry = koinInject(),
+    shellState: KCloudShellState = koinInject(),
+    shellSettingsService: ShellSettingsService = koinInject()
+) {
+    val selectedMenuId by shellState.selectedMenuId.collectAsState()
+    val expandedMenuIds by shellState.expandedMenuIds.collectAsState()
+    val themeMode by shellSettingsService.themeMode.collectAsState()
 
-    // 从 Koin 获取所有 SidebarContributor
-    val contributors = remember {
-        KoinPlatform.getKoin().getAll<SidebarContributor>()
-            .sortedBy { it.order }
-    }
+    val selectedNode = pluginRegistry.findLeaf(selectedMenuId)
 
-    // 获取当前选中的 contributor
-    val selectedContributor = contributors.find { it.id == selectedId }
-
-    MoveOffTheme(darkTheme = when (settings.theme) {
-        Theme.LIGHT -> false
-        Theme.DARK -> true
-        Theme.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-    }) {
+    MoveOffTheme(
+        darkTheme = when (themeMode) {
+            ShellThemeMode.LIGHT -> false
+            ShellThemeMode.DARK -> true
+            ShellThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
+        }
+    ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
         ) {
             Row(modifier = Modifier.fillMaxSize()) {
-                // 插件化侧边栏
                 PluginSidebar(
-                    contributors = contributors,
-                    selectedId = selectedId,
-                    onSelect = { viewModel.selectContributor(it) },
-                    modifier = Modifier.width(200.dp)
+                    nodes = pluginRegistry.menuTree,
+                    selectedId = selectedMenuId,
+                    expandedIds = expandedMenuIds,
+                    onLeafClick = shellState::selectMenu,
+                    onGroupToggle = shellState::toggleGroup,
+                    modifier = Modifier.width(240.dp)
                 )
 
-                // 内容区域
                 Column(modifier = Modifier.weight(1f)) {
-                    // 主内容 - 由选中的 contributor 渲染
                     Box(modifier = Modifier.weight(1f)) {
-                        selectedContributor?.Content()
-                            ?: Text("未找到页面: $selectedId")
+                        selectedNode?.entry?.content?.invoke()
+                            ?: EmptyShellContent()
                     }
-
-                    // 底部任务栏
-                    TaskBar(
-                        queueProgress = queueProgress,
+                    ShellStatusBar(
+                        currentTitle = selectedNode?.title ?: "未选择页面",
                         modifier = Modifier.height(60.dp)
                     )
                 }
@@ -147,10 +93,12 @@ fun MainWindow(viewModel: MainViewModel = koinInject()) {
 }
 
 @Composable
-fun PluginSidebar(
-    contributors: List<SidebarContributor>,
+private fun PluginSidebar(
+    nodes: List<KCloudMenuNode>,
     selectedId: String,
-    onSelect: (String) -> Unit,
+    expandedIds: Set<String>,
+    onLeafClick: (String) -> Unit,
+    onGroupToggle: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -159,7 +107,6 @@ fun PluginSidebar(
             .background(MaterialTheme.colorScheme.surface)
             .padding(8.dp)
     ) {
-        // 应用标题
         Text(
             text = "KCloud",
             fontSize = 24.sp,
@@ -168,20 +115,24 @@ fun PluginSidebar(
             modifier = Modifier.padding(16.dp)
         )
 
-        Divider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-        // 插件化导航项
-        contributors.forEach { contributor ->
-            ContributorRow(
-                contributor = contributor,
-                isSelected = contributor.id == selectedId,
-                onClick = { onSelect(contributor.id) }
-            )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            nodes.forEach { node ->
+                MenuNodeRow(
+                    node = node,
+                    selectedId = selectedId,
+                    expandedIds = expandedIds,
+                    onLeafClick = onLeafClick,
+                    onGroupToggle = onGroupToggle
+                )
+            }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        // 状态指示器
         Card(
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
@@ -190,12 +141,12 @@ fun PluginSidebar(
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = "就绪",
+                    text = "插件化壳层",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "等待操作",
+                    text = "功能由插件聚合",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -205,17 +156,24 @@ fun PluginSidebar(
 }
 
 @Composable
-fun ContributorRow(
-    contributor: SidebarContributor,
-    isSelected: Boolean,
-    onClick: () -> Unit
+private fun MenuNodeRow(
+    node: KCloudMenuNode,
+    selectedId: String,
+    expandedIds: Set<String>,
+    onLeafClick: (String) -> Unit,
+    onGroupToggle: (String) -> Unit
 ) {
+    if (!node.visible) {
+        return
+    }
+
+    val isSelected = node.id == selectedId
+    val isExpanded = node.id in expandedIds
     val backgroundColor = if (isSelected) {
         MaterialTheme.colorScheme.primaryContainer
     } else {
         Color.Transparent
     }
-
     val contentColor = if (isSelected) {
         MaterialTheme.colorScheme.onPrimaryContainer
     } else {
@@ -227,36 +185,70 @@ fun ContributorRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .clickable {
+                if (node.children.isEmpty()) {
+                    onLeafClick(node.id)
+                } else {
+                    onGroupToggle(node.id)
+                }
+            }
+            .padding(start = (12 + node.level * 18).dp, top = 10.dp, end = 12.dp, bottom = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        contributor.icon?.let { icon ->
+        if (node.children.isNotEmpty()) {
+            Icon(
+                imageVector = if (isExpanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        } else {
+            Spacer(modifier = Modifier.width(24.dp))
+        }
+
+        node.icon?.let { icon ->
             Icon(
                 imageVector = icon,
-                contentDescription = contributor.title,
+                contentDescription = node.title,
                 tint = contentColor,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(10.dp))
         }
+
         Text(
-            text = contributor.title,
-            fontSize = 14.sp,
-            color = contentColor
+            text = node.title,
+            color = contentColor,
+            fontWeight = if (node.children.isEmpty()) FontWeight.Medium else FontWeight.SemiBold
         )
+    }
+
+    if (isExpanded) {
+        node.children.forEach { child ->
+            MenuNodeRow(
+                node = child,
+                selectedId = selectedId,
+                expandedIds = expandedIds,
+                onLeafClick = onLeafClick,
+                onGroupToggle = onGroupToggle
+            )
+        }
     }
 }
 
 @Composable
-fun TaskBar(
-    queueProgress: com.kcloud.progress.QueueProgress?,
+private fun ShellStatusBar(
+    currentTitle: String,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -264,68 +256,30 @@ fun TaskBar(
                 .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (queueProgress == null || queueProgress.activeTasks.isEmpty()) {
-                Icon(
-                    imageVector = Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "没有正在进行的任务",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                )
-            } else {
-                val activeTask = queueProgress.activeTasks.first()
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = activeTask.fileName,
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Text(
-                            text = "${activeTask.overallPercent}%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(4.dp))
-                    LinearProgressIndicator(
-                        progress = { activeTask.overallPercent / 100f },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                if (queueProgress.activeTasks.size > 1 || queueProgress.pendingTasks.isNotEmpty()) {
-                    Badge {
-                        Text("${queueProgress.activeTasks.size + queueProgress.pendingTasks.size}")
-                    }
-                }
-            }
+            Text(
+                text = currentTitle,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "本地插件已聚合",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+            )
         }
     }
 }
 
-fun main() {
-    // 启动 Koin
-    startKoin {
-        modules(appModule)
-    }
-
-    application {
-        Window(
-            onCloseRequest = ::exitApplication,
-            title = "KCloud - 文件同步",
-            state = WindowState(width = 1200.dp, height = 800.dp)
-        ) {
-            MainWindow()
-        }
+@Composable
+private fun EmptyShellContent() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "暂无可用页面",
+            style = MaterialTheme.typography.headlineSmall
+        )
     }
 }

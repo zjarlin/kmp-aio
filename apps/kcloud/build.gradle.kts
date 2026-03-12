@@ -5,50 +5,55 @@
  */
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-aio")
-    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
 
-ksp {
-    arg("springKtor.generatedPackage", "com.kcloud.server.generated.springktor")
-}
+val desktopMainClass = "com.kcloud.MainKt"
+val libs = versionCatalogs.named("libs")
+val ktorVersion = libs.findVersion("ktor").get().requiredVersion
 
 kotlin {
     dependencies {
-//        implementation(project(":lib:glass-components"))
-        implementation(project(":lib:shadcn-ui-kmp"))
-        implementation(project(":lib:kcloud-core"))
-        implementation(project(":lib:plugin-ui"))
-//        implementation(project(":lib:api-suno"))
-//        implementation("site.addzero:api-netease:2026.02.17")
-//        implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
+        implementation(project(":apps:kcloud:plugins:plugin-api"))
+        implementation(project(":apps:kcloud:plugins:file-plugin"))
+        implementation(project(":apps:kcloud:plugins:file-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:notes-plugin"))
+        implementation(project(":apps:kcloud:plugins:notes-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:package-organizer-plugin"))
+        implementation(project(":apps:kcloud:plugins:package-organizer-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:quick-transfer-plugin"))
+        implementation(project(":apps:kcloud:plugins:quick-transfer-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:transfer-history-plugin"))
+        implementation(project(":apps:kcloud:plugins:transfer-history-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:server-management-plugin"))
+        implementation(project(":apps:kcloud:plugins:server-management-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:ssh-plugin"))
+        implementation(project(":apps:kcloud:plugins:ssh-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:settings-plugin"))
+        implementation(project(":apps:kcloud:plugins:webdav-plugin"))
+        implementation(project(":apps:kcloud:plugins:webdav-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:dotfiles-plugin"))
+        implementation(project(":apps:kcloud:plugins:dotfiles-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:environment-plugin"))
+        implementation(project(":apps:kcloud:plugins:environment-server-plugin"))
+        implementation(project(":apps:kcloud:plugins:desktop-integration-plugin"))
     }
 
     sourceSets {
         jvmMain.dependencies {
-            // 依赖 kcloud-core 传递下来的依赖
-            // (SQLite, HikariCP, SSHJ, JmDNS, kotlinx-datetime, kotlin-logging)
-
-            // Spring2Ktor - 使用 Spring 风格编写 Ktor 路由 (仅 JVM)
-            implementation("site.addzero:spring2ktor-server-core:2026.03.10")
-            compileOnly("org.springframework:spring-web:5.3.21")
-
-            // Ktor Server (内嵌本地服务器)
-            implementation("io.ktor:ktor-server-cio-jvm:2.3.12")
-            implementation("io.ktor:ktor-server-content-negotiation-jvm:2.3.12")
-            implementation("io.ktor:ktor-server-websockets-jvm:2.3.12")
-            implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:2.3.12")
-            implementation("io.ktor:ktor-server-cors-jvm:2.3.12")
-
-            // AWS SDK for Kotlin S3
-            implementation("aws.sdk.kotlin:s3:1.0.0")
-
-            // JNativeHook - 全局快捷键
-            implementation("com.github.kwhat:jnativehook:2.2.2")
+            implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
+            implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
+            implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
+            implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
         }
     }
 }
 
-// KSP 处理器依赖 - 必须在 kotlin 块外声明
-dependencies {
-    ksp("site.addzero:spring2ktor-server-processor:2026.03.10")
+kotlin.jvm().mainRun {
+    mainClass.set(desktopMainClass)
+}
+
+compose.desktop {
+    application {
+        mainClass = desktopMainClass
+    }
 }
