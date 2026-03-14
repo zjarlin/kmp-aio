@@ -1,44 +1,77 @@
 package site.addzero.vibepocket.routes
 
+import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.koin.ktor.ext.inject
 import site.addzero.ioc.annotation.Bean
-import site.addzero.network.call.music.MusicSearchClient
-import site.addzero.network.call.music.model.MusicSearchRequest
 import site.addzero.starter.statuspages.ErrorResponse
-import site.addzero.vibepocket.dto.SearchRequest
+import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.vibepocket.service.MusicCatalogService
 
 /**
- * 音乐搜索相关路由（网易云等）
+ * 音乐搜索相关路由
  */
 @Bean
 fun Route.musicRoutes() {
-    route("/api/music") {
+    val musicCatalogService by inject<MusicCatalogService>()
 
-        /**
-         * 按关键词搜索歌曲（GET）
-         */
+    route("/api/music") {
         get("/search") {
-            val query = call.request.queryParameters["query"]
-            if (query.isNullOrBlank()) {
-                call.respond(io.ktor.http.HttpStatusCode.BadRequest, ErrorResponse(400, "Query parameter 'query' is required."))
-                return@get
+            val provider = call.request.queryParameters["provider"].orEmpty()
+            val keyword = call.request.queryParameters["keyword"].orEmpty()
+            try {
+                val results = musicCatalogService.search(provider, keyword)
+                call.respond(results)
+            } catch (error: IllegalArgumentException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(400, error.message ?: "Invalid request"),
+                )
+            } catch (error: Exception) {
+                call.respond(
+                    HttpStatusCode.BadGateway,
+                    ErrorResponse(502, error.message ?: "Music provider request failed"),
+                )
             }
-            val client = MusicSearchClient()
-            val results = client.search(MusicSearchRequest(query))
-            // 假设 results 已经是序列化友好的（或者是 Map，Ktor 也能直接转 JSON）
-            call.respond(results ?: emptyMap<String, Any>())
         }
 
-        /**
-         * 按关键词搜索歌曲（POST JSON）
-         */
-        post("/search") {
-            val req = call.receive<SearchRequest>()
-            val client = MusicSearchClient()
-            val results = client.search(MusicSearchRequest(req.query))
-            call.respond(results ?: emptyMap<String, Any>())
+        get("/lyrics") {
+            val provider = call.request.queryParameters["provider"].orEmpty()
+            val songId = call.request.queryParameters["songId"].orEmpty()
+            try {
+                val result = musicCatalogService.getLyrics(provider, songId)
+                call.respond(result)
+            } catch (error: IllegalArgumentException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(400, error.message ?: "Invalid request"),
+                )
+            } catch (error: Exception) {
+                call.respond(
+                    HttpStatusCode.BadGateway,
+                    ErrorResponse(502, error.message ?: "Music provider request failed"),
+                )
+            }
+        }
+
+        post("/resolve") {
+            val track = call.receive<MusicTrack>()
+            try {
+                val asset = musicCatalogService.resolve(track)
+                call.respond(asset)
+            } catch (error: IllegalArgumentException) {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    ErrorResponse(400, error.message ?: "Invalid request"),
+                )
+            } catch (error: Exception) {
+                call.respond(
+                    HttpStatusCode.BadGateway,
+                    ErrorResponse(502, error.message ?: "Music provider request failed"),
+                )
+            }
         }
     }
 }

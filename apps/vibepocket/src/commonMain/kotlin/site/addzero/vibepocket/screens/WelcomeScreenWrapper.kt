@@ -1,30 +1,26 @@
 package site.addzero.vibepocket.screens
 
-import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.ui.NavDisplay
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import site.addzero.vibepocket.auth.WelcomePage
-import site.addzero.vibepocket.navigation.RouteKey
+import site.addzero.vibepocket.music.persistSunoRuntimeConfig
 
 @Composable
 fun WelcomeScreenWrapper(
-    backStack: SnapshotStateList<RouteKey>,
-    homeRoute: RouteKey,
-    onSetupComplete: (token: String, baseUrl: String) -> Unit
+    onSetupComplete: (token: String, baseUrl: String) -> Unit,
 ) {
-    NavDisplay(
-        backStack = backStack,
-        onBack = {},
-        entryProvider = { routeKey ->
-            NavEntry(routeKey) {
-                WelcomePage(
-                    onEnter = { token, url ->
-                        onSetupComplete(token, url)
-                        backStack.clear()
-                        backStack.add(homeRoute)
-                    },
-                )
+    val scope = rememberCoroutineScope()
+
+    WelcomePage(
+        onEnter = { token, url ->
+            scope.launch {
+                try {
+                    persistSunoRuntimeConfig(token, url)
+                } catch (_: Exception) {
+                    // 配置持久化失败时仍允许进入工作台，避免首次启动被卡死。
+                }
+                onSetupComplete(token, url)
             }
         },
     )

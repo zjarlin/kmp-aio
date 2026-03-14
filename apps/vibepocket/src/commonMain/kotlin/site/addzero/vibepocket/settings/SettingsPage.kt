@@ -1,141 +1,80 @@
 package site.addzero.vibepocket.settings
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import site.addzero.component.glass.GlassCard
-import site.addzero.component.glass.GlassTextField
-import site.addzero.component.glass.GlassTheme
-import site.addzero.component.glass.NeonGlassButton
 import site.addzero.ioc.annotation.Bean
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.model.ConfigEntry
+import site.addzero.vibepocket.ui.StudioEmptyState
+import site.addzero.vibepocket.ui.StudioPill
+import site.addzero.vibepocket.ui.StudioSectionCard
+import site.addzero.vibepocket.ui.SunoTokenApplyHint
 
-private enum class SettingsTab(val title: String, val icon: String) {
-    MUSIC("音乐", "🎵"),
-    IMAGE("图片", "🖼️"),
-    VIDEO("视频", "🎬"),
-}
-
-/**
- * 设置页面 — 从内嵌 server DB 读写配置，不再依赖 ConfigStore。
- */
 @Composable
 @Bean(tags = ["screen"])
 fun SettingsPage() {
     val scope = rememberCoroutineScope()
-    var selectedTab by remember { mutableStateOf(SettingsTab.MUSIC) }
-
-    // 音乐模块配置
     var sunoToken by remember { mutableStateOf("") }
     var sunoBaseUrl by remember { mutableStateOf("https://api.sunoapi.org/api/v1") }
     var loaded by remember { mutableStateOf(false) }
 
-    // 启动时从 server 加载
     LaunchedEffect(Unit) {
         sunoToken = ServerApiClient.getConfig("suno_api_token") ?: ""
         sunoBaseUrl = ServerApiClient.getConfig("suno_api_base_url") ?: "https://api.sunoapi.org/api/v1"
         loaded = true
     }
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "⚙️ 设置",
-                color = GlassTheme.TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+        if (!loaded) {
+            StudioEmptyState(
+                icon = "⏳",
+                title = "读取配置中",
+                description = "正在从本地 server 拉取你的音乐模块配置。",
+                modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(modifier = Modifier.height(20.dp))
-            SettingsTabBar(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Box(modifier = Modifier.weight(1f)) {
-                when (selectedTab) {
-                    SettingsTab.MUSIC -> {
-                        if (!loaded) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Text("加载中...", color = GlassTheme.TextSecondary)
-                            }
-                        } else {
-                            MusicConfigEditor(
-                                sunoToken = sunoToken,
-                                onTokenChange = { sunoToken = it },
-                                sunoBaseUrl = sunoBaseUrl,
-                                onBaseUrlChange = { sunoBaseUrl = it },
-                                onSave = {
-                                    scope.launch {
-                                        ServerApiClient.configApi.updateConfig(
-                                            ConfigEntry("suno_api_token", sunoToken, "Suno API Token")
-                                        )
-                                        ServerApiClient.configApi.updateConfig(
-                                            ConfigEntry("suno_api_base_url", sunoBaseUrl, "Suno API Base URL")
-                                        )
-                                    }
-                                },
-                            )
-                        }
+        } else {
+            MusicConfigEditor(
+                sunoToken = sunoToken,
+                onTokenChange = { sunoToken = it },
+                sunoBaseUrl = sunoBaseUrl,
+                onBaseUrlChange = { sunoBaseUrl = it },
+                onSave = {
+                    scope.launch {
+                        ServerApiClient.configApi.updateConfig(
+                            ConfigEntry("suno_api_token", sunoToken, "Suno API Token"),
+                        )
+                        ServerApiClient.configApi.updateConfig(
+                            ConfigEntry("suno_api_base_url", sunoBaseUrl, "Suno API Base URL"),
+                        )
                     }
-                    SettingsTab.IMAGE -> PlaceholderTab("🖼️", "图片模块", "AI 图片生成配置即将开放，敬请期待。")
-                    SettingsTab.VIDEO -> PlaceholderTab("🎬", "视频模块", "视频生成 API 配置即将开放，敬请期待。")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SettingsTabBar(selectedTab: SettingsTab, onTabSelected: (SettingsTab) -> Unit) {
-    GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            SettingsTab.entries.forEach { tab ->
-                val isSelected = tab == selectedTab
-                val interactionSource = remember { MutableInteractionSource() }
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .then(if (isSelected) Modifier.background(GlassTheme.NeonCyan.copy(alpha = 0.15f)) else Modifier)
-                        .clickable(interactionSource = interactionSource, indication = null) { onTabSelected(tab) }
-                        .padding(vertical = 10.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = "${tab.icon} ${tab.title}",
-                        color = if (isSelected) GlassTheme.NeonCyan else GlassTheme.TextSecondary,
-                        fontSize = 14.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    )
-                }
-            }
+                },
+            )
         }
     }
 }
@@ -148,54 +87,57 @@ private fun MusicConfigEditor(
     onBaseUrlChange: (String) -> Unit,
     onSave: () -> Unit,
 ) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        ConfigField(label = "Suno API Token", value = sunoToken, onValueChange = onTokenChange, placeholder = "sk-...")
-        ConfigField(label = "Suno API Base URL", value = sunoBaseUrl, onValueChange = onBaseUrlChange, placeholder = "https://api.sunoapi.org/api/v1")
-        Spacer(modifier = Modifier.height(8.dp))
-        NeonGlassButton(
-            text = "💾 保存配置",
-            onClick = onSave,
-            modifier = Modifier.fillMaxWidth(),
-            glowColor = GlassTheme.NeonCyan,
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-    }
-}
-
-@Composable
-private fun ConfigField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String) {
-    GlassCard(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(label, color = GlassTheme.TextSecondary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            GlassTextField(
-                value = value,
-                onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = placeholder,
-                shape = RoundedCornerShape(8.dp),
+    StudioSectionCard(
+        modifier = Modifier.fillMaxWidth(),
+        title = "音乐接口配置",
+        subtitle = "这里只保留音乐模块配置。界面已经切回清晰的蓝色 Material 3 风格。",
+        action = {
+            StudioPill(
+                text = "Music service",
+                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
             )
-        }
-    }
-}
+        },
+    ) {
+        SunoTokenApplyHint(
+            intro = "如果你还没申请过 Suno API Token，这里可以直接跳去控制台申请。",
+            introStyle = MaterialTheme.typography.bodyMedium,
+            introColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            linkStyle = MaterialTheme.typography.bodyMedium,
+            linkColor = MaterialTheme.colorScheme.primary,
+        )
 
-@Composable
-private fun PlaceholderTab(icon: String, title: String, message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        GlassCard(modifier = Modifier.widthIn(max = 400.dp).padding(32.dp), shape = RoundedCornerShape(16.dp)) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+        OutlinedTextField(
+            value = sunoToken,
+            onValueChange = onTokenChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Suno API Token") },
+            placeholder = { Text("sk-...") },
+            singleLine = true,
+        )
+        OutlinedTextField(
+            value = sunoBaseUrl,
+            onValueChange = onBaseUrlChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Suno API Base URL") },
+            placeholder = { Text("https://api.sunoapi.org/api/v1") },
+            singleLine = true,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Button(
+                onClick = onSave,
+                modifier = Modifier.weight(1f),
             ) {
-                Text(icon, fontSize = 48.sp)
-                Text(title, color = GlassTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                Text(message, color = GlassTheme.TextTertiary, fontSize = 14.sp)
+                Text("保存配置")
+            }
+            OutlinedButton(
+                onClick = {},
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("保留本地值")
             }
         }
     }

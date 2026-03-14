@@ -9,6 +9,14 @@ application {
     mainClass.set("site.addzero.vibepocket.ApplicationKt")
 }
 val sharedDir = rootDir.resolve("shared/src/commonMain/kotlin").absolutePath
+val localMusicSearchSourceDir =
+    file("/Users/zjarlin/IdeaProjects/addzero-lib-jvm/lib/tool-jvm/network-call/music/tool-api-music-search/src/main/kotlin")
+
+sourceSets {
+    named("main") {
+        java.srcDir(localMusicSearchSourceDir)
+    }
+}
 
 ksp {
     arg("isomorphicGenDir", sharedDir)
@@ -17,8 +25,18 @@ ksp {
 dependencies {
 //    ksp("site.addzero:entity2iso-processor:2026.02.28")
 
-    implementation("site.addzero:tool-api-music-search:2026.01.20")
     implementation("site.addzero:tool-api-suno:2026.02.06")
+    implementation(project(":lib:api-music-spi"))
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.alibaba.fastjson2:fastjson2-kotlin:2.0.57")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.2")
+    implementation("org.unbescape:unbescape:1.1.6.RELEASE")
+    implementation("io.ktor:ktor-client-core:2.3.7")
+    implementation("io.ktor:ktor-client-cio:2.3.7")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.7")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
+    implementation("io.ktor:ktor-client-logging:2.3.7")
 
     // @Bean KSP processor（用于 routes 聚合）
     implementation(libs.site.addzero.ioc.core)

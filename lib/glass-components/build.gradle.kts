@@ -5,8 +5,7 @@ plugins {
 kotlin {
     sourceSets {
         commonTest.dependencies {
-            @OptIn(org.jetbrains.compose.ExperimentalComposeLibrary::class)
-            implementation(compose.uiTest)
+            implementation(libs.org.jetbrains.compose.ui.ui.test)
         }
     }
 }

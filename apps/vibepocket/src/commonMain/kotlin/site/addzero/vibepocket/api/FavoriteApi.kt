@@ -8,6 +8,7 @@ import site.addzero.vibepocket.model.*
  */
 interface FavoriteApi {
 
+    @Headers("Content-Type: application/json")
     @POST("api/favorites")
     suspend fun addFavorite(@Body request: FavoriteRequest): FavoriteItem
 

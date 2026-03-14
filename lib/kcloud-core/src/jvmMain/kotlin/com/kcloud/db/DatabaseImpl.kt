@@ -1,6 +1,7 @@
 package com.kcloud.db
 
 import com.kcloud.model.ConflictStrategy
+import com.kcloud.paths.KCloudPaths
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.flow.Flow
@@ -26,12 +27,7 @@ class DatabaseImpl(
         private const val CURRENT_VERSION = 1
 
         fun getDefaultDbPath(): String {
-            val userHome = System.getProperty("user.home")
-            val appDir = File(userHome, ".moveoff")
-            if (!appDir.exists()) {
-                appDir.mkdirs()
-            }
-            return File(appDir, "sync.db").absolutePath
+            return File(KCloudPaths.appSupportDir(), "sync.db").absolutePath
         }
     }
 

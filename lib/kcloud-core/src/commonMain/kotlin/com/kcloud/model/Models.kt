@@ -15,7 +15,7 @@ data class ServerConfig(
     val password: String? = null,
     val privateKeyPath: String? = null,
     val passphrase: String? = null,
-    val remoteRootPath: String = "/home/$username/moveoff",
+    val remoteRootPath: String = "/home/$username/kcloud",
     val createdAt: Long = Clock.System.now().toEpochMilliseconds(),
     val updatedAt: Long = Clock.System.now().toEpochMilliseconds()
 )
@@ -117,7 +117,44 @@ data class AppSettings(
     val autoStart: Boolean = false,
     val showNotifications: Boolean = true,
     val maxConcurrentTransfers: Int = 3,
-    val updateSettings: UpdateSettings = UpdateSettings()
+    val updateSettings: UpdateSettings = UpdateSettings(),
+    val ai: AiSettings = AiSettings()
+)
+
+object AiProviderIds {
+    const val OLLAMA = "ollama"
+    const val OPENAI = "openai"
+    const val ANTHROPIC = "anthropic"
+}
+
+@Serializable
+data class AiSettings(
+    val enabled: Boolean = false,
+    val selectedProviderId: String = AiProviderIds.OLLAMA,
+    val ollama: OllamaAiSettings = OllamaAiSettings(),
+    val openAi: OpenAiAiSettings = OpenAiAiSettings(),
+    val anthropic: AnthropicAiSettings = AnthropicAiSettings()
+)
+
+@Serializable
+data class OllamaAiSettings(
+    val baseUrl: String = "http://127.0.0.1:11434",
+    val model: String = "llama3.2",
+    val timeoutMillis: Long = 30_000
+)
+
+@Serializable
+data class OpenAiAiSettings(
+    val baseUrl: String = "https://api.openai.com/v1",
+    val model: String = "",
+    val apiKey: String = ""
+)
+
+@Serializable
+data class AnthropicAiSettings(
+    val baseUrl: String = "https://api.anthropic.com",
+    val model: String = "",
+    val apiKey: String = ""
 )
 
 @Serializable

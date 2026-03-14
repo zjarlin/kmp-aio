@@ -18,7 +18,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import org.koin.core.annotation.Single
 
+@Single
 class FileWorkspaceServiceImpl : FileWorkspaceService {
     private val database = ensureDatabase()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

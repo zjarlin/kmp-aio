@@ -20,9 +20,11 @@ import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 import javax.xml.parsers.DocumentBuilderFactory
+import org.koin.core.annotation.Single
 
 private const val WEBDAV_PLUGIN_ID = "webdav-plugin"
 
+@Single
 class WebDavWorkspaceServiceImpl : WebDavWorkspaceService {
     private val settingsFile = File(KCloudLocalPaths.pluginDir(WEBDAV_PLUGIN_ID), "settings.json")
     private val httpClient: HttpClient = HttpClient.newBuilder().followRedirects(HttpClient.Redirect.NORMAL).build()

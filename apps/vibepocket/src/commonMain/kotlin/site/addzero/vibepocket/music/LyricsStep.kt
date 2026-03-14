@@ -1,34 +1,54 @@
 package site.addzero.vibepocket.music
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import io.ktor.util.date.*
-import kotlinx.coroutines.delay
+import io.github.vinceglb.filekit.dialogs.compose.rememberFileSaverLauncher
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.statement.readRawBytes
 import kotlinx.coroutines.launch
-import site.addzero.component.glass.*
-import site.addzero.vibepocket.api.ServerApiClient
-import site.addzero.vibepocket.api.netease.MusicSearchClient
-import site.addzero.vibepocket.api.netease.model.NeteaseSearchResult
-import site.addzero.vibepocket.api.netease.model.NeteaseSearchSong
-import site.addzero.vibepocket.api.netease.searchByKeyword
-import site.addzero.vibepocket.api.suno.SunoApiClient
+import site.addzero.media.playlist.player.MediaPlaylistPlayer
+import site.addzero.vibepocket.api.music.MusicTrack
 import site.addzero.vibepocket.api.suno.SunoLyricItem
-import site.addzero.vibepocket.api.suno.SunoLyricsRequest
+import site.addzero.vibepocket.ui.StudioEmptyState
+import site.addzero.vibepocket.ui.StudioPill
+import site.addzero.vibepocket.ui.StudioSectionCard
+
+private const val NETEASE_PROVIDER = "netease"
+private const val QQ_PROVIDER = "qq"
 
 @Composable
 fun LyricsStep(
@@ -40,245 +60,364 @@ fun LyricsStep(
     onArtistNameChange: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var isSearching by remember { mutableStateOf(false) }
-    var searchError by remember { mutableStateOf<String?>(null) }
-    // 搜索结果列表
-    var searchResults by remember { mutableStateOf(null as NeteaseSearchResult?) }
-    // 正在加载歌词的歌曲 ID
-    var loadingLyricId by remember { mutableStateOf<Long?>(null) }
+    val downloader = remember { HttpClient() }
+    val fileSaverLauncher = rememberFileSaverLauncher { }
 
-    // AI 生成模式开关
+    var selectedProvider by remember { mutableStateOf(NETEASE_PROVIDER) }
     var isAiMode by remember { mutableStateOf(false) }
+    var isSearching by remember { mutableStateOf(false) }
+    var isDownloadingId by remember { mutableStateOf<String?>(null) }
+    var importingLyricId by remember { mutableStateOf<String?>(null) }
+    var searchError by remember { mutableStateOf<String?>(null) }
+    var searchResults by remember { mutableStateOf<List<MusicTrack>>(emptyList()) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // ── 模式切换按钮 ──
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            NeonGlassButton(
-                text = if (isAiMode) "📝 手动编辑" else "🤖 AI 生成歌词",
-                onClick = { isAiMode = !isAiMode },
-                glowColor = if (isAiMode) GlassColors.NeonCyan else GlassColors.NeonPurple,
-            )
-        }
+    DisposableEffect(downloader) {
+        onDispose { downloader.close() }
+    }
 
-        // ── AI 歌词生成区域 ──
-        if (isAiMode) {
-            AiLyricsGenerator(onLyricsGenerated = { generatedLyrics ->
-                onLyricsChange(generatedLyrics)
-                // 填入歌词后自动切回编辑模式
-                isAiMode = false
-            })
-        }
+    val searchKeyword = remember(songName, artistName) {
+        buildString {
+            append(songName.trim())
+            if (artistName.isNotBlank()) {
+                append(' ')
+                append(artistName.trim())
+            }
+        }.trim()
+    }
 
-        // ── 搜索区域 ──
-        NeonGlassCard(
-            modifier = Modifier.fillMaxWidth(),
-            glowColor = GlassColors.NeonCyan
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "🔍 搜索歌词（可选）",
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
+    @Composable
+    fun LyricsModePanel() {
+        StudioSectionCard(
+            title = "歌词工作台",
+            subtitle = "在这里整理歌词、导入现成歌曲歌词，或者直接调用 Suno 生成候选文案。",
+            action = {
+                StudioPill(
+                    text = if (isAiMode) "AI mode" else "Manual mode",
+                    containerColor = if (isAiMode) {
+                        MaterialTheme.colorScheme.secondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primaryContainer
+                    },
+                    contentColor = if (isAiMode) {
+                        MaterialTheme.colorScheme.onSecondaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    },
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    GlassTextField(
-                        value = songName,
-                        onValueChange = onSongNameChange,
-                        placeholder = "歌名",
-                        modifier = Modifier.weight(1f)
-                    )
-                    GlassTextField(
-                        value = artistName,
-                        onValueChange = onArtistNameChange,
-                        placeholder = "歌手（可选）",
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
+            },
+        ) {
+            FilterChip(
+                selected = isAiMode,
+                onClick = { isAiMode = !isAiMode },
+                label = {
+                    Text(if (isAiMode) "切回手动编辑" else "切到 AI 歌词")
+                },
+            )
 
-                GlassButton(
-                    text = if (isSearching) "⏳ 搜索中..." else "搜索歌曲",
+            if (isAiMode) {
+                AiLyricsGenerator(
+                    onLyricsGenerated = { generated ->
+                        onLyricsChange(generated)
+                        isAiMode = false
+                    },
+                )
+            }
+        }
+    }
+
+    @Composable
+    fun LyricsSearchPanel() {
+        StudioSectionCard(
+            title = "搜索歌曲歌词",
+            subtitle = "搜索结果支持导入歌词、试听和下载，这里完全独立于 Suno 配置。",
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                FilterChip(
+                    selected = selectedProvider == NETEASE_PROVIDER,
+                    onClick = { selectedProvider = NETEASE_PROVIDER },
+                    label = { Text("网易云") },
+                )
+                FilterChip(
+                    selected = selectedProvider == QQ_PROVIDER,
+                    onClick = { selectedProvider = QQ_PROVIDER },
+                    label = { Text("QQ 音乐") },
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                OutlinedTextField(
+                    value = songName,
+                    onValueChange = onSongNameChange,
+                    modifier = Modifier.weight(1f),
+                    label = { Text("歌名") },
+                    placeholder = { Text("例如：晴天") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = artistName,
+                    onValueChange = onArtistNameChange,
+                    modifier = Modifier.weight(1f),
+                    label = { Text("歌手") },
+                    placeholder = { Text("可选，例如：周杰伦") },
+                    singleLine = true,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                StudioPill(
+                    text = providerLabel(selectedProvider),
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+                FilledTonalButton(
                     onClick = {
-                        if (isSearching) return@GlassButton
+                        if (isSearching) return@FilledTonalButton
                         isSearching = true
                         searchError = null
-                        searchResults = null
+                        searchResults = emptyList()
                         scope.launch {
                             try {
-                                val searchByKeyword = MusicSearchClient.musicApi.searchByKeyword(songName)
-                                val result = searchByKeyword.result
-
-                                if (result==null) {
-                                    searchError = "未找到相关歌曲"
-                                }
-
-                                searchResults=result!!
-
-                            } catch (e: Exception) {
-                                searchError = "搜索失败: ${e.message}"
+                                searchResults = MusicSearchService.search(selectedProvider, searchKeyword)
+                            } catch (error: Exception) {
+                                searchError = error.message ?: "搜索失败"
                             } finally {
                                 isSearching = false
                             }
                         }
                     },
-                    enabled = songName.isNotBlank() && !isSearching
-                )
-
-                searchError?.let { error ->
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = error, color = GlassColors.NeonMagenta, fontSize = 12.sp)
+                    enabled = searchKeyword.isNotBlank() && !isSearching,
+                ) {
+                    Text(if (isSearching) "搜索中..." else "搜索歌曲")
                 }
             }
-        }
 
-        // ── 搜索结果列表（带封面图） ──
-        searchResults?.let {
-            NeonGlassCard(
-                modifier = Modifier.fillMaxWidth(),
-                glowColor = GlassColors.NeonPurple
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    it.songs?.let { it1 ->
-                        Text(
-                            text = "🎵 搜索结果（${it1.size} 首）· 点击获取歌词",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
+            searchError?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(max = 320.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(it.songs.orEmpty(), key = { it.id }) { song ->
-                            SongResultItem(
-                                song = song,
-                                isLoading = loadingLyricId == song.id,
-                                onClick = {
-                                    if (loadingLyricId != null) return@SongResultItem
-                                    loadingLyricId = song.id
-                                    scope.launch {
-                                        try {
-                                            val lyric = MusicSearchClient.musicApi.getLyric(song.id)
-                                            val lyricText = lyric.tlyric.lyric
-
-                                            if (lyricText != null) {
-                                                onLyricsChange(lyricText)
-                                                onSongNameChange(song.name)
-                                                val artist = song.artistNames
-                                                if (artist.isNotBlank()) onArtistNameChange(artist)
-                                            } else {
-                                                searchError = "「${song.name}」暂无歌词"
-                                            }
-                                        } catch (e: Exception) {
-                                            searchError = "获取歌词失败: ${e.message}"
-                                        } finally {
-                                            loadingLyricId = null
-                                        }
-                                    }
+            when {
+                searchResults.isNotEmpty() -> {
+                    MediaPlaylistPlayer(
+                        items = searchResults,
+                        itemKey = { track -> "${track.platform}:${track.id}" },
+                        titleOf = { track -> track.name },
+                        artistOf = { track ->
+                            buildString {
+                                append(track.artist.ifBlank { "未知歌手" })
+                                if (track.album.isNotBlank()) {
+                                    append(" · ")
+                                    append(track.album)
                                 }
-                            )
-                        }
-                    }
+                            }
+                        },
+                        durationMsOf = { track -> track.durationMs.takeIf { it > 0 } },
+                        coverUrlOf = { track -> track.coverUrl },
+                        resolveUrl = { track ->
+                            MusicSearchService.resolve(track).url
+                        },
+                        resolveErrorMessage = { error ->
+                            error.message ?: "试听失败"
+                        },
+                        itemActions = { track ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Button(
+                                    onClick = {
+                                        if (importingLyricId != null) {
+                                            return@Button
+                                        }
+                                        importingLyricId = track.id
+                                        scope.launch {
+                                            try {
+                                                val lyric = MusicSearchService.getLyrics(track)
+                                                if (lyric.lrc.isBlank()) {
+                                                    searchError = "这首歌暂时没有可导入的歌词"
+                                                } else {
+                                                    onLyricsChange(lyric.lrc)
+                                                    onSongNameChange(track.name)
+                                                    if (track.artist.isNotBlank()) {
+                                                        onArtistNameChange(track.artist)
+                                                    }
+                                                }
+                                            } catch (error: Exception) {
+                                                searchError = error.message ?: "获取歌词失败"
+                                            } finally {
+                                                importingLyricId = null
+                                            }
+                                        }
+                                    },
+                                    enabled = importingLyricId == null,
+                                ) {
+                                    Text(if (importingLyricId == track.id) "导入中..." else "导入歌词")
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        if (isDownloadingId != null) {
+                                            return@FilledTonalButton
+                                        }
+                                        isDownloadingId = track.id
+                                        scope.launch {
+                                            try {
+                                                val asset = MusicSearchService.resolve(track)
+                                                val bytes = downloader.get(asset.url).readRawBytes()
+                                                val extension = asset.fileName.substringAfterLast('.', "mp3")
+                                                val baseName = asset.fileName.substringBeforeLast('.', asset.fileName)
+                                                fileSaverLauncher.launch(
+                                                    bytes = bytes,
+                                                    baseName = baseName,
+                                                    extension = extension,
+                                                )
+                                            } catch (error: Exception) {
+                                                searchError = error.message ?: "下载失败"
+                                            } finally {
+                                                isDownloadingId = null
+                                            }
+                                        }
+                                    },
+                                    enabled = isDownloadingId == null,
+                                ) {
+                                    Text(if (isDownloadingId == track.id) "下载中..." else "下载")
+                                }
+                            }
+                        },
+                    )
+                }
+
+                !isSearching && searchKeyword.isNotBlank() && searchError == null -> {
+                    StudioEmptyState(
+                        icon = "🎼",
+                        title = "还没有搜索结果",
+                        description = "输入歌名后搜索，找到合适的参考歌词再继续下一步。",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }
+    }
 
-        // ── 歌词编辑区域 ──
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "📝 歌词内容",
-                    color = Color.White,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "直接粘贴歌词，或通过上方搜索自动填入",
-                    color = GlassTheme.TextTertiary,
-                    fontSize = 12.sp
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                GlassTextArea(
-                    value = lyrics,
-                    onValueChange = onLyricsChange,
-                    placeholder = "在此输入或粘贴歌词...\n\n支持带时间轴的 LRC 格式，例如：\n[00:33.71]阿刁\n[00:36.31]住在西藏的某个地方",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 200.dp, max = 400.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "已输入 ${lyrics.lines().count { it.isNotBlank() }} 行",
-                    color = GlassTheme.TextTertiary,
-                    fontSize = 11.sp
-                )
+    @Composable
+    fun LyricsEditorPanel() {
+        StudioSectionCard(
+            title = "歌词编辑器",
+            subtitle = "支持纯文本和带时间轴的 LRC。导入歌词后可以继续细修。",
+        ) {
+            OutlinedTextField(
+                value = lyrics,
+                onValueChange = onLyricsChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 280.dp),
+                placeholder = {
+                    Text(
+                        "在这里输入或粘贴歌词，例如：\n[00:33.71]阿刁\n[00:36.31]住在西藏的某个地方",
+                    )
+                },
+                singleLine = false,
+                minLines = 12,
+            )
+            Text(
+                text = "当前共 ${lyrics.lines().count { it.isNotBlank() }} 行",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    BoxWithConstraints {
+        val useWideLayout = maxWidth >= 1040.dp
+        if (useWideLayout) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(
+                    modifier = Modifier.weight(0.92f),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    LyricsModePanel()
+                    LyricsSearchPanel()
+                }
+                Column(
+                    modifier = Modifier.weight(1.08f),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                ) {
+                    LyricsEditorPanel()
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                LyricsModePanel()
+                LyricsSearchPanel()
+                LyricsEditorPanel()
             }
         }
     }
 }
 
-// ── AI 歌词生成器 ──────────────────────────────────────────
-
-/**
- * AI 歌词生成组件
- *
- * 输入描述提示词 → 调用 SunoApiClient.generateLyrics() → 轮询 getLyricsDetail()
- * → 多条候选以列表展示供选择 → 选中后回调 onLyricsGenerated
- */
 @Composable
-fun AiLyricsGenerator(
+private fun AiLyricsGenerator(
     onLyricsGenerated: (String) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+
     var prompt by remember { mutableStateOf("") }
     var isGenerating by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var candidates by remember { mutableStateOf<List<SunoLyricItem>>(emptyList()) }
     var statusText by remember { mutableStateOf<String?>(null) }
+    var candidates by remember { mutableStateOf<List<SunoLyricItem>>(emptyList()) }
 
-    NeonGlassCard(
-        modifier = Modifier.fillMaxWidth(),
-        glowColor = GlassColors.NeonPurple
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Text(
-                text = "🤖 AI 歌词生成",
-                color = Color.White,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                text = "AI 歌词候选",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "输入描述，让 AI 为你生成歌词",
-                color = GlassTheme.TextTertiary,
-                fontSize = 12.sp
+                text = "这里会调用 Suno 的歌词生成接口。没配 Token 时不会闪退，只会给出清晰提示。",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(modifier = Modifier.height(12.dp))
-
-            GlassTextField(
+            OutlinedTextField(
                 value = prompt,
                 onValueChange = { prompt = it },
-                placeholder = "描述你想要的歌词风格和主题，例如：一首关于夏天海边的浪漫情歌",
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp),
+                label = { Text("提示词") },
+                placeholder = { Text("例如：一首关于夏天海边、轻快又带点失恋味道的流行歌词") },
+                singleLine = false,
+                minLines = 4,
             )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            NeonGlassButton(
-                text = if (isGenerating) "⏳ 生成中..." else "✨ 生成歌词",
+            FilledTonalButton(
                 onClick = {
-                    if (isGenerating) return@NeonGlassButton
+                    if (isGenerating) return@FilledTonalButton
                     isGenerating = true
                     errorMessage = null
                     candidates = emptyList()
@@ -286,104 +425,52 @@ fun AiLyricsGenerator(
 
                     scope.launch {
                         try {
-                            val token = ServerApiClient.getConfig("suno_api_token") ?: ""
-                            val url = ServerApiClient.getConfig("suno_api_base_url")
-                                ?.ifBlank { null }
-                                ?: "https://api.sunoapi.org/api/v1"
-                            val client = SunoApiClient(apiToken = token, baseUrl = url)
-
-                            // 提交歌词生成任务
-                            val taskId = client.generateLyrics(SunoLyricsRequest(prompt = prompt))
-                            statusText = "已提交，轮询中..."
-
-                            // 轮询等待完成
-                            val maxWaitMs = 300_000L
-                            val pollIntervalMs = 5_000L
-                            val startTime = getTimeMillis()
-
-                            while (true) {
-                                val elapsed = getTimeMillis() - startTime
-                                if (elapsed > maxWaitMs) {
-                                    throw RuntimeException("歌词生成超时，已等待 ${maxWaitMs / 1000} 秒")
-                                }
-
-                                val detail = client.getLyricsDetail(taskId)
-                                when {
-                                    detail?.isSuccess == true -> {
-                                        val items = detail.response?.data ?: emptyList()
-                                        candidates = items.filter { !it.text.isNullOrBlank() }
-                                        statusText = null
-                                        // 如果只有一条候选，直接填入
-                                        if (candidates.size == 1) {
-                                            onLyricsGenerated(candidates.first().text!!)
-                                        }
-                                        break
-                                    }
-                                    detail?.isFailed == true -> {
-                                        throw RuntimeException(
-                                            detail.errorMessage ?: detail.errorCode ?: "歌词生成失败"
-                                        )
-                                    }
-                                    else -> {
-                                        statusText = "生成中..."
-                                        delay(pollIntervalMs)
-                                    }
-                                }
+                            val result = SunoWorkflowService.generateLyricsCandidates(
+                                prompt = prompt,
+                                onStatusUpdate = { statusText = it },
+                            )
+                            candidates = result
+                            statusText = null
+                            if (result.size == 1) {
+                                result.first().text?.let(onLyricsGenerated)
                             }
-                        } catch (e: Exception) {
-                            errorMessage = "❌ ${e.message}"
+                        } catch (error: Exception) {
+                            errorMessage = SunoWorkflowService.errorMessage(error)
                             statusText = null
                         } finally {
                             isGenerating = false
                         }
                     }
                 },
-                glowColor = GlassColors.NeonPurple,
-                enabled = prompt.isNotBlank() && !isGenerating
-            )
-
-            // 状态文本
-            statusText?.let { status ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = status, color = GlassColors.NeonCyan, fontSize = 12.sp)
+                enabled = prompt.isNotBlank() && !isGenerating,
+            ) {
+                Text(if (isGenerating) "生成中..." else "生成歌词候选")
             }
 
-            // 错误信息 + 重试
-            errorMessage?.let { error ->
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(text = error, color = GlassColors.NeonMagenta, fontSize = 12.sp)
-                Spacer(modifier = Modifier.height(4.dp))
-                GlassButton(
-                    text = "🔄 重试",
-                    onClick = { errorMessage = null }
-                )
-            }
-
-            // 多条候选歌词列表
-            if (candidates.size > 1) {
-                Spacer(modifier = Modifier.height(12.dp))
+            statusText?.let {
                 Text(
-                    text = "🎶 候选歌词（${candidates.size} 条）· 点击选择",
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+            }
+            errorMessage?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
 
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(candidates.size) { index ->
-                        val candidate = candidates[index]
+            if (candidates.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    candidates.forEachIndexed { index, candidate ->
                         LyricCandidateItem(
                             index = index + 1,
                             item = candidate,
                             onClick = {
-                                candidate.text?.let { onLyricsGenerated(it) }
-                            }
+                                candidate.text?.let(onLyricsGenerated)
+                            },
                         )
                     }
                 }
@@ -392,121 +479,59 @@ fun AiLyricsGenerator(
     }
 }
 
-/** 单条候选歌词卡片 */
 @Composable
 private fun LyricCandidateItem(
     index: Int,
     item: SunoLyricItem,
     onClick: () -> Unit,
 ) {
-    GlassCard(
+    ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(onClick = onClick),
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
                     text = "候选 $index",
-                    color = GlassColors.NeonCyan,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold,
                 )
-                item.title?.let { title ->
-                    if (title.isNotBlank()) {
-                        Text(
-                            text = title,
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
+                item.title?.takeIf { it.isNotBlank() }?.let { title ->
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
-            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = item.text ?: "",
-                color = GlassTheme.TextSecondary,
-                fontSize = 12.sp,
-                maxLines = 6,
-                overflow = TextOverflow.Ellipsis
+                text = item.text.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 7,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
 
-// ── 单条搜索结果 ──────────────────────────────────────────
-
-@Composable
-private fun SongResultItem(
-    song: NeteaseSearchSong,
-    isLoading: Boolean,
-    onClick: () -> Unit,
-) {
-    GlassCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = !isLoading, onClick = onClick)
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // 封面图
-            val coverUrl = song.coverUrl
-            if (coverUrl != null) {
-                AsyncImage(
-                    model = coverUrl,
-                    contentDescription = song.name,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(6.dp)),
-                    contentScale = ContentScale.Crop,
-                )
-            } else {
-                // 无封面占位
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(6.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("🎵", fontSize = 20.sp)
-                }
-            }
-
-            // 歌曲信息
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = song.name,
-                    color = Color.White,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = buildString {
-                        append(song.artistNames)
-                        song.album?.name?.let { if (it.isNotBlank()) append(" · $it") }
-                    },
-                    color = GlassTheme.TextTertiary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            // 状态提示
-            if (isLoading) {
-                Text("⏳", fontSize = 16.sp)
-            }
-        }
+private fun providerLabel(provider: String): String {
+    return when (provider.trim().lowercase()) {
+        NETEASE_PROVIDER -> "网易云"
+        QQ_PROVIDER -> "QQ 音乐"
+        else -> provider
     }
 }

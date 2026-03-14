@@ -3,11 +3,11 @@ package site.addzero.vibepocket.music
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import site.addzero.component.glass.GlassStatCard
-import site.addzero.component.glass.GlassTheme
+import site.addzero.vibepocket.ui.StudioMetricCard
 
 /**
  * CreditsBar — 积分显示条
@@ -32,16 +32,17 @@ fun CreditsBar(
         credits != null -> "🎵 积分"
         else -> "积分未知"
     }
-    val glowColor = when {
-        isLoading -> GlassTheme.NeonPurple
-        credits != null -> GlassTheme.NeonCyan
-        else -> GlassTheme.NeonMagenta
+    val containerColor = when {
+        isLoading -> MaterialTheme.colorScheme.tertiaryContainer
+        credits != null -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.errorContainer
     }
 
-    GlassStatCard(
-        value = value,
+    StudioMetricCard(
         label = label,
-        modifier = Modifier.width(100.dp).height(64.dp),
-        glowColor = glowColor,
+        value = value,
+        supporting = "Suno API",
+        modifier = Modifier.width(132.dp).height(88.dp),
+        containerColor = containerColor,
     )
 }

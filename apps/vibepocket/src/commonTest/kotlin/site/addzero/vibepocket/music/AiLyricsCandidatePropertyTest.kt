@@ -10,7 +10,7 @@ import io.kotest.property.arbitrary.orNull
 import io.kotest.property.arbitrary.string
 import io.kotest.property.checkAll
 import kotlinx.coroutines.test.runTest
-import site.addzero.vibepocket.model.SunoLyricItem
+import site.addzero.vibepocket.api.suno.SunoLyricItem
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

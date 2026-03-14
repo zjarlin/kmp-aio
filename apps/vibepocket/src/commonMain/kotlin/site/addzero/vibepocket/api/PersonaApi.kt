@@ -8,6 +8,7 @@ import site.addzero.vibepocket.model.*
  */
 interface PersonaApi {
 
+    @Headers("Content-Type: application/json")
     @POST("api/personas")
     suspend fun savePersona(@Body request: PersonaSaveRequest): PersonaItem
 

@@ -12,9 +12,7 @@ import org.koin.ktor.ext.inject
 import site.addzero.ioc.annotation.Bean
 import site.addzero.starter.statuspages.ErrorResponse
 import site.addzero.vibepocket.dto.OkResponse
-import site.addzero.vibepocket.jimmer.model.entity.FavoriteTrack
-import site.addzero.vibepocket.jimmer.model.entity.by
-import site.addzero.vibepocket.jimmer.model.entity.trackId
+import site.addzero.vibepocket.model.*
 import java.time.LocalDateTime
 
 @Serializable

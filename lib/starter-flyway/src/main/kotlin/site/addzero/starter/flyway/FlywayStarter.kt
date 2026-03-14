@@ -62,7 +62,6 @@ import site.addzero.starter.AppStarter
  *     placeholder-replacement = true
  *     placeholder-suffix = "}"
  *     placeholders = {}
- *     repeat = false
  *     schemas = []
  *     skip-default-callbacks = false
  *     skip-default-resolvers = false
@@ -134,7 +133,6 @@ class FlywayStarter : AppStarter {
                 defaults.placeholderReplacement?.let { placeholderReplacement(it) }
                 defaults.placeholderPrefix?.let { placeholderPrefix(it) }
                 defaults.placeholderSuffix?.let { placeholderSuffix(it) }
-                defaults.repeat?.let { repeat(it) }
                 defaults.skipDefaultCallbacks?.let { skipDefaultCallbacks(it) }
                 defaults.skipDefaultResolvers?.let { skipDefaultResolvers(it) }
                 defaults.sqlMigrationPrefix?.let { sqlMigrationPrefix(it) }
@@ -186,7 +184,6 @@ private data class FlywayDefaults(
     val placeholderPrefix: String? = null,
     val placeholderSuffix: String? = null,
     val placeholders: Map<String, String>? = null,
-    val repeat: Boolean? = null,
     val schemas: List<String>? = null,
     val skipDefaultCallbacks: Boolean? = null,
     val skipDefaultResolvers: Boolean? = null,
@@ -215,7 +212,6 @@ private data class FlywayDefaults(
             placeholderPrefix = this.placeholderPrefix ?: other.placeholderPrefix,
             placeholderSuffix = this.placeholderSuffix ?: other.placeholderSuffix,
             placeholders = this.placeholders ?: other.placeholders,
-            repeat = this.repeat ?: other.repeat,
             schemas = this.schemas ?: other.schemas,
             skipDefaultCallbacks = this.skipDefaultCallbacks ?: other.skipDefaultCallbacks,
             skipDefaultResolvers = this.skipDefaultResolvers ?: other.skipDefaultResolvers,
@@ -246,7 +242,6 @@ private data class FlywayDefaults(
                 placeholderPrefix = cfg.propertyOrNull("placeholder-prefix")?.getString(),
                 placeholderSuffix = cfg.propertyOrNull("placeholder-suffix")?.getString(),
                 placeholders = cfg.configMap("placeholders"),
-                repeat = cfg.propertyOrNull("repeat")?.getString()?.toBoolean(),
                 schemas = cfg.propertyOrNull("schemas")?.getList(),
                 skipDefaultCallbacks = cfg.propertyOrNull("skip-default-callbacks")?.getString()?.toBoolean(),
                 skipDefaultResolvers = cfg.propertyOrNull("skip-default-resolvers")?.getString()?.toBoolean(),

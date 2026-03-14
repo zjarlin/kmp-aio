@@ -12,9 +12,9 @@
  * - kotlinx.coroutines (异步支持)
  *
  * ## 数据库文件位置
- * - Windows: `%LOCALAPPDATA%/MoveOff/moveoff.db`
- * - macOS: `~/Library/Application Support/MoveOff/moveoff.db`
- * - Linux: `~/.config/MoveOff/moveoff.db`
+ * - Windows: `%LOCALAPPDATA%/KCloud/sync.db`
+ * - macOS: `~/Library/Application Support/KCloud/sync.db`
+ * - Linux: `${XDG_DATA_HOME:-~/.local/share}/kcloud/sync.db`
  *
  * ## Schema 版本管理
  * 使用 Flyway 或手动版本控制进行数据库迁移

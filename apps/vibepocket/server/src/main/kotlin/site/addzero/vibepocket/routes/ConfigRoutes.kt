@@ -9,6 +9,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.ktor.ext.inject
 import site.addzero.ioc.annotation.Bean
 import site.addzero.vibepocket.dto.OkResponse
+import site.addzero.vibepocket.model.*
 
 /**
  * 从 app_config 表读取配置值

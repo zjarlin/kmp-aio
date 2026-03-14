@@ -13,8 +13,11 @@ import io.ktor.server.plugins.swagger.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
+import org.koin.ktor.ext.getKoin
+import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.notes.server.generated.springktor.registerGeneratedSpringRoutes
-import site.addzero.notes.server.store.NoteStoreRegistry
+import site.addzero.notes.server.store.NoteStoreService
+import site.addzero.starter.koin.installKoin
 import java.io.File
 
 fun main(args: Array<String>) {
@@ -23,9 +26,12 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    val stores = NoteStoreRegistry()
+    installKoin {
+        withConfiguration<NotesServerKoinApplication>()
+    }
+
     monitor.subscribe(ApplicationStopping) {
-        stores.close()
+        getKoin().get<NoteStoreService>().close()
     }
 
     install(ContentNegotiation) {
@@ -100,4 +106,3 @@ private fun loadApplicationConfig(configPath: String?): ApplicationConfig {
 
     return HoconApplicationConfig(parsed)
 }
-

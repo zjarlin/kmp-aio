@@ -16,12 +16,14 @@ import net.schmizz.sshj.connection.channel.direct.Session
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import java.io.File
 import java.util.concurrent.TimeUnit
+import org.koin.core.annotation.Single
 
 private const val ENVIRONMENT_PLUGIN_ID = "environment-plugin"
 
+@Single
 class EnvironmentSetupServiceImpl internal constructor(
-    private val settingsStore: EnvironmentSettingsStore = FileEnvironmentSettingsStore(),
-    private val commandExecutor: EnvironmentCommandExecutor = DefaultEnvironmentCommandExecutor()
+    private val settingsStore: EnvironmentSettingsStore,
+    private val commandExecutor: EnvironmentCommandExecutor
 ) : EnvironmentSetupService {
     override fun loadSettings(): EnvironmentSetupSettings {
         return normalizeSettings(settingsStore.load())
@@ -708,6 +710,7 @@ internal interface EnvironmentSettingsStore {
     fun save(settings: EnvironmentSetupSettings)
 }
 
+@Single
 internal class FileEnvironmentSettingsStore : EnvironmentSettingsStore {
     private val settingsFile = File(KCloudLocalPaths.pluginDir(ENVIRONMENT_PLUGIN_ID), "settings.json")
 
@@ -733,6 +736,7 @@ internal interface EnvironmentCommandExecutor {
     fun executeSsh(sshConfig: SshConnectionConfig, script: String): EnvironmentCommandResult
 }
 
+@Single
 internal class DefaultEnvironmentCommandExecutor : EnvironmentCommandExecutor {
     override fun executeLocal(script: String): EnvironmentCommandResult {
         return runCatching {

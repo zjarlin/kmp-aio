@@ -7,5 +7,5 @@ dependencies {
     implementation(projects.lib.starterSpi)
     implementation(libs.io.ktor.ktor.server.core)
     implementation(libs.io.insert.koin.koin.ktor)
-    implementation(libs.software.amazon.awssdk.s3)
+    api(libs.software.amazon.awssdk.s3)
 }

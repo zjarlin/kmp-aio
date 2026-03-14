@@ -1,14 +1,12 @@
 package site.addzero.component.glass
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import com.kyant.shapes.RoundedRectangle
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
@@ -37,25 +35,15 @@ fun GlassButton(
     enabled: Boolean = true,
     shape: Shape = RoundedRectangle(12.dp),
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = modifier
-            .alpha(if (enabled) 1f else 0.4f)
-            .glassEffect(shape = shape)
-            .then(
-                if (enabled) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick,
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center,
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.alpha(if (enabled) 1f else 0.7f),
+        enabled = enabled,
+        shape = shape,
+        border = BorderStroke(1.dp, GlassTheme.GlassBorder),
+        colors = ButtonDefaults.outlinedButtonColors(
+            contentColor = GlassTheme.TextPrimary,
+        ),
     ) {
         Text(
             text = text,
@@ -89,33 +77,21 @@ fun NeonGlassButton(
     intensity: Float = 0.6f,
     shape: Shape = RoundedRectangle(12.dp),
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = modifier
-            .alpha(if (enabled) 1f else 0.4f)
-            .neonGlassEffect(
-                shape = shape,
-                glowColor = glowColor,
-                intensity = intensity,
-            )
-            .then(
-                if (enabled) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick,
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center,
+    Button(
+        onClick = onClick,
+        modifier = modifier.alpha(if (enabled) 1f else 0.7f),
+        enabled = enabled,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = glowColor,
+            contentColor = Color.White,
+            disabledContainerColor = glowColor.copy(alpha = 0.3f),
+            disabledContentColor = Color.White,
+        ),
     ) {
         Text(
             text = text,
-            color = if (enabled) glowColor else GlassTheme.TextDisabled,
+            color = if (enabled) Color.White else GlassTheme.TextDisabled,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -145,29 +121,16 @@ fun LiquidGlassButton(
     secondaryColor: Color = GlassTheme.WaterSurfaceSecondary,
     shape: Shape = RoundedRectangle(16.dp),
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = modifier
-            .alpha(if (enabled) 1f else 0.4f)
-            .liquidGlassEffect(
-                shape = shape,
-                primaryColor = primaryColor,
-                secondaryColor = secondaryColor,
-            )
-            .then(
-                if (enabled) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null,
-                        onClick = onClick,
-                    )
-                } else {
-                    Modifier
-                }
-            )
-            .padding(horizontal = 24.dp, vertical = 14.dp),
-        contentAlignment = Alignment.Center,
+    Button(
+        onClick = onClick,
+        modifier = modifier.alpha(if (enabled) 1f else 0.7f),
+        enabled = enabled,
+        shape = shape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = primaryColor,
+            contentColor = GlassTheme.TextPrimary,
+        ),
+        border = BorderStroke(1.dp, secondaryColor),
     ) {
         Text(
             text = text,

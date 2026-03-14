@@ -4,13 +4,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import site.addzero.component.glass.GlassColors
-import site.addzero.component.glass.GlassTheme
 import site.addzero.vibepocket.model.TrackAction
 
 /**
@@ -59,7 +57,7 @@ fun TrackActionMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
         modifier = Modifier.background(
-            color = GlassColors.DarkBackground.copy(alpha = 0.95f),
+            color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(12.dp),
         ),
     ) {
@@ -68,8 +66,7 @@ fun TrackActionMenu(
                 text = {
                     Text(
                         text = "${action.icon()} ${action.label()}",
-                        color = GlassTheme.TextPrimary,
-                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 onClick = { onAction(action) },

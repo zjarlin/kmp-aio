@@ -11,8 +11,8 @@ import io.kotest.property.arbitrary.orNull
 import io.kotest.property.arbitrary.string
 import io.kotest.property.checkAll
 import kotlinx.coroutines.test.runTest
+import site.addzero.vibepocket.api.suno.SunoTrack
 import site.addzero.vibepocket.model.FavoriteItem
-import site.addzero.vibepocket.model.SunoTrack
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

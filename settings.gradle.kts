@@ -7,4 +7,3 @@ plugins {
     id("site.addzero.gradle.plugin.addzero-git-dependency") version "+"
 
 }
-

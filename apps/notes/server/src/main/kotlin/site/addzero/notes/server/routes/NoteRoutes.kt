@@ -3,25 +3,27 @@ package site.addzero.notes.server.routes
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
+import org.koin.core.annotation.Single
 import org.springframework.web.bind.annotation.*
 import site.addzero.notes.server.model.*
-import site.addzero.notes.server.store.NoteStoreRegistry
+import site.addzero.notes.server.store.NoteStoreService
 
+@Single
 @RestController
 @RequestMapping("/api/notes")
 class NoteRoutes(
-    private val registry: NoteStoreRegistry,
+    private val noteStoreService: NoteStoreService,
 ) {
     @GetMapping("/settings")
     fun readSettings(): StorageSettingsPayload {
-        return registry.readSettings()
+        return noteStoreService.readSettings()
     }
 
     @PutMapping("/settings")
     fun updateSettings(
         @RequestBody request: StorageSettingsUpdateRequest,
     ): StorageSettingsPayload {
-        return registry.updateSettings(request)
+        return noteStoreService.updateSettings(request)
     }
 
     @GetMapping("/{source}/health")
@@ -29,7 +31,7 @@ class NoteRoutes(
         call: ApplicationCall,
         @PathVariable source: String,
     ): DataSourceHealthPayload {
-        val store = registry.resolve(source)
+        val store = noteStoreService.resolve(source)
         if (store == null) {
             call.response.status(HttpStatusCode.NotFound)
             return DataSourceHealthPayload(
@@ -51,7 +53,7 @@ class NoteRoutes(
         call: ApplicationCall,
         @PathVariable source: String,
     ): List<NotePayload> {
-        val store = registry.resolve(source)
+        val store = noteStoreService.resolve(source)
         if (store == null) {
             call.response.status(HttpStatusCode.NotFound)
             return emptyList()
@@ -71,7 +73,7 @@ class NoteRoutes(
         @PathVariable id: String,
         @RequestBody request: NoteUpsertRequest,
     ) {
-        val store = registry.resolve(source)
+        val store = noteStoreService.resolve(source)
         if (store == null) {
             call.respond(HttpStatusCode.NotFound)
             return
@@ -100,7 +102,7 @@ class NoteRoutes(
         @PathVariable source: String,
         @PathVariable id: String,
     ) {
-        val store = registry.resolve(source)
+        val store = noteStoreService.resolve(source)
         if (store == null) {
             call.respond(HttpStatusCode.NotFound)
             return

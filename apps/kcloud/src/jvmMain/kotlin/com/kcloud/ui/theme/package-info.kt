@@ -14,7 +14,7 @@
  *
  * ## 使用方式
  * ```kotlin
- * MoveOffTheme(darkTheme = true) {
+ * KCloudTheme(darkTheme = true) {
  *     // 内容自动应用主题
  *     Surface {
  *         Text("Hello", color = MaterialTheme.colorScheme.primary)

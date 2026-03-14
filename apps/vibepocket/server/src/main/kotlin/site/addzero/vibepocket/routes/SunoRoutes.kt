@@ -12,9 +12,7 @@ import site.addzero.network.call.suno.SunoClient
 import site.addzero.network.call.suno.model.SunoMusicRequest
 import site.addzero.starter.statuspages.ErrorResponse
 import site.addzero.vibepocket.dto.*
-import site.addzero.vibepocket.jimmer.model.entity.MusicTask
-import site.addzero.vibepocket.jimmer.model.entity.by
-import site.addzero.vibepocket.jimmer.model.entity.taskId
+import site.addzero.vibepocket.model.*
 import java.time.LocalDateTime
 
 /**

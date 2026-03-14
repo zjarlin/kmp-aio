@@ -13,9 +13,11 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import java.io.File
+import org.koin.core.annotation.Single
 
 private const val SSH_PLUGIN_ID = "ssh-plugin"
 
+@Single
 class SshWorkspaceServiceImpl : SshWorkspaceService {
     private val settingsFile = File(KCloudLocalPaths.pluginDir(SSH_PLUGIN_ID), "settings.json")
 

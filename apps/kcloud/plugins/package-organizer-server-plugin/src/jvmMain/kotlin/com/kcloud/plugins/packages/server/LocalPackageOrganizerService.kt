@@ -9,9 +9,11 @@ import com.kcloud.plugins.packages.PackageOrganizerService
 import com.kcloud.plugins.packages.PackageOrganizerSettings
 import java.io.File
 import java.time.Instant
+import org.koin.core.annotation.Single
 
 private const val PACKAGE_PLUGIN_ID = "package-organizer-plugin"
 
+@Single
 class LocalPackageOrganizerService : PackageOrganizerService {
     private val settingsFile = File(KCloudLocalPaths.pluginDir(PACKAGE_PLUGIN_ID), "settings.json")
 

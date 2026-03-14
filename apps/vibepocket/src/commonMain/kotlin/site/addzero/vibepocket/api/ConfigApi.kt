@@ -2,6 +2,7 @@ package site.addzero.vibepocket.api
 
 import de.jensklingenberg.ktorfit.http.Body
 import de.jensklingenberg.ktorfit.http.GET
+import de.jensklingenberg.ktorfit.http.Headers
 import de.jensklingenberg.ktorfit.http.PUT
 import de.jensklingenberg.ktorfit.http.Path
 import site.addzero.vibepocket.model.ConfigEntry
@@ -16,6 +17,7 @@ interface ConfigApi {
     suspend fun getConfig(@Path("key") key: String): ConfigResponse
 
 
+    @Headers("Content-Type: application/json")
     @PUT("api/config")
     suspend fun updateConfig(@Body entry: ConfigEntry)
 
@@ -24,6 +26,7 @@ interface ConfigApi {
     @GET("api/config/storage")
     suspend fun getStorageConfig(): StorageConfig
 
+    @Headers("Content-Type: application/json")
     @PUT("api/config/storage")
     suspend fun saveStorageConfig(@Body config: StorageConfig)
 }

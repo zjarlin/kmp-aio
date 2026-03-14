@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# MoveOff 原生扩展构建脚本
+# KCloud 原生扩展构建脚本
 # 支持 macOS, Windows (MSYS2/MinGW), Linux
 
 set -e
@@ -70,7 +70,7 @@ build_macos() {
     fi
 
     # 创建 Xcode 项目（如果没有）
-    if [ ! -d "${macos_dir}/MoveOffFinderExtension.xcodeproj" ]; then
+    if [ ! -d "${macos_dir}/KCloudFinderExtension.xcodeproj" ]; then
         log_warn "Xcode 项目不存在，请手动创建 Finder Extension 项目"
         log_info "步骤:"
         log_info "1. 打开 Xcode"
@@ -81,8 +81,8 @@ build_macos() {
     fi
 
     # 构建
-    xcodebuild -project "${macos_dir}/MoveOffFinderExtension.xcodeproj" \
-               -scheme MoveOffFinderExtension \
+    xcodebuild -project "${macos_dir}/KCloudFinderExtension.xcodeproj" \
+               -scheme KCloudFinderExtension \
                -configuration Release \
                -derivedDataPath "$build_dir" \
                build
@@ -90,8 +90,8 @@ build_macos() {
     # 复制结果
     local app_path=$(find "$build_dir" -name "*.appex" -type d | head -1)
     if [ -n "$app_path" ]; then
-        cp -R "$app_path" "${INSTALL_PREFIX}/MoveOffFinderExtension.appex"
-        log_info "macOS 扩展构建完成: ${INSTALL_PREFIX}/MoveOffFinderExtension.appex"
+        cp -R "$app_path" "${INSTALL_PREFIX}/KCloudFinderExtension.appex"
+        log_info "macOS 扩展构建完成: ${INSTALL_PREFIX}/KCloudFinderExtension.appex"
     fi
 }
 
@@ -117,13 +117,13 @@ build_windows() {
 
         if [ -n "$VCPKG_ROOT" ]; then
             # 使用 vcpkg toolchain
-            cmake -S "$windows_dir/MoveOffShellExt" \
+            cmake -S "$windows_dir/KCloudShellExt" \
                   -B "$build_dir" \
                   -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
                   -DCMAKE_BUILD_TYPE=Release \
                   -A x64
         else
-            cmake -S "$windows_dir/MoveOffShellExt" \
+            cmake -S "$windows_dir/KCloudShellExt" \
                   -B "$build_dir" \
                   -DCMAKE_BUILD_TYPE=Release \
                   -A x64
@@ -132,8 +132,8 @@ build_windows() {
         cmake --build "$build_dir" --config Release
 
         # 复制结果
-        cp "$build_dir/Release/MoveOffShellExt.dll" "${INSTALL_PREFIX}/"
-        log_info "Windows Shell 扩展构建完成: ${INSTALL_PREFIX}/MoveOffShellExt.dll"
+        cp "$build_dir/Release/KCloudShellExt.dll" "${INSTALL_PREFIX}/"
+        log_info "Windows Shell 扩展构建完成: ${INSTALL_PREFIX}/KCloudShellExt.dll"
 
     elif command -v x86_64-w64-mingw32-g++ &> /dev/null; then
         # 使用 MinGW
@@ -141,14 +141,14 @@ build_windows() {
 
         # 编译 Shell Extension
         x86_64-w64-mingw32-g++ -shared -O2 \
-            -I"$windows_dir/MoveOffShellExt" \
-            -o "$build_dir/MoveOffShellExt.dll" \
-            "$windows_dir/MoveOffShellExt/MoveOffShellExt.cpp" \
+            -I"$windows_dir/KCloudShellExt" \
+            -o "$build_dir/KCloudShellExt.dll" \
+            "$windows_dir/KCloudShellExt/KCloudShellExt.cpp" \
             -lshlwapi -lshell32 -lole32 -luuid \
             -Wl,--kill-at
 
-        cp "$build_dir/MoveOffShellExt.dll" "${INSTALL_PREFIX}/"
-        log_info "Windows Shell 扩展构建完成: ${INSTALL_PREFIX}/MoveOffShellExt.dll"
+        cp "$build_dir/KCloudShellExt.dll" "${INSTALL_PREFIX}/"
+        log_info "Windows Shell 扩展构建完成: ${INSTALL_PREFIX}/KCloudShellExt.dll"
 
     else
         log_error "未找到 Visual Studio 或 MinGW，无法构建 Windows 扩展"
@@ -166,8 +166,8 @@ install_linux() {
     if command -v nautilus &> /dev/null; then
         local nautilus_ext_dir="$HOME/.local/share/nautilus-python/extensions"
         mkdir -p "$nautilus_ext_dir"
-        cp "$linux_dir/nautilus/moveoff_extension.py" "$nautilus_ext_dir/"
-        chmod +x "$nautilus_ext_dir/moveoff_extension.py"
+        cp "$linux_dir/nautilus/kcloud_extension.py" "$nautilus_ext_dir/"
+        chmod +x "$nautilus_ext_dir/kcloud_extension.py"
         log_info "Nautilus 扩展已安装到: $nautilus_ext_dir"
 
         # 重启 Nautilus
@@ -186,7 +186,7 @@ install_linux() {
 # 显示帮助
 show_help() {
     cat << EOF
-MoveOff 原生扩展构建脚本
+KCloud 原生扩展构建脚本
 
 用法: $0 [选项] [命令]
 
@@ -263,7 +263,7 @@ main() {
                     log_info "macOS 扩展需要手动安装到 Xcode 项目中"
                     ;;
                 windows)
-                    log_info "Windows 扩展需要手动注册: regsvr32 MoveOffShellExt.dll"
+                    log_info "Windows 扩展需要手动注册: regsvr32 KCloudShellExt.dll"
                     ;;
             esac
             ;;

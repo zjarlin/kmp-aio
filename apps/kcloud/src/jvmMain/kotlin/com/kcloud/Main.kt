@@ -7,16 +7,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
-import com.kcloud.system.isSystemTraySupported
+import com.kcloud.plugins.desktop.system.isSystemTraySupported
 import com.kcloud.ui.MainWindow
-import org.koin.compose.koinInject
 
 fun main() {
     val runtime = createKCloudRuntime()
     runtime.startDesktop()
 
     application {
-        val shellState = runtime.koin.get<KCloudShellState>()
+        val shellState = runtime.shellState
         val windowVisible by shellState.windowVisible.collectAsState()
         val exitRequested by shellState.exitRequested.collectAsState()
 
@@ -36,7 +35,7 @@ fun main() {
                         shellState.requestExit()
                     }
                 },
-                title = "KCloud - 文件同步",
+                title = "KCloud",
                 state = WindowState(width = 1280.dp, height = 860.dp)
             ) {
                 MainWindow()

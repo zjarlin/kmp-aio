@@ -1,30 +1,21 @@
 package site.addzero.vibepocket.music
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.client.request.*
-import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
-import site.addzero.component.glass.*
-import site.addzero.vibepocket.api.ServerApiClient
-import site.addzero.vibepocket.api.suno.SunoApiClient
 import site.addzero.vibepocket.api.suno.SunoReplaceSectionRequest
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
-import site.addzero.vibepocket.model.*
 
 @Composable
 fun ReplaceSectionFormDialog(
@@ -33,208 +24,113 @@ fun ReplaceSectionFormDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    val playback = rememberDialogPlaybackSnapshot()
 
-    // ── 表单字段 ──
     var replaceStartText by remember { mutableStateOf("") }
     var replaceEndText by remember { mutableStateOf("") }
     var prompt by remember { mutableStateOf("") }
     var style by remember { mutableStateOf("") }
 
-    // ── 提交状态 ──
     var isSubmitting by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // ── 结果 ──
     var resultDetail by remember { mutableStateOf<SunoTaskDetail?>(null) }
 
-    // ── 播放状态 ──
-    val currentTrackId by AudioPlayerManager.currentTrackId.collectAsState()
-    val playerState by AudioPlayerManager.playerState.collectAsState()
-    val progress by AudioPlayerManager.progress.collectAsState()
-    val position by AudioPlayerManager.position.collectAsState()
-    val duration by AudioPlayerManager.duration.collectAsState()
-
-    AlertDialog(
-        onDismissRequest = { if (!isSubmitting) onDismiss() },
-        confirmButton = {},
-        title = {
-            Text(
-                text = "✂️ 替换片段",
-                color = Color.White,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
+    MusicActionDialog(
+        title = "替换片段",
+        isSubmitting = isSubmitting,
+        onDismiss = onDismiss,
+    ) {
+        if (resultDetail == null) {
+            DialogHint("设置需要替换的片段范围，再补上新的歌词或提示词。")
+            OutlinedTextField(
+                value = replaceStartText,
+                onValueChange = { replaceStartText = it.filter(Char::isDigit) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("起始秒数") },
+                placeholder = { Text("replaceStart") },
+                singleLine = true,
             )
-        },
-        containerColor = Color(0xFF1A1A2E),
-        text = {
-            Column(
+            OutlinedTextField(
+                value = replaceEndText,
+                onValueChange = { replaceEndText = it.filter(Char::isDigit) },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("结束秒数") },
+                placeholder = { Text("replaceEnd") },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = prompt,
+                onValueChange = { prompt = it },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                // ── 表单区域（未提交或提交中时显示） ──
-                if (resultDetail == null) {
-                    Text(
-                        text = "设置要替换的片段范围和新内容",
-                        color = GlassTheme.TextTertiary,
-                        fontSize = 12.sp,
-                    )
-
-                    // 起始秒数
-                    GlassTextField(
-                        value = replaceStartText,
-                        onValueChange = { replaceStartText = it.filter { c -> c.isDigit() } },
-                        placeholder = "起始秒数（replaceStart）",
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    // 结束秒数
-                    GlassTextField(
-                        value = replaceEndText,
-                        onValueChange = { replaceEndText = it.filter { c -> c.isDigit() } },
-                        placeholder = "结束秒数（replaceEnd）",
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    // 歌词 / Prompt
-                    GlassTextArea(
-                        value = prompt,
-                        onValueChange = { prompt = it },
-                        placeholder = "新歌词 / 提示词（可选）",
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 160.dp),
-                    )
-
-                    // 风格
-                    GlassTextField(
-                        value = style,
-                        onValueChange = { style = it },
-                        placeholder = "风格标签（可选）",
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    // 提交按钮
-                    NeonGlassButton(
-                        text = if (isSubmitting) "⏳ 提交中..." else "🚀 提交替换",
-                        onClick = {
-                            if (isSubmitting) return@NeonGlassButton
-                            isSubmitting = true
-                            errorMessage = null
-                            statusText = "正在提交..."
-
-                            scope.launch {
-                                try {
-                                    val token = ServerApiClient.getConfig("suno_api_token") ?: ""
-                                    val url = ServerApiClient.getConfig("suno_api_base_url")
-                                        ?.ifBlank { null }
-                                        ?: "https://api.sunoapi.org/api/v1"
-                                    val client = SunoApiClient(apiToken = token, baseUrl = url)
-
-                                    val request = SunoReplaceSectionRequest(
-                                        taskId = taskId,
-                                        audioId = audioId,
-                                        prompt = prompt.ifBlank { null },
-                                        style = style.ifBlank { null },
-                                        replaceStart = replaceStartText.toIntOrNull(),
-                                        replaceEnd = replaceEndText.toIntOrNull(),
-                                    )
-
-                                    val newTaskId = client.replaceSection(request)
-                                    statusText = "已提交，轮询中..."
-
-                                    // 轮询等待完成
-                                    val detail = client.waitForCompletion(
-                                        taskId = newTaskId,
-                                        maxWaitMs = 600_000L,
-                                        pollIntervalMs = 30_000L,
-                                        onStatusUpdate = { detail ->
-                                            statusText = detail?.displayStatus ?: "轮询中..."
-                                        },
-                                    )
-                                    resultDetail = detail
-                                    statusText = null
-                                } catch (e: Exception) {
-                                    errorMessage = "❌ ${e.message}"
-                                    statusText = null
-                                } finally {
-                                    isSubmitting = false
-                                }
-                            }
-                        },
-                        glowColor = GlassColors.NeonCyan,
-                        enabled = !isSubmitting,
-                    )
-
-                    // 状态文本
-                    statusText?.let { status ->
-                        Text(text = status, color = GlassColors.NeonCyan, fontSize = 12.sp)
+                    .heightIn(min = 120.dp),
+                label = { Text("新歌词 / 提示词") },
+                placeholder = { Text("可选") },
+                singleLine = false,
+                minLines = 4,
+            )
+            OutlinedTextField(
+                value = style,
+                onValueChange = { style = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("风格标签") },
+                placeholder = { Text("可选") },
+                singleLine = true,
+            )
+            Button(
+                onClick = {
+                    if (isSubmitting) {
+                        return@Button
                     }
+                    isSubmitting = true
+                    errorMessage = null
+                    statusText = "正在提交..."
 
-                    // 错误信息
-                    errorMessage?.let { error ->
-                        Text(text = error, color = GlassColors.NeonMagenta, fontSize = 12.sp)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        GlassButton(
-                            text = "🔄 重试",
-                            onClick = { errorMessage = null },
-                        )
-                    }
-                }
-
-                // ── 结果展示区域 ──
-                resultDetail?.let { detail ->
-                    Text(
-                        text = "✅ 片段替换完成",
-                        color = GlassColors.NeonCyan,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-
-                    val tracks = detail.response?.sunoData ?: emptyList()
-                    if (tracks.isNotEmpty()) {
-                        tracks.forEach { track ->
-                            val trackId = track.id
-                            val trackPlayerState = if (trackId != null && currentTrackId == trackId) {
-                                TrackPlayerState(
-                                    isPlaying = playerState == PlayerState.PLAYING,
-                                    progress = progress,
-                                    currentTime = AudioPlayerManager.formatTime(position),
-                                    totalTime = AudioPlayerManager.formatTime(duration),
-                                )
-                            } else {
-                                TrackPlayerState()
-                            }
-
-                            TrackCard(
-                                track = track,
-                                taskId = detail.taskId ?: taskId,
-                                isFavorite = false,
-                                onFavoriteToggle = {},
-                                onAction = {},
-                                playerState = trackPlayerState,
-                                onPlayToggle = {
-                                    if (trackId == null || track.audioUrl == null) return@TrackCard
-                                    when {
-                                        currentTrackId == trackId && playerState == PlayerState.PLAYING ->
-                                            AudioPlayerManager.pause()
-                                        currentTrackId == trackId && playerState == PlayerState.PAUSED ->
-                                            AudioPlayerManager.resume()
-                                        else ->
-                                            AudioPlayerManager.play(trackId, track.audioUrl!!)
-                                    }
+                    scope.launch {
+                        try {
+                            val request = SunoReplaceSectionRequest(
+                                taskId = taskId,
+                                audioId = audioId,
+                                prompt = prompt.ifBlank { null },
+                                style = style.ifBlank { null },
+                                replaceStart = replaceStartText.toIntOrNull(),
+                                replaceEnd = replaceEndText.toIntOrNull(),
+                            )
+                            val detail = SunoWorkflowService.submitTask(
+                                submit = { client -> client.replaceSection(request) },
+                                onStatusUpdate = { status, _ ->
+                                    statusText = status
                                 },
                             )
+                            resultDetail = detail
+                            statusText = null
+                        } catch (error: Exception) {
+                            errorMessage = SunoWorkflowService.errorMessage(error)
+                            statusText = null
+                        } finally {
+                            isSubmitting = false
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-                    GlassButton(
-                        text = "关闭",
-                        onClick = onDismiss,
-                    )
-                }
+                },
+                enabled = !isSubmitting,
+            ) {
+                Text(if (isSubmitting) "提交中..." else "提交替换")
             }
-        },
-    )
+            DialogStatusText(statusText)
+            DialogErrorText(
+                errorMessage = errorMessage,
+                onClear = { errorMessage = null },
+            )
+        } else {
+            val detail = resultDetail ?: return@MusicActionDialog
+            DialogSuccessTitle("片段替换完成")
+            DialogTrackResults(
+                detail = detail,
+                fallbackTaskId = taskId,
+                playback = playback,
+            )
+            DialogCloseButton(onDismiss)
+        }
+    }
 }

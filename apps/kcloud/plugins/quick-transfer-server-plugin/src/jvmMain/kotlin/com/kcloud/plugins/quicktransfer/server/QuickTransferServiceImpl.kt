@@ -1,6 +1,13 @@
 package com.kcloud.plugins.quicktransfer.server
 
+import com.kcloud.db.Database
+import com.kcloud.db.DatabaseManager
+import com.kcloud.db.SyncOperation
+import com.kcloud.db.SyncState
+import com.kcloud.event.EventShortcuts
+import com.kcloud.plugin.KCloudLocalPaths
 import com.kcloud.plugins.quicktransfer.QuickTransferActionResult
+import com.kcloud.plugins.quicktransfer.QuickTransferDropService
 import com.kcloud.plugins.quicktransfer.QuickTransferService
 import com.kcloud.plugins.quicktransfer.QuickTransferState
 import com.kcloud.plugins.quicktransfer.QuickTransferSyncStatus
@@ -15,8 +22,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.withContext
+import java.io.File
+import org.koin.core.annotation.Single
 
-class QuickTransferServiceImpl : QuickTransferService {
+@Single
+class QuickTransferServiceImpl : QuickTransferDropService {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val state: StateFlow<QuickTransferState> = AppStateManager.state
@@ -61,6 +72,34 @@ class QuickTransferServiceImpl : QuickTransferService {
             )
     }
 
+    override suspend fun stageDroppedFiles(files: List<File>): QuickTransferActionResult {
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val database = DatabaseManager.get()
+                val syncRoot = KCloudLocalPaths.workspaceDir().absolutePath
+                files.forEach { file ->
+                    stageFile(
+                        file = file,
+                        syncRoot = syncRoot,
+                        database = database,
+                        relativePath = ""
+                    )
+                }
+
+                EventShortcuts.notify("上传准备完成", "已添加 ${files.size} 个文件到同步队列")
+                QuickTransferActionResult(
+                    success = true,
+                    message = "已添加 ${files.size} 个文件到同步队列"
+                )
+            }.getOrElse { throwable ->
+                QuickTransferActionResult(
+                    success = false,
+                    message = "处理拖拽文件失败：${throwable.message ?: "未知错误"}"
+                )
+            }
+        }
+    }
+
     override fun pause(): QuickTransferActionResult {
         return runCatching {
             SyncEngineManager.get().pause()
@@ -84,6 +123,47 @@ class QuickTransferServiceImpl : QuickTransferService {
             )
         }
     }
+}
+
+private suspend fun stageFile(
+    file: File,
+    syncRoot: String,
+    database: Database,
+    relativePath: String
+) {
+    val targetPath = if (relativePath.isEmpty()) {
+        file.name
+    } else {
+        "$relativePath/${file.name}"
+    }
+
+    if (file.isDirectory) {
+        file.listFiles()?.forEach { child ->
+            stageFile(
+                file = child,
+                syncRoot = syncRoot,
+                database = database,
+                relativePath = targetPath
+            )
+        }
+        return
+    }
+
+    val targetFile = File(syncRoot, targetPath)
+    targetFile.parentFile?.mkdirs()
+
+    if (file.absolutePath != targetFile.absolutePath) {
+        file.copyTo(targetFile, overwrite = true)
+    }
+
+    database.updateLocalInfo(
+        path = targetPath,
+        mtime = targetFile.lastModified(),
+        size = targetFile.length(),
+        hash = null
+    )
+    database.updateSyncState(targetPath, SyncState.PENDING_UPLOAD)
+    database.enqueueSync(targetPath, SyncOperation.UPLOAD, targetFile.length())
 }
 
 private fun AppState.toQuickTransferState(): QuickTransferState {

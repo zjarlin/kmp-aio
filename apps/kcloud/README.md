@@ -109,9 +109,9 @@ apps/kcloud/
 | 桌面集成 | `desktop-integration-plugin` | 无 | 已提供系统托盘与全局快捷键 |
 | 笔记 | `notes-plugin` | `notes-server-plugin` | 接入 `apps/notes` / `apps/notes/server` 的 VibeNotes；当前不是专门的 Nextcloud Notes 适配器 |
 | 安装包归纳 | `package-organizer-plugin` | `package-organizer-server-plugin` | 支持扫描目录、分类展示、一键归档 |
-| 快速迁移 | `quick-transfer-plugin` | `quick-transfer-server-plugin` | 已接入同步状态面板、阶段进度、立即同步 / 暂停 / 继续控制；依赖同步引擎初始化状态 |
-| 文件管理 | `file-plugin` | `file-server-plugin` | 支持读取数据库记录、虚拟目录浏览、搜索 / 排序、冲突处理、在文件夹中显示 |
-| 迁移记录 | `transfer-history-plugin` | `transfer-history-server-plugin` | 支持读取数据库统计、同步队列、清理已完成队列 |
+| 快速迁移 | `quick-transfer-plugin` | `quick-transfer-server-plugin` | 已接入同步状态面板、阶段进度、立即同步 / 暂停 / 继续控制；页面与 HTTP 路由统一通过 `QuickTransferService` 访问状态 |
+| 文件管理 | `file-plugin` | `file-server-plugin` | 支持读取记录、虚拟目录浏览、搜索 / 排序、冲突处理、在文件夹中显示；页面与 HTTP 路由统一通过 `FileWorkspaceService` 访问 |
+| 迁移记录 | `transfer-history-plugin` | `transfer-history-server-plugin` | 支持读取统计、同步队列、清理已完成队列；页面与 HTTP 路由统一通过 `TransferHistoryService` 访问 |
 | 服务器管理 | `server-management-plugin` | `server-management-server-plugin` | 支持维护统一服务器列表；桌面 UI 与独立 server 共用同一套 CRUD service，并暴露 `/api/servers` |
 | SSH 工作区 | `ssh-plugin` | `ssh-server-plugin` | 支持保存配置、测试连接、浏览目录、创建目录、删除路径 |
 | WebDAV 工作区 | `webdav-plugin` | `webdav-server-plugin` | 支持保存配置、测试连接、浏览目录、创建目录、删除路径 |
@@ -123,7 +123,7 @@ apps/kcloud/
 
 | 功能 | 现状 |
 | --- | --- |
-| 快速迁移 / 文件管理 / 迁移记录 | UI 已可用，但仍建立在 `lib:kcloud-core` 的旧同步 / 数据库模型之上，后续还要继续现代化 |
+| 快速迁移 / 文件管理 / 迁移记录 | UI 与路由已经切到插件自己的 service 契约，但当前 server 实现仍在适配 `lib:kcloud-core` 的旧同步 / 数据库模型，后续还要继续现代化 |
 
 ### 当前本地 HTTP 聚合层
 
@@ -152,11 +152,13 @@ apps/kcloud/
 ./gradlew :apps:kcloud:jvmRun
 ```
 
+- 请确保 Gradle / IDE 使用 JDK 11 或更高版本
 - 会启动 Compose Desktop 壳层
 - 会自动启动本地 HTTP 聚合服务
 - 默认优先尝试 `127.0.0.1:18080`
 - 如果端口被占用，会自动选择可用端口
 - 端口也可以通过 `KCLOUD_LOCAL_SERVER_PORT` 或 `-Dkcloud.localServer.port=...` 覆盖
+- 这是当前 **唯一** 的桌面应用入口；实际 `main` 在 [`src/jvmMain/kotlin/com/kcloud/Main.kt`](src/jvmMain/kotlin/com/kcloud/Main.kt)
 
 ### 独立服务
 
@@ -164,8 +166,24 @@ apps/kcloud/
 ./gradlew :apps:kcloud:server:run
 ```
 
+- 同样要求 Gradle / IDE 使用 JDK 11 或更高版本
 - 只启动本地 HTTP 聚合层
 - 适合单独调试 `*-server-plugin` 路由与服务逻辑
+
+### 启动入口说明
+
+- 不要直接运行 `plugins/*:jvmRun`
+- `plugins/*` 下的模块当前定位是 **库模块 / 插件模块**，不是独立桌面应用
+- 例如 [`plugins/desktop-integration-plugin/build.gradle.kts`](plugins/desktop-integration-plugin/build.gradle.kts) 只声明了库依赖，没有配置 `mainClass`
+- 真正的桌面主入口定义在 [`build.gradle.kts`](build.gradle.kts) 的 `kotlin.jvm().mainRun` / `compose.desktop.application`
+- 对应的实际启动类是 [`src/jvmMain/kotlin/com/kcloud/Main.kt`](src/jvmMain/kotlin/com/kcloud/Main.kt)
+- 如果误跑了某个插件模块的 `jvmRun`，常见报错会是：`No main class specified and classpath is not an executable jar`
+
+### IDE 启动指引
+
+- Gradle Run Configuration 请指向 `:apps:kcloud:jvmRun`
+- 如果按主类启动，请使用 `com.kcloud.MainKt`
+- 需要只调本地 HTTP 聚合层时，再单独运行 `:apps:kcloud:server:run`
 
 ### 新增插件的当前接入方式
 
@@ -181,7 +199,7 @@ apps/kcloud/
 | 状态 | 内容 |
 | --- | --- |
 | 已落地 | 插件化桌面壳、树状侧边栏、静态插件聚合、本地 HTTP 聚合层、桌面托盘与快捷键、笔记接入、快速迁移面板、文件管理页、迁移记录页、服务器管理页、设置页、安装包归档、SSH 工作区、WebDAV 工作区、Dotfiles、Unix 环境搭建 |
-| 正在补强 | 快速迁移 / 文件管理 / 迁移记录对旧 `lib:kcloud-core` 模型的清理与替换 |
+| 正在补强 | 快速迁移 / 文件管理 / 迁移记录的 server 实现继续脱离旧 `lib:kcloud-core` 模型；把未接入的拖拽上传链路也纳入新 service 边界 |
 | 下一阶段 | 把硬编码聚合升级为真正 SPI / `ServiceLoader` 装载；统一 SSH / WebDAV / File 的工作区抽象；给环境搭建补安装任务历史与实时日志；给笔记插件补专门的 Nextcloud / WebDAV Notes 适配；继续收敛 legacy 同步 / 数据模型 |
 
 ---
@@ -191,7 +209,7 @@ apps/kcloud/
 - 这还不是完整的 Nextcloud 替代品；当前更像“插件化私有云工作台”。
 - 笔记插件当前接的是 `apps/notes`，不是 Nextcloud Notes 专用实现。
 - 插件发现目前仍是静态聚合，不是动态 SPI 自动扫描。
-- 多个页面虽然已经可用，但其中一部分仍依赖 `lib:kcloud-core` 的 legacy 同步 / 数据库模型，不算最终形态。
+- 快速迁移 / 文件管理 / 迁移记录的 UI 已经不再直接碰 legacy manager，但对应 server 实现仍在适配 `lib:kcloud-core`，还不是最终形态。
 - `environment-plugin` 的“一键安装”本质是本机执行或 SSH 会话远程执行，不是 SSH 隧道或远程 agent 部署。
 - `security-plugin` 目录当前没有接入主应用聚合，文档不把它算作已落地能力。
 

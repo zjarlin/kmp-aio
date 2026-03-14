@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Figma Component Code Connect",
+  "description": "When Compose UI files change, ask whether they should be mapped to a Figma component.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "apps/vibepocket/src/commonMain/kotlin/**/*.kt",
+      "lib/vibepocket-ui/src/commonMain/kotlin/**/*.kt"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "If the edited file defines or updates a Compose UI component, ask the user whether it should be connected to the matching Figma component for Vibepocket. If they approve, request the latest Figma URL if missing and then run the available code-connect workflow for that URL. If they decline, stop without further actions."
+  },
+  "shortName": "figma-code-connect"
+}

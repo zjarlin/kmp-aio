@@ -1,9 +1,5 @@
 package site.addzero.vibepocket.music
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,23 +20,28 @@ enum class PlayerState {
  * 通过 StateFlow 暴露播放状态供 UI 层观察。
  */
 object AudioPlayerManager {
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var pollingJob: Job? = null
+    private val backend by lazy { createAudioPlayerBackend() }
 
     // ── 内部可变状态 ──────────────────────────────────────────
-    private val _currentTrackId = MutableStateFlow<String?>(null)
+    private val _currentPlaybackId = MutableStateFlow<String?>(null)
+    private val _currentAudio = MutableStateFlow<PlayableAudio?>(null)
     private val _playerState = MutableStateFlow(PlayerState.IDLE)
     private val _progress = MutableStateFlow(0f)
     private val _position = MutableStateFlow(0L)
     private val _duration = MutableStateFlow(0L)
+    private val _lastError = MutableStateFlow<String?>(null)
 
     // ── 对外只读 StateFlow ───────────────────────────────────
-    val currentTrackId: StateFlow<String?> = _currentTrackId.asStateFlow()
+    val currentPlaybackId: StateFlow<String?> = _currentPlaybackId.asStateFlow()
+    val currentTrackId: StateFlow<String?> = _currentPlaybackId.asStateFlow()
+    val currentAudio: StateFlow<PlayableAudio?> = _currentAudio.asStateFlow()
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
     val progress: StateFlow<Float> = _progress.asStateFlow()
+    val positionMs: StateFlow<Long> = _position.asStateFlow()
+    val durationMs: StateFlow<Long> = _duration.asStateFlow()
     val position: StateFlow<Long> = _position.asStateFlow()
     val duration: StateFlow<Long> = _duration.asStateFlow()
+    val lastError: StateFlow<String?> = _lastError.asStateFlow()
 
     // ── 播放控制 ─────────────────────────────────────────────
 
@@ -48,23 +49,28 @@ object AudioPlayerManager {
      * 播放指定 Track。
      */
     fun play(trackId: String, audioUrl: String) {
-        // 停止当前播放
-        stop()
+        play(
+            PlayableAudio(
+                playbackId = trackId,
+                url = audioUrl,
+            )
+        )
+    }
 
-        _currentTrackId.value = trackId
-        _playerState.value = PlayerState.PLAYING
-        _progress.value = 0.5f // Dummy progress
-        _position.value = 1000L
-        _duration.value = 2000L
-
-        println("Dummy Play: $trackId -> $audioUrl")
+    fun play(audio: PlayableAudio) {
+        _currentPlaybackId.value = audio.playbackId
+        _currentAudio.value = audio
+        _lastError.value = null
+        applySnapshot(PlayerSnapshot(state = PlayerState.BUFFERING))
+        backend.load(audio, ::applySnapshot)
     }
 
     /**
      * 暂停当前播放。
      */
     fun pause() {
-        if (_playerState.value == PlayerState.PLAYING) {
+        if (_playerState.value == PlayerState.PLAYING || _playerState.value == PlayerState.BUFFERING) {
+            backend.pause()
             _playerState.value = PlayerState.PAUSED
         }
     }
@@ -74,6 +80,7 @@ object AudioPlayerManager {
      */
     fun resume() {
         if (_playerState.value == PlayerState.PAUSED) {
+            backend.play()
             _playerState.value = PlayerState.PLAYING
         }
     }
@@ -82,20 +89,39 @@ object AudioPlayerManager {
      * 停止播放并重置状态。
      */
     fun stop() {
-        pollingJob?.cancel()
-        pollingJob = null
+        backend.stop()
+        _currentPlaybackId.value = null
+        _currentAudio.value = null
         _playerState.value = PlayerState.IDLE
-        _currentTrackId.value = null
         _progress.value = 0f
         _position.value = 0L
         _duration.value = 0L
+        _lastError.value = null
     }
 
     /**
      * 释放播放器资源。
      */
     fun release() {
+        backend.release()
         stop()
+    }
+
+    private fun applySnapshot(snapshot: PlayerSnapshot) {
+        _playerState.value = snapshot.state
+        _position.value = snapshot.positionMs.coerceAtLeast(0L)
+        _duration.value = snapshot.durationMs.coerceAtLeast(0L)
+        _lastError.value = snapshot.errorMessage?.trim()?.ifBlank { null }
+        _progress.value = when {
+            snapshot.durationMs > 0L -> {
+                (snapshot.positionMs.toFloat() / snapshot.durationMs.toFloat()).coerceIn(0f, 1f)
+            }
+
+            else -> 0f
+        }
+        snapshot.errorMessage?.trim()?.takeIf(String::isNotBlank)?.let { error ->
+            println("[AudioPlayer] ${snapshot.state}: $error")
+        }
     }
 
     // ── 工具方法 ─────────────────────────────────────────────

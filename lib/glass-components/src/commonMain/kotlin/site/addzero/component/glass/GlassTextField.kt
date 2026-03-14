@@ -1,20 +1,13 @@
 package site.addzero.component.glass
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import com.kyant.shapes.RoundedRectangle
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 /**
  * GlassTextField — 单行玻璃风格输入框
@@ -40,34 +33,14 @@ fun GlassTextField(
     singleLine: Boolean = true,
     shape: Shape = RoundedRectangle(12.dp),
 ) {
-    BasicTextField(
+    OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
+        placeholder = { androidx.compose.material3.Text(placeholder) },
         singleLine = singleLine,
-        textStyle = TextStyle(
-            color = GlassTheme.TextPrimary,
-            fontSize = 14.sp,
-        ),
-        cursorBrush = SolidColor(GlassTheme.WaterRefractionEdgeStrong),
         modifier = modifier,
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .glassEffect(shape = shape)
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                if (value.isEmpty() && placeholder.isNotEmpty()) {
-                    Text(
-                        text = placeholder,
-                        color = GlassTheme.TextTertiary,
-                        fontSize = 14.sp,
-                    )
-                }
-                innerTextField()
-            }
-        },
+        shape = shape,
     )
 }
 
@@ -93,38 +66,17 @@ fun GlassTextArea(
     enabled: Boolean = true,
     shape: Shape = RoundedRectangle(16.dp),
 ) {
-    BasicTextField(
+    OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
+        placeholder = { androidx.compose.material3.Text(placeholder) },
         singleLine = false,
-        textStyle = TextStyle(
-            color = GlassTheme.TextPrimary,
-            fontSize = 14.sp,
-            lineHeight = 20.sp,
-        ),
-        cursorBrush = SolidColor(GlassTheme.WaterRefractionEdgeStrong),
-        modifier = modifier,
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .glassEffect(shape = shape)
-                    .fillMaxWidth()
-                    .heightIn(min = 120.dp)
-                    .padding(16.dp),
-                contentAlignment = Alignment.TopStart,
-            ) {
-                if (value.isEmpty() && placeholder.isNotEmpty()) {
-                    Text(
-                        text = placeholder,
-                        color = GlassTheme.TextTertiary,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                    )
-                }
-                innerTextField()
-            }
-        },
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp),
+        shape = shape,
+        minLines = 5,
     )
 }
 
@@ -150,32 +102,12 @@ fun GlassSearchField(
     placeholder: String = "搜索...",
     shape: Shape = RoundedRectangle(24.dp),
 ) {
-    BasicTextField(
+    OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
+        placeholder = { androidx.compose.material3.Text("🔍 $placeholder") },
         singleLine = true,
-        textStyle = TextStyle(
-            color = GlassTheme.TextPrimary,
-            fontSize = 14.sp,
-        ),
-        cursorBrush = SolidColor(GlassTheme.WaterRefractionEdgeStrong),
         modifier = modifier,
-        decorationBox = { innerTextField ->
-            Box(
-                modifier = Modifier
-                    .glassEffect(shape = shape)
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                if (value.isEmpty()) {
-                    Text(
-                        text = "🔍 $placeholder",
-                        color = GlassTheme.TextTertiary,
-                        fontSize = 14.sp,
-                    )
-                }
-                innerTextField()
-            }
-        },
+        shape = shape,
     )
 }

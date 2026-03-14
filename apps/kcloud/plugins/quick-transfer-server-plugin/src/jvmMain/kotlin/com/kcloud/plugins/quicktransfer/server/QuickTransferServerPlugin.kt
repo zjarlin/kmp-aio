@@ -1,31 +1,19 @@
 package com.kcloud.plugins.quicktransfer.server
 
-import com.kcloud.plugin.KCloudPluginBundle
 import com.kcloud.plugin.KCloudServerPlugin
-import com.kcloud.plugins.quicktransfer.QuickTransferService
-import com.kcloud.server.routes.installQuickTransferRoutes
+import com.kcloud.plugins.quicktransfer.QuickTransferDropService
+import com.kcloud.plugins.quicktransfer.server.routes.installQuickTransferRoutes
 import io.ktor.server.routing.Routing
-import org.koin.core.module.dsl.bind
-import org.koin.core.module.dsl.singleOf
-import org.koin.core.module.dsl.withOptions
-import org.koin.dsl.module
+import org.koin.core.annotation.Single
 
-private val quickTransferServerPluginModule = module {
-    single<QuickTransferService> { QuickTransferServiceImpl() }
-    singleOf(::QuickTransferServerPlugin) withOptions {
-        bind<KCloudServerPlugin>()
-    }
-}
-
-object QuickTransferServerPluginBundle : KCloudPluginBundle {
-    override val koinModules = listOf(quickTransferServerPluginModule)
-}
-
-class QuickTransferServerPlugin : KCloudServerPlugin {
+@Single
+class QuickTransferServerPlugin(
+    private val service: QuickTransferDropService
+) : KCloudServerPlugin {
     override val pluginId = "quick-transfer-server-plugin"
     override val order = 10
 
-    override fun installHttp(routing: Routing, koin: org.koin.core.Koin) {
-        routing.installQuickTransferRoutes(koin.get())
+    override fun installHttp(routing: Routing) {
+        routing.installQuickTransferRoutes(service)
     }
 }

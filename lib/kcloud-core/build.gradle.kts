@@ -21,6 +21,7 @@ kotlin {
         }
 
         jvmMain.dependencies {
+            implementation(project(":lib:kcloud-paths"))
             // SQLite JDBC驱动
             implementation("org.xerial:sqlite-jdbc:3.45.1.0")
             // HikariCP连接池

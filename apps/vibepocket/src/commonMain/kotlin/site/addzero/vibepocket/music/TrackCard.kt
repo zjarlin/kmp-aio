@@ -6,26 +6,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
-import site.addzero.component.glass.GlassCard
-import site.addzero.component.glass.GlassColors
-import site.addzero.component.glass.GlassTheme
 import site.addzero.vibepocket.api.suno.SunoTrack
 import site.addzero.vibepocket.model.TrackAction
 import site.addzero.vibepocket.model.TrackPlayerState
+import site.addzero.vibepocket.ui.StudioPill
 
 /**
  * TrackCard — 统一音轨卡片组件
@@ -43,21 +42,24 @@ fun TrackCard(
     playerState: TrackPlayerState,
     onPlayToggle: () -> Unit,
 ) {
-    // 操作菜单展开状态
     var menuExpanded by remember { mutableStateOf(false) }
 
-    GlassCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // ── 顶部：封面图 + 标题/标签 + 操作按钮 ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // 封面图
                 val imageUrl = track.imageUrl
                 if (imageUrl != null) {
                     AsyncImage(
@@ -75,35 +77,46 @@ fun TrackCard(
                             .clip(RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("🎵", fontSize = 24.sp)
+                        Text(
+                            text = "🎵",
+                            style = MaterialTheme.typography.headlineMedium,
+                        )
                     }
                 }
 
-                // 标题 + 标签
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
                         text = track.title ?: "未命名音轨",
-                        color = Color.White,
-                        fontSize = 15.sp,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    track.tags?.let { tags ->
-                        Text(
-                            text = "🏷️ $tags",
-                            color = GlassTheme.TextSecondary,
-                            fontSize = 12.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        track.tags?.takeIf { it.isNotBlank() }?.let { tags ->
+                            StudioPill(
+                                text = tags,
+                                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                        }
+                        taskId.takeIf { it.isNotBlank() }?.let { id ->
+                            StudioPill(
+                                text = id.take(8),
+                                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                        }
                     }
                 }
 
-                // 收藏星星按钮（仅当 track 有 id 时显示）
                 if (track.id != null) {
                     IconButton(
                         onClick = { onFavoriteToggle(!isFavorite) },
@@ -112,13 +125,12 @@ fun TrackCard(
                         Icon(
                             imageVector = if (isFavorite) Icons.Filled.Star else Icons.Filled.StarBorder,
                             contentDescription = if (isFavorite) "取消收藏" else "收藏",
-                            tint = if (isFavorite) GlassColors.NeonCyan else GlassTheme.TextTertiary,
+                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
                     }
                 }
 
-                // 操作菜单按钮（仅当 track 有 id 时显示）
                 if (track.id != null) {
                     Box {
                         IconButton(
@@ -128,12 +140,11 @@ fun TrackCard(
                             Icon(
                                 imageVector = Icons.Filled.MoreVert,
                                 contentDescription = "操作菜单",
-                                tint = GlassTheme.TextSecondary,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
 
-                        // 下拉操作菜单
                         TrackActionMenu(
                             expanded = menuExpanded,
                             onDismiss = { menuExpanded = false },
@@ -146,7 +157,6 @@ fun TrackCard(
                 }
             }
 
-            // ── 内联播放器（仅当 track 有 audioUrl 时显示） ──
             track.audioUrl?.let { audioUrl ->
                 InlinePlayer(
                     audioUrl = audioUrl,

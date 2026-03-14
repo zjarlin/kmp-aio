@@ -1,6 +1,7 @@
 package com.kcloud
 
 import com.kcloud.plugin.KCloudMenuGroups
+import com.kcloud.plugins.ai.spi.AiDiagnosticsService
 import com.kcloud.plugins.dotfiles.DotfilesPluginMenus
 import com.kcloud.plugins.environment.EnvironmentPluginMenus
 import com.kcloud.plugins.file.FilePluginMenus
@@ -9,6 +10,7 @@ import com.kcloud.plugins.packages.PackageOrganizerPluginMenus
 import com.kcloud.plugins.quicktransfer.QuickTransferPluginMenus
 import com.kcloud.plugins.servermanagement.ServerManagementPluginMenus
 import com.kcloud.plugins.ssh.SshPluginMenus
+import com.kcloud.plugins.settings.SettingsSectionRegistry
 import com.kcloud.plugins.settings.SettingsPluginMenus
 import com.kcloud.plugins.transferhistory.TransferHistoryPluginMenus
 import com.kcloud.plugins.webdav.WebDavPluginMenus
@@ -99,8 +101,7 @@ class KCloudRuntimeTest {
         val runtime = createKCloudRuntime()
 
         try {
-            val pluginRegistry = runtime.koin.get<KCloudPluginRegistry>()
-            val serverPluginRegistry = runtime.koin.get<KCloudServerPluginRegistry>()
+            val pluginRegistry = runtime.pluginRegistry
 
             assertEquals(
                 listOf(
@@ -130,9 +131,10 @@ class KCloudRuntimeTest {
                     "ssh-server-plugin",
                     "webdav-server-plugin",
                     "dotfiles-server-plugin",
-                    "environment-server-plugin"
+                    "environment-server-plugin",
+                    "ai-server-plugin"
                 ),
-                serverPluginRegistry.plugins.map { plugin -> plugin.pluginId }
+                runtime.serverPlugins.map { plugin -> plugin.pluginId }
             )
         } finally {
             runtime.stopServer()
@@ -164,6 +166,41 @@ class KCloudRuntimeTest {
             assertEquals(EnvironmentPluginMenus.ENVIRONMENT_SETUP, registry.normalizeMenuId("environment"))
             assertNotNull(registry.findLeaf("quick")?.entry?.content)
             assertNotNull(registry.findLeaf("notes")?.entry?.content)
+        } finally {
+            runtime.stopServer()
+            stopKoin()
+        }
+    }
+
+    @Test
+    fun `resolves settings section registry`() {
+        stopKoin()
+        val runtime = createKCloudRuntime()
+
+        try {
+            val registry = runtime.koin.get<SettingsSectionRegistry>()
+
+            assertTrue(registry.contributors.isNotEmpty())
+            assertContains(
+                registry.contributors.map { contributor -> contributor.sectionId },
+                "settings.ai"
+            )
+        } finally {
+            runtime.stopServer()
+            stopKoin()
+        }
+    }
+
+    @Test
+    fun `registers ollama ai provider`() {
+        stopKoin()
+        val runtime = createKCloudRuntime()
+
+        try {
+            val diagnosticsService = runtime.koin.get<AiDiagnosticsService>()
+            val providerIds = diagnosticsService.availableProviders().map { provider -> provider.providerId }
+
+            assertContains(providerIds, "ollama")
         } finally {
             runtime.stopServer()
             stopKoin()

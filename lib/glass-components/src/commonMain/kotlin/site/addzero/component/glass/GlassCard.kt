@@ -1,8 +1,10 @@
 package site.addzero.component.glass
 
+import com.kyant.shapes.RoundedRectangle
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
-import com.kyant.shapes.RoundedRectangle
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,10 +27,16 @@ fun GlassCard(
     shape: Shape = RoundedRectangle(16.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(
-        modifier = modifier.glassEffect(shape = shape),
-        content = content,
-    )
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = GlassTheme.GlassSurface,
+        tonalElevation = 2.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, GlassTheme.GlassBorder),
+    ) {
+        Box(content = content)
+    }
 }
 
 /**
@@ -51,14 +59,16 @@ fun NeonGlassCard(
     shape: Shape = RoundedRectangle(16.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(
-        modifier = modifier.neonGlassEffect(
-            shape = shape,
-            glowColor = glowColor,
-            intensity = intensity,
-        ),
-        content = content,
-    )
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = glowColor.copy(alpha = 0.06f),
+        tonalElevation = 2.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, glowColor.copy(alpha = 0.32f)),
+    ) {
+        Box(content = content)
+    }
 }
 
 /**
@@ -81,12 +91,14 @@ fun LiquidGlassCard(
     shape: Shape = RoundedRectangle(24.dp),
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(
-        modifier = modifier.liquidGlassEffect(
-            shape = shape,
-            primaryColor = primaryColor,
-            secondaryColor = secondaryColor,
-        ),
-        content = content,
-    )
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = primaryColor,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, secondaryColor),
+    ) {
+        Box(content = content)
+    }
 }

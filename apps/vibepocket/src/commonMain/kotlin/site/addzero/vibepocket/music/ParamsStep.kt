@@ -1,36 +1,30 @@
 package site.addzero.vibepocket.music
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import site.addzero.component.glass.*
+import site.addzero.vibepocket.api.suno.SUNO_MODELS
+import site.addzero.vibepocket.api.suno.VOCAL_GENDERS
 import site.addzero.vibepocket.model.PersonaItem
+import site.addzero.vibepocket.ui.StudioSectionCard
 
-// Constants for model versions
-private val SUNO_MODELS = listOf("v3.5", "v3", "v2")
-
-// Constants for vocal genders, with display labels
-private val VOCAL_GENDERS = listOf(
-    Pair("male", "男声"),
-    Pair("female", "女声"),
-    Pair("any", "任意"),
-)
-
-/**
- * 第二步：Vibe 参数配置
- */
 @Composable
 fun ParamsStep(
     title: String,
@@ -51,100 +45,145 @@ fun ParamsStep(
     selectedPersonaId: String? = null,
     onPersonaChange: (String?) -> Unit = {},
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // 基本信息
-        NeonGlassCard(
-            modifier = Modifier.fillMaxWidth(),
-            glowColor = GlassColors.NeonPurple
+    @Composable
+    fun BasicInfoPanel() {
+        StudioSectionCard(
+            title = "基本信息",
+            subtitle = "先给这首歌一个标题，再补上你想要和不想要的风格。",
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("🎤 基本信息", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            OutlinedTextField(
+                value = title,
+                onValueChange = onTitleChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("歌曲标题") },
+                placeholder = { Text("给你的歌起个名字") },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = tags,
+                onValueChange = onTagsChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("风格标签") },
+                placeholder = { Text("例如：pop, rock, chinese gospel") },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = negativeTags,
+                onValueChange = onNegativeTagsChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("负面标签") },
+                placeholder = { Text("例如：heavy metal, screaming") },
+                singleLine = true,
+            )
+        }
+    }
 
-                FieldLabel("歌曲标题")
-                GlassTextField(
-                    value = title, onValueChange = onTitleChange,
-                    placeholder = "给你的歌起个名字", modifier = Modifier.fillMaxWidth()
-                )
+    @Composable
+    fun VoicePanel() {
+        StudioSectionCard(
+            title = "模型与声音",
+            subtitle = "挑一个模型版本、声音方向，以及是否制作纯音乐。",
+        ) {
+            FieldLabel("模型版本")
+            ChipSelector(
+                options = SUNO_MODELS,
+                selected = mv,
+                onSelect = onMvChange,
+            )
 
-                FieldLabel("风格标签")
-                GlassTextField(
-                    value = tags, onValueChange = onTagsChange,
-                    placeholder = "例如: pop, rock, 黑人福音, chinese", modifier = Modifier.fillMaxWidth()
-                )
+            FieldLabel("声音性别")
+            ChipSelector(
+                options = VOCAL_GENDERS.map { it.first },
+                labels = VOCAL_GENDERS.map { it.second },
+                selected = vocalGender,
+                onSelect = onVocalGenderChange,
+            )
 
-                FieldLabel("负面标签（不想要的风格）")
-                GlassTextField(
-                    value = negativeTags, onValueChange = onNegativeTagsChange,
-                    placeholder = "例如: heavy metal, screaming", modifier = Modifier.fillMaxWidth()
+            FieldLabel("Persona 声音角色")
+            PersonaSelector(
+                personas = personas,
+                selectedPersonaId = selectedPersonaId,
+                onPersonaChange = onPersonaChange,
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "纯音乐（无人声）",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = "打开后会优先生成器乐版本，不再强调 vocal。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = makeInstrumental,
+                    onCheckedChange = onMakeInstrumentalChange,
                 )
             }
         }
+    }
 
-        // 模型与声音
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("⚙️ 模型与声音", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+    @Composable
+    fun PromptPanel() {
+        StudioSectionCard(
+            title = "AI 灵感描述",
+            subtitle = "可选。用自然语言描述你希望得到的音乐气质。",
+        ) {
+            OutlinedTextField(
+                value = gptDescriptionPrompt,
+                onValueChange = onGptDescriptionPromptChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 120.dp),
+                label = { Text("描述词") },
+                placeholder = { Text("例如：Powerful black male gospel lead vocal, deep and soulful...") },
+                singleLine = false,
+                minLines = 5,
+            )
+        }
+    }
 
-                FieldLabel("模型版本")
-                ChipSelector(options = SUNO_MODELS, selected = mv, onSelect = onMvChange)
-
-                FieldLabel("声音性别")
-                ChipSelector(
-                    options = VOCAL_GENDERS.map { it.first },
-                    labels = VOCAL_GENDERS.map { it.second },
-                    selected = vocalGender, onSelect = onVocalGenderChange
-                )
-
-                // Persona 声音角色选择
-                FieldLabel("Persona 声音角色")
-                PersonaSelector(
-                    personas = personas,
-                    selectedPersonaId = selectedPersonaId,
-                    onPersonaChange = onPersonaChange,
-                )
-
-                // 纯音乐开关
+    BoxWithConstraints {
+        val useWideLayout = maxWidth >= 980.dp
+        if (useWideLayout) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(alpha = 0.05f))
-                        .clickable { onMakeInstrumentalChange(!makeInstrumental) }
-                        .padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    Text("纯音乐（无人声）", color = Color.White, fontSize = 14.sp)
-                    Box(
-                        modifier = Modifier.size(24.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (makeInstrumental) GlassColors.NeonCyan
-                                else Color.White.copy(alpha = 0.15f)
-                            ),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        if (makeInstrumental) {
-                            Text("✓", color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
+                        BasicInfoPanel()
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        VoicePanel()
                     }
                 }
+                PromptPanel()
             }
-        }
-
-        // GPT 描述
-        GlassCard(modifier = Modifier.fillMaxWidth()) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("💡 AI 灵感描述（可选）", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "用自然语言描述你想要的音乐风格，AI 会据此生成",
-                    color = GlassTheme.TextTertiary, fontSize = 12.sp
-                )
-                GlassTextArea(
-                    value = gptDescriptionPrompt,
-                    onValueChange = onGptDescriptionPromptChange,
-                    placeholder = "例如: Powerful Black male gospel lead vocal, deep, soulful...",
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 200.dp)
-                )
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                BasicInfoPanel()
+                VoicePanel()
+                PromptPanel()
             }
         }
     }
@@ -152,7 +191,11 @@ fun ParamsStep(
 
 @Composable
 private fun FieldLabel(text: String) {
-    Text(text = text, color = GlassTheme.TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 @Composable
@@ -160,37 +203,25 @@ fun ChipSelector(
     options: List<String>,
     selected: String,
     onSelect: (String) -> Unit,
-    labels: List<String>? = null
+    labels: List<String>? = null,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
         options.forEachIndexed { index, option ->
-            val isSelected = option == selected
             val displayLabel = labels?.getOrNull(index) ?: option
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (isSelected) GlassColors.NeonCyan.copy(alpha = 0.3f)
-                        else Color.White.copy(alpha = 0.08f)
-                    )
-                    .clickable { onSelect(option) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = displayLabel,
-                    color = if (isSelected) GlassColors.NeonCyan else GlassTheme.TextSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                )
-            }
+            FilterChip(
+                selected = option == selected,
+                onClick = { onSelect(option) },
+                label = { Text(displayLabel) },
+            )
         }
     }
 }
 
-/**
- * Persona 声音角色选择器
- * 使用横向可滚动 Chip 列表，第一项为"无 Persona"默认选项。
- */
 @Composable
 private fun PersonaSelector(
     personas: List<PersonaItem>,
@@ -198,49 +229,27 @@ private fun PersonaSelector(
     onPersonaChange: (String?) -> Unit,
 ) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // 默认"无"选项
-        val noneSelected = selectedPersonaId == null
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(
-                    if (noneSelected) GlassColors.NeonCyan.copy(alpha = 0.3f)
-                    else Color.White.copy(alpha = 0.08f)
-                )
-                .clickable { onPersonaChange(null) }
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = "无",
-                color = if (noneSelected) GlassColors.NeonCyan else GlassTheme.TextSecondary,
-                fontSize = 13.sp,
-                fontWeight = if (noneSelected) FontWeight.Bold else FontWeight.Normal,
-            )
-        }
-
-        // Persona 列表
+        FilterChip(
+            selected = selectedPersonaId == null,
+            onClick = { onPersonaChange(null) },
+            label = { Text("无") },
+        )
         personas.forEach { persona ->
-            val isSelected = persona.personaId == selectedPersonaId
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(
-                        if (isSelected) GlassColors.NeonCyan.copy(alpha = 0.3f)
-                        else Color.White.copy(alpha = 0.08f)
+            FilterChip(
+                selected = persona.personaId == selectedPersonaId,
+                onClick = { onPersonaChange(persona.personaId) },
+                label = {
+                    Text(
+                        text = persona.name,
+                        modifier = Modifier.widthIn(max = 180.dp),
                     )
-                    .clickable { onPersonaChange(persona.personaId) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
-            ) {
-                Text(
-                    text = persona.name,
-                    color = if (isSelected) GlassColors.NeonCyan else GlassTheme.TextSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                )
-            }
+                },
+            )
         }
     }
 }

@@ -1,12 +1,11 @@
 package site.addzero.component.glass
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import com.kyant.shapes.RoundedRectangle
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,13 +36,13 @@ fun GlassStatCard(
     glowColor: Color = GlassTheme.NeonCyan,
     shape: Shape = RoundedRectangle(16.dp),
 ) {
-    Box(
-        modifier = modifier.neonGlassEffect(
-            shape = shape,
-            glowColor = glowColor,
-            intensity = 0.5f,
-        ),
-        contentAlignment = Alignment.Center,
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = glowColor.copy(alpha = 0.08f),
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, glowColor.copy(alpha = 0.28f)),
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -84,8 +83,13 @@ fun GlassInfoCard(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedRectangle(16.dp),
 ) {
-    Box(
-        modifier = modifier.glassEffect(shape = shape),
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = GlassTheme.GlassSurface,
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, GlassTheme.GlassBorder),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -131,12 +135,13 @@ fun GlassFeatureCard(
     shape: Shape = RoundedRectangle(20.dp),
     icon: (@Composable () -> Unit)? = null,
 ) {
-    Box(
-        modifier = modifier.liquidGlassEffect(
-            shape = shape,
-            primaryColor = primaryColor,
-            secondaryColor = secondaryColor,
-        ),
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = primaryColor.copy(alpha = 0.10f),
+        tonalElevation = 1.dp,
+        shadowElevation = 0.dp,
+        border = BorderStroke(1.dp, secondaryColor.copy(alpha = 0.28f)),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),

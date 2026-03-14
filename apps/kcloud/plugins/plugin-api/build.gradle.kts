@@ -9,10 +9,11 @@ kotlin {
         commonMain.dependencies {
             api(libs.findLibrary("io-insert-koin-koin-core").get())
             api(libs.findLibrary("io-insert-koin-koin-compose").get())
+            api(libs.findLibrary("io-ktor-ktor-server-core").get())
+            api(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-serialization-json").get())
         }
         jvmMain.dependencies {
-            api(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
-            api(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-serialization-json").get())
+            implementation(project(":lib:kcloud-paths"))
         }
     }
 }

@@ -21,6 +21,10 @@ data class MusicTrack(
     val durationMs: Long = 0,
     /** 来源平台标识 */
     val platform: String = "",
+    /** 原始歌曲页链接 */
+    val link: String? = null,
+    /** 平台特有元数据 */
+    val extra: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -32,4 +36,14 @@ data class MusicLyric(
     val lrc: String,
     /** 翻译歌词（可能为空） */
     val translatedLrc: String? = null,
+)
+
+/**
+ * 解析后的音频资源
+ */
+@Serializable
+data class MusicResolvedAsset(
+    val url: String,
+    val fileName: String,
+    val contentType: String? = null,
 )

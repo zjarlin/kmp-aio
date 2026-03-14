@@ -9,9 +9,7 @@ import de.jensklingenberg.ktorfit.http.*
  * 文档: https://docs.sunoapi.org
  */
 interface SunoApi {
-
     // ── 音乐生成 ─────────────────────────────────────────────
-
     /** 生成音乐 */
     @POST("generate")
     suspend fun generateMusic(
@@ -142,8 +140,8 @@ interface SunoApi {
     // ── 账户 ─────────────────────────────────────────────────
 
     /** 查询剩余积分 */
-    @GET("get-credits")
+    @GET("generate/credit")
     suspend fun getCredits(
         @Header("Authorization") auth: String,
-    ): ApiResult<SunoCredits>
+    ): ApiResult<Double>
 }

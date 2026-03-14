@@ -1,4 +1,4 @@
-# MoveOff 系统托盘与Compose UI架构设计
+# KCloud 系统托盘与Compose UI架构设计
 
 > 复刻JetBrains Toolbox风格：常驻托盘、浮动面板、全局快捷键、状态实时同步
 
@@ -121,11 +121,11 @@ enum class TrayIconState(
     val iconResource: String,
     val tooltip: String
 ) {
-    IDLE("tray/icon_idle.png", "MoveOff - 已同步"),
-    SYNCING("tray/icon_syncing.png", "MoveOff - 同步中..."),
-    WARNING("tray/icon_warning.png", "MoveOff - 需要关注"),
-    ERROR("tray/icon_error.png", "MoveOff - 同步错误"),
-    PAUSED("tray/icon_paused.png", "MoveOff - 已暂停");
+    IDLE("tray/icon_idle.png", "KCloud - 已同步"),
+    SYNCING("tray/icon_syncing.png", "KCloud - 同步中..."),
+    WARNING("tray/icon_warning.png", "KCloud - 需要关注"),
+    ERROR("tray/icon_error.png", "KCloud - 同步错误"),
+    PAUSED("tray/icon_paused.png", "KCloud - 已暂停");
 
     companion object {
         fun fromSyncStatus(status: SyncStatus): TrayIconState = when (status) {
@@ -196,7 +196,7 @@ class AwtTrayManager : TrayManager {
 // 托盘菜单结构
 trayMenu {
     // 状态区 (不可点击)
-    label("MoveOff v1.0.0")
+    label("KCloud v1.0.0")
     label(if (isOnline) "已连接" else "离线")
     separator()
 
@@ -252,7 +252,7 @@ sealed class AppWindow(
     data class Main(
         override val width: Dp = 1200.dp,
         override val height: Dp = 800.dp
-    ) : AppWindow("main", "MoveOff", width, height)
+    ) : AppWindow("main", "KCloud", width, height)
 
     data class Settings(
         override val width: Dp = 600.dp,
@@ -352,7 +352,7 @@ fun MainWindowContent(
     val appState by AppStateManager.state.collectAsState()
     val syncStatus = appState.syncStatus
 
-    MoveOffTheme {
+    KCloudTheme {
         Box(modifier = Modifier.fillMaxSize()) {
             // 三栏布局
             Row(modifier = Modifier.fillMaxSize()) {
@@ -808,7 +808,7 @@ fun main() = application {
     LaunchedEffect(Unit) {
         AppStateManager.state.collect { state ->
             trayManager.updateIcon(TrayIconState.fromSyncStatus(state.syncStatus))
-            trayManager.updateTooltip("MoveOff - ${state.currentOperation ?: "就绪"}")
+            trayManager.updateTooltip("KCloud - ${state.currentOperation ?: "就绪"}")
         }
     }
 

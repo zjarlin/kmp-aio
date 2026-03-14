@@ -1,6 +1,7 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
     id("site.addzero.buildlogic.jvm.jvm-json-withtool")
+    id("site.addzero.buildlogic.jvm.jvm-koin")
     id("site.addzero.buildlogic.jvm.jvm-ksp-plugin")
 }
 
@@ -23,6 +24,7 @@ configurations.configureEach {
 }
 
 dependencies {
+    implementation(project(":lib:starter-koin"))
 
     implementation("site.addzero:spring2ktor-server-core:2026.03.10")
     ksp("site.addzero:spring2ktor-server-processor:2026.03.10")

@@ -10,11 +10,13 @@ import kotlinx.serialization.encodeToString
 import java.io.File
 import java.util.logging.Level
 import java.util.logging.Logger
+import org.koin.core.annotation.Single
 
 private val serverManagementLogger: Logger = Logger.getLogger(
     "com.kcloud.plugins.servermanagement.server.ServerManagementServiceImpl"
 )
 
+@Single
 class ServerManagementServiceImpl : ServerManagementService {
     private val settingsFile = File(KCloudLocalPaths.appSupportDir(), "settings.json").also { file ->
         file.parentFile?.mkdirs()
@@ -111,7 +113,7 @@ class ServerManagementServiceImpl : ServerManagementService {
             passphrase = server.passphrase?.takeIf { value -> value.isNotBlank() },
             remoteRootPath = server.remoteRootPath
                 .trim()
-                .ifBlank { "/home/$normalizedUsername/moveoff" },
+                .ifBlank { "/home/$normalizedUsername/kcloud" },
             createdAt = existingServer?.createdAt ?: server.createdAt,
             updatedAt = System.currentTimeMillis()
         )

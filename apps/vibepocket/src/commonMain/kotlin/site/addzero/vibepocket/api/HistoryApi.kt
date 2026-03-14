@@ -8,6 +8,7 @@ import site.addzero.vibepocket.model.*
  */
 interface HistoryApi {
 
+    @Headers("Content-Type: application/json")
     @POST("api/suno/history")
     suspend fun saveHistory(@Body request: MusicHistorySaveRequest): MusicHistoryItem
 

@@ -1,22 +1,22 @@
-# MoveOff 原生系统集成
+# KCloud 原生系统集成
 
 ## 概述
 
-此目录包含 MoveOff 与操作系统原生集成的代码，包括 Finder/Explorer 右键菜单和文件状态图标。
+此目录包含 KCloud 与操作系统原生集成的代码，包括 Finder/Explorer 右键菜单和文件状态图标。
 
 ## macOS - Finder Sync Extension
 
 ### 目录结构
 ```
 macos/
-└── MoveOffFinderExtension/
+└── KCloudFinderExtension/
     ├── FinderSync.swift          # 主扩展代码
     └── Info.plist                # 扩展配置
 ```
 
 ### 功能
 - ✅ 在 Finder 中显示文件同步状态图标（badge）
-- ✅ 右键菜单：立即同步、解决冲突、在 MoveOff 中显示、获取共享链接
+- ✅ 右键菜单：立即同步、解决冲突、在 KCloud 中显示、获取共享链接
 - ✅ 通过 XPC 与主应用通信
 
 ### 构建步骤
@@ -40,29 +40,29 @@ cd native/macos
 
 ### 安装/启用
 
-用户需要在 **系统设置 > 扩展 > 添加的扩展** 中手动启用 MoveOff Finder Extension
+用户需要在 **系统设置 > 扩展 > 添加的扩展** 中手动启用 KCloud Finder Extension
 
 ### XPC 通信
 
 Finder Extension 通过 XPC 与主应用通信：
-- Mach Service: `site.addzero.moveoff.xpc`
-- 协议: `MoveOffXPCProtocol`
+- Mach Service: `site.addzero.kcloud.xpc`
+- 协议: `KCloudXPCProtocol`
 
 ## Windows - Shell Context Menu Extension
 
 ### 目录结构
 ```
 windows/
-└── MoveOffShellExt/
-    ├── MoveOffShellExt.h       # 头文件
-    ├── MoveOffShellExt.cpp     # 实现
-    └── MoveOffShellExt.def     # 模块定义
+└── KCloudShellExt/
+    ├── KCloudShellExt.h       # 头文件
+    ├── KCloudShellExt.cpp     # 实现
+    └── KCloudShellExt.def     # 模块定义
 ```
 
 ### 功能
-- ✅ 在资源管理器右键菜单中显示 MoveOff 菜单
+- ✅ 在资源管理器右键菜单中显示 KCloud 菜单
 - ✅ 显示文件同步状态
-- ✅ 菜单项：立即同步、解决冲突、在 MoveOff 中显示、获取共享链接
+- ✅ 菜单项：立即同步、解决冲突、在 KCloud 中显示、获取共享链接
 
 ### 构建步骤
 
@@ -74,28 +74,28 @@ windows/
 将 `.h`, `.cpp`, `.def` 文件添加到项目中
 
 3. **生成新的 GUID**
-使用 Visual Studio 的 "Create GUID" 工具生成新的 GUID，替换代码中的 `CLSID_MoveOffContextMenu`
+使用 Visual Studio 的 "Create GUID" 工具生成新的 GUID，替换代码中的 `CLSID_KCloudContextMenu`
 
 4. **编译**
-选择 Release/x64 配置，生成 `MoveOffShellExt.dll`
+选择 Release/x64 配置，生成 `KCloudShellExt.dll`
 
 ### 注册/安装
 
 **手动注册（需要管理员权限）：**
 ```cmd
-regsvr32 MoveOffShellExt.dll
+regsvr32 KCloudShellExt.dll
 ```
 
 **卸载：**
 ```cmd
-regsvr32 /u MoveOffShellExt.dll
+regsvr32 /u KCloudShellExt.dll
 ```
 
 **通过安装程序自动注册：**
 在 Inno Setup 或 WiX 安装包中添加注册步骤：
 ```pascal
 [Run]
-Filename: "regsvr32"; Parameters: "/s ""{app}\MoveOffShellExt.dll"""; Flags: waituntilterminated
+Filename: "regsvr32"; Parameters: "/s ""{app}\KCloudShellExt.dll"""; Flags: waituntilterminated
 ```
 
 ### 图标覆盖（可选）
@@ -147,7 +147,7 @@ XPCServer.start { message ->
 
 ```kotlin
 // 启动命名管道服务器
-NamedPipeServer.start("\\\\.\\pipe\\MoveOff") { request ->
+NamedPipeServer.start("\\\\.\\pipe\\KCloud") { request ->
     handleRequest(request)
 }
 ```
@@ -166,15 +166,15 @@ NamedPipeServer.start("\\\\.\\pipe\\MoveOff") { request ->
 
 **请求消息:**
 ```json
-{"action": "GET_FILE_STATUS", "path": "/Users/xxx/MoveOff/file.txt"}
-{"action": "TRIGGER_SYNC", "path": "/Users/xxx/MoveOff/file.txt"}
-{"action": "SHOW_IN_APP", "path": "/Users/xxx/MoveOff/file.txt"}
-{"action": "RESOLVE_CONFLICT", "path": "/Users/xxx/MoveOff/file.txt"}
+{"action": "GET_FILE_STATUS", "path": "/Users/xxx/KCloud/file.txt"}
+{"action": "TRIGGER_SYNC", "path": "/Users/xxx/KCloud/file.txt"}
+{"action": "SHOW_IN_APP", "path": "/Users/xxx/KCloud/file.txt"}
+{"action": "RESOLVE_CONFLICT", "path": "/Users/xxx/KCloud/file.txt"}
 ```
 
 **响应消息:**
 ```json
-{"path": "/Users/xxx/MoveOff/file.txt", "status": "SYNCED", "exists": true}
+{"path": "/Users/xxx/KCloud/file.txt", "status": "SYNCED", "exists": true}
 {"message": "同步已触发"}
 {"message": "错误信息"}
 ```

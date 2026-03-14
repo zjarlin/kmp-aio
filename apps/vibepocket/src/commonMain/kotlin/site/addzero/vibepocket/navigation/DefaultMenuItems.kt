@@ -14,21 +14,9 @@ val defaultMenuItems = listOf(
         sortOrder = 0
     ),
     MenuMetadata(
-        routeKey = "site.addzero.vibepocket.screens.ImageScreen",
-        menuNameAlias = "图片",
-        icon = "🖼️",
-        sortOrder = 1
-    ),
-    MenuMetadata(
-        routeKey = "site.addzero.vibepocket.screens.VideoScreen",
-        menuNameAlias = "视频",
-        icon = "🎬",
-        sortOrder = 2
-    ),
-    MenuMetadata(
         routeKey = "site.addzero.vibepocket.settings.SettingsPage",
         menuNameAlias = "设置",
         icon = "⚙️",
-        sortOrder = 3
+        sortOrder = 1
     )
 )

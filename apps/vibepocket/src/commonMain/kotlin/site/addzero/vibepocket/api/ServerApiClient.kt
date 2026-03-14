@@ -30,6 +30,7 @@ object ServerApiClient {
     val favoriteApi: FavoriteApi = ktorfit.createFavoriteApi()
     val personaApi: PersonaApi = ktorfit.createPersonaApi()
     val historyApi: HistoryApi = ktorfit.createHistoryApi()
+    val musicApi: MusicSearchApi = ktorfit.createMusicSearchApi()
 
     // ── 兼容旧代码的便捷方法 ──────────────────────────────────────────────
 
@@ -58,4 +59,17 @@ object ServerApiClient {
         personaApi.savePersona(request)
 
     suspend fun getPersonas() = personaApi.getPersonas()
+
+    suspend fun searchMusic(
+        provider: String,
+        keyword: String,
+    ) = musicApi.search(provider, keyword)
+
+    suspend fun getMusicLyrics(
+        provider: String,
+        songId: String,
+    ) = musicApi.getLyrics(provider, songId)
+
+    suspend fun resolveMusic(track: site.addzero.vibepocket.api.music.MusicTrack) =
+        musicApi.resolve(track)
 }

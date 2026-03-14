@@ -1,19 +1,7 @@
 package com.kcloud.plugins.transferhistory.server
 
-import com.kcloud.db.Database
-import com.kcloud.db.DatabaseManager
-import com.kcloud.db.FileRecord
-import com.kcloud.db.QueueStatus
-import com.kcloud.db.SyncOperation
-import com.kcloud.db.SyncQueueItem
-import com.kcloud.db.SyncState
-import com.kcloud.plugins.transferhistory.TransferHistoryActionResult
-import com.kcloud.plugins.transferhistory.TransferHistoryQueueItem
-import com.kcloud.plugins.transferhistory.TransferHistoryQueueOperation
-import com.kcloud.plugins.transferhistory.TransferHistoryQueueStatus
-import com.kcloud.plugins.transferhistory.TransferHistoryService
-import com.kcloud.plugins.transferhistory.TransferHistorySnapshot
-import com.kcloud.plugins.transferhistory.TransferHistoryStats
+import com.kcloud.db.*
+import com.kcloud.plugins.transferhistory.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -21,7 +9,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.koin.core.annotation.Single
 
+@Single
 class TransferHistoryServiceImpl : TransferHistoryService {
     private val database = ensureDatabase()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

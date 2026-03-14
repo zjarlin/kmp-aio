@@ -1,5 +1,6 @@
 package com.kcloud.security
 
+import com.kcloud.paths.KCloudPaths
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.File
 import java.security.*
@@ -24,7 +25,7 @@ private val logger = KotlinLogging.logger {}
  */
 actual class KeyStoreManager {
     private val keyStore: KeyStore = KeyStore.getInstance("PKCS12")
-    private val keyStoreFile: File = File(getKeyStoreDirectory(), "moveoff.keystore")
+    private val keyStoreFile: File = resolveKeyStoreFile()
     private val masterPassword: CharArray by lazy { deriveMasterPassword() }
 
     companion object {
@@ -38,8 +39,7 @@ actual class KeyStoreManager {
     }
 
     private fun getKeyStoreDirectory(): File {
-        val userHome = System.getProperty("user.home")
-        return File(userHome, ".moveoff/security").apply {
+        return KCloudPaths.securityDir().apply {
             mkdirs()
             // 设置目录权限（仅所有者访问）
             setReadable(false, false)
@@ -49,6 +49,11 @@ actual class KeyStoreManager {
             setWritable(true, true)
             setExecutable(true, true)
         }
+    }
+
+    private fun resolveKeyStoreFile(): File {
+        val keyStoreDirectory = getKeyStoreDirectory()
+        return File(keyStoreDirectory, "kcloud.keystore")
     }
 
     /**

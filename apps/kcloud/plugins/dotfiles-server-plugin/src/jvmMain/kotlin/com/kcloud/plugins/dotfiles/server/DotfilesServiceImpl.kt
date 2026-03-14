@@ -8,9 +8,11 @@ import com.kcloud.plugins.dotfiles.DotfilesService
 import com.kcloud.plugins.dotfiles.DotfilesSettings
 import com.kcloud.plugins.dotfiles.DotfilesStatus
 import java.io.File
+import org.koin.core.annotation.Single
 
 private const val DOTFILES_PLUGIN_ID = "dotfiles-plugin"
 
+@Single
 class DotfilesServiceImpl : DotfilesService {
     private val pluginDirectory = KCloudLocalPaths.pluginDir(DOTFILES_PLUGIN_ID)
     private val settingsFile = File(pluginDirectory, "settings.json")

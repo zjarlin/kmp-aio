@@ -1,158 +1,184 @@
 package site.addzero.vibepocket
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation3.runtime.NavEntry
-import androidx.navigation3.ui.NavDisplay
-import com.shadcn.ui.components.sidebar.LocalSidebarState
-import com.shadcn.ui.components.sidebar.SidebarLayout
-import com.shadcn.ui.components.sidebar.SidebarProvider
-import com.shadcn.ui.components.sidebar.SidebarTrigger
-import com.shadcn.ui.themes.styles
-import site.addzero.component.glass.GlassSidebar
-import site.addzero.component.glass.LiquidGlassCard
-import site.addzero.vibepocket.music.ioc.generated.iocComposablesByTag
-import site.addzero.vibepocket.navigation.MenuNode
-import site.addzero.vibepocket.navigation.MenuTreeBuilder
-import site.addzero.vibepocket.navigation.RouteKey
-import site.addzero.vibepocket.navigation.defaultMenuItems
+import site.addzero.vibepocket.music.hasCompletedVibePocketSetup
+import site.addzero.vibepocket.music.loadSunoRuntimeConfig
+import site.addzero.vibepocket.plugin.VibePocketPluginRegistry
+import site.addzero.vibepocket.plugin.VibePocketPluginSidebar
 import site.addzero.vibepocket.screens.PlaceholderScreen
 import site.addzero.vibepocket.screens.WelcomeScreenWrapper
-
-private val WELCOME_ROUTE = RouteKey("site.addzero.vibepocket.auth.WelcomePage")
+import site.addzero.vibepocket.ui.VibeGlassAppTheme
 
 @Composable
 @Preview
 fun App() {
-    compoaseApp()
-
+    VibeGlassAppTheme {
+        VibePocketAppRoot()
+    }
 }
 
 @Composable
-private fun compoaseApp() {
-    val menuTree = remember { MenuTreeBuilder.buildTree(defaultMenuItems) }
-    val visibleLeaves = remember { MenuTreeBuilder.flattenVisibleLeaves(menuTree) }
-    val homeRoute = RouteKey(visibleLeaves.firstOrNull()?.routeKey ?: "")
+private fun VibePocketAppRoot() {
+    val pluginRegistry = remember { VibePocketPluginRegistry() }
 
+    var isStartupReady by remember { mutableStateOf(false) }
     var isSetupDone by remember { mutableStateOf(false) }
-    val backStack = remember { mutableStateListOf(WELCOME_ROUTE) }
+    var selectedMenuId by remember { mutableStateOf(pluginRegistry.defaultLeafId) }
+    var expandedMenuIds by remember { mutableStateOf(pluginRegistry.defaultExpandedIds) }
 
-    // API 配置（欢迎页填写后传入，后续会改成从 DB 读取）
+    LaunchedEffect(pluginRegistry.defaultLeafId) {
+        val runtimeConfig = try {
+            loadSunoRuntimeConfig()
+        } catch (_: Exception) {
+            null
+        }
+        val setupCompleted = try {
+            hasCompletedVibePocketSetup()
+        } catch (_: Exception) {
+            false
+        }
+        val hasPersistedConfig = runtimeConfig?.apiToken?.isNotBlank() == true ||
+            runtimeConfig?.baseUrl?.takeIf { it != site.addzero.vibepocket.api.suno.SunoApiClient.DEFAULT_BASE_URL } != null
 
-    MaterialTheme {
-        // A surface container using the 'background' color from the theme
-        SidebarProvider {
-            if (!isSetupDone) {
-                WelcomeScreenWrapper(
-                    backStack = backStack,
-                    homeRoute = homeRoute,
-                    onSetupComplete = { token, url ->
-                        isSetupDone = true
-                    }
-                )
-            } else {
-                // 主界面：侧边栏 + NavDisplay
-                MainScreen(menuTree, backStack)
+        isSetupDone = setupCompleted || hasPersistedConfig
+        selectedMenuId = pluginRegistry.normalizeMenuId(selectedMenuId)
+        expandedMenuIds = expandedMenuIds + pluginRegistry.defaultExpandedIds
+        isStartupReady = true
+    }
+
+    if (!isStartupReady) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background,
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    CircularProgressIndicator()
+                    Text(
+                        text = "正在读取本地配置...",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
+        return
+    }
 
+    if (!isSetupDone) {
+        WelcomeScreenWrapper(
+            onSetupComplete = { _, _ ->
+                isSetupDone = true
+                selectedMenuId = pluginRegistry.defaultLeafId
+                expandedMenuIds = pluginRegistry.defaultExpandedIds
+            },
+        )
+    } else {
+        MainScreen(
+            pluginRegistry = pluginRegistry,
+            selectedMenuId = selectedMenuId,
+            expandedMenuIds = expandedMenuIds,
+            onLeafClick = { menuId ->
+                val normalized = pluginRegistry.normalizeMenuId(menuId)
+                selectedMenuId = normalized
+                expandedMenuIds = expandedMenuIds + pluginRegistry.ancestorIdsFor(normalized)
+            },
+            onGroupToggle = { menuId ->
+                val normalized = pluginRegistry.normalizeMenuId(menuId)
+                expandedMenuIds = expandedMenuIds.toMutableSet().apply {
+                    if (!add(normalized)) {
+                        remove(normalized)
+                    }
+                }
+            },
+        )
     }
 }
 
 @Composable
 private fun MainScreen(
-    menuTree: List<MenuNode>,
-    backStack: SnapshotStateList<RouteKey>
+    pluginRegistry: VibePocketPluginRegistry,
+    selectedMenuId: String,
+    expandedMenuIds: Set<String>,
+    onLeafClick: (String) -> Unit,
+    onGroupToggle: (String) -> Unit,
 ) {
-    val sidebarState = LocalSidebarState.current
-    SidebarLayout(
+    val selectedNode = pluginRegistry.findLeaf(selectedMenuId)
+
+    Surface(
         modifier = Modifier.fillMaxSize(),
-        sidebarContent = {
-            GlassSidebar(
-                roots = menuTree,
-                nodeKey = { it.metadata.routeKey },
-                nodeTitle = { it.metadata.menuNameAlias },
-                nodeIcon = { it.metadata.icon },
-                nodeChildren = { it.children },
-                nodeVisible = { it.metadata.visible },
-                selectedKey = backStack.lastOrNull()?.key ?: "",
-                onLeafClick = { leaf ->
-                    backStack.clear()
-                    backStack.add(RouteKey(leaf.metadata.routeKey))
-                    if (sidebarState.isMobile) {
-                        sidebarState.closeSidebar()
-                    }
-                },
-                modifier = Modifier.fillMaxSize(),
-                title = "Vibepocket",
-                width = 256.dp
-            )
-        }
+        color = MaterialTheme.colorScheme.background,
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.styles.background)
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row(
+            ElevatedCard(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .width(256.dp)
+                    .fillMaxHeight(),
             ) {
-                SidebarTrigger()
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Vibepocket",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.styles.foreground
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    VibePocketPluginSidebar(
+                        nodes = pluginRegistry.menuTree,
+                        selectedId = selectedNode?.id.orEmpty(),
+                        expandedIds = expandedMenuIds,
+                        onLeafClick = onLeafClick,
+                        onGroupToggle = onGroupToggle,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
-            NavDisplay(
-                backStack = backStack,
-                onBack = { backStack.removeLastOrNull() },
-                entryProvider = { routeKey ->
-                    NavEntry(routeKey) {
-                        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-                            LiquidGlassCard(
-                                modifier = Modifier.fillMaxSize(),
-                                shape = RoundedCornerShape(16.dp)
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+            ) {
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                    ) {
+                        val content = selectedNode?.entry?.content
+                        if (content == null) {
+                            PlaceholderScreen("🧩", "这个插件页面暂时还没有挂载内容。")
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(vertical = 4.dp),
                             ) {
-                                val function = iocComposablesByTag["screen"]?.get(routeKey.key)
-                                if (function == null) {
-                                    PlaceholderScreen("❓", "未知页面")
-                                } else {
-                                    when (routeKey.key) {
-                                        "site.addzero.vibepocket.screens.ImageScreen" -> PlaceholderScreen(
-                                            "🖼️ 图片",
-                                            "即将开放"
-                                        )
-
-                                        "site.addzero.vibepocket.screens.VideoScreen" -> PlaceholderScreen(
-                                            "🎬 视频",
-                                            "即将开放"
-                                        )
-
-                                        else -> function()
-                                    }
-                                }
+                                content()
                             }
                         }
                     }
-                },
-            )
+                }
+            }
         }
     }
 }
