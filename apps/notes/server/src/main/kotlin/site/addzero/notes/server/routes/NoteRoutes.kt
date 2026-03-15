@@ -1,113 +1,125 @@
 package site.addzero.notes.server.routes
 
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.response.*
-import org.koin.core.annotation.Single
-import org.springframework.web.bind.annotation.*
-import site.addzero.notes.server.model.*
+import io.ktor.http.HttpStatusCode
+import io.ktor.server.application.ApplicationCall
+import io.ktor.server.response.respond
+import org.koin.ktor.ext.getKoin
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.notes.server.model.DataSourceHealthPayload
+import site.addzero.notes.server.model.NotePayload
+import site.addzero.notes.server.model.NoteUpsertRequest
+import site.addzero.notes.server.model.StorageSettingsPayload
+import site.addzero.notes.server.model.StorageSettingsUpdateRequest
+import site.addzero.notes.server.store.JdbcNoteStore
 import site.addzero.notes.server.store.NoteStoreService
 
-@Single
-@RestController
-@RequestMapping("/api/notes")
-class NoteRoutes(
-    private val noteStoreService: NoteStoreService,
-) {
-    @GetMapping("/settings")
-    fun readSettings(): StorageSettingsPayload {
-        return noteStoreService.readSettings()
-    }
+@GetMapping("/api/notes/settings")
+fun readNoteSettings(call: ApplicationCall): StorageSettingsPayload {
+    return call.noteStoreService().readSettings()
+}
 
-    @PutMapping("/settings")
-    fun updateSettings(
-        @RequestBody request: StorageSettingsUpdateRequest,
-    ): StorageSettingsPayload {
-        return noteStoreService.updateSettings(request)
-    }
+@PutMapping("/api/notes/settings")
+fun updateNoteSettings(
+    call: ApplicationCall,
+    @RequestBody request: StorageSettingsUpdateRequest,
+): StorageSettingsPayload {
+    return call.noteStoreService().updateSettings(request)
+}
 
-    @GetMapping("/{source}/health")
-    fun readHealth(
-        call: ApplicationCall,
-        @PathVariable source: String,
-    ): DataSourceHealthPayload {
-        val store = noteStoreService.resolve(source)
-        if (store == null) {
-            call.response.status(HttpStatusCode.NotFound)
-            return DataSourceHealthPayload(
-                source = source,
-                available = false,
-                message = "unknown source",
-            )
-        }
-
+@GetMapping("/api/notes/{source}/health")
+fun readNoteHealth(
+    call: ApplicationCall,
+    @PathVariable source: String,
+): DataSourceHealthPayload {
+    val store = call.resolveStoreOrNull(source)
+    if (store == null) {
+        call.response.status(HttpStatusCode.NotFound)
         return DataSourceHealthPayload(
             source = source,
-            available = store.isReady(),
-            message = store.healthMessage(),
+            available = false,
+            message = "unknown source",
         )
     }
 
-    @GetMapping("/{source}")
-    fun listNotes(
-        call: ApplicationCall,
-        @PathVariable source: String,
-    ): List<NotePayload> {
-        val store = noteStoreService.resolve(source)
-        if (store == null) {
-            call.response.status(HttpStatusCode.NotFound)
-            return emptyList()
-        }
-        if (!store.isReady()) {
-            call.response.status(HttpStatusCode.ServiceUnavailable)
-            return emptyList()
-        }
+    return DataSourceHealthPayload(
+        source = source,
+        available = store.isReady(),
+        message = store.healthMessage(),
+    )
+}
 
-        return store.listNotes()
+@GetMapping("/api/notes/{source}")
+fun listNotes(
+    call: ApplicationCall,
+    @PathVariable source: String,
+): List<NotePayload> {
+    val store = call.resolveStoreOrNull(source)
+    if (store == null) {
+        call.response.status(HttpStatusCode.NotFound)
+        return emptyList()
+    }
+    if (!store.isReady()) {
+        call.response.status(HttpStatusCode.ServiceUnavailable)
+        return emptyList()
     }
 
-    @PutMapping("/{source}/{id}")
-    suspend fun upsertNote(
-        call: ApplicationCall,
-        @PathVariable source: String,
-        @PathVariable id: String,
-        @RequestBody request: NoteUpsertRequest,
-    ) {
-        val store = noteStoreService.resolve(source)
-        if (store == null) {
-            call.respond(HttpStatusCode.NotFound)
-            return
-        }
-        if (!store.isReady()) {
-            call.respond(HttpStatusCode.ServiceUnavailable)
-            return
-        }
+    return store.listNotes()
+}
 
-        val saved = store.upsertNote(
-            NotePayload(
-                id = if (request.id.isBlank()) id else request.id,
-                path = request.path,
-                title = request.title,
-                markdown = request.markdown,
-                pinned = request.pinned,
-                version = request.version,
-            ),
-        )
-        call.respond(saved)
+@PutMapping("/api/notes/{source}/{id}")
+suspend fun upsertNote(
+    call: ApplicationCall,
+    @PathVariable source: String,
+    @PathVariable id: String,
+    @RequestBody request: NoteUpsertRequest,
+) {
+    val store = call.resolveStoreOrNull(source)
+    if (store == null) {
+        call.respond(HttpStatusCode.NotFound)
+        return
+    }
+    if (!store.isReady()) {
+        call.respond(HttpStatusCode.ServiceUnavailable)
+        return
     }
 
-    @DeleteMapping("/{source}/{id}")
-    suspend fun deleteNote(
-        call: ApplicationCall,
-        @PathVariable source: String,
-        @PathVariable id: String,
-    ) {
-        val store = noteStoreService.resolve(source)
-        if (store == null) {
-            call.respond(HttpStatusCode.NotFound)
-            return
-        }
+    val saved = store.upsertNote(
+        NotePayload(
+            id = if (request.id.isBlank()) id else request.id,
+            path = request.path,
+            title = request.title,
+            markdown = request.markdown,
+            pinned = request.pinned,
+            version = request.version,
+        ),
+    )
+    call.respond(saved)
+}
 
-        store.deleteNote(id)
+@DeleteMapping("/api/notes/{source}/{id}")
+suspend fun deleteNote(
+    call: ApplicationCall,
+    @PathVariable source: String,
+    @PathVariable id: String,
+) {
+    val store = call.resolveStoreOrNull(source)
+    if (store == null) {
+        call.respond(HttpStatusCode.NotFound)
+        return
     }
+
+    store.deleteNote(id)
+    call.respond(HttpStatusCode.NoContent)
+}
+
+private fun ApplicationCall.noteStoreService(): NoteStoreService {
+    return application.getKoin().get()
+}
+
+private fun ApplicationCall.resolveStoreOrNull(source: String): JdbcNoteStore? {
+    return noteStoreService().resolve(source)
 }

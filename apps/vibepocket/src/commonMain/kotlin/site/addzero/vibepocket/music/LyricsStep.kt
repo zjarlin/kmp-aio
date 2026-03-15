@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilledTonalButton
@@ -40,7 +41,8 @@ import io.ktor.client.HttpClient
 import io.ktor.client.request.get
 import io.ktor.client.statement.readRawBytes
 import kotlinx.coroutines.launch
-import site.addzero.media.playlist.player.MediaPlaylistPlayer
+import site.addzero.media.playlist.player.DefaultPlaylistPlayer
+import site.addzero.media.playlist.player.PlaylistAudioSource
 import site.addzero.vibepocket.api.music.MusicTrack
 import site.addzero.vibepocket.api.suno.SunoLyricItem
 import site.addzero.vibepocket.ui.StudioEmptyState
@@ -211,26 +213,37 @@ fun LyricsStep(
 
             when {
                 searchResults.isNotEmpty() -> {
-                    MediaPlaylistPlayer(
+                    DefaultPlaylistPlayer(
                         items = searchResults,
-                        itemKey = { track -> "${track.platform}:${track.id}" },
+                        itemKey = { track -> MusicSearchService.playbackId(track) },
                         titleOf = { track -> track.name },
-                        artistOf = { track ->
+                        subtitleOf = { track ->
                             buildString {
                                 append(track.artist.ifBlank { "未知歌手" })
                                 if (track.album.isNotBlank()) {
                                     append(" · ")
                                     append(track.album)
                                 }
+                                if (track.platform.isNotBlank()) {
+                                    append(" · ")
+                                    append(providerLabel(track.platform))
+                                }
                             }
                         },
                         durationMsOf = { track -> track.durationMs.takeIf { it > 0 } },
                         coverUrlOf = { track -> track.coverUrl },
-                        resolveUrl = { track ->
-                            MusicSearchService.resolve(track).url
+                        resolveAudioSource = { track ->
+                            val asset = MusicSearchService.resolve(track)
+                            PlaylistAudioSource(
+                                url = asset.url,
+                                unavailableMessage = "当前歌曲无可用音源",
+                            )
                         },
                         resolveErrorMessage = { error ->
                             error.message ?: "试听失败"
+                        },
+                        resolveLyrics = { track ->
+                            MusicSearchService.getLyrics(track).lrc.takeIf { it.isNotBlank() }
                         },
                         itemActions = { track ->
                             Row(

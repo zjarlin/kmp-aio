@@ -1,5 +1,7 @@
 package site.addzero.vibepocket.routes
 
+import io.ktor.server.application.*
+import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -55,12 +57,23 @@ data class StorageConfig(
     val basePath: String? = null
 )
 
+@Serializable
+data class ConfigRuntimeInfo(
+    val storage: String = "unknown",
+    val sqlitePath: String? = null,
+    val dataDir: String? = null,
+    val cacheDir: String? = null,
+)
+
 
 @Bean
 fun Route.configRoutes() {
     val sqlClient by inject<KSqlClient>()
 
     route("/api/config") {
+        get("/runtime") {
+            call.respond(call.application.environment.config.toRuntimeInfo())
+        }
 
         get("/{key}") {
             val key = call.parameters["key"]
@@ -104,4 +117,25 @@ fun Route.configRoutes() {
             }
         }
     }
+}
+
+private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
+    val sqliteEnabled = propertyOrNull("datasources.sqlite.enabled")
+        ?.getString()
+        ?.toBoolean() == true
+    val postgresEnabled = propertyOrNull("datasources.postgres.enabled")
+        ?.getString()
+        ?.toBoolean() == true
+    val sqliteUrl = propertyOrNull("datasources.sqlite.url")?.getString()
+
+    return ConfigRuntimeInfo(
+        storage = when {
+            sqliteEnabled -> "sqlite"
+            postgresEnabled -> "postgres"
+            else -> "unknown"
+        },
+        sqlitePath = sqliteUrl?.takeIf { it.startsWith("jdbc:sqlite:") }?.removePrefix("jdbc:sqlite:"),
+        dataDir = propertyOrNull("vibepocket.runtime.dataDir")?.getString(),
+        cacheDir = propertyOrNull("vibepocket.runtime.cacheDir")?.getString(),
+    )
 }

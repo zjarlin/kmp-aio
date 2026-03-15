@@ -7,6 +7,7 @@ import de.jensklingenberg.ktorfit.http.PUT
 import de.jensklingenberg.ktorfit.http.Path
 import site.addzero.vibepocket.model.ConfigEntry
 import site.addzero.vibepocket.model.ConfigResponse
+import site.addzero.vibepocket.model.ConfigRuntimeInfo
 import site.addzero.vibepocket.model.StorageConfig
 
 interface ConfigApi {
@@ -16,6 +17,8 @@ interface ConfigApi {
     @GET("api/config/{key}")
     suspend fun getConfig(@Path("key") key: String): ConfigResponse
 
+    @GET("api/config/runtime")
+    suspend fun getRuntimeInfo(): ConfigRuntimeInfo
 
     @Headers("Content-Type: application/json")
     @PUT("api/config")

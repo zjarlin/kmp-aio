@@ -3,8 +3,18 @@ package site.addzero.starter.flyway
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import org.flywaydb.core.Flyway
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.Module
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import site.addzero.starter.AppStarter
+import site.addzero.starter.effectiveConfig
+
+@Module
+@Configuration("vibepocket")
+@ComponentScan("site.addzero.starter.flyway")
+class FlywayStarterKoinModule
 
 /**
  * Flyway 数据库迁移 Starter（支持多数据源）
@@ -74,17 +84,18 @@ import site.addzero.starter.AppStarter
  * }
  * ```
  */
-@Single
+@Named("flywayStarter")
+@Single(binds = [AppStarter::class])
 class FlywayStarter : AppStarter {
 
-    override val order: Int = 200  // 在数据源初始化之后运行（DatasourceRegistrar 之后）
+    override val order: Int = 200
 
     override fun Application.enable(): Boolean {
-        return environment.config.propertyOrNull("flyway.enabled")?.getString()?.toBoolean() != false
+        return effectiveConfig().propertyOrNull("flyway.enabled")?.getString()?.toBoolean() != false
     }
 
     override fun Application.onInstall() {
-        val config = environment.config
+        val config = effectiveConfig()
 
         // 读取所有启用的数据源，按配置顺序执行
         val datasources = config.getDatasources()
@@ -264,7 +275,7 @@ private fun ApplicationConfig.getDatasources(): List<DatasourceConfig> {
 
     try {
         val dsConfig = config("datasources")
-        val keys = dsConfig.keys()
+        val keys = dsConfig.toMap().keys
 
         for (name in keys) {
             try {
@@ -290,45 +301,6 @@ private fun ApplicationConfig.getDatasources(): List<DatasourceConfig> {
     }
 
     return datasources
-}
-
-/**
- * 获取配置中的所有 key（保持顺序）
- */
-private fun ApplicationConfig.keys(): List<String> {
-    return try {
-        // 尝试获取所有子配置项的 key
-        toMap().keys.toList()
-    } catch (e: Exception) {
-        emptyList()
-    }
-}
-
-/**
- * 将配置转换为 Map
- */
-private fun ApplicationConfig.toMap(): Map<String, Any?> {
-    val result = mutableMapOf<String, Any?>()
-    try {
-        // 遍历所有直接子项
-        val keys = this::class.java.getMethod("keys")
-            ?.invoke(this) as? List<String>
-            ?: emptyList()
-        for (key in keys) {
-            result[key] = try {
-                property(key).getString()
-            } catch (e: Exception) {
-                try {
-                    config(key).toMap()
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        }
-    } catch (e: Exception) {
-        // 忽略
-    }
-    return result
 }
 
 /**

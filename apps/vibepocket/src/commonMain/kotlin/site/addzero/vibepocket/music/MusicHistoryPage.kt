@@ -1,25 +1,19 @@
 package site.addzero.vibepocket.music
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -31,13 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoTrack
 import site.addzero.vibepocket.model.FavoriteItem
 import site.addzero.vibepocket.model.FavoriteRequest
 import site.addzero.vibepocket.model.MusicHistoryItem
-import site.addzero.vibepocket.model.MusicHistoryTrack
-import site.addzero.vibepocket.model.TrackPlayerState
 import site.addzero.vibepocket.ui.StudioEmptyState
 import site.addzero.vibepocket.ui.StudioPill
 import site.addzero.vibepocket.ui.StudioSectionCard
@@ -58,12 +51,6 @@ fun MusicHistoryPage() {
 
     var credits by remember { mutableStateOf<Int?>(null) }
     var isLoadingCredits by remember { mutableStateOf(false) }
-
-    val currentTrackId by AudioPlayerManager.currentTrackId.collectAsState()
-    val playerState by AudioPlayerManager.playerState.collectAsState()
-    val progress by AudioPlayerManager.progress.collectAsState()
-    val position by AudioPlayerManager.position.collectAsState()
-    val duration by AudioPlayerManager.duration.collectAsState()
 
     val scope = rememberCoroutineScope()
 
@@ -157,11 +144,6 @@ fun MusicHistoryPage() {
                         }
                     },
                     favoriteSet = favoriteSet,
-                    currentTrackId = currentTrackId,
-                    playerState = playerState,
-                    progress = progress,
-                    position = position,
-                    duration = duration,
                     onFavoriteToggle = { trackId, track, taskId, newFavorite ->
                         scope.launch {
                             try {
@@ -210,11 +192,6 @@ fun MusicHistoryPage() {
                             }
                         }
                     },
-                    currentTrackId = currentTrackId,
-                    playerState = playerState,
-                    progress = progress,
-                    position = position,
-                    duration = duration,
                     onFavoriteToggle = { trackId, newFavorite ->
                         scope.launch {
                             try {
@@ -278,11 +255,6 @@ private fun HistoryAllContent(
     error: String?,
     onRetry: () -> Unit,
     favoriteSet: Map<String, Boolean>,
-    currentTrackId: String?,
-    playerState: PlayerState,
-    progress: Float,
-    position: Long,
-    duration: Long,
     onFavoriteToggle: (trackId: String, track: SunoTrack, taskId: String, newFavorite: Boolean) -> Unit,
 ) {
     when {
@@ -294,55 +266,51 @@ private fun HistoryAllContent(
         )
 
         else -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items.forEach { historyItem ->
-                    HistoryItemHeader(historyItem)
-                    historyItem.tracks.forEach { historyTrack ->
-                        val sunoTrack = historyTrack.toSunoTrack()
-                        val trackId = sunoTrack.id
-                        val isFavorite = trackId != null && favoriteSet[trackId] == true
-                        val trackPlayerState = if (trackId != null && currentTrackId == trackId) {
-                            TrackPlayerState(
-                                isPlaying = playerState == PlayerState.PLAYING,
-                                progress = progress,
-                                currentTime = AudioPlayerManager.formatTime(position),
-                                totalTime = AudioPlayerManager.formatTime(duration),
-                            )
-                        } else {
-                            TrackPlayerState()
-                        }
-
-                        TrackCard(
-                            track = sunoTrack,
-                            taskId = historyItem.taskId,
-                            isFavorite = isFavorite,
-                            onFavoriteToggle = { newFavorite ->
-                                if (trackId != null) {
-                                    onFavoriteToggle(trackId, sunoTrack, historyItem.taskId, newFavorite)
-                                }
-                            },
-                            onAction = {},
-                            playerState = trackPlayerState,
-                            onPlayToggle = {
-                                if (trackId == null || sunoTrack.audioUrl == null) {
-                                    return@TrackCard
-                                }
-                                when {
-                                    currentTrackId == trackId && playerState == PlayerState.PLAYING -> AudioPlayerManager.pause()
-                                    currentTrackId == trackId && playerState == PlayerState.PAUSED -> AudioPlayerManager.resume()
-                                    else -> AudioPlayerManager.play(trackId, sunoTrack.audioUrl!!)
-                                }
-                            },
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+            val playlistItems = remember(items) {
+                items.flatMap { historyItem -> historyItem.toPlaylistEntries() }
             }
+            DefaultPlaylistPlayer(
+                items = playlistItems,
+                modifier = Modifier.fillMaxSize(),
+                itemKey = { entry ->
+                    entry.track.playbackId(entry.taskId)
+                },
+                titleOf = { entry ->
+                    entry.track.displayTitle()
+                },
+                subtitleOf = { entry ->
+                    entry.track.displaySubtitle(entry.taskId.take(8), entry.createdAt, entry.status)
+                },
+                durationMsOf = { entry ->
+                    entry.track.durationMsOrNull()
+                },
+                coverUrlOf = { entry ->
+                    entry.track.imageUrl
+                },
+                resolveAudioSource = { entry ->
+                    entry.track.resolvedAudioSource()
+                },
+                itemActions = { entry ->
+                    val trackId = entry.track.id
+                    if (trackId != null) {
+                        val isFavorite = favoriteSet[trackId] == true
+                        IconButton(
+                            onClick = {
+                                onFavoriteToggle(trackId, entry.track, entry.taskId, !isFavorite)
+                            },
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorite) {
+                                    Icons.Filled.Star
+                                } else {
+                                    Icons.Filled.StarBorder
+                                },
+                                contentDescription = if (isFavorite) "取消收藏" else "收藏",
+                            )
+                        }
+                    }
+                },
+            )
         }
     }
 }
@@ -353,11 +321,6 @@ private fun FavoritesContent(
     isLoading: Boolean,
     error: String?,
     onRetry: () -> Unit,
-    currentTrackId: String?,
-    playerState: PlayerState,
-    progress: Float,
-    position: Long,
-    duration: Long,
     onFavoriteToggle: (trackId: String, newFavorite: Boolean) -> Unit,
 ) {
     when {
@@ -369,47 +332,43 @@ private fun FavoritesContent(
         )
 
         else -> {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items.forEach { favoriteItem ->
-                    val sunoTrack = favoriteItem.toSunoTrack()
-                    val trackId = favoriteItem.trackId
-                    val trackPlayerState = if (currentTrackId == trackId) {
-                        TrackPlayerState(
-                            isPlaying = playerState == PlayerState.PLAYING,
-                            progress = progress,
-                            currentTime = AudioPlayerManager.formatTime(position),
-                            totalTime = AudioPlayerManager.formatTime(duration),
-                        )
-                    } else {
-                        TrackPlayerState()
-                    }
-
-                    TrackCard(
-                        track = sunoTrack,
-                        taskId = favoriteItem.taskId,
-                        isFavorite = true,
-                        onFavoriteToggle = { newFavorite ->
-                            onFavoriteToggle(trackId, newFavorite)
-                        },
-                        onAction = {},
-                        playerState = trackPlayerState,
-                        onPlayToggle = {
-                            val audioUrl = sunoTrack.audioUrl ?: return@TrackCard
-                            when {
-                                currentTrackId == trackId && playerState == PlayerState.PLAYING -> AudioPlayerManager.pause()
-                                currentTrackId == trackId && playerState == PlayerState.PAUSED -> AudioPlayerManager.resume()
-                                else -> AudioPlayerManager.play(trackId, audioUrl)
-                            }
-                        },
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
+            val playlistItems = remember(items) {
+                items.map { favoriteItem -> favoriteItem.toPlaylistEntry() }
             }
+            DefaultPlaylistPlayer(
+                items = playlistItems,
+                modifier = Modifier.fillMaxSize(),
+                itemKey = { entry ->
+                    entry.track.playbackId(entry.item.taskId)
+                },
+                titleOf = { entry ->
+                    entry.track.displayTitle()
+                },
+                subtitleOf = { entry ->
+                    entry.track.displaySubtitle(entry.item.taskId.take(8), entry.item.createdAt)
+                },
+                durationMsOf = { entry ->
+                    entry.track.durationMsOrNull()
+                },
+                coverUrlOf = { entry ->
+                    entry.track.imageUrl
+                },
+                resolveAudioSource = { entry ->
+                    entry.track.resolvedAudioSource()
+                },
+                itemActions = { entry ->
+                    IconButton(
+                        onClick = {
+                            onFavoriteToggle(entry.item.trackId, false)
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Star,
+                            contentDescription = "取消收藏",
+                        )
+                    }
+                },
+            )
         }
     }
 }
@@ -479,21 +438,3 @@ private fun EmptyState(
         )
     }
 }
-
-internal fun MusicHistoryTrack.toSunoTrack(): SunoTrack = SunoTrack(
-    id = id,
-    audioUrl = audioUrl,
-    title = title,
-    tags = tags,
-    imageUrl = imageUrl,
-    duration = duration,
-)
-
-internal fun FavoriteItem.toSunoTrack(): SunoTrack = SunoTrack(
-    id = trackId,
-    audioUrl = audioUrl,
-    title = title,
-    tags = tags,
-    imageUrl = imageUrl,
-    duration = duration,
-)

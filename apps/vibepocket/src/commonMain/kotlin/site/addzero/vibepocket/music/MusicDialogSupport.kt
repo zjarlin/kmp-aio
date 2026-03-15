@@ -17,8 +17,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,9 +24,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
-import site.addzero.vibepocket.api.suno.SunoTrack
-import site.addzero.vibepocket.model.TrackPlayerState
 
 @Composable
 internal fun MusicActionDialog(
@@ -211,67 +208,10 @@ internal fun DialogCloseButton(onDismiss: () -> Unit) {
     }
 }
 
-internal data class DialogPlaybackSnapshot(
-    val currentTrackId: String?,
-    val playerState: PlayerState,
-    val progress: Float,
-    val position: Long,
-    val duration: Long,
-)
-
-@Composable
-internal fun rememberDialogPlaybackSnapshot(): DialogPlaybackSnapshot {
-    val currentTrackId by AudioPlayerManager.currentTrackId.collectAsState()
-    val playerState by AudioPlayerManager.playerState.collectAsState()
-    val progress by AudioPlayerManager.progress.collectAsState()
-    val position by AudioPlayerManager.position.collectAsState()
-    val duration by AudioPlayerManager.duration.collectAsState()
-
-    return DialogPlaybackSnapshot(
-        currentTrackId = currentTrackId,
-        playerState = playerState,
-        progress = progress,
-        position = position,
-        duration = duration,
-    )
-}
-
-internal fun DialogPlaybackSnapshot.toTrackPlayerState(trackId: String?): TrackPlayerState {
-    if (trackId == null || currentTrackId != trackId) {
-        return TrackPlayerState()
-    }
-    return TrackPlayerState(
-        isPlaying = playerState == PlayerState.PLAYING,
-        progress = progress,
-        currentTime = AudioPlayerManager.formatTime(position),
-        totalTime = AudioPlayerManager.formatTime(duration),
-    )
-}
-
-internal fun DialogPlaybackSnapshot.toggle(trackId: String?, audioUrl: String?) {
-    if (trackId == null || audioUrl == null) {
-        return
-    }
-    when {
-        currentTrackId == trackId && playerState == PlayerState.PLAYING -> {
-            AudioPlayerManager.pause()
-        }
-
-        currentTrackId == trackId && playerState == PlayerState.PAUSED -> {
-            AudioPlayerManager.resume()
-        }
-
-        else -> {
-            AudioPlayerManager.play(trackId, audioUrl)
-        }
-    }
-}
-
 @Composable
 internal fun DialogTrackResults(
     detail: SunoTaskDetail,
     fallbackTaskId: String,
-    playback: DialogPlaybackSnapshot,
 ) {
     val tracks = detail.response?.sunoData ?: emptyList()
     if (tracks.isEmpty()) {
@@ -279,32 +219,26 @@ internal fun DialogTrackResults(
         return
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        tracks.forEach { track ->
-            DialogTrackResultItem(
-                track = track,
-                taskId = detail.taskId ?: fallbackTaskId,
-                playback = playback,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DialogTrackResultItem(
-    track: SunoTrack,
-    taskId: String,
-    playback: DialogPlaybackSnapshot,
-) {
-    TrackCard(
-        track = track,
-        taskId = taskId,
-        isFavorite = false,
-        onFavoriteToggle = {},
-        onAction = {},
-        playerState = playback.toTrackPlayerState(track.id),
-        onPlayToggle = {
-            playback.toggle(track.id, track.audioUrl)
+    DefaultPlaylistPlayer(
+        items = tracks,
+        modifier = Modifier.fillMaxWidth(),
+        itemKey = { track ->
+            track.playbackId(detail.taskId ?: fallbackTaskId)
+        },
+        titleOf = { track ->
+            track.displayTitle()
+        },
+        subtitleOf = { track ->
+            track.displaySubtitle((detail.taskId ?: fallbackTaskId).take(8))
+        },
+        durationMsOf = { track ->
+            track.durationMsOrNull()
+        },
+        coverUrlOf = { track ->
+            track.imageUrl
+        },
+        resolveAudioSource = { track ->
+            track.resolvedAudioSource()
         },
     )
 }

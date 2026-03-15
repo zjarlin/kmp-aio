@@ -36,8 +36,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kcloud.KCloudPluginRegistry
-import com.kcloud.KCloudShellState
+import com.kcloud.app.KCloudPluginRegistry
+import com.kcloud.app.KCloudShellState
 import com.kcloud.plugin.KCloudMenuNode
 import com.kcloud.plugin.ShellSettingsService
 import com.kcloud.plugin.ShellThemeMode

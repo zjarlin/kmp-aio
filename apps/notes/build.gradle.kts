@@ -19,6 +19,7 @@ val notesEnv = parseEnvFile(
 }
 
 buildkonfig {
+    packageName = "site.addzero.notes"
     defaultConfigs {
         buildConfigField(FieldSpec.Type.STRING, "BASE_HOST", notesEnv.getValue("BASE_HOST"))
         buildConfigField(FieldSpec.Type.STRING, "BASE_PORT", notesEnv.getValue("BASE_PORT"))

@@ -1,54 +1,96 @@
 package site.addzero.vibepocket
 
 import com.typesafe.config.ConfigFactory
-import io.ktor.serialization.kotlinx.json.*
-import org.babyfish.jimmer.sql.dialect.SQLiteDialect
-import org.babyfish.jimmer.sql.kt.KSqlClient
-import org.babyfish.jimmer.sql.kt.newKSqlClient
-import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
+import com.typesafe.config.ConfigValueFactory
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.EngineMain
 import io.ktor.server.netty.Netty
 import io.ktor.server.netty.NettyApplicationEngine
-import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
-import org.koin.core.Koin
-import org.koin.ktor.ext.getKoin
 import org.koin.plugin.module.dsl.withConfiguration
-import org.sqlite.SQLiteDataSource
+import site.addzero.starter.installEffectiveConfig
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import site.addzero.vibepocket.di.AppKoinApplication
 import site.addzero.vibepocket.routes.ioc.generated.iocModule
-import site.addzero.vibepocket.service.MusicCatalogService
-import site.addzero.vibepocket.service.MusicLibCatalogService
+import site.addzero.vibepocket.runtime.VibePocketDesktopStorage
 import java.io.File
-import javax.sql.DataSource
+
+private const val DEFAULT_EMBEDDED_ENV = "dev"
+private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
+private const val EMBEDDED_SQLITE_URL_PROPERTY = "vibepocket.embedded.sqlite.url"
+@Volatile
+private var embeddedApplicationConfigOverride: ApplicationConfig? = null
 
 /**
- * EngineMain 入口 — Ktor 自动加载 application.conf，
- * 读取 ktor.application.modules 配置调用 Application.module()。
+ * Server 入口。
  */
-fun main(args: Array<String>) = EngineMain.main(args)
+fun main(args: Array<String>) {
+    val cli = parseServerCliArgs(args)
+    serverApplication(
+        configPath = cli.configPath,
+        host = cli.host,
+        port = cli.port,
+    ).start(wait = true)
+}
 
 /**
  * 由 application.conf 中 ktor.application.modules 指定调用。
  */
 fun Application.module() {
-    // 1. Koin 必须最先初始化（发现机制依赖它）
+    val config = embeddedApplicationConfigOverride ?: environment.config
+    installEffectiveConfig(config)
     installKoin {
+        val koinProperties = mutableMapOf<String, Any>(
+            "vibepocket.applicationConfig" to config,
+        )
+        config.propertyOrNull("suno.apiToken")
+            ?.getString()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { koinProperties["suno.apiToken"] = it }
+        properties(
+            koinProperties,
+        )
         withConfiguration<AppKoinApplication>()
     }
-    ensureEmbeddedSqlClient()
-    ensureMusicCatalogService()
-    // 2. 自动发现并执行所有 Starter
     runStarters()
-    ensureContentNegotiation()
-    // 3. 路由聚合（iocModule 由 @Bean KSP 生成）
     routing { iocModule() }
+}
+
+fun serverApplication(
+    configPath: String? = null,
+    host: String? = null,
+    port: Int? = null,
+): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+    embeddedApplicationConfigOverride = null
+    val config = loadServerConfig(configPath)
+
+    val finalHost = host
+        ?: System.getenv("SERVER_HOST")
+        ?: config.propertyOrNull("ktor.deployment.host")?.getString()
+        ?: "0.0.0.0"
+
+    val finalPort = port
+        ?: System.getenv("SERVER_PORT")?.toIntOrNull()
+        ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
+        ?: 8080
+
+    val environment = applicationEnvironment {
+        this.config = config
+    }
+
+    return embeddedServer(
+        factory = Netty,
+        environment = environment,
+        configure = {
+            connectors += EngineConnectorBuilder().apply {
+                this.host = finalHost
+                this.port = finalPort
+            }
+        },
+        module = Application::module,
+    )
 }
 
 /**
@@ -60,12 +102,13 @@ fun ktorApplication(
     host: String? = null,
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
-    // 加载配置（优先使用指定路径，否则从 classpath 加载 application.conf）
-    val config = configPath?.let {
-        HoconApplicationConfig(
-            ConfigFactory.parseFile(File(it)).withFallback(ConfigFactory.load()).resolve()
-        )
-    } ?: HoconApplicationConfig(ConfigFactory.load())
+    val config = loadEmbeddedConfig(configPath)
+    embeddedApplicationConfigOverride = config
+    System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
+    config.propertyOrNull("datasources.sqlite.url")
+        ?.getString()
+        ?.takeIf { it.isNotBlank() }
+        ?.let { System.setProperty(EMBEDDED_SQLITE_URL_PROPERTY, it) }
 
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val finalHost = host
@@ -78,79 +121,165 @@ fun ktorApplication(
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: 8080
 
-    return embeddedServer(Netty, port = finalPort, host = finalHost, module = Application::module)
+    val environment = applicationEnvironment {
+        this.config = config
+    }
+
+    return embeddedServer(
+        factory = Netty,
+        environment = environment,
+        configure = {
+            connectors += EngineConnectorBuilder().apply {
+                this.host = finalHost
+                this.port = finalPort
+            }
+        },
+        module = Application::module,
+    )
 }
 
-private fun Application.ensureEmbeddedSqlClient() {
-    val koin = getKoin()
-    val existing = runCatching { koin.get<KSqlClient>() }.getOrNull()
-    if (existing != null) {
-        return
+private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
+    val storage = VibePocketDesktopStorage.resolve()
+    val resolvedConfig = configPath?.let { path ->
+        ConfigFactory.parseFile(resolveConfigFile(path))
+    } ?: run {
+        val env = System.getenv("KTOR_ENV")
+            ?.trim()
+            ?.ifBlank { null }
+            ?: DEFAULT_EMBEDDED_ENV
+        ConfigFactory
+            .parseResources("application-$env.conf")
+            .withFallback(embeddedDesktopDefaults())
+            .withFallback(ConfigFactory.load())
     }
 
-    val jdbcUrl = environment.config
-        .propertyOrNull("datasources.sqlite.url")
-        ?.getString()
-        ?.ifBlank { null }
-        ?: "jdbc:sqlite:vibepocket.db"
-
-    val dataSource = SQLiteDataSource().apply {
-        url = jdbcUrl
-    }
-    runSqlSchema(dataSource, "schema-sqlite.sql")
-
-    val sqlClient = newKSqlClient {
-        setDialect(SQLiteDialect())
-        setDatabaseNamingStrategy(DefaultDatabaseNamingStrategy.LOWER_CASE)
-        setConnectionManager { dataSource.connection.use { proceed(it) } }
-    }
-
-    koin.declare<DataSource>(dataSource)
-    koin.declare<KSqlClient>(sqlClient)
+    return HoconApplicationConfig(
+        embeddedDesktopRuntimeOverrides(storage)
+            .withFallback(embeddedDesktopOverrides())
+            .withFallback(resolvedConfig)
+            .resolve()
+    )
 }
 
-private fun Application.ensureMusicCatalogService() {
-    val koin = getKoin()
-    val existing = runCatching { koin.get<MusicCatalogService>() }.getOrNull()
-    if (existing != null) {
-        return
-    }
+private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
+    val resolved = configPath?.let { path ->
+        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
+    } ?: ConfigFactory.load()
 
-    koin.declare<MusicCatalogService>(MusicLibCatalogService())
+    return HoconApplicationConfig(
+        serverRuntimeOverrides()
+            .withFallback(resolved)
+            .resolve()
+    )
 }
 
-private fun Application.ensureContentNegotiation() {
-    if (pluginOrNull(ContentNegotiation) != null) {
-        return
-    }
+private data class ServerCliArgs(
+    val configPath: String? = null,
+    val host: String? = null,
+    val port: Int? = null,
+)
 
-    install(ContentNegotiation) {
-        json(
-            Json {
-                ignoreUnknownKeys = true
-                encodeDefaults = true
-                explicitNulls = false
-                isLenient = true
-            },
-        )
-    }
-}
+private fun parseServerCliArgs(args: Array<String>): ServerCliArgs {
+    val normalizedArgs = args
+        .flatMap { raw -> raw.split(Regex("\\s+")).filter { it.isNotBlank() } }
 
-private fun runSqlSchema(
-    dataSource: DataSource,
-    schemaFile: String,
-) {
-    val sql = object {}.javaClass.getResource("/sql/$schemaFile")?.readText().orEmpty()
-    if (sql.isBlank()) {
-        return
-    }
-
-    dataSource.connection.use { connection ->
-        connection.createStatement().use { statement ->
-            sql.split(";")
-                .map(String::trim)
-                .filter(String::isNotEmpty)
-                .forEach(statement::executeUpdate)
+    fun findValue(name: String): String? {
+        val prefixes = listOf("-$name=", "--$name=")
+        return normalizedArgs.firstNotNullOfOrNull { arg ->
+            prefixes.firstNotNullOfOrNull { prefix ->
+                arg.removePrefix(prefix).takeIf { arg.startsWith(prefix) }
+            }
         }
     }
+
+    return ServerCliArgs(
+        configPath = findValue("config"),
+        host = findValue("host"),
+        port = findValue("port")?.toIntOrNull(),
+    )
 }
+
+private fun resolveConfigFile(path: String): File {
+    val direct = File(path)
+    if (direct.exists()) return direct
+
+    var current: File? = File(System.getProperty("user.dir")).absoluteFile
+    while (current != null) {
+        val candidate = File(current, path)
+        if (candidate.exists()) {
+            return candidate
+        }
+        current = current.parentFile
+    }
+
+    return direct
+}
+
+private fun serverRuntimeOverrides() = ConfigFactory.parseString(
+    """
+    ktor {
+      application {
+        modules = []
+      }
+    }
+    """.trimIndent()
+)
+
+private fun embeddedDesktopDefaults() = ConfigFactory.parseString(
+    """
+    ktor {
+      deployment {
+        port = 8080
+        host = "127.0.0.1"
+      }
+      application {
+        modules = [site.addzero.vibepocket.ApplicationKt.module]
+      }
+    }
+    banner {
+      text = "VIBEPOCKET [DESKTOP]"
+      subtitle = "Embedded Dev Server"
+    }
+    openapi {
+      enabled = false
+      path = "/swagger"
+      spec = "openapi/documentation.yaml"
+    }
+    flyway {
+      enabled = false
+    }
+    datasources {
+      sqlite {
+        enabled = true
+        url = "jdbc:sqlite:vibepocket-desktop.db"
+        driver = "org.sqlite.SQLiteDriver"
+      }
+      postgres {
+        enabled = false
+      }
+    }
+    s3 {
+      enabled = false
+    }
+    """.trimIndent()
+)
+
+private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
+    """
+    ktor {
+      application {
+        modules = []
+      }
+    }
+    """.trimIndent()
+)
+
+private fun embeddedDesktopRuntimeOverrides(storage: site.addzero.vibepocket.runtime.VibePocketDesktopStoragePaths) =
+    ConfigFactory.empty()
+        .withValue("datasources.sqlite.enabled", ConfigValueFactory.fromAnyRef(true))
+        .withValue("datasources.sqlite.url", ConfigValueFactory.fromAnyRef(storage.sqliteJdbcUrl))
+        .withValue("datasources.sqlite.driver", ConfigValueFactory.fromAnyRef("org.sqlite.SQLiteDriver"))
+        .withValue("datasources.postgres.enabled", ConfigValueFactory.fromAnyRef(false))
+        .withValue("vibepocket.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(storage.sqliteFile.absolutePath))
+        .withValue("vibepocket.runtime.dataDir", ConfigValueFactory.fromAnyRef(storage.dataDir.absolutePath))
+        .withValue("vibepocket.runtime.cacheDir", ConfigValueFactory.fromAnyRef(storage.cacheDir.absolutePath))

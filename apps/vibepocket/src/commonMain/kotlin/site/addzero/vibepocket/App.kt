@@ -7,6 +7,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import site.addzero.media.playlist.player.ProvidePlaylistPlayerHost
 import site.addzero.vibepocket.music.hasCompletedVibePocketSetup
 import site.addzero.vibepocket.music.loadSunoRuntimeConfig
 import site.addzero.vibepocket.plugin.VibePocketPluginRegistry
@@ -19,7 +20,9 @@ import site.addzero.vibepocket.ui.VibeGlassAppTheme
 @Preview
 fun App() {
     VibeGlassAppTheme {
-        VibePocketAppRoot()
+        ProvidePlaylistPlayerHost {
+            VibePocketAppRoot()
+        }
     }
 }
 

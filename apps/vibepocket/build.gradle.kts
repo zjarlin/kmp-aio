@@ -10,19 +10,6 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-aio")
 }
 
-val javaFxVersion = "19"
-val javaFxClassifier = run {
-    val osName = System.getProperty("os.name").lowercase()
-    val osArch = System.getProperty("os.arch").lowercase()
-    when {
-        osName.contains("mac") && (osArch.contains("aarch64") || osArch.contains("arm64")) -> "mac-aarch64"
-        osName.contains("mac") -> "mac"
-        osName.contains("win") -> "win"
-        osArch.contains("aarch64") || osArch.contains("arm64") -> "linux-aarch64"
-        else -> "linux"
-    }
-}
-
 dependencies {
     kspCommonMainMetadata(libs.site.addzero.ioc.processor)
 }
@@ -37,13 +24,9 @@ kotlin {
             implementation(project(":lib:glass-components"))
             implementation(project(":lib:api-music-spi"))
             implementation(project(":lib:api-suno"))
-            implementation(libs.io.github.khubaibkhan4.mediaplayer.kmp)
         }
         jvmMain.dependencies {
             implementation(project(":apps:vibepocket:server"))
-            implementation("org.openjfx:javafx-base:$javaFxVersion:$javaFxClassifier")
-            implementation("org.openjfx:javafx-graphics:$javaFxVersion:$javaFxClassifier")
-            implementation("org.openjfx:javafx-media:$javaFxVersion:$javaFxClassifier")
         }
     }
 }

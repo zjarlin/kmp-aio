@@ -8,7 +8,6 @@ kotlin {
             api(project(":apps:kcloud:plugins:notes-plugin"))
         }
         jvmMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:plugin-api"))
             api(project(":apps:kcloud:plugins:notes-server-plugin"))
             api(project(":apps:notes:server"))
         }

@@ -1,6 +1,10 @@
 package com.kcloud
 
+import com.kcloud.app.KCloudCoreKoinModule
 import org.koin.core.annotation.KoinApplication
 
-@KoinApplication(modules = [KCloudKoinModule::class])
+@KoinApplication(
+    configurations = ["kcloud"],
+    modules = [KCloudCoreKoinModule::class]
+)
 object KCloudKoinApplication

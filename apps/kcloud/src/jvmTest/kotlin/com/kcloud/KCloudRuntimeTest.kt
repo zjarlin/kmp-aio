@@ -1,5 +1,6 @@
 package com.kcloud
 
+import com.kcloud.app.KCloudPluginRegistry
 import com.kcloud.plugin.KCloudMenuGroups
 import com.kcloud.plugins.ai.spi.AiDiagnosticsService
 import com.kcloud.plugins.dotfiles.DotfilesPluginMenus

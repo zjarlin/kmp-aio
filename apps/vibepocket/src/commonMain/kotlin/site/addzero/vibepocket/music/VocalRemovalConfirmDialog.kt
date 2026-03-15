@@ -19,7 +19,6 @@ fun VocalRemovalConfirmDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val playback = rememberDialogPlaybackSnapshot()
 
     var isSubmitting by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf<String?>(null) }
@@ -79,7 +78,6 @@ fun VocalRemovalConfirmDialog(
             DialogTrackResults(
                 detail = detail,
                 fallbackTaskId = taskId,
-                playback = playback,
             )
             DialogCloseButton(onDismiss)
         }

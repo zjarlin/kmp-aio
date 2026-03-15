@@ -29,3 +29,11 @@ data class StorageConfig(
     val domain: String? = null, // 访问域名
     val basePath: String? = null
 )
+
+@Serializable
+data class ConfigRuntimeInfo(
+    val storage: String = "unknown",
+    val sqlitePath: String? = null,
+    val dataDir: String? = null,
+    val cacheDir: String? = null,
+)

@@ -5,10 +5,20 @@ import io.ktor.server.application.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import kotlinx.serialization.SerializationException
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.Module
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import site.addzero.starter.AppStarter
 
-@Single
+@Module
+@Configuration("vibepocket")
+@ComponentScan("site.addzero.starter.statuspages")
+class StatusPagesStarterKoinModule
+
+@Named("statusPagesStarter")
+@Single(binds = [AppStarter::class])
 class StatusPagesStarter : AppStarter {
 
     override fun Application.onInstall() {

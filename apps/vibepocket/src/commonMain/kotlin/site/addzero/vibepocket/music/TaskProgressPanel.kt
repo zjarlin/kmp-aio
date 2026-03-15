@@ -13,14 +13,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -33,11 +38,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
 import site.addzero.vibepocket.model.FavoriteRequest
 import site.addzero.vibepocket.model.TrackAction
-import site.addzero.vibepocket.model.TrackPlayerState
 import site.addzero.vibepocket.ui.StudioEmptyState
 import site.addzero.vibepocket.ui.StudioMetricCard
 import site.addzero.vibepocket.ui.StudioSectionCard
@@ -67,12 +72,6 @@ fun TaskProgressPanel(
             favoriteSet[favorite.trackId] = true
         }
     }
-
-    val currentTrackId by AudioPlayerManager.currentTrackId.collectAsState()
-    val playerState by AudioPlayerManager.playerState.collectAsState()
-    val progress by AudioPlayerManager.progress.collectAsState()
-    val position by AudioPlayerManager.position.collectAsState()
-    val duration by AudioPlayerManager.duration.collectAsState()
 
     ElevatedCard(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -140,75 +139,101 @@ fun TaskProgressPanel(
             )
 
             if (taskDetail?.isSuccess == true && tracks.isNotEmpty()) {
-                tracks.forEach { track ->
-                    val trackId = track.id
-                    val isFavorite = trackId != null && favoriteSet[trackId] == true
+                DefaultPlaylistPlayer(
+                    items = tracks,
+                    itemKey = { track ->
+                        track.playbackId(taskDetail.taskId ?: "task")
+                    },
+                    titleOf = { track ->
+                        track.displayTitle()
+                    },
+                    subtitleOf = { track ->
+                        track.displaySubtitle(taskDetail.taskId?.take(8))
+                    },
+                    durationMsOf = { track ->
+                        track.durationMsOrNull()
+                    },
+                    coverUrlOf = { track ->
+                        track.imageUrl
+                    },
+                    resolveAudioSource = { track ->
+                        track.resolvedAudioSource()
+                    },
+                    itemActions = { track ->
+                        val trackId = track.id
+                        var menuExpanded by remember(track.playbackId(taskDetail.taskId ?: "task")) {
+                            mutableStateOf(false)
+                        }
 
-                    val trackPlayerState = if (trackId != null && currentTrackId == trackId) {
-                        TrackPlayerState(
-                            isPlaying = playerState == PlayerState.PLAYING,
-                            progress = progress,
-                            currentTime = AudioPlayerManager.formatTime(position),
-                            totalTime = AudioPlayerManager.formatTime(duration),
-                        )
-                    } else {
-                        TrackPlayerState()
-                    }
-
-                    TrackCard(
-                        track = track,
-                        taskId = taskDetail.taskId ?: "",
-                        isFavorite = isFavorite,
-                        onFavoriteToggle = { newFavorite ->
-                            if (trackId == null) return@TrackCard
-                            scope.launch {
-                                try {
-                                    if (newFavorite) {
-                                        ServerApiClient.addFavorite(
-                                            FavoriteRequest(
-                                                trackId = trackId,
-                                                taskId = taskDetail.taskId ?: "",
-                                                audioUrl = track.audioUrl,
-                                                title = track.title,
-                                                tags = track.tags,
-                                                imageUrl = track.imageUrl,
-                                                duration = track.duration,
-                                            ),
-                                        )
-                                        favoriteSet[trackId] = true
-                                    } else {
-                                        ServerApiClient.removeFavorite(trackId)
-                                        favoriteSet.remove(trackId)
+                        if (trackId != null) {
+                            val isFavorite = favoriteSet[trackId] == true
+                            IconButton(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            if (isFavorite) {
+                                                ServerApiClient.removeFavorite(trackId)
+                                                favoriteSet.remove(trackId)
+                                            } else {
+                                                ServerApiClient.addFavorite(
+                                                    FavoriteRequest(
+                                                        trackId = trackId,
+                                                        taskId = taskDetail.taskId ?: "",
+                                                        audioUrl = track.audioUrl,
+                                                        title = track.title,
+                                                        tags = track.tags,
+                                                        imageUrl = track.imageUrl,
+                                                        duration = track.duration,
+                                                    ),
+                                                )
+                                                favoriteSet[trackId] = true
+                                            }
+                                        } catch (_: Exception) {
+                                            // 收藏失败不阻断主流程
+                                        }
                                     }
-                                } catch (_: Exception) {
-                                    // 收藏失败不阻断主流程
+                                },
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) {
+                                        Icons.Filled.Star
+                                    } else {
+                                        Icons.Filled.StarBorder
+                                    },
+                                    contentDescription = if (isFavorite) "取消收藏" else "收藏",
+                                )
+                            }
+
+                            Box {
+                                IconButton(
+                                    onClick = { menuExpanded = true },
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.MoreVert,
+                                        contentDescription = "更多操作",
+                                    )
                                 }
+                                TrackActionMenu(
+                                    expanded = menuExpanded,
+                                    onDismiss = { menuExpanded = false },
+                                    onAction = { action ->
+                                        menuExpanded = false
+                                        val trackTaskId = taskDetail.taskId ?: ""
+                                        when (action) {
+                                            TrackAction.EXTEND -> extendDialogTrack = trackId to trackTaskId
+                                            TrackAction.VOCAL_REMOVAL -> vocalRemovalDialogTrack = trackId to trackTaskId
+                                            TrackAction.GENERATE_COVER -> musicCoverDialogTrack = trackId to trackTaskId
+                                            TrackAction.CREATE_PERSONA -> personaDialogTrack = trackId to trackTaskId
+                                            TrackAction.REPLACE_SECTION -> replaceSectionDialogTrack = trackId to trackTaskId
+                                            TrackAction.EXPORT_WAV -> wavExportDialogTrack = trackId to trackTaskId
+                                            TrackAction.BOOST_STYLE -> boostStyleDialogTrack = trackId to trackTaskId
+                                        }
+                                    },
+                                )
                             }
-                        },
-                        onAction = { action ->
-                            val trackAudioId = track.id ?: return@TrackCard
-                            val trackTaskId = taskDetail.taskId ?: ""
-                            when (action) {
-                                TrackAction.EXTEND -> extendDialogTrack = trackAudioId to trackTaskId
-                                TrackAction.VOCAL_REMOVAL -> vocalRemovalDialogTrack = trackAudioId to trackTaskId
-                                TrackAction.GENERATE_COVER -> musicCoverDialogTrack = trackAudioId to trackTaskId
-                                TrackAction.CREATE_PERSONA -> personaDialogTrack = trackAudioId to trackTaskId
-                                TrackAction.REPLACE_SECTION -> replaceSectionDialogTrack = trackAudioId to trackTaskId
-                                TrackAction.EXPORT_WAV -> wavExportDialogTrack = trackAudioId to trackTaskId
-                                TrackAction.BOOST_STYLE -> boostStyleDialogTrack = trackAudioId to trackTaskId
-                            }
-                        },
-                        playerState = trackPlayerState,
-                        onPlayToggle = {
-                            if (trackId == null || track.audioUrl == null) return@TrackCard
-                            when {
-                                currentTrackId == trackId && playerState == PlayerState.PLAYING -> AudioPlayerManager.pause()
-                                currentTrackId == trackId && playerState == PlayerState.PAUSED -> AudioPlayerManager.resume()
-                                else -> AudioPlayerManager.play(trackId, track.audioUrl!!)
-                            }
-                        },
-                    )
-                }
+                        }
+                    },
+                )
             } else if (taskDetail?.isFailed == true) {
                 StudioEmptyState(
                     icon = "⚠",

@@ -1,16 +1,23 @@
 package site.addzero.vibepocket.jimmer.di
 
-import com.typesafe.config.ConfigFactory
+import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
-import org.babyfish.jimmer.sql.runtime.ConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
-import org.koin.core.qualifier.named
-import org.koin.mp.KoinPlatform.getKoin
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.Module
+import org.koin.core.annotation.Property
+import org.koin.core.annotation.Single
 import site.addzero.vibepocket.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.vibepocket.jimmer.spi.DatabaseDriverSpi
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
+
+private const val APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
+private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
+private const val EMBEDDED_SQLITE_URL_PROPERTY = "vibepocket.embedded.sqlite.url"
+private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:vibepocket-desktop.db"
 
 /**
  * 数据源属性（从 application.conf 的 datasources.xxx 读取）
@@ -20,38 +27,35 @@ data class DatasourceProperties(
     val enabled: Boolean = false,
     val url: String = "",
     val driver: String = "",
+    val user: String = "",
+    val password: String = "",
 )
 
-/**
- * 从 application.conf 动态加载所有 datasources 配置
- */
-private fun loadAllDatasources(): List<DatasourceProperties> {
-    val root = ConfigFactory.load()
-    if (!root.hasPath("datasources")) return emptyList()
-    val ds = root.getConfig("datasources")
-    return ds.root().keys.map { name ->
-        val section = ds.getConfig(name)
-        DatasourceProperties(
-            name = name,
-            enabled = if (section.hasPath("enabled")) section.getBoolean("enabled") else false,
-            url = if (section.hasPath("url")) section.getString("url") else "",
-            driver = if (section.hasPath("driver")) section.getString("driver") else "",
-        )
+@Module
+@Configuration("vibepocket")
+@ComponentScan("site.addzero.vibepocket.jimmer")
+class JimmerKoinModule {
+    @Single
+    fun provideDefaultDataSource(registry: DatasourceRegistry): DataSource {
+        return registry.defaultDataSource()
+    }
+
+    @Single
+    fun provideDefaultSqlClient(registry: DatasourceRegistry): KSqlClient {
+        return registry.defaultSqlClient()
     }
 }
 
-private val allDatasources: List<DatasourceProperties> = loadAllDatasources()
-
-/**
- * 从 Koin 中获取所有 DatabaseDriverSpi 实现，匹配给定 driver 字符串
- */
-private fun resolveDriver(driver: String): DatabaseDriverSpi {
-    val all = getKoin().getAll<DatabaseDriverSpi>()
-    return all.firstOrNull { it.supports(driver) }
-        ?: throw IllegalArgumentException(
-            "No DatabaseDriverSpi found for driver '$driver'. " +
-            "Available: ${all.map { it::class.simpleName }}"
-        )
+@Single
+class DatabaseDriverResolver(
+    private val drivers: List<DatabaseDriverSpi>,
+) {
+    fun resolve(driver: String): DatabaseDriverSpi {
+        return drivers.firstOrNull { it.supports(driver) }
+            ?: throw IllegalArgumentException(
+                "No DatabaseDriverSpi found for driver '$driver'. Available: ${drivers.map { it::class.simpleName }}",
+            )
+    }
 }
 
 /**
@@ -63,7 +67,6 @@ private fun buildSqlClient(
     interceptor: BaseEntityDraftInterceptor,
 ): KSqlClient = newKSqlClient {
     setDialect(spi.dialect())
-    setConnectionManager(ConnectionManager.simpleConnectionManager(dataSource))
     addDraftInterceptor(interceptor)
     setDatabaseNamingStrategy(DefaultDatabaseNamingStrategy.LOWER_CASE)
     setConnectionManager { dataSource.connection.use { proceed(it) } }
@@ -88,40 +91,85 @@ private fun runSchema(dataSource: DataSource, schemaFile: String) {
     }
 }
 
-/**
- * 动态多数据源注册器。
- *
- * 遍历 application.conf 中所有 datasources，通过 DatabaseDriverSpi 解析驱动类型，
- * 为每个 enabled 的数据源创建 DataSource + KSqlClient 并注册到 Koin。
- * 第一个 enabled 的作为默认（无 qualifier），所有数据源同时用 @Named("xxx") 注册。
- */
-@org.koin.core.annotation.Single(createdAtStart = true)
-class DatasourceRegistrar(
+private data class DatasourceRuntime(
+    val properties: DatasourceProperties,
+    val dataSource: DataSource,
+    val sqlClient: KSqlClient,
+)
+
+@Single(createdAtStart = true)
+class DatasourceRegistry(
+    @Property(APPLICATION_CONFIG_PROPERTY)
+    private val config: ApplicationConfig,
     private val interceptor: BaseEntityDraftInterceptor,
+    private val driverResolver: DatabaseDriverResolver,
 ) {
-    init {
-        val koin = getKoin()
-        var defaultRegistered = false
+    private val runtimesByName: LinkedHashMap<String, DatasourceRuntime> = buildRuntimeMap(config)
+    private val defaultRuntime: DatasourceRuntime = runtimesByName.values.firstOrNull()
+        ?: throw IllegalStateException(
+            "No enabled datasource configured. Please configure at least one datasources.*.enabled=true entry.",
+        )
 
-        for (props in allDatasources) {
-            if (!props.enabled) continue
-
-            val spi = resolveDriver(props.driver)
-            val dataSource = spi.createDataSource(props)
-            val sqlClient = buildSqlClient(dataSource, spi, interceptor)
-
-            if (!defaultRegistered) {
-                koin.declare<DataSource>(dataSource)
-                koin.declare<KSqlClient>(sqlClient)
-                defaultRegistered = true
-            }
-            koin.declare<DataSource>(dataSource, qualifier = named(props.name))
-            koin.declare<KSqlClient>(sqlClient, qualifier = named(props.name))
-
-            val schemaFile = spi.schemaFile()
-            if (schemaFile != null) runSchema(dataSource, schemaFile)
-        }
+    fun defaultDataSource(): DataSource {
+        return defaultRuntime.dataSource
     }
+
+    fun defaultSqlClient(): KSqlClient {
+        return defaultRuntime.sqlClient
+    }
+
+    fun dataSource(name: String): DataSource {
+        return runtime(name).dataSource
+    }
+
+    fun sqlClient(name: String): KSqlClient {
+        return runtime(name).sqlClient
+    }
+
+    private fun runtime(name: String): DatasourceRuntime {
+        return runtimesByName[name]
+            ?: throw IllegalArgumentException(
+                "Datasource '$name' is not configured. Available: ${runtimesByName.keys.joinToString()}",
+            )
+    }
+
+    private fun buildRuntimeMap(config: ApplicationConfig): LinkedHashMap<String, DatasourceRuntime> {
+        val datasources = loadAllDatasources(config)
+            .filter { it.enabled }
+            .ifEmpty {
+                fallbackEmbeddedDesktopDatasource()?.let(::listOf) ?: emptyList()
+            }
+
+        val runtimes = LinkedHashMap<String, DatasourceRuntime>()
+        for (props in datasources) {
+            val spi = driverResolver.resolve(props.driver)
+            val dataSource = spi.createDataSource(props)
+            spi.schemaFile()?.let { runSchema(dataSource, it) }
+            val sqlClient = buildSqlClient(dataSource, spi, interceptor)
+            runtimes[props.name] = DatasourceRuntime(props, dataSource, sqlClient)
+        }
+        return runtimes
+    }
+}
+
+private fun fallbackEmbeddedDesktopDatasource(): DatasourceProperties? {
+    val isEmbeddedDesktop = System.getProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
+        ?.toBooleanStrictOrNull()
+        ?: false
+    if (!isEmbeddedDesktop) {
+        return null
+    }
+
+    val sqliteUrl = System.getProperty(EMBEDDED_SQLITE_URL_PROPERTY)
+        ?.takeIf { it.isNotBlank() }
+        ?: DEFAULT_EMBEDDED_SQLITE_URL
+
+    return DatasourceProperties(
+        name = "sqlite",
+        enabled = true,
+        url = sqliteUrl,
+        driver = "org.sqlite.SQLiteDriver",
+    )
 }
 
 /**
@@ -134,19 +182,39 @@ fun initDatabase(dataSource: DataSource) {
 /**
  * 动态数据源管理器（运行时按 dbType + url 创建临时连接，同样走 SPI）
  */
-@org.koin.core.annotation.Single
+@Single
 class DataSourceManager(
     private val interceptor: BaseEntityDraftInterceptor,
+    private val driverResolver: DatabaseDriverResolver,
 ) {
     private val cache = ConcurrentHashMap<String, KSqlClient>()
 
     fun getSqlClient(dbType: String, url: String): KSqlClient {
         val key = "$dbType:$url"
         return cache.getOrPut(key) {
-            val spi = resolveDriver(dbType)
+            val spi = driverResolver.resolve(dbType)
             val props = DatasourceProperties(name = key, enabled = true, url = url, driver = dbType)
             val dataSource = spi.createDataSource(props)
             buildSqlClient(dataSource, spi, interceptor)
         }
     }
+}
+
+private fun loadAllDatasources(config: ApplicationConfig): List<DatasourceProperties> {
+    val datasources = mutableListOf<DatasourceProperties>()
+    val datasourceConfig = runCatching { config.config("datasources") }.getOrNull() ?: return emptyList()
+
+    for (name in datasourceConfig.toMap().keys) {
+        val section = runCatching { datasourceConfig.config(name) }.getOrNull() ?: continue
+        datasources += DatasourceProperties(
+            name = name,
+            enabled = section.propertyOrNull("enabled")?.getString()?.toBoolean() == true,
+            url = section.propertyOrNull("url")?.getString().orEmpty(),
+            driver = section.propertyOrNull("driver")?.getString().orEmpty(),
+            user = section.propertyOrNull("user")?.getString().orEmpty(),
+            password = section.propertyOrNull("password")?.getString().orEmpty(),
+        )
+    }
+
+    return datasources
 }

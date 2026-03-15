@@ -24,7 +24,6 @@ fun MusicCoverFormDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val playback = rememberDialogPlaybackSnapshot()
 
     var prompt by remember { mutableStateOf("") }
     var style by remember { mutableStateOf("") }
@@ -118,7 +117,6 @@ fun MusicCoverFormDialog(
             DialogTrackResults(
                 detail = detail,
                 fallbackTaskId = taskId,
-                playback = playback,
             )
             DialogCloseButton(onDismiss)
         }

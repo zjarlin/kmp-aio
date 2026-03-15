@@ -29,7 +29,6 @@ fun UploadCoverFormDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val playback = rememberDialogPlaybackSnapshot()
 
     var uploadUrl by remember { mutableStateOf("") }
     var prompt by remember { mutableStateOf("") }
@@ -172,7 +171,6 @@ fun UploadCoverFormDialog(
             DialogTrackResults(
                 detail = detail,
                 fallbackTaskId = "",
-                playback = playback,
             )
             DialogCloseButton(onDismiss)
         }

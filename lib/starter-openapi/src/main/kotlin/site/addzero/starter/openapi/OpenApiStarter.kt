@@ -4,21 +4,31 @@ import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.routing.*
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.Module
+import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import site.addzero.starter.AppStarter
+import site.addzero.starter.effectiveConfig
 
-@Single
+@Module
+@Configuration("vibepocket")
+@ComponentScan("site.addzero.starter.openapi")
+class OpenApiStarterKoinModule
+
+@Named("openApiStarter")
+@Single(binds = [AppStarter::class])
 class OpenApiStarter : AppStarter {
 
     override fun Application.enable(): Boolean {
-        val enabled = environment.config.propertyOrNull("openapi.enabled")?.getAs<Boolean>()
-        return  enabled ?:true
+        return effectiveConfig().propertyOrNull("openapi.enabled")?.getString()?.toBoolean() != false
     }
 
     override fun Application.onInstall() {
-        val config = environment.config.config("openapi")
-        val path = config?.propertyOrNull("path")?.getString() ?: "/swagger"
-        val spec = config?.propertyOrNull("spec")?.getString() ?: "openapi/documentation.yaml"
+        val config = effectiveConfig().config("openapi")
+        val path = config.propertyOrNull("path")?.getString() ?: "/swagger"
+        val spec = config.propertyOrNull("spec")?.getString() ?: "openapi/documentation.yaml"
         routing {
             swaggerUI(path, spec)
         }

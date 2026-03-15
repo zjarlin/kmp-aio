@@ -14,7 +14,23 @@ class PostgresDriver : DatabaseDriverSpi {
         driver.contains("postgres", ignoreCase = true)
 
     override fun createDataSource(props: DatasourceProperties): DataSource =
-        PGSimpleDataSource().apply { setURL(props.url) }
+        PGSimpleDataSource().apply {
+            setURL(props.url)
+            val queryParams = props.url.substringAfter('?', "")
+                .split('&')
+                .mapNotNull { entry ->
+                    val separatorIndex = entry.indexOf('=')
+                    if (separatorIndex <= 0) {
+                        null
+                    } else {
+                        entry.substring(0, separatorIndex) to entry.substring(separatorIndex + 1)
+                    }
+                }
+                .toMap()
+
+            user = props.user.ifBlank { queryParams["user"] }.takeUnless { it.isNullOrBlank() }
+            password = props.password.ifBlank { queryParams["password"] }.takeUnless { it.isNullOrBlank() }
+        }
 
     override fun dialect(): Dialect = PostgresDialect()
 

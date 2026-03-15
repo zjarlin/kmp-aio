@@ -24,7 +24,6 @@ fun ReplaceSectionFormDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    val playback = rememberDialogPlaybackSnapshot()
 
     var replaceStartText by remember { mutableStateOf("") }
     var replaceEndText by remember { mutableStateOf("") }
@@ -128,7 +127,6 @@ fun ReplaceSectionFormDialog(
             DialogTrackResults(
                 detail = detail,
                 fallbackTaskId = taskId,
-                playback = playback,
             )
             DialogCloseButton(onDismiss)
         }
