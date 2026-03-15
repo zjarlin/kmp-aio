@@ -5,10 +5,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:transfer-history-plugin"))
+            api(project(":apps:kcloud:plugins:transfer-history:transfer-history-plugin"))
         }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:transfer-history-server-plugin"))
+            api(project(":apps:kcloud:plugins:transfer-history:transfer-history-server-plugin"))
         }
     }
 }

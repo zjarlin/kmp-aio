@@ -49,6 +49,15 @@ data class PlaylistPlaybackState<T>(
     val emptyHint: String = "",
 )
 
+data class PlaylistItemActionState(
+    val playbackId: String,
+    val canPlay: Boolean,
+    val canUseAudioUrl: Boolean,
+    val isResolving: Boolean,
+    val isUnavailable: Boolean,
+    val unavailableMessage: String? = null,
+)
+
 @Stable
 class PlaylistPlayerController<T> internal constructor(
     private val host: PlaylistPlayerHost,
@@ -267,6 +276,25 @@ class PlaylistPlayerController<T> internal constructor(
         return true
     }
 
+    internal suspend fun resolveAudioSourceFor(item: T): PlaylistAudioSource {
+        val playbackId = itemKeyOf(item)
+        sourceCache[playbackId]?.let { cached ->
+            return cached
+        }
+
+        val source = resolveAudioSource(item)
+        sourceCache[playbackId] = source
+
+        val resolvedUrl = source.url?.trim().orEmpty()
+        if (resolvedUrl.isBlank()) {
+            val message = source.unavailableMessage?.trim()?.ifBlank { null } ?: DEFAULT_UNAVAILABLE_MESSAGE
+            unavailableMessages[playbackId] = message
+        } else {
+            unavailableMessages.remove(playbackId)
+        }
+        return source
+    }
+
     internal fun itemState(item: T): PlaylistItemUiState {
         val playbackId = itemKeyOf(item)
         val isCurrent = currentPlaybackId == playbackId
@@ -284,6 +312,7 @@ class PlaylistPlayerController<T> internal constructor(
             isPlaying = isCurrent && status == PlaylistPlayerStatus.PLAYING,
             isBuffering = isCurrent && status == PlaylistPlayerStatus.BUFFERING,
             isEnded = isCurrent && status == PlaylistPlayerStatus.ENDED,
+            unavailableMessage = unavailableMessage,
             statusLabel = when {
                 unavailableMessage != null -> unavailableMessage
                 isCurrent && status == PlaylistPlayerStatus.BUFFERING -> "正在缓冲"
@@ -303,6 +332,19 @@ class PlaylistPlayerController<T> internal constructor(
                 isCurrent && status == PlaylistPlayerStatus.ERROR -> "重试"
                 else -> "试听"
             },
+        )
+    }
+
+    internal fun itemActionState(item: T): PlaylistItemActionState {
+        val playbackId = itemKeyOf(item)
+        val itemState = itemState(item)
+        return PlaylistItemActionState(
+            playbackId = playbackId,
+            canPlay = !itemState.isUnavailable && !itemState.isResolving,
+            canUseAudioUrl = !itemState.isUnavailable,
+            isResolving = itemState.isResolving,
+            isUnavailable = itemState.isUnavailable,
+            unavailableMessage = itemState.unavailableMessage,
         )
     }
 
@@ -382,6 +424,8 @@ class PlaylistPlayerController<T> internal constructor(
 
     internal fun coverOf(item: T): String? = coverUrlOf(item)
 
+    internal fun playbackIdOf(item: T): String = itemKeyOf(item)
+
     internal fun queueSize(): Int = items.size
 
     internal fun currentIndexOrNull(): Int? {
@@ -454,6 +498,7 @@ internal data class PlaylistItemUiState(
     val isPlaying: Boolean,
     val isBuffering: Boolean,
     val isEnded: Boolean,
+    val unavailableMessage: String?,
     val statusLabel: String?,
     val buttonLabel: String,
 )

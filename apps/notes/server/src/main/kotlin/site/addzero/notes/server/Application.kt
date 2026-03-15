@@ -10,7 +10,6 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.swagger.*
-import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.getKoin
@@ -55,9 +54,6 @@ fun Application.module() {
     }
 
     routing {
-        get("/health") {
-            call.respondText("ok")
-        }
         swaggerUI(
             path = "swagger",
             swaggerFile = "openapi/documentation.yaml"

@@ -2,6 +2,7 @@ package site.addzero.media.playlist.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -17,8 +18,19 @@ import platform.AVFoundation.AVPlayerItemStatusFailed
 import platform.AVFoundation.AVPlayerTimeControlStatusPaused
 import platform.AVFoundation.AVPlayerTimeControlStatusPlaying
 import platform.AVFoundation.AVURLAsset
-import platform.AVFoundation.AVURLAssetHTTPHeaderFieldsKey
+import platform.AVFoundation.currentItem
+import platform.AVFoundation.currentTime
+import platform.AVFoundation.duration
+import platform.AVFoundation.error
+import platform.AVFoundation.pause
+import platform.AVFoundation.play
+import platform.AVFoundation.replaceCurrentItemWithPlayerItem
+import platform.AVFoundation.seekToTime
+import platform.AVFoundation.status
+import platform.AVFoundation.timeControlStatus
+import platform.AVFoundation.volume
 import platform.CoreMedia.CMTimeGetSeconds
+import platform.CoreMedia.CMTimeMakeWithSeconds
 import platform.Foundation.NSNotification
 import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
@@ -31,6 +43,7 @@ internal actual fun rememberPlatformPlaylistPlayerEngine(): PlaylistPlayerEngine
     }
 }
 
+@OptIn(ExperimentalForeignApi::class)
 private class IosPlaylistPlayerEngine : PlaylistPlayerEngine {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var player: AVPlayer? = null
@@ -51,14 +64,10 @@ private class IosPlaylistPlayerEngine : PlaylistPlayerEngine {
             val url = requireNotNull(NSURL.URLWithString(media.url.trim())) {
                 "音频地址不能为空"
             }
-            val options = media.headers
-                .takeIf { it.isNotEmpty() }
-                ?.let { headers ->
-                    mapOf<Any?, Any>(AVURLAssetHTTPHeaderFieldsKey to headers)
-                }
+            require(media.headers.isEmpty()) { "iOS 暂不支持带鉴权头的私有音源" }
             val asset = AVURLAsset(
-                URL = url,
-                options = options,
+                uRL = url,
+                options = null,
             )
             val item = AVPlayerItem(asset = asset)
             val avPlayer = AVPlayer(playerItem = item).apply {
@@ -100,7 +109,7 @@ private class IosPlaylistPlayerEngine : PlaylistPlayerEngine {
 
     override fun seekTo(positionMs: Long) {
         player?.seekToTime(
-            time = platform.CoreMedia.CMTimeMakeWithSeconds(
+            time = CMTimeMakeWithSeconds(
                 seconds = positionMs.coerceAtLeast(0L).toDouble() / 1000.0,
                 preferredTimescale = 600,
             ),
@@ -185,7 +194,16 @@ private class IosPlaylistPlayerEngine : PlaylistPlayerEngine {
     }
 
     private fun AVPlayer.durationMs(): Long {
-        val seconds = CMTimeGetSeconds(currentItem?.duration ?: platform.CoreMedia.kCMTimeZero)
+        val item = currentItem
+        val durationTime = if (item != null) {
+            item.duration
+        } else {
+            CMTimeMakeWithSeconds(
+                seconds = 0.0,
+                preferredTimescale = 1,
+            )
+        }
+        val seconds = CMTimeGetSeconds(durationTime)
         if (!seconds.isFinite() || seconds <= 0.0) {
             return 0L
         }

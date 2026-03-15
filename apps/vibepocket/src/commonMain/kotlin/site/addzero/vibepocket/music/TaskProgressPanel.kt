@@ -159,7 +159,7 @@ fun TaskProgressPanel(
                     resolveAudioSource = { track ->
                         track.resolvedAudioSource()
                     },
-                    itemActions = { track ->
+                    itemActions = { track, _ ->
                         val trackId = track.id
                         var menuExpanded by remember(track.playbackId(taskDetail.taskId ?: "task")) {
                             mutableStateOf(false)

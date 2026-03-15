@@ -5,10 +5,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:dotfiles-plugin"))
+            api(project(":apps:kcloud:plugins:dotfiles:dotfiles-plugin"))
         }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:dotfiles-server-plugin"))
+            api(project(":apps:kcloud:plugins:dotfiles:dotfiles-server-plugin"))
         }
     }
 }

@@ -245,7 +245,7 @@ fun LyricsStep(
                         resolveLyrics = { track ->
                             MusicSearchService.getLyrics(track).lrc.takeIf { it.isNotBlank() }
                         },
-                        itemActions = { track ->
+                        itemActions = { track, actionState ->
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -303,9 +303,15 @@ fun LyricsStep(
                                             }
                                         }
                                     },
-                                    enabled = isDownloadingId == null,
+                                    enabled = isDownloadingId == null && actionState.canUseAudioUrl,
                                 ) {
-                                    Text(if (isDownloadingId == track.id) "下载中..." else "下载")
+                                    Text(
+                                        when {
+                                            isDownloadingId == track.id -> "下载中..."
+                                            actionState.isUnavailable -> "无音源"
+                                            else -> "下载"
+                                        }
+                                    )
                                 }
                             }
                         },

@@ -5,10 +5,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:file-plugin"))
+            api(project(":apps:kcloud:plugins:file:file-plugin"))
         }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:file-server-plugin"))
+            api(project(":apps:kcloud:plugins:file:file-server-plugin"))
         }
     }
 }

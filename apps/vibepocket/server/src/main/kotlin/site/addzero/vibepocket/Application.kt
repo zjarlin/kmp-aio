@@ -13,7 +13,7 @@ import site.addzero.starter.installEffectiveConfig
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import site.addzero.vibepocket.di.AppKoinApplication
-import site.addzero.vibepocket.routes.ioc.generated.iocModule
+import site.addzero.vibepocket.generated.springktor.registerGeneratedSpringRoutes
 import site.addzero.vibepocket.runtime.VibePocketDesktopStorage
 import java.io.File
 
@@ -55,7 +55,7 @@ fun Application.module() {
         withConfiguration<AppKoinApplication>()
     }
     runStarters()
-    routing { iocModule() }
+    routing { registerGeneratedSpringRoutes() }
 }
 
 fun serverApplication(

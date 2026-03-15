@@ -1,17 +1,21 @@
 package site.addzero.vibepocket.routes
 
-import io.ktor.server.application.*
+import io.ktor.server.application.Application
 import io.ktor.server.config.ApplicationConfig
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
+import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
-import org.koin.ktor.ext.inject
-import site.addzero.ioc.annotation.Bean
+import org.koin.mp.KoinPlatform
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PutMapping
+import org.springframework.web.bind.annotation.RequestBody
 import site.addzero.vibepocket.dto.OkResponse
-import site.addzero.vibepocket.model.*
+import site.addzero.vibepocket.model.AppConfig
+import site.addzero.vibepocket.model.by
+import site.addzero.vibepocket.model.key
+import site.addzero.vibepocket.model.value
 
 /**
  * 从 app_config 表读取配置值
@@ -30,7 +34,7 @@ fun KSqlClient.getConfig(key: String): String? {
  */
 fun KSqlClient.setConfig(key: String, value: String, description: String? = null) {
     save(
-        AppConfig {
+        new(AppConfig::class).by {
             this.key = key
             this.value = value
             this.description = description
@@ -66,57 +70,56 @@ data class ConfigRuntimeInfo(
 )
 
 
-@Bean
-fun Route.configRoutes() {
-    val sqlClient by inject<KSqlClient>()
+@GetMapping("/api/config/runtime")
+suspend fun readRuntimeConfig(application: Application): ConfigRuntimeInfo {
+    return application.environment.config.toRuntimeInfo()
+}
 
-    route("/api/config") {
-        get("/runtime") {
-            call.respond(call.application.environment.config.toRuntimeInfo())
-        }
+@GetMapping("/api/config/{key}")
+suspend fun readConfig(
+    @PathVariable key: String,
+): ConfigResponse {
+    val value = sqlClient().getConfig(key)
+    return ConfigResponse(key = key, value = value)
+}
 
-        get("/{key}") {
-            val key = call.parameters["key"]
-                ?: throw IllegalArgumentException("key is required")
-            val value = sqlClient.getConfig(key)
-            call.respond(ConfigResponse(key = key, value = value))
-        }
+@PutMapping("/api/config")
+suspend fun updateConfig(
+    @RequestBody entry: ConfigEntry,
+): OkResponse {
+    sqlClient().setConfig(entry.key, entry.value, entry.description)
+    return OkResponse()
+}
 
-        put {
-            val entry = call.receive<ConfigEntry>()
-            sqlClient.setConfig(entry.key, entry.value, entry.description)
-            call.respond(OkResponse())
-        }
+@GetMapping("/api/config/storage")
+suspend fun readStorageConfig(): StorageConfig {
+    val sqlClient = sqlClient()
+    return StorageConfig(
+        type = sqlClient.getConfig("storage.type") ?: "LOCAL",
+        endpoint = sqlClient.getConfig("storage.endpoint"),
+        accessKey = sqlClient.getConfig("storage.accessKey"),
+        secretKey = sqlClient.getConfig("storage.secretKey"),
+        bucketName = sqlClient.getConfig("storage.bucketName"),
+        region = sqlClient.getConfig("storage.region"),
+        domain = sqlClient.getConfig("storage.domain"),
+        basePath = sqlClient.getConfig("storage.basePath"),
+    )
+}
 
-        route("/storage") {
-            get {
-                val config = StorageConfig(
-                    type = sqlClient.getConfig("storage.type") ?: "LOCAL",
-                    endpoint = sqlClient.getConfig("storage.endpoint"),
-                    accessKey = sqlClient.getConfig("storage.accessKey"),
-                    secretKey = sqlClient.getConfig("storage.secretKey"),
-                    bucketName = sqlClient.getConfig("storage.bucketName"),
-                    region = sqlClient.getConfig("storage.region"),
-                    domain = sqlClient.getConfig("storage.domain"),
-                    basePath = sqlClient.getConfig("storage.basePath")
-                )
-                call.respond(config)
-            }
-
-            put {
-                val config = call.receive<StorageConfig>()
-                sqlClient.setConfig("storage.type", config.type)
-                config.endpoint?.let { sqlClient.setConfig("storage.endpoint", it) }
-                config.accessKey?.let { sqlClient.setConfig("storage.accessKey", it) }
-                config.secretKey?.let { sqlClient.setConfig("storage.secretKey", it) }
-                config.bucketName?.let { sqlClient.setConfig("storage.bucketName", it) }
-                config.region?.let { sqlClient.setConfig("storage.region", it) }
-                config.domain?.let { sqlClient.setConfig("storage.domain", it) }
-                config.basePath?.let { sqlClient.setConfig("storage.basePath", it) }
-                call.respond(OkResponse())
-            }
-        }
-    }
+@PutMapping("/api/config/storage")
+suspend fun updateStorageConfig(
+    @RequestBody config: StorageConfig,
+): OkResponse {
+    val sqlClient = sqlClient()
+    sqlClient.setConfig("storage.type", config.type)
+    config.endpoint?.let { sqlClient.setConfig("storage.endpoint", it) }
+    config.accessKey?.let { sqlClient.setConfig("storage.accessKey", it) }
+    config.secretKey?.let { sqlClient.setConfig("storage.secretKey", it) }
+    config.bucketName?.let { sqlClient.setConfig("storage.bucketName", it) }
+    config.region?.let { sqlClient.setConfig("storage.region", it) }
+    config.domain?.let { sqlClient.setConfig("storage.domain", it) }
+    config.basePath?.let { sqlClient.setConfig("storage.basePath", it) }
+    return OkResponse()
 }
 
 private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
@@ -138,4 +141,8 @@ private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
         dataDir = propertyOrNull("vibepocket.runtime.dataDir")?.getString(),
         cacheDir = propertyOrNull("vibepocket.runtime.cacheDir")?.getString(),
     )
+}
+
+private fun sqlClient(): KSqlClient {
+    return KoinPlatform.getKoin().get()
 }

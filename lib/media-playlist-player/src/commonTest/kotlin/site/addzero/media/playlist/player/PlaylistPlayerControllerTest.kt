@@ -147,6 +147,35 @@ class PlaylistPlayerControllerTest {
         assertEquals("a", host.snapshot.currentPlaybackId)
         assertFalse(controller.playPrevious())
     }
+
+    @Test
+    fun resolveAudioSourceForUsesTheSameSessionCache() = runTest {
+        val engine = FakePlaylistPlayerEngine()
+        val host = PlaylistPlayerHost(engine)
+        val controller = PlaylistPlayerController<String>(host)
+        var resolveCalls = 0
+
+        controller.bind(
+            scope = this,
+            items = listOf("a"),
+            itemKey = { it },
+            titleOf = { "Song $it" },
+            subtitleOf = { "Artist" },
+            durationMsOf = { 90_000L },
+            coverUrlOf = { null },
+            resolveAudioSource = {
+                resolveCalls += 1
+                PlaylistAudioSource(url = "https://example.com/$it.mp3")
+            },
+            resolveLyrics = null,
+            resolveErrorMessage = { it.message ?: "加载失败" },
+            resolveLyricsErrorMessage = { it.message ?: "歌词失败" },
+        )
+
+        assertEquals("https://example.com/a.mp3", controller.resolveAudioSourceFor("a").url)
+        assertEquals("https://example.com/a.mp3", controller.resolveAudioSourceFor("a").url)
+        assertEquals(1, resolveCalls)
+    }
 }
 
 private class FakePlaylistPlayerEngine : PlaylistPlayerEngine {

@@ -13,11 +13,16 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-aio")
     id("site.addzero.buildlogic.kmp.kmp-koin-core")
+    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
 
 val desktopMainClass = "com.kcloud.MainKt"
 val libs = versionCatalogs.named("libs")
 val ktorVersion = libs.findVersion("ktor").get().requiredVersion
+
+ksp {
+    arg("springKtor.generatedPackage", "com.kcloud.app.generated.springktor")
+}
 
 kotlin {
     jvmToolchain(17)
@@ -34,7 +39,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":apps:kcloud:plugins:ai"))
-            implementation(project(":apps:kcloud:plugins:desktop-integration-plugin"))
+            implementation(project(":apps:kcloud:plugins:desktop-integration"))
             implementation(project(":apps:kcloud:plugins:dotfiles"))
             implementation(project(":apps:kcloud:plugins:environment"))
             implementation(project(":apps:kcloud:plugins:file"))
@@ -42,7 +47,7 @@ kotlin {
             implementation(project(":apps:kcloud:plugins:plugin-api"))
             implementation(project(":apps:kcloud:plugins:package-organizer"))
             implementation(project(":apps:kcloud:plugins:quick-transfer"))
-            implementation(project(":apps:kcloud:plugins:settings-plugin"))
+            implementation(project(":apps:kcloud:plugins:settings"))
             implementation(project(":apps:kcloud:plugins:server-management"))
             implementation(project(":apps:kcloud:plugins:ssh"))
             implementation(project(":apps:kcloud:plugins:transfer-history"))
@@ -53,8 +58,14 @@ kotlin {
             implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
             implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
             implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
+            implementation("site.addzero:spring2ktor-server-core:2026.03.10")
+            compileOnly("org.springframework:spring-web:5.3.21")
         }
     }
+}
+
+dependencies {
+    add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.10")
 }
 
 val java17Launcher = extensions.getByType<JavaToolchainService>().launcherFor {

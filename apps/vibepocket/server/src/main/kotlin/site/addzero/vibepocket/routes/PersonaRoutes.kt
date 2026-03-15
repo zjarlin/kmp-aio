@@ -1,14 +1,14 @@
 package site.addzero.vibepocket.routes
 
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
-import org.koin.ktor.ext.inject
-import site.addzero.ioc.annotation.Bean
+import org.koin.mp.KoinPlatform
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import site.addzero.vibepocket.model.*
+import site.addzero.vibepocket.model.by
 import java.time.LocalDateTime
 
 @Serializable
@@ -30,31 +30,28 @@ data class PersonaResponse(
 /**
  * Persona 管理相关路由
  */
-@Bean
-fun Route.personaRoutes() {
-    val sqlClient by inject<KSqlClient>()
-
-    route("/api/personas") {
-
-        post {
-            val req = call.receive<PersonaSaveRequest>()
-            val entity = new(PersonaRecord::class).by {
-                personaId = req.personaId
-                name = req.name
-                description = req.description
-                createdAt = LocalDateTime.now()
-            }
-            val saved = sqlClient.save(entity)
-            call.respond(saved.modifiedEntity.toPersonaResponse())
-        }
-
-        get {
-            val list = sqlClient.createQuery(PersonaRecord::class) {
-                select(table)
-            }.execute()
-            call.respond(list.map { it.toPersonaResponse() })
-        }
+@PostMapping("/api/personas")
+suspend fun savePersona(
+    @RequestBody request: PersonaSaveRequest,
+): PersonaResponse {
+    val entity = new(PersonaRecord::class).by {
+        personaId = request.personaId
+        name = request.name
+        description = request.description
+        createdAt = LocalDateTime.now()
     }
+    val saved = sqlClient().save(entity)
+    return saved.modifiedEntity.toPersonaResponse()
+}
+
+@GetMapping("/api/personas")
+suspend fun listPersonas(): List<PersonaResponse> {
+    return sqlClient()
+        .createQuery(PersonaRecord::class) {
+            select(table)
+        }
+        .execute()
+        .map { it.toPersonaResponse() }
 }
 
 private fun PersonaRecord.toPersonaResponse() = PersonaResponse(
@@ -64,3 +61,7 @@ private fun PersonaRecord.toPersonaResponse() = PersonaResponse(
     description = description,
     createdAt = createdAt.toString(),
 )
+
+private fun sqlClient(): KSqlClient {
+    return KoinPlatform.getKoin().get()
+}

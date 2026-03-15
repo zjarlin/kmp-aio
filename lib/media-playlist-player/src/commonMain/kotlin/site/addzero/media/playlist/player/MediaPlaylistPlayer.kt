@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
@@ -46,21 +50,26 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 
 @Composable
 fun <T> DefaultPlaylistPlayer(
@@ -78,7 +87,7 @@ fun <T> DefaultPlaylistPlayer(
     resolveLyrics: (suspend (T) -> String?)? = null,
     resolveLyricsErrorMessage: (Throwable) -> String = { it.message ?: "加载歌词失败" },
     lyricsEmptyHint: String = "当前歌曲暂无同步歌词",
-    itemActions: @Composable RowScope.(T) -> Unit = {},
+    itemActions: @Composable RowScope.(T, PlaylistItemActionState) -> Unit = { _, _ -> },
 ) {
     val activeController = controller ?: rememberPlaylistPlayerController(
         items = items,
@@ -168,7 +177,7 @@ fun <T> MediaPlaylistPlayer(
         coverUrlOf = coverUrlOf,
         emptyHint = emptyHint,
         lyricsEmptyHint = lyricsEmptyHint,
-        itemActions = { item ->
+        itemActions = { item, _ ->
             itemActions(item)
         },
         playbackProgress = controller.currentProgressOr(playbackProgress),
@@ -191,11 +200,13 @@ private fun <T> PlaylistPlayerLayout(
     coverUrlOf: (T) -> String?,
     emptyHint: String,
     lyricsEmptyHint: String,
-    itemActions: @Composable RowScope.(T) -> Unit,
+    itemActions: @Composable RowScope.(T, PlaylistItemActionState) -> Unit,
     playbackProgress: PlaylistPlaybackProgress,
     showLyrics: Boolean,
     playerPane: @Composable () -> Unit,
 ) {
+    val clipboardManager = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
     val currentItem = controller.currentItem
     val snapshot = controller.snapshot
     val displayTitle = currentItem?.let(titleOf) ?: snapshot.title ?: "列表播放器"
@@ -203,6 +214,9 @@ private fun <T> PlaylistPlayerLayout(
     val displayCover = currentItem?.let(coverUrlOf) ?: snapshot.coverUrl
     val displayDuration = currentItem?.let(durationMsOf)
         ?: snapshot.durationMs.takeIf { it > 0L }
+    var playlistActionMessage by remember { mutableStateOf<String?>(null) }
+    var playlistUtilityBusy by remember { mutableStateOf(false) }
+    var urlDialogState by remember { mutableStateOf<PlaylistUrlDialogState?>(null) }
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -341,6 +355,55 @@ private fun <T> PlaylistPlayerLayout(
                     }
                 }
 
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilledTonalButton(
+                        onClick = {
+                            if (playlistUtilityBusy) {
+                                return@FilledTonalButton
+                            }
+                            playlistUtilityBusy = true
+                            playlistActionMessage = null
+                            scope.launch {
+                                val resolvedUrls = buildList {
+                                    items.forEach { item ->
+                                        runCatching {
+                                            controller.resolveAudioSourceFor(item)
+                                        }.getOrNull()
+                                            ?.url
+                                            ?.trim()
+                                            ?.takeIf(String::isNotBlank)
+                                            ?.let(::add)
+                                    }
+                                }
+                                playlistUtilityBusy = false
+                                if (resolvedUrls.isEmpty()) {
+                                    playlistActionMessage = "当前列表里没有可复制的歌曲 URL"
+                                    return@launch
+                                }
+                                clipboardManager.setText(
+                                    AnnotatedString(resolvedUrls.joinToString(separator = "\n"))
+                                )
+                                playlistActionMessage = "已复制 ${resolvedUrls.size} 条歌曲 URL"
+                            }
+                        },
+                        enabled = items.isNotEmpty() && !playlistUtilityBusy,
+                    ) {
+                        Text(if (playlistUtilityBusy) "处理中..." else "复制全部 URL")
+                    }
+                }
+
+                playlistActionMessage?.let { message ->
+                    Text(
+                        text = message,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
                 if (items.isEmpty()) {
                     Text(
                         text = emptyHint,
@@ -358,20 +421,105 @@ private fun <T> PlaylistPlayerLayout(
                             items = items,
                             key = { item -> itemKey(item) },
                         ) { item ->
+                            val itemState = controller.itemState(item)
+                            val itemActionState = controller.itemActionState(item)
                             PlaylistListItem(
                                 title = titleOf(item),
                                 subtitle = subtitleOf(item),
                                 durationMs = durationMsOf(item),
                                 coverUrl = coverUrlOf(item),
-                                state = controller.itemState(item),
+                                state = itemState,
                                 onPlayClick = { controller.play(item) },
-                                itemActions = { itemActions(item) },
+                                itemActions = {
+                                    val displayTitleText = titleOf(item)
+                                    val displaySubtitleText = subtitleOf(item)
+
+                                    FilledTonalButton(
+                                        onClick = {
+                                            if (playlistUtilityBusy) {
+                                                return@FilledTonalButton
+                                            }
+                                            playlistUtilityBusy = true
+                                            playlistActionMessage = null
+                                            scope.launch {
+                                                val source = runCatching {
+                                                    controller.resolveAudioSourceFor(item)
+                                                }.getOrElse { error ->
+                                                    playlistActionMessage = error.message ?: "读取歌曲 URL 失败"
+                                                    playlistUtilityBusy = false
+                                                    return@launch
+                                                }
+                                                playlistUtilityBusy = false
+                                                val resolvedUrl = source.url?.trim().orEmpty()
+                                                if (resolvedUrl.isBlank()) {
+                                                    playlistActionMessage =
+                                                        source.unavailableMessage ?: "当前歌曲没有可用音源 URL"
+                                                    return@launch
+                                                }
+                                                urlDialogState = PlaylistUrlDialogState(
+                                                    title = displayTitleText,
+                                                    subtitle = displaySubtitleText,
+                                                    playbackId = controller.playbackIdOf(item),
+                                                    url = resolvedUrl,
+                                                )
+                                            }
+                                        },
+                                        enabled = itemActionState.canUseAudioUrl && !playlistUtilityBusy,
+                                    ) {
+                                        Text("链接")
+                                    }
+
+                                    TextButton(
+                                        onClick = {
+                                            if (playlistUtilityBusy) {
+                                                return@TextButton
+                                            }
+                                            playlistUtilityBusy = true
+                                            playlistActionMessage = null
+                                            scope.launch {
+                                                val source = runCatching {
+                                                    controller.resolveAudioSourceFor(item)
+                                                }.getOrElse { error ->
+                                                    playlistActionMessage = error.message ?: "复制歌曲 URL 失败"
+                                                    playlistUtilityBusy = false
+                                                    return@launch
+                                                }
+                                                playlistUtilityBusy = false
+                                                val resolvedUrl = source.url?.trim().orEmpty()
+                                                if (resolvedUrl.isBlank()) {
+                                                    playlistActionMessage =
+                                                        source.unavailableMessage ?: "当前歌曲没有可用音源 URL"
+                                                    return@launch
+                                                }
+                                                clipboardManager.setText(AnnotatedString(resolvedUrl))
+                                                playlistActionMessage = "已复制 $displayTitleText 的歌曲 URL"
+                                            }
+                                        },
+                                        enabled = itemActionState.canUseAudioUrl && !playlistUtilityBusy,
+                                    ) {
+                                        Text("复制")
+                                    }
+
+                                    itemActions(item, itemActionState)
+                                },
                             )
                         }
                     }
                 }
             }
         }
+    }
+
+    urlDialogState?.let { dialogState ->
+        PlaylistUrlDialog(
+            state = dialogState,
+            onDismiss = { urlDialogState = null },
+            onCopy = {
+                clipboardManager.setText(AnnotatedString(dialogState.url))
+                playlistActionMessage = "已复制 ${dialogState.title} 的歌曲 URL"
+                urlDialogState = null
+            },
+        )
     }
 }
 
@@ -506,15 +654,27 @@ private fun <T> DefaultPlaylistPlayerContent(
                                 ),
                             )
 
-                            Text(
-                                text = if (progressEnabled) {
-                                    "拖动进度条可快速预览任意片段"
-                                } else {
-                                    "当前音源尚未返回可拖动的时长信息"
-                                },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = compactPlaybackStatusText(
+                                        status = snapshot.status,
+                                        errorMessage = snapshot.errorMessage,
+                                    ),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (snapshot.status == PlaylistPlayerStatus.ERROR) {
+                                        MaterialTheme.colorScheme.error
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                )
+                                currentIndex?.let {
+                                    PlaylistMetadataPill(text = "${it + 1}/${controller.queueSize()}")
+                                }
+                            }
                         }
 
                         Row(
@@ -660,12 +820,26 @@ private fun playbackStatusDescription(
     errorMessage: String?,
 ): String {
     return when (status) {
-        PlaylistPlayerStatus.BUFFERING -> "正在连接音源并准备播放"
-        PlaylistPlayerStatus.PLAYING -> "音频正在顺畅播放"
-        PlaylistPlayerStatus.PAUSED -> "播放已暂停，可以继续收听"
-        PlaylistPlayerStatus.ENDED -> "当前歌曲已播完，再点一次会从头重播"
-        PlaylistPlayerStatus.ERROR -> errorMessage ?: "播放失败，请切换其他音源"
+        PlaylistPlayerStatus.BUFFERING -> "正在连接音源"
+        PlaylistPlayerStatus.PLAYING -> "当前歌曲正在播放"
+        PlaylistPlayerStatus.PAUSED -> "播放已暂停"
+        PlaylistPlayerStatus.ENDED -> "当前歌曲已播完"
+        PlaylistPlayerStatus.ERROR -> errorMessage ?: "播放失败"
         PlaylistPlayerStatus.IDLE -> "从列表挑一首开始试听"
+    }
+}
+
+private fun compactPlaybackStatusText(
+    status: PlaylistPlayerStatus,
+    errorMessage: String?,
+): String {
+    return when (status) {
+        PlaylistPlayerStatus.BUFFERING -> "缓冲中"
+        PlaylistPlayerStatus.PLAYING -> "播放中"
+        PlaylistPlayerStatus.PAUSED -> "已暂停"
+        PlaylistPlayerStatus.ENDED -> "可重播"
+        PlaylistPlayerStatus.ERROR -> errorMessage ?: "播放失败"
+        PlaylistPlayerStatus.IDLE -> "等待播放"
     }
 }
 
@@ -710,112 +884,152 @@ private fun PlaylistVolumeRow(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        shape = RoundedCornerShape(22.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         border = BorderStroke(
             width = 1.dp,
             color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f),
         ),
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Surface(
-                shape = CircleShape,
-                color = if (isMuted) {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-                } else {
-                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                },
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(
-                    onClick = {
-                        if (isMuted) {
-                            onVolumeChange(lastAudibleVolume.coerceIn(0.35f, 1f))
-                        } else {
-                            onVolumeChange(0f)
-                        }
+                Text(
+                    text = "音量",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium,
+                )
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = if (isMuted) {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
                     },
-                    modifier = Modifier.size(38.dp),
                 ) {
-                    Icon(
-                        imageVector = volumeIcon,
-                        contentDescription = if (isMuted) "取消静音" else "静音",
-                        tint = if (isMuted) {
+                    Text(
+                        text = volumePercentage,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (isMuted) {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         } else {
                             MaterialTheme.colorScheme.primary
                         },
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }
-            Slider(
-                value = safeVolume,
-                onValueChange = { nextVolume ->
-                    if (nextVolume > 0.05f) {
-                        lastAudibleVolume = nextVolume
-                    }
-                    onVolumeChange(nextVolume)
-                },
-                valueRange = 0f..1f,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(28.dp),
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
-                ),
-                thumb = {
-                    Box(
-                        modifier = Modifier
-                            .size(14.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .border(
-                                width = 3.dp,
-                                color = MaterialTheme.colorScheme.surface,
-                                shape = CircleShape,
-                            ),
-                    )
-                },
-                track = { _ ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (isMuted) {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    },
+                ) {
+                    IconButton(
+                        onClick = {
+                            if (isMuted) {
+                                onVolumeChange(lastAudibleVolume.coerceIn(0.35f, 1f))
+                            } else {
+                                onVolumeChange(0f)
+                            }
+                        },
+                        modifier = Modifier.size(36.dp),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(safeVolume)
-                                .height(5.dp)
-                                .clip(RoundedCornerShape(999.dp))
-                                .background(MaterialTheme.colorScheme.primary),
+                        Icon(
+                            imageVector = volumeIcon,
+                            contentDescription = if (isMuted) "取消静音" else "静音",
+                            tint = if (isMuted) {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                         )
                     }
-                },
-            )
-            Column(
-                modifier = Modifier.width(48.dp),
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = volumePercentage,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.SemiBold,
+                }
+
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                    modifier = Modifier.size(18.dp),
                 )
-                Text(
-                    text = if (isMuted) "静音" else "音量",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+
+                Slider(
+                    value = safeVolume,
+                    onValueChange = { nextVolume ->
+                        if (nextVolume > 0.05f) {
+                            lastAudibleVolume = nextVolume
+                        }
+                        onVolumeChange(nextVolume)
+                    },
+                    valueRange = 0f..1f,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(30.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
+                        inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
+                    ),
+                    thumb = {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .border(
+                                    width = 4.dp,
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = CircleShape,
+                                ),
+                        )
+                    },
+                    track = { _ ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(6.dp)
+                                .clip(RoundedCornerShape(999.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(safeVolume)
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(MaterialTheme.colorScheme.primary),
+                            )
+                        }
+                    },
+                )
+
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = null,
+                    tint = if (isMuted) {
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f)
+                    } else {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.78f)
+                    },
+                    modifier = Modifier.size(18.dp),
                 )
             }
         }
@@ -904,7 +1118,7 @@ private fun PlaylistLyricsCard(
                     ) {
                         itemsIndexed(
                             items = lyrics.lines,
-                            key = { _, line -> "${line.timeMs ?: -1L}:${line.text}" },
+                            key = { index, line -> "${line.timeMs ?: -1L}:${line.text}:$index" },
                         ) { index, line ->
                             val isActive = index == activeIndex
                             Surface(
@@ -1029,13 +1243,6 @@ private fun PlaylistPlayerHeader(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Text(
-                text = "内置进度、音量、歌词和列表状态管理，业务层只需要传数据。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
         }
 
         durationMs?.takeIf { it > 0L }?.let {
@@ -1288,6 +1495,71 @@ private fun PlaylistMetadataPill(text: String) {
             color = MaterialTheme.colorScheme.onSecondaryContainer,
         )
     }
+}
+
+private data class PlaylistUrlDialogState(
+    val title: String,
+    val subtitle: String,
+    val playbackId: String,
+    val url: String,
+)
+
+@Composable
+private fun PlaylistUrlDialog(
+    state: PlaylistUrlDialogState,
+    onDismiss: () -> Unit,
+    onCopy: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = state.title.ifBlank { "歌曲 URL" },
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (state.subtitle.isNotBlank()) {
+                    Text(
+                        text = state.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                PlaylistMetadataPill(text = state.playbackId)
+                SelectionContainer {
+                    Text(
+                        text = state.url,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 220.dp)
+                            .verticalScroll(rememberScrollState()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            FilledTonalButton(onClick = onCopy) {
+                Text("复制 URL")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("关闭")
+            }
+        },
+    )
 }
 
 internal fun formatPlaylistDuration(durationMs: Long): String {

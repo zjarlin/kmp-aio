@@ -1,11 +1,14 @@
 package site.addzero.vibepocket.routes
 
-import io.ktor.http.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import org.koin.ktor.ext.inject
-import site.addzero.ioc.annotation.Bean
+import org.koin.mp.KoinPlatform
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestParam
+import site.addzero.springktor.runtime.SpringRouteResult
+import site.addzero.springktor.runtime.springBadGateway
+import site.addzero.springktor.runtime.springBadRequest
+import site.addzero.springktor.runtime.springOk
 import site.addzero.starter.statuspages.ErrorResponse
 import site.addzero.vibepocket.api.music.MusicTrack
 import site.addzero.vibepocket.service.MusicCatalogService
@@ -13,65 +16,47 @@ import site.addzero.vibepocket.service.MusicCatalogService
 /**
  * 音乐搜索相关路由
  */
-@Bean
-fun Route.musicRoutes() {
-    val musicCatalogService by inject<MusicCatalogService>()
-
-    route("/api/music") {
-        get("/search") {
-            val provider = call.request.queryParameters["provider"].orEmpty()
-            val keyword = call.request.queryParameters["keyword"].orEmpty()
-            try {
-                val results = musicCatalogService.search(provider, keyword)
-                call.respond(results)
-            } catch (error: IllegalArgumentException) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse(400, error.message ?: "Invalid request"),
-                )
-            } catch (error: Exception) {
-                call.respond(
-                    HttpStatusCode.BadGateway,
-                    ErrorResponse(502, error.message ?: "Music provider request failed"),
-                )
-            }
-        }
-
-        get("/lyrics") {
-            val provider = call.request.queryParameters["provider"].orEmpty()
-            val songId = call.request.queryParameters["songId"].orEmpty()
-            try {
-                val result = musicCatalogService.getLyrics(provider, songId)
-                call.respond(result)
-            } catch (error: IllegalArgumentException) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse(400, error.message ?: "Invalid request"),
-                )
-            } catch (error: Exception) {
-                call.respond(
-                    HttpStatusCode.BadGateway,
-                    ErrorResponse(502, error.message ?: "Music provider request failed"),
-                )
-            }
-        }
-
-        post("/resolve") {
-            val track = call.receive<MusicTrack>()
-            try {
-                val asset = musicCatalogService.resolve(track)
-                call.respond(asset)
-            } catch (error: IllegalArgumentException) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    ErrorResponse(400, error.message ?: "Invalid request"),
-                )
-            } catch (error: Exception) {
-                call.respond(
-                    HttpStatusCode.BadGateway,
-                    ErrorResponse(502, error.message ?: "Music provider request failed"),
-                )
-            }
-        }
+@GetMapping("/api/music/search")
+suspend fun searchMusic(
+    @RequestParam("provider") provider: String?,
+    @RequestParam("keyword") keyword: String?,
+): SpringRouteResult<Any> {
+    try {
+        return springOk(musicCatalogService().search(provider.orEmpty(), keyword.orEmpty()))
+    } catch (error: IllegalArgumentException) {
+        return springBadRequest(ErrorResponse(400, error.message ?: "Invalid request"))
+    } catch (error: Exception) {
+        return springBadGateway(ErrorResponse(502, error.message ?: "Music provider request failed"))
     }
+}
+
+@GetMapping("/api/music/lyrics")
+suspend fun readLyrics(
+    @RequestParam("provider") provider: String?,
+    @RequestParam("songId") songId: String?,
+): SpringRouteResult<Any> {
+    try {
+        return springOk(musicCatalogService().getLyrics(provider.orEmpty(), songId.orEmpty()))
+    } catch (error: IllegalArgumentException) {
+        return springBadRequest(ErrorResponse(400, error.message ?: "Invalid request"))
+    } catch (error: Exception) {
+        return springBadGateway(ErrorResponse(502, error.message ?: "Music provider request failed"))
+    }
+}
+
+@PostMapping("/api/music/resolve")
+suspend fun resolveMusic(
+    @RequestBody track: MusicTrack,
+): SpringRouteResult<Any> {
+    try {
+        return springOk(musicCatalogService().resolve(track))
+    } catch (error: IllegalArgumentException) {
+        return springBadRequest(ErrorResponse(400, error.message ?: "Invalid request"))
+    } catch (error: Exception) {
+        return springBadGateway(ErrorResponse(502, error.message ?: "Music provider request failed"))
+    }
+}
+
+private fun musicCatalogService(): MusicCatalogService {
+    return KoinPlatform.getKoin().get()
 }

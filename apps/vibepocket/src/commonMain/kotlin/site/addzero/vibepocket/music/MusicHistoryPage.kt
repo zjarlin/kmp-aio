@@ -290,7 +290,7 @@ private fun HistoryAllContent(
                 resolveAudioSource = { entry ->
                     entry.track.resolvedAudioSource()
                 },
-                itemActions = { entry ->
+                itemActions = { entry, _ ->
                     val trackId = entry.track.id
                     if (trackId != null) {
                         val isFavorite = favoriteSet[trackId] == true
@@ -356,7 +356,7 @@ private fun FavoritesContent(
                 resolveAudioSource = { entry ->
                     entry.track.resolvedAudioSource()
                 },
-                itemActions = { entry ->
+                itemActions = { entry, _ ->
                     IconButton(
                         onClick = {
                             onFavoriteToggle(entry.item.trackId, false)

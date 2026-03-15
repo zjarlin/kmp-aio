@@ -20,6 +20,7 @@ sourceSets {
 
 ksp {
     arg("isomorphicGenDir", sharedDir)
+    arg("springKtor.generatedPackage", "site.addzero.vibepocket.generated.springktor")
 }
 
 dependencies {
@@ -38,9 +39,9 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.7")
     implementation("io.ktor:ktor-client-logging:2.3.7")
 
-    // @Bean KSP processor（用于 routes 聚合）
-    implementation(libs.site.addzero.ioc.core)
-    ksp(libs.site.addzero.ioc.processor)
+    implementation("site.addzero:spring2ktor-server-core:2026.03.10")
+    ksp("site.addzero:spring2ktor-server-processor:2026.03.10")
+    compileOnly(libs.org.springframework.spring.web)
 
     // Starter 模块（引入即生效）
     implementation(projects.lib.starterKoin)

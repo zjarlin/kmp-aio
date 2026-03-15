@@ -13,6 +13,7 @@ kotlin {
             api(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-serialization-json").get())
         }
         jvmMain.dependencies {
+            api(libs.findLibrary("io-insert-koin-koin-ktor").get())
             implementation(project(":lib:kcloud-paths"))
         }
     }

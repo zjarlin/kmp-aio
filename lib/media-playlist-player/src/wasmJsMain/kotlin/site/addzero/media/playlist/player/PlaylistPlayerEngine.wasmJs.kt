@@ -10,6 +10,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.w3c.dom.HTMLAudioElement
+import kotlin.js.ExperimentalWasmJsInterop
 import kotlin.math.roundToLong
 
 @Composable
@@ -19,6 +20,7 @@ internal actual fun rememberPlatformPlaylistPlayerEngine(): PlaylistPlayerEngine
     }
 }
 
+@OptIn(ExperimentalWasmJsInterop::class)
 private class WasmPlaylistPlayerEngine : PlaylistPlayerEngine {
     private val scope = MainScope()
     private var audioElement: HTMLAudioElement? = null

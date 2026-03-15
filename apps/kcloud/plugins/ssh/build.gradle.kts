@@ -5,10 +5,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:ssh-plugin"))
+            api(project(":apps:kcloud:plugins:ssh:ssh-plugin"))
         }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:ssh-server-plugin"))
+            api(project(":apps:kcloud:plugins:ssh:ssh-server-plugin"))
         }
     }
 }

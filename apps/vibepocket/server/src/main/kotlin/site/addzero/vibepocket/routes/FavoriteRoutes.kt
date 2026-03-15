@@ -1,18 +1,22 @@
 package site.addzero.vibepocket.routes
 
-import io.ktor.http.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
-import org.koin.ktor.ext.inject
-import site.addzero.ioc.annotation.Bean
+import org.koin.mp.KoinPlatform
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.springktor.runtime.SpringRouteResult
+import site.addzero.springktor.runtime.springNotFound
+import site.addzero.springktor.runtime.springOk
 import site.addzero.starter.statuspages.ErrorResponse
 import site.addzero.vibepocket.dto.OkResponse
 import site.addzero.vibepocket.model.*
+import site.addzero.vibepocket.model.by
 import java.time.LocalDateTime
 
 @Serializable
@@ -42,52 +46,50 @@ data class FavoriteResponse(
 /**
  * 收藏相关路由
  */
-@Bean
-fun Route.favoriteRoutes() {
-    val sqlClient by inject<KSqlClient>()
-
-    route("/api/favorites") {
-
-        post {
-            val req = call.receive<FavoriteRequest>()
-            val entity = new(FavoriteTrack::class).by {
-                trackId = req.trackId
-                taskId = req.taskId
-                audioUrl = req.audioUrl
-                title = req.title
-                tags = req.tags
-                imageUrl = req.imageUrl
-                duration = req.duration
-                createdAt = LocalDateTime.now()
-            }
-            val saved = sqlClient.save(entity)
-            call.respond(saved.modifiedEntity.toResponse())
-        }
-
-        delete("/{trackId}") {
-            val tid = call.parameters["trackId"]
-                ?: throw IllegalArgumentException("trackId is required")
-
-            val existing = sqlClient.createQuery(FavoriteTrack::class) {
-                where(table.trackId eq tid)
-                select(table)
-            }.execute().firstOrNull()
-
-            if (existing == null) {
-                call.respond(HttpStatusCode.NotFound, ErrorResponse(404, "Favorite not found"))
-            } else {
-                sqlClient.deleteById(FavoriteTrack::class, existing.id)
-                call.respond(OkResponse())
-            }
-        }
-
-        get {
-            val list = sqlClient.createQuery(FavoriteTrack::class) {
-                select(table)
-            }.execute()
-            call.respond(list.map { it.toResponse() })
-        }
+@PostMapping("/api/favorites")
+suspend fun createFavorite(
+    @RequestBody request: FavoriteRequest,
+): FavoriteResponse {
+    val entity = new(FavoriteTrack::class).by {
+        trackId = request.trackId
+        taskId = request.taskId
+        audioUrl = request.audioUrl
+        title = request.title
+        tags = request.tags
+        imageUrl = request.imageUrl
+        duration = request.duration
+        createdAt = LocalDateTime.now()
     }
+    val saved = sqlClient().save(entity)
+    return saved.modifiedEntity.toResponse()
+}
+
+@DeleteMapping("/api/favorites/{trackId}")
+suspend fun deleteFavorite(
+    @PathVariable trackId: String,
+): SpringRouteResult<Any> {
+    val sqlClient = sqlClient()
+    val existing = sqlClient.createQuery(FavoriteTrack::class) {
+        where(table.trackId eq trackId)
+        select(table)
+    }.execute().firstOrNull()
+
+    if (existing == null) {
+        return springNotFound(ErrorResponse(404, "Favorite not found"))
+    }
+
+    sqlClient.deleteById(FavoriteTrack::class, existing.id)
+    return springOk(OkResponse())
+}
+
+@GetMapping("/api/favorites")
+suspend fun listFavorites(): List<FavoriteResponse> {
+    return sqlClient()
+        .createQuery(FavoriteTrack::class) {
+            select(table)
+        }
+        .execute()
+        .map { it.toResponse() }
 }
 
 private fun FavoriteTrack.toResponse() = FavoriteResponse(
@@ -101,3 +103,7 @@ private fun FavoriteTrack.toResponse() = FavoriteResponse(
     duration = duration,
     createdAt = createdAt.toString(),
 )
+
+private fun sqlClient(): KSqlClient {
+    return KoinPlatform.getKoin().get()
+}

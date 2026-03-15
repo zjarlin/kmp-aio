@@ -5,10 +5,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:quick-transfer-plugin"))
+            api(project(":apps:kcloud:plugins:quick-transfer:quick-transfer-plugin"))
         }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:quick-transfer-server-plugin"))
+            api(project(":apps:kcloud:plugins:quick-transfer:quick-transfer-server-plugin"))
         }
     }
 }

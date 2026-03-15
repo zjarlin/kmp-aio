@@ -41,9 +41,9 @@
 
 ### 1. 插件聚合方式
 
-当前不是动态扫描，而是 **静态聚合插件包**。
+当前不是运行时热插拔，而是 **编译时 SPI 聚合**。
 
-主应用在 [`src/jvmMain/kotlin/com/kcloud/KCloudPlugins.kt`](src/jvmMain/kotlin/com/kcloud/KCloudPlugins.kt) 中显式聚合所有 `KCloudPluginBundle`，再由 runtime 一次性装配 Koin 模块。
+主应用通过 [`src/jvmMain/kotlin/com/kcloud/KCloudKoinApplication.kt`](src/jvmMain/kotlin/com/kcloud/KCloudKoinApplication.kt) 的 `@KoinApplication(configurations = ["kcloud"])` 聚合所有插件模块，再由 runtime 一次性装配 Koin 模块。
 
 ### 2. 壳层职责
 
@@ -61,10 +61,9 @@
 
 | 接口 | 作用 |
 | --- | --- |
-| [`KCloudPlugin`](plugins/plugin-api/src/jvmMain/kotlin/com/kcloud/plugin/KCloudPlugin.kt) | 客户端页面、生命周期、菜单入口 |
-| [`KCloudServerPlugin`](plugins/plugin-api/src/jvmMain/kotlin/com/kcloud/plugin/KCloudPlugin.kt) | 本地 HTTP 路由扩展入口 |
-| [`KCloudPluginBundle`](plugins/plugin-api/src/jvmMain/kotlin/com/kcloud/plugin/KCloudPlugin.kt) | Koin 模块聚合单元 |
-| [`KCloudMenuEntry`](plugins/plugin-api/src/jvmMain/kotlin/com/kcloud/plugin/KCloudMenu.kt) | 壳层菜单描述，支持 `parentId`、`visible`、`content` |
+| [`KCloudPlugin`](plugins/plugin-api/src/commonMain/kotlin/com/kcloud/plugin/KCloudPlugin.kt) | 客户端页面、生命周期、菜单入口 |
+| [`KCloudServerPlugin`](plugins/plugin-api/src/commonMain/kotlin/com/kcloud/plugin/KCloudPlugin.kt) | 本地 HTTP 路由扩展入口 |
+| [`KCloudMenuEntry`](plugins/plugin-api/src/commonMain/kotlin/com/kcloud/plugin/KCloudMenu.kt) | 壳层菜单描述，支持 `parentId`、`visible`、`content` |
 
 菜单树能力：
 
@@ -174,7 +173,7 @@ apps/kcloud/
 
 - 不要直接运行 `plugins/*:jvmRun`
 - `plugins/*` 下的模块当前定位是 **库模块 / 插件模块**，不是独立桌面应用
-- 例如 [`plugins/desktop-integration-plugin/build.gradle.kts`](plugins/desktop-integration-plugin/build.gradle.kts) 只声明了库依赖，没有配置 `mainClass`
+- 例如 [`plugins/desktop-integration/desktop-integration-plugin/build.gradle.kts`](plugins/desktop-integration/desktop-integration-plugin/build.gradle.kts) 只声明了库依赖，没有配置 `mainClass`
 - 真正的桌面主入口定义在 [`build.gradle.kts`](build.gradle.kts) 的 `kotlin.jvm().mainRun` / `compose.desktop.application`
 - 对应的实际启动类是 [`src/jvmMain/kotlin/com/kcloud/Main.kt`](src/jvmMain/kotlin/com/kcloud/Main.kt)
 - 如果误跑了某个插件模块的 `jvmRun`，常见报错会是：`No main class specified and classpath is not an executable jar`
@@ -187,10 +186,10 @@ apps/kcloud/
 
 ### 新增插件的当前接入方式
 
-1. 在 `plugins/` 下创建功能模块
-2. 如需本地 HTTP 能力，再创建对应 `*-server-plugin`
-3. 在主应用中把对应 `KCloudPluginBundle` 加入 `KCloudPlugins.kt`
-4. 通过 Koin 注册 `KCloudPlugin` / `KCloudServerPlugin`
+1. 在 `plugins/<feature>/` 下创建插件家族目录
+2. 在家族目录中放置 `*-plugin`，需要本地 HTTP 能力时再增加 `*-server-plugin`
+3. 让叶子模块通过 `@Configuration("kcloud")` 参与编译时 SPI 聚合
+4. 让主应用只依赖家族聚合模块，例如 `:apps:kcloud:plugins:file`
 
 ---
 
@@ -200,7 +199,7 @@ apps/kcloud/
 | --- | --- |
 | 已落地 | 插件化桌面壳、树状侧边栏、静态插件聚合、本地 HTTP 聚合层、桌面托盘与快捷键、笔记接入、快速迁移面板、文件管理页、迁移记录页、服务器管理页、设置页、安装包归档、SSH 工作区、WebDAV 工作区、Dotfiles、Unix 环境搭建 |
 | 正在补强 | 快速迁移 / 文件管理 / 迁移记录的 server 实现继续脱离旧 `lib:kcloud-core` 模型；把未接入的拖拽上传链路也纳入新 service 边界 |
-| 下一阶段 | 把硬编码聚合升级为真正 SPI / `ServiceLoader` 装载；统一 SSH / WebDAV / File 的工作区抽象；给环境搭建补安装任务历史与实时日志；给笔记插件补专门的 Nextcloud / WebDAV Notes 适配；继续收敛 legacy 同步 / 数据模型 |
+| 下一阶段 | 继续保持编译时 SPI 聚合，并补齐插件元数据与插件市场页面；统一 SSH / WebDAV / File 的工作区抽象；给环境搭建补安装任务历史与实时日志；给笔记插件补专门的 Nextcloud / WebDAV Notes 适配；继续收敛 legacy 同步 / 数据模型 |
 
 ---
 

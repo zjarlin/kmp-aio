@@ -5,10 +5,10 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:server-management-plugin"))
+            api(project(":apps:kcloud:plugins:server-management:server-management-plugin"))
         }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:server-management-server-plugin"))
+            api(project(":apps:kcloud:plugins:server-management:server-management-server-plugin"))
         }
     }
 }

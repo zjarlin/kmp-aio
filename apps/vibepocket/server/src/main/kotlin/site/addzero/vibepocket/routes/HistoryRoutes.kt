@@ -1,14 +1,14 @@
 package site.addzero.vibepocket.routes
 
-import io.ktor.server.request.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
-import org.koin.ktor.ext.inject
-import site.addzero.ioc.annotation.Bean
-import site.addzero.vibepocket.model.*
+import org.koin.mp.KoinPlatform
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.vibepocket.model.MusicHistory
+import site.addzero.vibepocket.model.by
 import java.time.LocalDateTime
 
 @Serializable
@@ -42,36 +42,33 @@ data class HistoryResponse(
 /**
  * 音乐历史相关路由
  */
-@Bean
-fun Route.historyRoutes() {
-    val sqlClient by inject<KSqlClient>()
-
-    route("/api/suno/history") {
-
-        post {
-            val req = call.receive<HistorySaveRequest>()
-            val tracksJson = kotlinx.serialization.json.Json.encodeToString(
-                kotlinx.serialization.builtins.ListSerializer(HistoryTrackDto.serializer()),
-                req.tracks
-            )
-            val entity = new(MusicHistory::class).by {
-                taskId = req.taskId
-                type = req.type
-                status = req.status
-                this.tracksJson = tracksJson
-                createdAt = LocalDateTime.now()
-            }
-            val saved = sqlClient.save(entity)
-            call.respond(saved.modifiedEntity.toHistoryResponse())
-        }
-
-        get {
-            val list = sqlClient.createQuery(MusicHistory::class) {
-                select(table)
-            }.execute()
-            call.respond(list.map { it.toHistoryResponse() })
-        }
+@PostMapping("/api/suno/history")
+suspend fun saveHistory(
+    @RequestBody request: HistorySaveRequest,
+): HistoryResponse {
+    val tracksJson = kotlinx.serialization.json.Json.encodeToString(
+        kotlinx.serialization.builtins.ListSerializer(HistoryTrackDto.serializer()),
+        request.tracks,
+    )
+    val entity = new(MusicHistory::class).by {
+        taskId = request.taskId
+        type = request.type
+        status = request.status
+        this.tracksJson = tracksJson
+        createdAt = LocalDateTime.now()
     }
+    val saved = sqlClient().save(entity)
+    return saved.modifiedEntity.toHistoryResponse()
+}
+
+@GetMapping("/api/suno/history")
+suspend fun listHistory(): List<HistoryResponse> {
+    return sqlClient()
+        .createQuery(MusicHistory::class) {
+            select(table)
+        }
+        .execute()
+        .map { it.toHistoryResponse() }
 }
 
 private fun MusicHistory.toHistoryResponse(): HistoryResponse {
@@ -91,4 +88,8 @@ private fun MusicHistory.toHistoryResponse(): HistoryResponse {
         tracks = tracks,
         createdAt = createdAt.toString(),
     )
+}
+
+private fun sqlClient(): KSqlClient {
+    return KoinPlatform.getKoin().get()
 }
