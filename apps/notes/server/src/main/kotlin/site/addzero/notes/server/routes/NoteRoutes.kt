@@ -1,14 +1,12 @@
 package site.addzero.notes.server.routes
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.ApplicationCall
-import io.ktor.server.response.respond
-import org.koin.ktor.ext.getKoin
+import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.starter.statuspages.ServiceUnavailableHttpException
 import site.addzero.notes.server.model.DataSourceHealthPayload
 import site.addzero.notes.server.model.NotePayload
 import site.addzero.notes.server.model.NoteUpsertRequest
@@ -18,32 +16,23 @@ import site.addzero.notes.server.store.JdbcNoteStore
 import site.addzero.notes.server.store.NoteStoreService
 
 @GetMapping("/api/notes/settings")
-fun readNoteSettings(call: ApplicationCall): StorageSettingsPayload {
-    return call.noteStoreService().readSettings()
+fun readNoteSettings(): StorageSettingsPayload {
+    return noteStoreService().readSettings()
 }
 
 @PutMapping("/api/notes/settings")
 fun updateNoteSettings(
-    call: ApplicationCall,
     @RequestBody request: StorageSettingsUpdateRequest,
 ): StorageSettingsPayload {
-    return call.noteStoreService().updateSettings(request)
+    return noteStoreService().updateSettings(request)
 }
 
 @GetMapping("/api/notes/{source}/health")
 fun readNoteHealth(
-    call: ApplicationCall,
     @PathVariable source: String,
 ): DataSourceHealthPayload {
-    val store = call.resolveStoreOrNull(source)
-    if (store == null) {
-        call.response.status(HttpStatusCode.NotFound)
-        return DataSourceHealthPayload(
-            source = source,
-            available = false,
-            message = "unknown source",
-        )
-    }
+    val store = resolveStoreOrNull(source)
+        ?: throw NoSuchElementException("unknown source")
 
     return DataSourceHealthPayload(
         source = source,
@@ -54,40 +43,30 @@ fun readNoteHealth(
 
 @GetMapping("/api/notes/{source}")
 fun listNotes(
-    call: ApplicationCall,
     @PathVariable source: String,
 ): List<NotePayload> {
-    val store = call.resolveStoreOrNull(source)
-    if (store == null) {
-        call.response.status(HttpStatusCode.NotFound)
-        return emptyList()
-    }
+    val store = resolveStoreOrNull(source)
+        ?: throw NoSuchElementException("unknown source")
     if (!store.isReady()) {
-        call.response.status(HttpStatusCode.ServiceUnavailable)
-        return emptyList()
+        throw ServiceUnavailableHttpException("source is not ready")
     }
 
     return store.listNotes()
 }
 
 @PutMapping("/api/notes/{source}/{id}")
-suspend fun upsertNote(
-    call: ApplicationCall,
+fun upsertNote(
     @PathVariable source: String,
     @PathVariable id: String,
     @RequestBody request: NoteUpsertRequest,
-) {
-    val store = call.resolveStoreOrNull(source)
-    if (store == null) {
-        call.respond(HttpStatusCode.NotFound)
-        return
-    }
+): NotePayload {
+    val store = resolveStoreOrNull(source)
+        ?: throw NoSuchElementException("unknown source")
     if (!store.isReady()) {
-        call.respond(HttpStatusCode.ServiceUnavailable)
-        return
+        throw ServiceUnavailableHttpException("source is not ready")
     }
 
-    val saved = store.upsertNote(
+    return store.upsertNote(
         NotePayload(
             id = if (request.id.isBlank()) id else request.id,
             path = request.path,
@@ -97,29 +76,23 @@ suspend fun upsertNote(
             version = request.version,
         ),
     )
-    call.respond(saved)
 }
 
 @DeleteMapping("/api/notes/{source}/{id}")
-suspend fun deleteNote(
-    call: ApplicationCall,
+fun deleteNote(
     @PathVariable source: String,
     @PathVariable id: String,
 ) {
-    val store = call.resolveStoreOrNull(source)
-    if (store == null) {
-        call.respond(HttpStatusCode.NotFound)
-        return
-    }
+    val store = resolveStoreOrNull(source)
+        ?: throw NoSuchElementException("unknown source")
 
     store.deleteNote(id)
-    call.respond(HttpStatusCode.NoContent)
 }
 
-private fun ApplicationCall.noteStoreService(): NoteStoreService {
-    return application.getKoin().get()
+private fun noteStoreService(): NoteStoreService {
+    return KoinPlatform.getKoin().get()
 }
 
-private fun ApplicationCall.resolveStoreOrNull(source: String): JdbcNoteStore? {
+private fun resolveStoreOrNull(source: String): JdbcNoteStore? {
     return noteStoreService().resolve(source)
 }

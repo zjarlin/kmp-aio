@@ -1,6 +1,7 @@
 package site.addzero.vibepocket.music
 
 import kotlinx.coroutines.test.runTest
+import site.addzero.vibepocket.api.MusicSearchApi
 import site.addzero.vibepocket.api.music.MusicLyric
 import site.addzero.vibepocket.api.music.MusicResolvedAsset
 import site.addzero.vibepocket.api.music.MusicTrack
@@ -23,7 +24,7 @@ class MusicSearchServiceTest {
             fileName = "song.mp3",
             contentType = "audio/mpeg",
         )
-        MusicSearchService.gateway = object : MusicSearchGateway {
+        MusicSearchService.api = object : MusicSearchApi {
             override suspend fun search(
                 provider: String,
                 keyword: String,

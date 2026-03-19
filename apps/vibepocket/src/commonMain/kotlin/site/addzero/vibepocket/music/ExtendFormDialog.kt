@@ -7,6 +7,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.vibepocket.api.suno.SunoExtendRequest
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
+import site.addzero.vibepocket.model.PersonaItem
 
 @Composable
 fun ExtendFormDialog(
@@ -30,11 +32,23 @@ fun ExtendFormDialog(
     var prompt by remember { mutableStateOf("") }
     var style by remember { mutableStateOf("") }
     var title by remember { mutableStateOf("") }
+    var personas by remember { mutableStateOf<List<PersonaItem>>(emptyList()) }
+    var selectedPersonaId by remember { mutableStateOf<String?>(null) }
+    var isRefreshingPersonas by remember { mutableStateOf(false) }
 
     var isSubmitting by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var resultDetail by remember { mutableStateOf<SunoTaskDetail?>(null) }
+
+    LaunchedEffect(Unit) {
+        isRefreshingPersonas = true
+        try {
+            personas = loadSavedPersonas()
+        } finally {
+            isRefreshingPersonas = false
+        }
+    }
 
     MusicActionDialog(
         title = "扩展音乐",
@@ -78,6 +92,30 @@ fun ExtendFormDialog(
                 placeholder = { Text("可选") },
                 singleLine = true,
             )
+            DialogHint("Persona 声音角色")
+            PersonaSelectionPanel(
+                personas = personas,
+                selectedPersonaId = selectedPersonaId,
+                onPersonaChange = { selectedPersonaId = it },
+                onRefresh = {
+                    scope.launch {
+                        if (isRefreshingPersonas) {
+                            return@launch
+                        }
+                        isRefreshingPersonas = true
+                        try {
+                            personas = loadSavedPersonas()
+                            if (!personas.containsPersona(selectedPersonaId)) {
+                                selectedPersonaId = null
+                            }
+                        } finally {
+                            isRefreshingPersonas = false
+                        }
+                    }
+                },
+                isRefreshing = isRefreshingPersonas,
+                emptyMessage = "还没有 Persona。先从已生成音轨创建一个，再回来做续写。",
+            )
             Button(
                 onClick = {
                     if (isSubmitting) {
@@ -95,10 +133,16 @@ fun ExtendFormDialog(
                                 style = style.ifBlank { null },
                                 title = title.ifBlank { null },
                                 continueAt = continueAtText.toIntOrNull(),
+                                personaId = selectedPersonaId,
                             )
 
                             val detail = SunoWorkflowService.submitTask(
-                                submit = { client -> client.extendMusic(request) },
+                                actionLabel = "提交扩展",
+                                submit = { client, callbackUrl ->
+                                    client.extendMusic(
+                                        request.copy(callBackUrl = callbackUrl)
+                                    )
+                                },
                                 onStatusUpdate = { status, _ ->
                                     statusText = status
                                 },

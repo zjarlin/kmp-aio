@@ -1,7 +1,7 @@
 package com.kcloud.app
 
-import com.kcloud.plugin.KCloudServerPlugin
-import com.kcloud.plugin.ShellLocalServerService
+import com.kcloud.feature.KCloudServerFeature
+import com.kcloud.feature.ShellLocalServerService
 import com.kcloud.app.generated.springktor.registerGeneratedSpringRoutes
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -18,16 +18,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
+import site.addzero.starter.statuspages.installDefaultStatusPages
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.logging.Logger
 
-@Single
+@Single(binds = [ShellLocalServerService::class])
 class KCloudHttpServer(
-    serverPlugins: List<KCloudServerPlugin>
+    serverFeatures: List<KCloudServerFeature>
 ) : ShellLocalServerService {
     private val logger = Logger.getLogger(KCloudHttpServer::class.java.name)
-    private val serverPlugins = serverPlugins.sortedBy { it.order }
+    private val serverFeatures = serverFeatures.sortedBy { it.order }
     private var server: EmbeddedServer<*, *>? = null
     private var port: Int? = null
     private val _baseUrl = MutableStateFlow<String?>(null)
@@ -54,6 +55,7 @@ class KCloudHttpServer(
                     }
                 )
             }
+            installDefaultStatusPages()
             install(CORS) {
                 anyHost()
                 allowHeader(HttpHeaders.ContentType)
@@ -62,8 +64,8 @@ class KCloudHttpServer(
             }
             routing {
                 registerGeneratedSpringRoutes()
-                serverPlugins.forEach { plugin ->
-                    plugin.installHttp(this)
+                serverFeatures.forEach { feature ->
+                    feature.installHttp(this)
                 }
             }
         }.start(wait = wait)

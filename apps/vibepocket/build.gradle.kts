@@ -11,14 +11,13 @@ plugins {
 }
 
 dependencies {
-    kspCommonMainMetadata(libs.site.addzero.ioc.processor)
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:plugin-api"))
-            implementation(libs.site.addzero.ioc.core)
+            implementation(project(":apps:vibepocket:shared"))
+            implementation(project(":apps:kcloud:features:feature-api"))
             implementation(project(":lib:media-playlist-player"))
             implementation(project(":lib:vibepocket-ui"))
             implementation(project(":lib:glass-components"))

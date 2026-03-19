@@ -48,7 +48,12 @@ fun VocalRemovalConfirmDialog(
                                 audioId = audioId,
                             )
                             val detail = SunoWorkflowService.submitTask(
-                                submit = { client -> client.vocalRemoval(request) },
+                                actionLabel = "提交人声分离",
+                                submit = { client, callbackUrl ->
+                                    client.vocalRemoval(
+                                        request.copy(callBackUrl = callbackUrl)
+                                    )
+                                },
                                 onStatusUpdate = { status, _ ->
                                     statusText = status
                                 },

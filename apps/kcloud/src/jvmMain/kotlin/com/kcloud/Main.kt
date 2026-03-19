@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
-import com.kcloud.plugins.desktop.system.isSystemTraySupported
+import com.kcloud.features.desktop.system.isSystemTraySupported
 import com.kcloud.ui.MainWindow
 
 fun main() {

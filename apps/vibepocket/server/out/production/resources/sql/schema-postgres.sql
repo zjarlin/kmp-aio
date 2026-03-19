@@ -61,6 +61,26 @@ CREATE TABLE IF NOT EXISTS music_history (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- suno_task_resource 表
+CREATE TABLE IF NOT EXISTS suno_task_resource (
+    id BIGSERIAL PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'generate',
+    status TEXT NOT NULL,
+    request_json TEXT,
+    tracks_json TEXT NOT NULL DEFAULT '[]',
+    detail_json TEXT,
+    error_message TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_suno_task_resource_task_id
+    ON suno_task_resource(task_id);
+
+CREATE INDEX IF NOT EXISTS idx_suno_task_resource_updated_at
+    ON suno_task_resource(updated_at);
+
 -- persona_record 表
 CREATE TABLE IF NOT EXISTS persona_record (
     id BIGSERIAL PRIMARY KEY,

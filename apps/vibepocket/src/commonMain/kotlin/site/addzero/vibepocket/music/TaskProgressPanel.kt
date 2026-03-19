@@ -5,19 +5,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,7 +32,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -42,6 +41,7 @@ import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
 import site.addzero.vibepocket.model.FavoriteRequest
+import site.addzero.vibepocket.model.PersonaItem
 import site.addzero.vibepocket.model.TrackAction
 import site.addzero.vibepocket.ui.StudioEmptyState
 import site.addzero.vibepocket.ui.StudioMetricCard
@@ -50,10 +50,15 @@ import site.addzero.vibepocket.ui.StudioSectionCard
 @Composable
 fun TaskProgressPanel(
     submittedJson: String?,
+    submittedTaskId: String? = null,
+    taskArchiveStatus: String? = null,
     taskStatus: String,
     taskDetail: SunoTaskDetail? = null,
+    fallbackType: String = "generate",
+    onCancelWait: (() -> Unit)? = null,
+    onPersonaCreated: (PersonaItem) -> Unit = {},
 ) {
-    val tracks = taskDetail?.response?.sunoData ?: emptyList()
+    val baseTaskId = submittedTaskId ?: taskDetail?.taskId
     val scope = rememberCoroutineScope()
 
     var extendDialogTrack by remember { mutableStateOf<Pair<String, String>?>(null) }
@@ -63,13 +68,44 @@ fun TaskProgressPanel(
     var replaceSectionDialogTrack by remember { mutableStateOf<Pair<String, String>?>(null) }
     var wavExportDialogTrack by remember { mutableStateOf<Pair<String, String>?>(null) }
     var boostStyleDialogTrack by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var refreshedTaskDetail by remember(baseTaskId) { mutableStateOf<SunoTaskDetail?>(null) }
+    var refreshedArchiveStatus by remember(baseTaskId) { mutableStateOf<String?>(null) }
+    var remoteLookupMessage by remember(baseTaskId) { mutableStateOf<String?>(null) }
+    var isRefreshingRemoteTask by remember(baseTaskId) { mutableStateOf(false) }
 
     val favoriteSet = remember { mutableStateMapOf<String, Boolean>() }
+    val effectiveTaskDetail = refreshedTaskDetail ?: taskDetail
+    val effectiveTaskId = submittedTaskId ?: effectiveTaskDetail?.taskId
+    val effectiveArchiveStatus = refreshedArchiveStatus ?: taskArchiveStatus
+    val effectiveTaskStatus = refreshedTaskDetail?.displayStatus ?: taskStatus
+    val tracks = effectiveTaskDetail?.response?.sunoData ?: emptyList()
 
     LaunchedEffect(Unit) {
-        val favorites = ServerApiClient.getFavorites()
+        val favorites = ServerApiClient.favoriteApi.getFavorites()
         favorites.forEach { favorite ->
             favoriteSet[favorite.trackId] = true
+        }
+    }
+
+    fun refreshTaskById() {
+        val taskId = effectiveTaskId ?: return
+        scope.launch {
+            isRefreshingRemoteTask = true
+            remoteLookupMessage = null
+            try {
+                val refreshedSnapshot = refreshSunoTaskSnapshotById(
+                    taskId = taskId,
+                    fallbackType = fallbackType,
+                    requestJson = submittedJson,
+                )
+                refreshedTaskDetail = refreshedSnapshot.detail
+                refreshedArchiveStatus = refreshedSnapshot.archiveStatus
+                remoteLookupMessage = "已按 taskId 从 Suno 刷新：${refreshedSnapshot.detail.displayStatus}"
+            } catch (error: Exception) {
+                remoteLookupMessage = "按 taskId 查询失败：${SunoWorkflowService.errorMessage(error)}"
+            } finally {
+                isRefreshingRemoteTask = false
+            }
         }
     }
 
@@ -77,9 +113,9 @@ fun TaskProgressPanel(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(20.dp)
+                .padding(14.dp)
                 .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
                 text = "任务面板",
@@ -89,31 +125,28 @@ fun TaskProgressPanel(
             )
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 StudioMetricCard(
                     label = "音轨数",
                     value = tracks.size.toString(),
-                    supporting = "生成结果",
                     modifier = Modifier.width(120.dp),
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                 )
                 StudioMetricCard(
                     label = "状态",
-                    value = taskDetail?.displayStatus?.take(4) ?: taskStatus.take(4),
-                    supporting = "当前任务",
+                    value = effectiveTaskDetail?.displayStatus?.take(4) ?: effectiveTaskStatus.take(4),
                     modifier = Modifier.width(120.dp),
                     containerColor = when {
-                        taskDetail?.isSuccess == true -> MaterialTheme.colorScheme.primaryContainer
-                        taskDetail?.isFailed == true -> MaterialTheme.colorScheme.errorContainer
+                        effectiveTaskDetail?.isSuccess == true -> MaterialTheme.colorScheme.primaryContainer
+                        effectiveTaskDetail?.isFailed == true -> MaterialTheme.colorScheme.errorContainer
                         else -> MaterialTheme.colorScheme.secondaryContainer
                     },
                 )
-                taskDetail?.firstTrack?.duration?.let { firstDuration ->
+                effectiveTaskDetail?.firstTrack?.duration?.let { firstDuration ->
                     StudioMetricCard(
                         label = "时长",
                         value = "${firstDuration.toInt()}s",
-                        supporting = "首条音轨",
                         modifier = Modifier.width(120.dp),
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                     )
@@ -121,11 +154,79 @@ fun TaskProgressPanel(
             }
 
             StudioSectionCard(
+                title = "任务标识",
+                subtitle = "taskId 会贯穿轮询、回调恢复和后台任务建档，生成完成后再补齐结果资源。",
+            ) {
+                if (effectiveTaskId.isNullOrBlank()) {
+                    Text(
+                        text = "任务提交成功后，这里会显示 Suno 返回的 taskId。",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    ) {
+                        SelectionContainer {
+                            Text(
+                                text = effectiveTaskId,
+                                modifier = Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontFamily = FontFamily.Monospace,
+                            )
+                        }
+                    }
+                    effectiveArchiveStatus?.let { archiveStatus ->
+                        Text(
+                            text = "后台记录：$archiveStatus",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (archiveStatus.startsWith("建档失败")) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                    remoteLookupMessage?.let { message ->
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (message.startsWith("按 taskId 查询失败")) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
+                        )
+                    }
+                }
+            }
+
+            StudioSectionCard(
                 title = "当前状态",
                 subtitle = "任务轮询会实时更新这里的文案。",
+                action = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (!effectiveTaskId.isNullOrBlank()) {
+                            OutlinedButton(
+                                onClick = ::refreshTaskById,
+                                enabled = !isRefreshingRemoteTask,
+                            ) {
+                                Text(if (isRefreshingRemoteTask) "查询中..." else "按 taskId 查询")
+                            }
+                        }
+                        if (onCancelWait != null) {
+                            OutlinedButton(onClick = onCancelWait) {
+                                Text("取消等待")
+                            }
+                        }
+                    }
+                },
             ) {
                 Text(
-                    text = taskStatus,
+                    text = effectiveTaskStatus,
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -138,17 +239,17 @@ fun TaskProgressPanel(
                 fontWeight = FontWeight.SemiBold,
             )
 
-            if (taskDetail?.isSuccess == true && tracks.isNotEmpty()) {
+            if (effectiveTaskDetail?.isSuccess == true && tracks.isNotEmpty()) {
                 DefaultPlaylistPlayer(
                     items = tracks,
                     itemKey = { track ->
-                        track.playbackId(taskDetail.taskId ?: "task")
+                        track.playbackId(effectiveTaskId ?: "task")
                     },
                     titleOf = { track ->
                         track.displayTitle()
                     },
                     subtitleOf = { track ->
-                        track.displaySubtitle(taskDetail.taskId?.take(8))
+                        track.displaySubtitle(effectiveTaskId?.take(8))
                     },
                     durationMsOf = { track ->
                         track.durationMsOrNull()
@@ -156,12 +257,15 @@ fun TaskProgressPanel(
                     coverUrlOf = { track ->
                         track.imageUrl
                     },
+                    hasResolvableAudioOf = { track ->
+                        !track.audioUrl.isNullOrBlank() || !track.streamAudioUrl.isNullOrBlank()
+                    },
                     resolveAudioSource = { track ->
                         track.resolvedAudioSource()
                     },
                     itemActions = { track, _ ->
                         val trackId = track.id
-                        var menuExpanded by remember(track.playbackId(taskDetail.taskId ?: "task")) {
+                        var menuExpanded by remember(track.playbackId(effectiveTaskId ?: "task")) {
                             mutableStateOf(false)
                         }
 
@@ -172,13 +276,13 @@ fun TaskProgressPanel(
                                     scope.launch {
                                         try {
                                             if (isFavorite) {
-                                                ServerApiClient.removeFavorite(trackId)
+                                                ServerApiClient.favoriteApi.removeFavorite(trackId)
                                                 favoriteSet.remove(trackId)
                                             } else {
-                                                ServerApiClient.addFavorite(
+                                                ServerApiClient.favoriteApi.addFavorite(
                                                     FavoriteRequest(
                                                         trackId = trackId,
-                                                        taskId = taskDetail.taskId ?: "",
+                                                        taskId = effectiveTaskId ?: "",
                                                         audioUrl = track.audioUrl,
                                                         title = track.title,
                                                         tags = track.tags,
@@ -218,7 +322,7 @@ fun TaskProgressPanel(
                                     onDismiss = { menuExpanded = false },
                                     onAction = { action ->
                                         menuExpanded = false
-                                        val trackTaskId = taskDetail.taskId ?: ""
+                                        val trackTaskId = effectiveTaskId ?: ""
                                         when (action) {
                                             TrackAction.EXTEND -> extendDialogTrack = trackId to trackTaskId
                                             TrackAction.VOCAL_REMOVAL -> vocalRemovalDialogTrack = trackId to trackTaskId
@@ -234,18 +338,18 @@ fun TaskProgressPanel(
                         }
                     },
                 )
-            } else if (taskDetail?.isFailed == true) {
+            } else if (effectiveTaskDetail?.isFailed == true) {
                 StudioEmptyState(
                     icon = "⚠",
                     title = "任务失败",
-                    description = taskDetail.errorMessage ?: taskDetail.errorCode ?: "未知错误",
+                    description = effectiveTaskDetail.errorMessage ?: effectiveTaskDetail.errorCode ?: "未知错误",
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 StudioEmptyState(
                     icon = "⏳",
                     title = "等待生成结果",
-                    description = if (taskDetail?.isProcessing == true) {
+                    description = if (effectiveTaskDetail?.isProcessing == true) {
                         "正在生成中，请稍候..."
                     } else {
                         "等待提交..."
@@ -270,18 +374,20 @@ fun TaskProgressPanel(
                         shape = RoundedCornerShape(16.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp)
-                                .horizontalScroll(rememberScrollState()),
-                        ) {
-                            Text(
-                                text = submittedJson,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontFamily = FontFamily.Monospace,
-                            )
+                        SelectionContainer {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp)
+                                    .horizontalScroll(rememberScrollState()),
+                            ) {
+                                Text(
+                                    text = submittedJson,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontFamily = FontFamily.Monospace,
+                                )
+                            }
                         }
                     }
                 }
@@ -317,6 +423,7 @@ fun TaskProgressPanel(
         PersonaFormDialog(
             audioId = audioId,
             taskId = taskId,
+            onCreated = onPersonaCreated,
             onDismiss = { personaDialogTrack = null },
         )
     }

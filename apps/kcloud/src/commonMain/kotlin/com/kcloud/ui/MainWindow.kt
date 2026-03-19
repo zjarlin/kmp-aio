@@ -36,17 +36,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kcloud.app.KCloudPluginRegistry
+import com.kcloud.app.KCloudFeatureRegistry
 import com.kcloud.app.KCloudShellState
-import com.kcloud.plugin.KCloudMenuNode
-import com.kcloud.plugin.ShellSettingsService
-import com.kcloud.plugin.ShellThemeMode
+import com.kcloud.feature.KCloudMenuNode
+import com.kcloud.feature.ShellSettingsService
+import com.kcloud.feature.ShellThemeMode
 import com.kcloud.ui.theme.KCloudTheme
 import org.koin.compose.koinInject
 
 @Composable
 fun MainWindow(
-    pluginRegistry: KCloudPluginRegistry = koinInject(),
+    featureRegistry: KCloudFeatureRegistry = koinInject(),
     shellState: KCloudShellState = koinInject(),
     shellSettingsService: ShellSettingsService = koinInject()
 ) {
@@ -54,7 +54,7 @@ fun MainWindow(
     val expandedMenuIds by shellState.expandedMenuIds.collectAsState()
     val themeMode by shellSettingsService.themeMode.collectAsState()
 
-    val selectedNode = pluginRegistry.findLeaf(selectedMenuId)
+    val selectedNode = featureRegistry.findLeaf(selectedMenuId)
 
     KCloudTheme(
         darkTheme = when (themeMode) {
@@ -68,8 +68,8 @@ fun MainWindow(
             color = MaterialTheme.colorScheme.background
         ) {
             Row(modifier = Modifier.fillMaxSize()) {
-                PluginSidebar(
-                    nodes = pluginRegistry.menuTree,
+                FeatureSidebar(
+                    nodes = featureRegistry.menuTree,
                     selectedId = selectedMenuId,
                     expandedIds = expandedMenuIds,
                     onLeafClick = shellState::selectMenu,
@@ -93,7 +93,7 @@ fun MainWindow(
 }
 
 @Composable
-private fun PluginSidebar(
+private fun FeatureSidebar(
     nodes: List<KCloudMenuNode>,
     selectedId: String,
     expandedIds: Set<String>,
@@ -123,7 +123,7 @@ private fun PluginSidebar(
                 .verticalScroll(rememberScrollState())
         ) {
             nodes.forEach { node ->
-                MenuNodeRow(
+                FeatureMenuRow(
                     node = node,
                     selectedId = selectedId,
                     expandedIds = expandedIds,
@@ -141,12 +141,12 @@ private fun PluginSidebar(
         ) {
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
-                    text = "插件化壳层",
+                    text = "模块化壳层",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer
                 )
                 Text(
-                    text = "功能由插件聚合",
+                    text = "功能由 feature 聚合",
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -156,7 +156,7 @@ private fun PluginSidebar(
 }
 
 @Composable
-private fun MenuNodeRow(
+private fun FeatureMenuRow(
     node: KCloudMenuNode,
     selectedId: String,
     expandedIds: Set<String>,
@@ -226,7 +226,7 @@ private fun MenuNodeRow(
 
     if (isExpanded) {
         node.children.forEach { child ->
-            MenuNodeRow(
+            FeatureMenuRow(
                 node = child,
                 selectedId = selectedId,
                 expandedIds = expandedIds,

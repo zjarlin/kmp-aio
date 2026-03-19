@@ -5,12 +5,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -97,7 +92,12 @@ fun ReplaceSectionFormDialog(
                                 replaceEnd = replaceEndText.toIntOrNull(),
                             )
                             val detail = SunoWorkflowService.submitTask(
-                                submit = { client -> client.replaceSection(request) },
+                                actionLabel = "提交片段替换",
+                                submit = { client, callbackUrl ->
+                                    client.replaceSection(
+                                        request.copy(callBackUrl = callbackUrl)
+                                    )
+                                },
                                 onStatusUpdate = { status, _ ->
                                     statusText = status
                                 },

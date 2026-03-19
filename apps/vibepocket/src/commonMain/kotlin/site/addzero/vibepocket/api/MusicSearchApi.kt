@@ -8,6 +8,8 @@ import de.jensklingenberg.ktorfit.http.Query
 import site.addzero.vibepocket.api.music.MusicLyric
 import site.addzero.vibepocket.api.music.MusicResolvedAsset
 import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.vibepocket.music.UploadCoverSourcePrepareRequest
+import site.addzero.vibepocket.music.UploadCoverSourcePrepareResponse
 
 interface MusicSearchApi {
 
@@ -26,4 +28,10 @@ interface MusicSearchApi {
     @Headers("Content-Type: application/json")
     @POST("api/music/resolve")
     suspend fun resolve(@Body track: MusicTrack): MusicResolvedAsset
+
+    @Headers("Content-Type: application/json")
+    @POST("api/music/upload-cover-source/prepare")
+    suspend fun prepareUploadCoverSource(
+        @Body request: UploadCoverSourcePrepareRequest,
+    ): UploadCoverSourcePrepareResponse
 }

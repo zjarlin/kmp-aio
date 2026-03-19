@@ -5,6 +5,8 @@ import site.addzero.vibepocket.api.suno.SunoTrack
 import site.addzero.vibepocket.model.FavoriteItem
 import site.addzero.vibepocket.model.MusicHistoryItem
 import site.addzero.vibepocket.model.MusicHistoryTrack
+import site.addzero.vibepocket.model.SunoTaskResourceItem
+import site.addzero.vibepocket.model.SunoTaskResourceTrack
 
 internal data class HistoryPlaylistEntry(
     val taskId: String,
@@ -15,6 +17,11 @@ internal data class HistoryPlaylistEntry(
 
 internal data class FavoritePlaylistEntry(
     val item: FavoriteItem,
+    val track: SunoTrack,
+)
+
+internal data class TaskResourcePlaylistEntry(
+    val item: SunoTaskResourceItem,
     val track: SunoTrack,
 )
 
@@ -70,6 +77,15 @@ internal fun FavoriteItem.toPlaylistEntry(): FavoritePlaylistEntry {
     )
 }
 
+internal fun SunoTaskResourceItem.toPlaylistEntries(): List<TaskResourcePlaylistEntry> {
+    return tracks.map { track ->
+        TaskResourcePlaylistEntry(
+            item = this,
+            track = track.toSunoTrack(),
+        )
+    }
+}
+
 internal fun MusicHistoryTrack.toSunoTrack(): SunoTrack = SunoTrack(
     id = id,
     audioUrl = audioUrl,
@@ -82,6 +98,16 @@ internal fun MusicHistoryTrack.toSunoTrack(): SunoTrack = SunoTrack(
 internal fun FavoriteItem.toSunoTrack(): SunoTrack = SunoTrack(
     id = trackId,
     audioUrl = audioUrl,
+    title = title,
+    tags = tags,
+    imageUrl = imageUrl,
+    duration = duration,
+)
+
+internal fun SunoTaskResourceTrack.toSunoTrack(): SunoTrack = SunoTrack(
+    id = id,
+    audioUrl = audioUrl,
+    streamAudioUrl = streamAudioUrl,
     title = title,
     tags = tags,
     imageUrl = imageUrl,

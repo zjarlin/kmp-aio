@@ -25,6 +25,7 @@ class PlaylistPlayerControllerTest {
             subtitleOf = { "Artist" },
             durationMsOf = { 120_000L },
             coverUrlOf = { null },
+            hasResolvableAudioOf = { true },
             resolveAudioSource = {
                 resolveCalls += 1
                 PlaylistAudioSource(url = "https://example.com/$it.mp3")
@@ -62,6 +63,7 @@ class PlaylistPlayerControllerTest {
             subtitleOf = { "Nobody" },
             durationMsOf = { null },
             coverUrlOf = { null },
+            hasResolvableAudioOf = { true },
             resolveAudioSource = {
                 resolveCalls += 1
                 PlaylistAudioSource(
@@ -98,6 +100,7 @@ class PlaylistPlayerControllerTest {
             subtitleOf = { "Artist" },
             durationMsOf = { 90_000L },
             coverUrlOf = { null },
+            hasResolvableAudioOf = { true },
             resolveAudioSource = { track ->
                 PlaylistAudioSource(url = "https://example.com/$track.mp3")
             },
@@ -130,6 +133,7 @@ class PlaylistPlayerControllerTest {
             subtitleOf = { "Artist" },
             durationMsOf = { 90_000L },
             coverUrlOf = { null },
+            hasResolvableAudioOf = { true },
             resolveAudioSource = { track ->
                 PlaylistAudioSource(url = "https://example.com/$track.mp3")
             },
@@ -163,6 +167,7 @@ class PlaylistPlayerControllerTest {
             subtitleOf = { "Artist" },
             durationMsOf = { 90_000L },
             coverUrlOf = { null },
+            hasResolvableAudioOf = { true },
             resolveAudioSource = {
                 resolveCalls += 1
                 PlaylistAudioSource(url = "https://example.com/$it.mp3")

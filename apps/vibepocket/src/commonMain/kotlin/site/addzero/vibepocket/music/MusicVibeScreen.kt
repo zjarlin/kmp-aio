@@ -18,6 +18,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -30,14 +32,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import site.addzero.ioc.annotation.Bean
-import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoGenerateRequest
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
-import site.addzero.vibepocket.model.MusicHistorySaveRequest
-import site.addzero.vibepocket.model.MusicHistoryTrack
 import site.addzero.vibepocket.model.PersonaItem
 import site.addzero.vibepocket.ui.StudioPill
 import site.addzero.vibepocket.ui.StudioSectionCard
@@ -49,9 +50,113 @@ private val prettyJson = Json {
     ignoreUnknownKeys = true
 }
 
+private enum class MusicStudioTab(
+    val title: String,
+    val subtitle: String,
+) {
+    COVER(
+        title = "翻唱",
+        subtitle = "贴 URL 直接翻唱，默认打开这一栏。",
+    ),
+    GENERATE(
+        title = "生成音乐",
+        subtitle = "先整理歌词，再补 persona 和 vibe 参数。",
+    ),
+}
+
 @Composable
-@Bean(tags = ["screen"])
 fun MusicVibeScreen() {
+    val scope = rememberCoroutineScope()
+    var selectedTab by remember { mutableStateOf(MusicStudioTab.COVER) }
+    var credits by remember { mutableStateOf<Int?>(null) }
+    var isLoadingCredits by remember { mutableStateOf(false) }
+
+    fun refreshCredits() {
+        scope.launch {
+            val config = runCatching { SunoWorkflowService.loadConfig() }
+                .getOrDefault(SunoRuntimeConfig())
+            if (!config.hasToken) {
+                isLoadingCredits = false
+                credits = null
+                return@launch
+            }
+            isLoadingCredits = true
+            try {
+                credits = SunoWorkflowService.getCreditsOrNull()
+            } finally {
+                isLoadingCredits = false
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        refreshCredits()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        StudioPill(
+            text = "Music Studio",
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Text(
+                text = "音乐工作台",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontWeight = FontWeight.Bold,
+            )
+            CreditsBar(
+                credits = credits,
+                isLoading = isLoadingCredits,
+            )
+        }
+        Text(
+            text = "生成音乐和翻唱统一放在一个界面里切 tab，不再拆成两个侧边栏菜单。",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        TabRow(selectedTabIndex = selectedTab.ordinal) {
+            MusicStudioTab.entries.forEach { tab ->
+                Tab(
+                    selected = selectedTab == tab,
+                    onClick = { selectedTab = tab },
+                    text = { Text(tab.title) },
+                )
+            }
+        }
+        Text(
+            text = selectedTab.subtitle,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            when (selectedTab) {
+                MusicStudioTab.COVER -> UploadCoverWorkbench(
+                    onCreditsRefresh = ::refreshCredits,
+                )
+                MusicStudioTab.GENERATE -> GenerateMusicWorkbench(
+                    onCreditsRefresh = ::refreshCredits,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GenerateMusicWorkbench(
+    onCreditsRefresh: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
 
     var currentStep by remember { mutableStateOf(VibeStep.LYRICS) }
@@ -67,16 +172,67 @@ fun MusicVibeScreen() {
     var gptDescriptionPrompt by remember { mutableStateOf("") }
     var personas by remember { mutableStateOf<List<PersonaItem>>(emptyList()) }
     var selectedPersonaId by remember { mutableStateOf<String?>(null) }
+    var isRefreshingPersonas by remember { mutableStateOf(false) }
+    var vibeFormHistory by remember { mutableStateOf<List<SavedVibeFormDraft>>(emptyList()) }
 
     var submittedJson by remember { mutableStateOf<String?>(null) }
+    var submittedTaskId by remember { mutableStateOf<String?>(null) }
+    var taskArchiveStatus by remember { mutableStateOf<String?>(null) }
     var taskStatus by remember { mutableStateOf("未提交") }
     var isSubmitted by remember { mutableStateOf(false) }
     var taskDetail by remember { mutableStateOf<SunoTaskDetail?>(null) }
     var isSubmitting by remember { mutableStateOf(false) }
+    var submissionJob by remember { mutableStateOf<Job?>(null) }
 
-    var credits by remember { mutableStateOf<Int?>(null) }
-    var isLoadingCredits by remember { mutableStateOf(false) }
     var sunoConfig by remember { mutableStateOf(SunoRuntimeConfig()) }
+
+    fun acceptPersonas(loaded: List<PersonaItem>) {
+        personas = loaded
+        if (!loaded.containsPersona(selectedPersonaId)) {
+            selectedPersonaId = null
+        }
+    }
+
+    fun applyCreatedPersona(persona: PersonaItem) {
+        personas = personas.upsertPersona(persona)
+        selectedPersonaId = persona.personaId
+        currentStep = VibeStep.PARAMS
+    }
+
+    fun applySavedDraft(draft: SavedVibeFormDraft) {
+        lyrics = draft.lyrics
+        songName = draft.songName
+        artistName = draft.artistName
+        title = draft.title
+        tags = draft.tags
+        mv = draft.mv
+        makeInstrumental = draft.makeInstrumental
+        vocalGender = draft.vocalGender
+        negativeTags = draft.negativeTags
+        gptDescriptionPrompt = draft.gptDescriptionPrompt
+        selectedPersonaId = draft.selectedPersonaId
+        if (!personas.containsPersona(selectedPersonaId)) {
+            selectedPersonaId = null
+        }
+    }
+
+    fun shouldRestoreDraft(): Boolean {
+        return lyrics.isBlank() &&
+            songName.isBlank() &&
+            artistName.isBlank() &&
+            title.isBlank() &&
+            tags.isBlank() &&
+            negativeTags.isBlank() &&
+            gptDescriptionPrompt.isBlank() &&
+            !makeInstrumental &&
+            selectedPersonaId == null &&
+            mv == "V4_5" &&
+            vocalGender == "m"
+    }
+
+    fun cancelSubmission() {
+        submissionJob?.cancel(CancellationException("用户取消等待"))
+    }
 
     LaunchedEffect(Unit) {
         sunoConfig = try {
@@ -84,47 +240,41 @@ fun MusicVibeScreen() {
         } catch (_: Exception) {
             SunoRuntimeConfig()
         }
-        personas = try {
-            ServerApiClient.getPersonas()
-        } catch (_: Exception) {
-            emptyList()
+        isRefreshingPersonas = true
+        acceptPersonas(
+            try {
+                loadSavedPersonas()
+            } catch (_: Exception) {
+                emptyList()
+            },
+        )
+        isRefreshingPersonas = false
+
+        vibeFormHistory = runCatching { loadVibeFormHistory() }.getOrDefault(emptyList())
+        if (shouldRestoreDraft()) {
+            vibeFormHistory.firstOrNull()?.let(::applySavedDraft)
         }
 
-        if (!sunoConfig.hasToken) {
-            credits = null
-        } else {
-            isLoadingCredits = true
-            credits = SunoWorkflowService.getCreditsOrNull()
-            isLoadingCredits = false
+    }
+
+    LaunchedEffect(submittedTaskId, taskDetail?.status, submittedJson) {
+        val taskId = submittedTaskId ?: return@LaunchedEffect
+        val requestJson = submittedJson ?: return@LaunchedEffect
+        taskArchiveStatus = "建档中..."
+        taskArchiveStatus = runCatching {
+            saveSunoTaskArchive(
+                taskId = taskId,
+                fallbackType = "generate",
+                requestJson = requestJson,
+                detail = taskDetail,
+            ).archiveStatusText()
+        }.getOrElse { error ->
+            error.archiveFailureText()
         }
     }
 
     LaunchedEffect(taskDetail?.taskId, taskDetail?.isSuccess) {
-        val detail = taskDetail ?: return@LaunchedEffect
-        if (!detail.isSuccess) return@LaunchedEffect
-        val taskId = detail.taskId ?: return@LaunchedEffect
-        val tracks = detail.response?.sunoData ?: emptyList()
-        try {
-            ServerApiClient.saveHistory(
-                MusicHistorySaveRequest(
-                    taskId = taskId,
-                    type = detail.type ?: "generate",
-                    status = detail.status ?: "SUCCESS",
-                    tracks = tracks.map { track ->
-                        MusicHistoryTrack(
-                            id = track.id,
-                            audioUrl = track.audioUrl,
-                            title = track.title,
-                            tags = track.tags,
-                            imageUrl = track.imageUrl,
-                            duration = track.duration,
-                        )
-                    },
-                ),
-            )
-        } catch (_: Exception) {
-            // 保存历史失败不阻断主流程
-        }
+        persistSunoHistoryIfSuccess(taskDetail)
     }
 
     Row(modifier = Modifier.fillMaxSize()) {
@@ -132,13 +282,13 @@ fun MusicVibeScreen() {
             modifier = Modifier
                 .weight(if (isSubmitted) 0.52f else 1f)
                 .fillMaxHeight()
-                .padding(24.dp),
+                .padding(12.dp),
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 StudioPill(
                     text = if (currentStep == VibeStep.LYRICS) "Step 1 / Lyrics" else "Step 2 / Vibe",
@@ -146,29 +296,52 @@ fun MusicVibeScreen() {
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
                 Text(
-                    text = "Music Vibe",
-                    style = MaterialTheme.typography.headlineLarge,
+                    text = "生成音乐",
+                    style = MaterialTheme.typography.headlineMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = "把歌词、风格和 persona 串成一条清晰的音乐生成流程。",
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                CreditsBar(
-                    credits = credits,
-                    isLoading = isLoadingCredits,
                 )
 
                 if (!sunoConfig.hasToken) {
                     StudioSectionCard(
                         title = "Suno 尚未配置",
-                        subtitle = "搜索、试听和下载仍然可用；只有提交生成前需要先配置 Token。",
+                        subtitle = "搜索、试听和下载仍然可用；提交生成前至少要先配置 Token。",
                     ) {
                         SunoTokenApplyHint(
                             intro = "还没配置 Suno API Token。没申请过的话，可以先去控制台申请。",
+                        )
+                    }
+                }
+
+                if (sunoConfig.hasToken && !sunoConfig.hasCallbackUrl) {
+                    StudioSectionCard(
+                        title = "Callback URL 可选但推荐",
+                        subtitle = "不填也能正常提交并轮询；只有在 Suno 提交响应被中断时，才会少一层自动恢复能力。",
+                    ) {
+                        Text(
+                            text = "如果你想在网络抖动或 EOF 场景下自动找回 taskId，可以在设置页补一个公网 HTTPS Callback URL。临时调试可以先用 Cloudflare Tunnel。",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+
+                if (vibeFormHistory.isNotEmpty()) {
+                    StudioSectionCard(
+                        title = "最近填写",
+                        subtitle = "点一下直接回填，上次的 Vibe 参数不用重新打。",
+                    ) {
+                        RecentFormHistoryChips(
+                            labels = vibeFormHistory.map { it.chipLabel() },
+                            onSelectIndex = { index ->
+                                vibeFormHistory.getOrNull(index)?.let(::applySavedDraft)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     }
                 }
@@ -204,13 +377,27 @@ fun MusicVibeScreen() {
                             personas = personas,
                             selectedPersonaId = selectedPersonaId,
                             onPersonaChange = { selectedPersonaId = it },
+                            onRefreshPersonas = {
+                                scope.launch {
+                                    if (isRefreshingPersonas) {
+                                        return@launch
+                                    }
+                                    isRefreshingPersonas = true
+                                    try {
+                                        acceptPersonas(loadSavedPersonas())
+                                    } finally {
+                                        isRefreshingPersonas = false
+                                    }
+                                }
+                            },
+                            isRefreshingPersonas = isRefreshingPersonas,
                         )
                     }
                 }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (currentStep == VibeStep.PARAMS) {
@@ -235,30 +422,63 @@ fun MusicVibeScreen() {
                             Button(
                                 onClick = {
                                     if (isSubmitting) return@Button
-
-                                    val request = SunoGenerateRequest(
-                                        prompt = lyrics,
-                                        customMode = true,
-                                        instrumental = makeInstrumental,
-                                        model = mv,
-                                        title = title.ifBlank { null },
-                                        style = tags.ifBlank { null },
-                                        negativeTags = negativeTags.ifBlank { null },
-                                        vocalGender = vocalGender,
-                                        personaId = selectedPersonaId,
-                                    )
-                                    submittedJson = prettyJson.encodeToString(request)
                                     isSubmitted = true
                                     isSubmitting = true
+                                    submittedTaskId = null
+                                    taskArchiveStatus = null
                                     taskStatus = "正在提交..."
-
-                                    scope.launch {
+                                    val launchedJob = scope.launch {
                                         try {
                                             val latestConfig = SunoWorkflowService.loadConfig()
                                             sunoConfig = latestConfig
                                             latestConfig.requireToken()
+                                            val currentDraft = SavedVibeFormDraft(
+                                                lyrics = lyrics,
+                                                songName = songName,
+                                                artistName = artistName,
+                                                title = title,
+                                                tags = tags,
+                                                mv = mv,
+                                                makeInstrumental = makeInstrumental,
+                                                vocalGender = vocalGender,
+                                                negativeTags = negativeTags,
+                                                gptDescriptionPrompt = gptDescriptionPrompt,
+                                                selectedPersonaId = selectedPersonaId,
+                                            )
+                                            val draftSaved = runCatching {
+                                                saveVibeFormDraft(currentDraft)
+                                            }.isSuccess
+                                            if (draftSaved) {
+                                                vibeFormHistory = runCatching {
+                                                    loadVibeFormHistory()
+                                                }.getOrDefault(vibeFormHistory)
+                                            }
+                                            val mergedStyle = buildSunoStyleText(
+                                                tags = tags,
+                                                descriptionPrompt = gptDescriptionPrompt,
+                                            )
+                                            val request = SunoGenerateRequest(
+                                                prompt = lyrics,
+                                                customMode = true,
+                                                instrumental = makeInstrumental,
+                                                model = mv,
+                                                title = title.ifBlank { null },
+                                                style = mergedStyle.ifBlank { null },
+                                                negativeTags = negativeTags.ifBlank { null },
+                                                vocalGender = vocalGender,
+                                                personaId = selectedPersonaId,
+                                            )
+                                            submittedJson = prettyJson.encodeToString(request)
                                             val completed = SunoWorkflowService.submitTask(
-                                                submit = { client -> client.generateMusic(request) },
+                                                actionLabel = "提交音乐生成",
+                                                submit = { client, callbackUrl ->
+                                                    client.generateMusic(
+                                                        request.copy(callBackUrl = callbackUrl)
+                                                    )
+                                                },
+                                                onTaskAccepted = { taskId ->
+                                                    submittedTaskId = taskId
+                                                },
                                                 onStatusUpdate = { status, detail ->
                                                     taskDetail = detail
                                                     taskStatus = status
@@ -266,13 +486,43 @@ fun MusicVibeScreen() {
                                             )
                                             taskDetail = completed
                                             taskStatus = completed.displayStatus
+                                        } catch (_: CancellationException) {
+                                            taskStatus = if (submittedTaskId.isNullOrBlank()) {
+                                                isSubmitted = false
+                                                "已取消提交"
+                                            } else {
+                                                "已取消等待，Suno 侧任务可能仍在继续"
+                                            }
                                         } catch (error: Exception) {
-                                            taskStatus = "错误: ${SunoWorkflowService.errorMessage(error)}"
+                                            val recoveredTaskId = submittedTaskId
+                                            val recoveredSnapshot = recoveredTaskId
+                                                ?.takeIf { it.isNotBlank() }
+                                                ?.let { taskId ->
+                                                    runCatching {
+                                                        refreshSunoTaskSnapshotById(
+                                                            taskId = taskId,
+                                                            fallbackType = "generate",
+                                                            requestJson = submittedJson,
+                                                        )
+                                                    }.getOrNull()
+                                                }
+                                            if (recoveredSnapshot != null) {
+                                                taskDetail = recoveredSnapshot.detail
+                                                taskArchiveStatus = recoveredSnapshot.archiveStatus
+                                                taskStatus = recoveredTaskStatusText(recoveredSnapshot.detail)
+                                            } else {
+                                                taskStatus = "错误: ${SunoWorkflowService.errorMessage(error)}"
+                                            }
                                         } finally {
+                                            val currentJob = currentCoroutineContext()[Job]
                                             isSubmitting = false
-                                            credits = SunoWorkflowService.getCreditsOrNull() ?: credits
+                                            if (submissionJob === currentJob) {
+                                                submissionJob = null
+                                            }
+                                            onCreditsRefresh()
                                         }
                                     }
+                                    submissionJob = launchedJob
                                 },
                                 enabled = !isSubmitting && sunoConfig.hasToken,
                             ) {
@@ -283,6 +533,11 @@ fun MusicVibeScreen() {
                                         else -> "提交 Vibe"
                                     },
                                 )
+                            }
+                            if (isSubmitting) {
+                                OutlinedButton(onClick = ::cancelSubmission) {
+                                    Text("取消等待")
+                                }
                             }
                         }
                     }
@@ -296,12 +551,19 @@ fun MusicVibeScreen() {
                 modifier = Modifier
                     .weight(0.48f)
                     .fillMaxHeight()
-                    .padding(top = 24.dp, end = 24.dp, bottom = 24.dp),
+                    .padding(top = 12.dp, end = 12.dp, bottom = 12.dp),
             ) {
                 TaskProgressPanel(
                     submittedJson = submittedJson,
+                    submittedTaskId = submittedTaskId,
+                    taskArchiveStatus = taskArchiveStatus,
                     taskStatus = taskStatus,
                     taskDetail = taskDetail,
+                    fallbackType = "generate",
+                    onCancelWait = if (isSubmitting) ::cancelSubmission else null,
+                    onPersonaCreated = { persona ->
+                        applyCreatedPersona(persona)
+                    },
                 )
             }
         }

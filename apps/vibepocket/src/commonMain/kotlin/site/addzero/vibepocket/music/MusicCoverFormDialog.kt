@@ -87,7 +87,12 @@ fun MusicCoverFormDialog(
                                 title = title.ifBlank { null },
                             )
                             val detail = SunoWorkflowService.submitTask(
-                                submit = { client -> client.generateMusicCover(request) },
+                                actionLabel = "生成封面",
+                                submit = { client, callbackUrl ->
+                                    client.generateMusicCover(
+                                        request.copy(callBackUrl = callbackUrl)
+                                    )
+                                },
                                 onStatusUpdate = { status, _ ->
                                     statusText = status
                                 },

@@ -5,8 +5,7 @@ import com.typesafe.config.ConfigValueFactory
 import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.Netty
-import io.ktor.server.netty.NettyApplicationEngine
+import io.ktor.server.netty.*
 import io.ktor.server.routing.*
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.starter.installEffectiveConfig
@@ -14,12 +13,11 @@ import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import site.addzero.vibepocket.di.AppKoinApplication
 import site.addzero.vibepocket.generated.springktor.registerGeneratedSpringRoutes
-import site.addzero.vibepocket.runtime.VibePocketDesktopStorage
 import java.io.File
 
 private const val DEFAULT_EMBEDDED_ENV = "dev"
+private const val DESKTOP_APP_DIRECTORY_NAME = "VibePocket"
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
-private const val EMBEDDED_SQLITE_URL_PROPERTY = "vibepocket.embedded.sqlite.url"
 @Volatile
 private var embeddedApplicationConfigOverride: ApplicationConfig? = null
 
@@ -105,10 +103,6 @@ fun ktorApplication(
     val config = loadEmbeddedConfig(configPath)
     embeddedApplicationConfigOverride = config
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
-    config.propertyOrNull("datasources.sqlite.url")
-        ?.getString()
-        ?.takeIf { it.isNotBlank() }
-        ?.let { System.setProperty(EMBEDDED_SQLITE_URL_PROPERTY, it) }
 
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val finalHost = host
@@ -139,7 +133,7 @@ fun ktorApplication(
 }
 
 private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
-    val storage = VibePocketDesktopStorage.resolve()
+    val desktopPaths = resolveEmbeddedDesktopPaths()
     val resolvedConfig = configPath?.let { path ->
         ConfigFactory.parseFile(resolveConfigFile(path))
     } ?: run {
@@ -154,7 +148,7 @@ private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
     }
 
     return HoconApplicationConfig(
-        embeddedDesktopRuntimeOverrides(storage)
+        embeddedDesktopRuntimeOverrides(desktopPaths)
             .withFallback(embeddedDesktopOverrides())
             .withFallback(resolvedConfig)
             .resolve()
@@ -274,12 +268,143 @@ private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
     """.trimIndent()
 )
 
-private fun embeddedDesktopRuntimeOverrides(storage: site.addzero.vibepocket.runtime.VibePocketDesktopStoragePaths) =
+private fun embeddedDesktopRuntimeOverrides(paths: EmbeddedDesktopPaths) =
     ConfigFactory.empty()
         .withValue("datasources.sqlite.enabled", ConfigValueFactory.fromAnyRef(true))
-        .withValue("datasources.sqlite.url", ConfigValueFactory.fromAnyRef(storage.sqliteJdbcUrl))
+        .withValue("datasources.sqlite.url", ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
         .withValue("datasources.sqlite.driver", ConfigValueFactory.fromAnyRef("org.sqlite.SQLiteDriver"))
         .withValue("datasources.postgres.enabled", ConfigValueFactory.fromAnyRef(false))
-        .withValue("vibepocket.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(storage.sqliteFile.absolutePath))
-        .withValue("vibepocket.runtime.dataDir", ConfigValueFactory.fromAnyRef(storage.dataDir.absolutePath))
-        .withValue("vibepocket.runtime.cacheDir", ConfigValueFactory.fromAnyRef(storage.cacheDir.absolutePath))
+        .withValue("vibepocket.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
+        .withValue("vibepocket.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))
+        .withValue("vibepocket.runtime.cacheDir", ConfigValueFactory.fromAnyRef(paths.cacheDir.absolutePath))
+
+private data class EmbeddedDesktopPaths(
+    val dataDir: File,
+    val cacheDir: File,
+    val sqliteFile: File,
+) {
+    val sqliteJdbcUrl: String
+        get() = "jdbc:sqlite:${sqliteFile.absolutePath}"
+}
+
+private fun resolveEmbeddedDesktopPaths(): EmbeddedDesktopPaths {
+    val dataDir = preferredDesktopDataDir().ensureDirectory()
+    val cacheDir = preferredDesktopCacheDir().ensureDirectory()
+    val sqliteFile = File(dataDir, "vibepocket.db").absoluteFile
+    migrateLegacyDatabaseIfNeeded(sqliteFile)
+    return EmbeddedDesktopPaths(
+        dataDir = dataDir,
+        cacheDir = cacheDir,
+        sqliteFile = sqliteFile,
+    )
+}
+
+private fun preferredDesktopDataDir(): File {
+    val userHome = desktopUserHome()
+    val osName = System.getProperty("os.name").orEmpty()
+
+    return when {
+        osName.contains("Mac", ignoreCase = true) -> {
+            File(userHome, "Library/Application Support/$DESKTOP_APP_DIRECTORY_NAME")
+        }
+
+        osName.contains("Windows", ignoreCase = true) -> {
+            File(
+                System.getenv("LOCALAPPDATA")
+                    ?: System.getenv("APPDATA")
+                    ?: userHome,
+                DESKTOP_APP_DIRECTORY_NAME,
+            )
+        }
+
+        else -> {
+            val xdgDataHome = System.getenv("XDG_DATA_HOME")
+                ?.takeIf { it.isNotBlank() }
+                ?: File(userHome, ".local/share").absolutePath
+            File(xdgDataHome, DESKTOP_APP_DIRECTORY_NAME.lowercase())
+        }
+    }
+}
+
+private fun preferredDesktopCacheDir(): File {
+    val userHome = desktopUserHome()
+    val osName = System.getProperty("os.name").orEmpty()
+
+    return when {
+        osName.contains("Mac", ignoreCase = true) -> {
+            File(userHome, "Library/Caches/$DESKTOP_APP_DIRECTORY_NAME")
+        }
+
+        osName.contains("Windows", ignoreCase = true) -> {
+            File(
+                System.getenv("LOCALAPPDATA")
+                    ?: System.getenv("APPDATA")
+                    ?: userHome,
+                "$DESKTOP_APP_DIRECTORY_NAME/Cache",
+            )
+        }
+
+        else -> {
+            val xdgCacheHome = System.getenv("XDG_CACHE_HOME")
+                ?.takeIf { it.isNotBlank() }
+                ?: File(userHome, ".cache").absolutePath
+            File(xdgCacheHome, DESKTOP_APP_DIRECTORY_NAME.lowercase())
+        }
+    }
+}
+
+private fun File.ensureDirectory(): File {
+    if (exists()) {
+        require(isDirectory) {
+            "路径不是目录：$absolutePath"
+        }
+        return this
+    }
+
+    check(mkdirs() || exists()) {
+        "无法创建目录：$absolutePath"
+    }
+    return this
+}
+
+private fun desktopUserHome(): String {
+    return System.getProperty("user.home").orEmpty()
+}
+
+private fun migrateLegacyDatabaseIfNeeded(targetFile: File) {
+    if (targetFile.exists()) {
+        return
+    }
+
+    val legacySource = legacyDatabaseCandidates()
+        .firstOrNull { candidate ->
+            candidate.exists() &&
+                candidate.isFile &&
+                candidate.length() > 0L &&
+                candidate.absolutePath != targetFile.absolutePath
+        }
+        ?: return
+
+    runCatching {
+        legacySource.copyTo(targetFile, overwrite = false)
+    }.onFailure {
+        println("Failed to migrate legacy vibepocket database from ${legacySource.absolutePath}: ${it.message}")
+    }
+}
+
+private fun legacyDatabaseCandidates(): List<File> {
+    val workingDir = File(System.getProperty("user.dir").orEmpty()).absoluteFile
+    val parentDir = workingDir.parentFile
+
+    return buildList {
+        add(File(workingDir, "vibepocket-dev.db"))
+        add(File(workingDir, "vibepocket.db"))
+        add(File(workingDir, "vibepocket-desktop.db"))
+        add(File(workingDir, "server/vibepocket.db"))
+        if (parentDir != null) {
+            add(File(parentDir, "vibepocket-dev.db"))
+            add(File(parentDir, "vibepocket.db"))
+            add(File(parentDir, "vibepocket-desktop.db"))
+        }
+    }.distinctBy { it.absolutePath }
+}

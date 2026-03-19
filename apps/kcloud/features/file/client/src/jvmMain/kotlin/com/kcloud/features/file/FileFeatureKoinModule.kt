@@ -1,0 +1,10 @@
+package com.kcloud.features.file
+
+import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.Module
+
+@Module(includes = [FileFeatureCommonKoinModule::class])
+@Configuration("kcloud")
+@ComponentScan("com.kcloud.features.file.desktop")
+class FileFeatureKoinModule

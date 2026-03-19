@@ -16,6 +16,7 @@ object ServerApiClient {
     }
 
     private val httpClient = HttpClient {
+        expectSuccess = true
         install(ContentNegotiation) {
             json(json)
         }
@@ -31,8 +32,7 @@ object ServerApiClient {
     val personaApi: PersonaApi = ktorfit.createPersonaApi()
     val historyApi: HistoryApi = ktorfit.createHistoryApi()
     val musicApi: MusicSearchApi = ktorfit.createMusicSearchApi()
-
-    // ── 兼容旧代码的便捷方法 ──────────────────────────────────────────────
+    val sunoTaskResourceApi: SunoTaskResourceApi = ktorfit.createSunoTaskResourceApi()
 
     suspend fun getConfig(key: String): String? {
         return try {
@@ -41,35 +41,4 @@ object ServerApiClient {
             null
         }
     }
-
-    suspend fun getHistory() = historyApi.getHistory()
-
-    suspend fun saveHistory(request: site.addzero.vibepocket.model.MusicHistorySaveRequest) = 
-        historyApi.saveHistory(request)
-
-    suspend fun getFavorites() = favoriteApi.getFavorites()
-
-    suspend fun addFavorite(request: site.addzero.vibepocket.model.FavoriteRequest) = 
-        favoriteApi.addFavorite(request)
-
-    suspend fun removeFavorite(trackId: String) = 
-        favoriteApi.removeFavorite(trackId)
-
-    suspend fun savePersona(request: site.addzero.vibepocket.model.PersonaSaveRequest) = 
-        personaApi.savePersona(request)
-
-    suspend fun getPersonas() = personaApi.getPersonas()
-
-    suspend fun searchMusic(
-        provider: String,
-        keyword: String,
-    ) = musicApi.search(provider, keyword)
-
-    suspend fun getMusicLyrics(
-        provider: String,
-        songId: String,
-    ) = musicApi.getLyrics(provider, songId)
-
-    suspend fun resolveMusic(track: site.addzero.vibepocket.api.music.MusicTrack) =
-        musicApi.resolve(track)
 }

@@ -69,6 +69,7 @@ class PlaylistPlayerController<T> internal constructor(
     private var subtitleOf: (T) -> String = { "" }
     private var durationMsOf: (T) -> Long? = { null }
     private var coverUrlOf: (T) -> String? = { null }
+    private var hasResolvableAudioOf: (T) -> Boolean = { true }
     private var resolveAudioSource: suspend (T) -> PlaylistAudioSource = { PlaylistAudioSource() }
     private var resolveLyrics: (suspend (T) -> String?)? = null
     private var resolveErrorMessage: (Throwable) -> String = { it.message ?: "加载音频失败" }
@@ -113,6 +114,7 @@ class PlaylistPlayerController<T> internal constructor(
         subtitleOf: (T) -> String,
         durationMsOf: (T) -> Long?,
         coverUrlOf: (T) -> String?,
+        hasResolvableAudioOf: (T) -> Boolean,
         resolveAudioSource: suspend (T) -> PlaylistAudioSource,
         resolveLyrics: (suspend (T) -> String?)?,
         resolveErrorMessage: (Throwable) -> String,
@@ -125,6 +127,7 @@ class PlaylistPlayerController<T> internal constructor(
         this.subtitleOf = subtitleOf
         this.durationMsOf = durationMsOf
         this.coverUrlOf = coverUrlOf
+        this.hasResolvableAudioOf = hasResolvableAudioOf
         this.resolveAudioSource = resolveAudioSource
         this.resolveLyrics = resolveLyrics
         this.resolveErrorMessage = resolveErrorMessage
@@ -149,6 +152,11 @@ class PlaylistPlayerController<T> internal constructor(
     fun play(item: T) {
         val playbackId = itemKeyOf(item)
         resolveError = null
+
+        knownUnavailableMessage(item)?.let {
+            resolveError = it
+            return
+        }
 
         unavailableMessages[playbackId]?.let {
             resolveError = it
@@ -209,6 +217,7 @@ class PlaylistPlayerController<T> internal constructor(
             }
 
             resolvingPlaybackId = null
+            unavailableMessages.remove(playbackId)
             resolveError = null
             completionHandledPlaybackId = null
             host.play(
@@ -278,6 +287,13 @@ class PlaylistPlayerController<T> internal constructor(
 
     internal suspend fun resolveAudioSourceFor(item: T): PlaylistAudioSource {
         val playbackId = itemKeyOf(item)
+        knownUnavailableMessage(item)?.let { message ->
+            return PlaylistAudioSource(
+                url = null,
+                unavailableMessage = message,
+            )
+        }
+
         sourceCache[playbackId]?.let { cached ->
             return cached
         }
@@ -303,7 +319,7 @@ class PlaylistPlayerController<T> internal constructor(
         } else {
             PlaylistPlayerStatus.IDLE
         }
-        val unavailableMessage = unavailableMessages[playbackId]
+        val unavailableMessage = unavailableMessages[playbackId] ?: knownUnavailableMessage(item)
 
         return PlaylistItemUiState(
             isCurrent = isCurrent,
@@ -444,6 +460,13 @@ class PlaylistPlayerController<T> internal constructor(
     private fun findItemByKey(playbackId: String): T? {
         return items.firstOrNull { itemKeyOf(it) == playbackId }
     }
+
+    private fun knownUnavailableMessage(item: T): String? {
+        if (hasResolvableAudioOf(item)) {
+            return null
+        }
+        return DEFAULT_UNAVAILABLE_MESSAGE
+    }
 }
 
 @Composable
@@ -454,6 +477,7 @@ fun <T> rememberPlaylistPlayerController(
     subtitleOf: (T) -> String,
     durationMsOf: (T) -> Long?,
     coverUrlOf: (T) -> String?,
+    hasResolvableAudioOf: (T) -> Boolean = { true },
     resolveAudioSource: suspend (T) -> PlaylistAudioSource,
     resolveLyrics: (suspend (T) -> String?)? = null,
     resolveErrorMessage: (Throwable) -> String = { it.message ?: "加载音频失败" },
@@ -473,6 +497,7 @@ fun <T> rememberPlaylistPlayerController(
         subtitleOf = subtitleOf,
         durationMsOf = durationMsOf,
         coverUrlOf = coverUrlOf,
+        hasResolvableAudioOf = hasResolvableAudioOf,
         resolveAudioSource = resolveAudioSource,
         resolveLyrics = resolveLyrics,
         resolveErrorMessage = resolveErrorMessage,

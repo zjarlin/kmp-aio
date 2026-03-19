@@ -16,12 +16,14 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoGeneratePersonaRequest
+import site.addzero.vibepocket.model.PersonaItem
 import site.addzero.vibepocket.model.PersonaSaveRequest
 
 @Composable
 fun PersonaFormDialog(
     audioId: String,
     taskId: String,
+    onCreated: (PersonaItem) -> Unit = {},
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -32,14 +34,14 @@ fun PersonaFormDialog(
     var isSubmitting by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var resultPersonaId by remember { mutableStateOf<String?>(null) }
+    var resultPersona by remember { mutableStateOf<PersonaItem?>(null) }
 
     MusicActionDialog(
         title = "创建 Persona",
         isSubmitting = isSubmitting,
         onDismiss = onDismiss,
     ) {
-        if (resultPersonaId == null) {
+        if (resultPersona == null) {
             DialogHint("基于当前音轨创建一个可复用的声音角色，名称和描述都是必填。")
             OutlinedTextField(
                 value = name,
@@ -91,14 +93,15 @@ fun PersonaFormDialog(
                                 ?: throw IllegalStateException("Persona 创建成功但未返回 personaId")
 
                             statusText = "正在保存 Persona 记录..."
-                            ServerApiClient.savePersona(
+                            val savedPersona = ServerApiClient.personaApi.savePersona(
                                 PersonaSaveRequest(
                                     personaId = personaId,
                                     name = name.trim(),
                                     description = description.trim(),
                                 ),
                             )
-                            resultPersonaId = personaId
+                            resultPersona = savedPersona
+                            onCreated(savedPersona)
                             statusText = null
                         } catch (error: Exception) {
                             errorMessage = SunoWorkflowService.errorMessage(error)
@@ -121,7 +124,19 @@ fun PersonaFormDialog(
             DialogSuccessTitle("Persona 创建成功")
             DialogMonospaceValue(
                 label = "Persona ID",
-                value = resultPersonaId ?: "",
+                value = resultPersona?.personaId.orEmpty(),
+            )
+            DialogInfoCard(
+                title = resultPersona?.name ?: "Persona",
+                body = buildString {
+                    append(resultPersona?.description.orEmpty())
+                    resultPersona?.createdAt
+                        ?.takeIf { it.isNotBlank() }
+                        ?.let {
+                            append("\n\n创建时间: ")
+                            append(it)
+                        }
+                },
             )
             DialogInfoCard(
                 title = "提示",

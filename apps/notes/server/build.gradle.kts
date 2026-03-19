@@ -5,6 +5,8 @@ plugins {
     id("site.addzero.buildlogic.jvm.jvm-ksp-plugin")
 }
 
+apply(from = rootProject.file("gradle/spring2ktor-ksp-cache-workaround.gradle.kts"))
+
 application {
     mainClass.set("site.addzero.notes.server.ApplicationKt")
 }
@@ -25,9 +27,10 @@ configurations.configureEach {
 
 dependencies {
     implementation(project(":lib:starter-koin"))
+    implementation(projects.lib.starterStatuspages)
 
-    implementation("site.addzero:spring2ktor-server-core:2026.03.10")
-    ksp("site.addzero:spring2ktor-server-processor:2026.03.10")
+    implementation("site.addzero:spring2ktor-server-core:2026.03.13")
+    ksp("site.addzero:spring2ktor-server-processor:2026.03.13")
     compileOnly("org.springframework:spring-web:5.3.21")
 
     implementation("org.xerial:sqlite-jdbc:$sqliteVersion")

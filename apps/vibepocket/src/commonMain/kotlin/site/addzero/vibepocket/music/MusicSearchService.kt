@@ -1,56 +1,46 @@
 package site.addzero.vibepocket.music
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import site.addzero.vibepocket.api.MusicSearchApi
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.music.MusicLyric
 import site.addzero.vibepocket.api.music.MusicResolvedAsset
 import site.addzero.vibepocket.api.music.MusicTrack
 
-internal interface MusicSearchGateway {
-    suspend fun search(
-        provider: String,
-        keyword: String,
-    ): List<MusicTrack>
-
-    suspend fun getLyrics(
-        provider: String,
-        songId: String,
-    ): MusicLyric
-
-    suspend fun resolve(track: MusicTrack): MusicResolvedAsset
-}
-
-private object ServerMusicSearchGateway : MusicSearchGateway {
-    override suspend fun search(
-        provider: String,
-        keyword: String,
-    ): List<MusicTrack> = ServerApiClient.searchMusic(provider, keyword)
-
-    override suspend fun getLyrics(
-        provider: String,
-        songId: String,
-    ): MusicLyric = ServerApiClient.getMusicLyrics(provider, songId)
-
-    override suspend fun resolve(track: MusicTrack): MusicResolvedAsset =
-        ServerApiClient.resolveMusic(track)
-}
-
 object MusicSearchService {
+    private val supportedProviders = listOf("netease", "qq")
     private val resolvedAssetCache = linkedMapOf<String, MusicResolvedAsset>()
-    internal var gateway: MusicSearchGateway = ServerMusicSearchGateway
+    internal var api: MusicSearchApi = ServerApiClient.musicApi
 
-    suspend fun search(
-        provider: String,
-        keyword: String,
-    ): List<MusicTrack> {
-        val normalizedProvider = normalizeProvider(provider)
+    suspend fun search(keyword: String): List<MusicTrack> {
         val normalizedKeyword = keyword.trim()
         require(normalizedKeyword.isNotBlank()) { "请输入歌曲关键词" }
 
-        return runCatching {
-            gateway.search(normalizedProvider, normalizedKeyword)
-        }.getOrElse { error ->
-            throw IllegalStateException(error.userMessage("搜索歌曲失败"))
+        val resultsByProvider = coroutineScope {
+            supportedProviders.map { provider ->
+                async {
+                    provider to runCatching {
+                        api.search(provider, normalizedKeyword)
+                    }
+                }
+            }.awaitAll()
         }
+
+        val successes = resultsByProvider.mapNotNull { (_, result) ->
+            result.getOrNull()
+        }
+        if (successes.isNotEmpty()) {
+            return successes
+                .flatten()
+                .distinctBy(::playbackId)
+        }
+
+        val messages = resultsByProvider.mapNotNull { (provider, result) ->
+            result.exceptionOrNull()?.userMessage("${provider.displayName()} 搜索失败")
+        }
+        throw IllegalStateException(messages.firstOrNull() ?: "搜索歌曲失败")
     }
 
     suspend fun getLyrics(track: MusicTrack): MusicLyric {
@@ -58,10 +48,8 @@ object MusicSearchService {
         val songId = track.id.trim()
         require(songId.isNotBlank()) { "歌曲 ID 不能为空" }
 
-        return runCatching {
-            gateway.getLyrics(provider, songId)
-        }.getOrElse { error ->
-            throw IllegalStateException(error.userMessage("获取歌词失败"))
+        return runMusicRequest("获取歌词失败") {
+            api.getLyrics(provider, songId)
         }
     }
 
@@ -69,10 +57,8 @@ object MusicSearchService {
         val cacheKey = cacheKey(track)
         resolvedAssetCache[cacheKey]?.let { return it }
 
-        val resolved = runCatching {
-            gateway.resolve(track.copy(platform = normalizeProvider(track.platform)))
-        }.getOrElse { error ->
-            throw IllegalStateException(error.userMessage("解析音频失败"))
+        val resolved = runMusicRequest("解析音频失败") {
+            api.resolve(track.copy(platform = normalizeProvider(track.platform)))
         }
         resolvedAssetCache[cacheKey] = resolved
         return resolved
@@ -81,8 +67,19 @@ object MusicSearchService {
     fun playbackId(track: MusicTrack): String = "music:${normalizeProvider(track.platform)}:${track.id}"
 
     internal fun resetForTests() {
-        gateway = ServerMusicSearchGateway
+        api = ServerApiClient.musicApi
         resolvedAssetCache.clear()
+    }
+
+    private suspend fun <T> runMusicRequest(
+        fallback: String,
+        block: suspend () -> T,
+    ): T {
+        return runCatching {
+            block()
+        }.getOrElse { error ->
+            throw IllegalStateException(error.userMessage(fallback))
+        }
     }
 
     private fun cacheKey(track: MusicTrack): String = "${normalizeProvider(track.platform)}:${track.id}"
@@ -92,6 +89,14 @@ object MusicSearchService {
             "netease", "163", "网易", "网易云" -> "netease"
             "qq", "qqmusic", "qq音乐", "tencent" -> "qq"
             else -> throw IllegalArgumentException("暂不支持的音源: $provider")
+        }
+    }
+
+    private fun String.displayName(): String {
+        return when (this) {
+            "netease" -> "网易云"
+            "qq" -> "QQ 音乐"
+            else -> this
         }
     }
 

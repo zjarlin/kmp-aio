@@ -10,11 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import site.addzero.ioc.annotation.Bean
 import site.addzero.vibepocket.ui.*
 
 @Composable
-@Bean(tags = ["screen"])
 fun WelcomePage(
     onEnter: (sunoToken: String, sunoBaseUrl: String) -> Unit,
 ) {

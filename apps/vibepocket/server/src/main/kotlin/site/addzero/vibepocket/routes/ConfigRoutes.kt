@@ -1,7 +1,7 @@
 package site.addzero.vibepocket.routes
 
-import io.ktor.server.application.Application
-import io.ktor.server.config.ApplicationConfig
+import io.ktor.server.application.*
+import io.ktor.server.config.*
 import kotlinx.serialization.Serializable
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient

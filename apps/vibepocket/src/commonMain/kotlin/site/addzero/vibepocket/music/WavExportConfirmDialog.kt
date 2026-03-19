@@ -52,7 +52,12 @@ fun WavExportConfirmDialog(
                                 audioId = audioId,
                             )
                             val detail = SunoWorkflowService.submitTask(
-                                submit = { client -> client.convertToWav(request) },
+                                actionLabel = "提交 WAV 转换",
+                                submit = { client, callbackUrl ->
+                                    client.convertToWav(
+                                        request.copy(callBackUrl = callbackUrl)
+                                    )
+                                },
                                 onStatusUpdate = { status, _ ->
                                     statusText = status
                                 },

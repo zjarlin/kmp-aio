@@ -1,10 +1,11 @@
 package com.kcloud
 
 import com.kcloud.app.KCloudHttpServer
-import com.kcloud.app.KCloudPluginRegistry
+import com.kcloud.app.KCloudFeatureRegistry
 import com.kcloud.app.KCloudShellState
-import com.kcloud.plugin.KCloudPlugin
-import com.kcloud.plugin.KCloudServerPlugin
+import com.kcloud.db.Database
+import com.kcloud.feature.KCloudFeature
+import com.kcloud.feature.KCloudServerFeature
 import org.koin.core.Koin
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
@@ -13,8 +14,8 @@ import org.koin.plugin.module.dsl.withConfiguration
 class KCloudRuntime(
     private val koinApplication: KoinApplication,
     val shellState: KCloudShellState,
-    val pluginRegistry: KCloudPluginRegistry,
-    val serverPlugins: List<KCloudServerPlugin>,
+    val featureRegistry: KCloudFeatureRegistry,
+    val serverFeatures: List<KCloudServerFeature>,
     private val httpServer: KCloudHttpServer
 ) {
     val koin: Koin
@@ -22,37 +23,39 @@ class KCloudRuntime(
 
     fun startDesktop() {
         httpServer.start(wait = false)
-        serverPlugins.forEach { plugin ->
-            plugin.onStart()
+        serverFeatures.forEach { feature ->
+            feature.onStart()
         }
-        pluginRegistry.plugins.forEach { plugin ->
-            plugin.onStart(koin)
+        featureRegistry.features.forEach { feature ->
+            feature.onStart(koin)
         }
     }
 
     fun startServer(wait: Boolean) {
         httpServer.start(wait = wait)
-        serverPlugins.forEach { plugin ->
-            plugin.onStart()
+        serverFeatures.forEach { feature ->
+            feature.onStart()
         }
     }
 
     fun stopDesktop() {
-        pluginRegistry.plugins
+        featureRegistry.features
             .asReversed()
-            .forEach { plugin -> plugin.onStop(koin) }
+            .forEach { feature -> feature.onStop(koin) }
         httpServer.stop()
-        serverPlugins
+        serverFeatures
             .asReversed()
-            .forEach { plugin -> plugin.onStop() }
+            .forEach { feature -> feature.onStop() }
+        koin.get<Database>().close()
         koinApplication.close()
     }
 
     fun stopServer() {
         httpServer.stop()
-        serverPlugins
+        serverFeatures
             .asReversed()
-            .forEach { plugin -> plugin.onStop() }
+            .forEach { feature -> feature.onStop() }
+        koin.get<Database>().close()
         koinApplication.close()
     }
 }
@@ -65,8 +68,8 @@ fun createKCloudRuntime(): KCloudRuntime {
     return KCloudRuntime(
         koinApplication = koinApplication,
         shellState = koin.get(),
-        pluginRegistry = koin.get(),
-        serverPlugins = koin.getAll<KCloudServerPlugin>().sortedBy { it.order },
+        featureRegistry = koin.get(),
+        serverFeatures = koin.getAll<KCloudServerFeature>().sortedBy { it.order },
         httpServer = koin.get()
     )
 }

@@ -10,8 +10,8 @@ import androidx.compose.ui.unit.dp
 import site.addzero.media.playlist.player.ProvidePlaylistPlayerHost
 import site.addzero.vibepocket.music.hasCompletedVibePocketSetup
 import site.addzero.vibepocket.music.loadSunoRuntimeConfig
-import site.addzero.vibepocket.plugin.VibePocketPluginRegistry
-import site.addzero.vibepocket.plugin.VibePocketPluginSidebar
+import site.addzero.vibepocket.feature.VibePocketFeatureRegistry
+import site.addzero.vibepocket.feature.VibePocketFeatureSidebar
 import site.addzero.vibepocket.screens.PlaceholderScreen
 import site.addzero.vibepocket.screens.WelcomeScreenWrapper
 import site.addzero.vibepocket.ui.VibeGlassAppTheme
@@ -28,14 +28,14 @@ fun App() {
 
 @Composable
 private fun VibePocketAppRoot() {
-    val pluginRegistry = remember { VibePocketPluginRegistry() }
+    val featureRegistry = remember { VibePocketFeatureRegistry() }
 
     var isStartupReady by remember { mutableStateOf(false) }
     var isSetupDone by remember { mutableStateOf(false) }
-    var selectedMenuId by remember { mutableStateOf(pluginRegistry.defaultLeafId) }
-    var expandedMenuIds by remember { mutableStateOf(pluginRegistry.defaultExpandedIds) }
+    var selectedMenuId by remember { mutableStateOf(featureRegistry.defaultLeafId) }
+    var expandedMenuIds by remember { mutableStateOf(featureRegistry.defaultExpandedIds) }
 
-    LaunchedEffect(pluginRegistry.defaultLeafId) {
+    LaunchedEffect(featureRegistry.defaultLeafId) {
         val runtimeConfig = try {
             loadSunoRuntimeConfig()
         } catch (_: Exception) {
@@ -50,8 +50,8 @@ private fun VibePocketAppRoot() {
             runtimeConfig?.baseUrl?.takeIf { it != site.addzero.vibepocket.api.suno.SunoApiClient.DEFAULT_BASE_URL } != null
 
         isSetupDone = setupCompleted || hasPersistedConfig
-        selectedMenuId = pluginRegistry.normalizeMenuId(selectedMenuId)
-        expandedMenuIds = expandedMenuIds + pluginRegistry.defaultExpandedIds
+        selectedMenuId = featureRegistry.normalizeMenuId(selectedMenuId)
+        expandedMenuIds = expandedMenuIds + featureRegistry.defaultExpandedIds
         isStartupReady = true
     }
 
@@ -84,22 +84,22 @@ private fun VibePocketAppRoot() {
         WelcomeScreenWrapper(
             onSetupComplete = { _, _ ->
                 isSetupDone = true
-                selectedMenuId = pluginRegistry.defaultLeafId
-                expandedMenuIds = pluginRegistry.defaultExpandedIds
+                selectedMenuId = featureRegistry.defaultLeafId
+                expandedMenuIds = featureRegistry.defaultExpandedIds
             },
         )
     } else {
         MainScreen(
-            pluginRegistry = pluginRegistry,
+            featureRegistry = featureRegistry,
             selectedMenuId = selectedMenuId,
             expandedMenuIds = expandedMenuIds,
             onLeafClick = { menuId ->
-                val normalized = pluginRegistry.normalizeMenuId(menuId)
+                val normalized = featureRegistry.normalizeMenuId(menuId)
                 selectedMenuId = normalized
-                expandedMenuIds = expandedMenuIds + pluginRegistry.ancestorIdsFor(normalized)
+                expandedMenuIds = expandedMenuIds + featureRegistry.ancestorIdsFor(normalized)
             },
             onGroupToggle = { menuId ->
-                val normalized = pluginRegistry.normalizeMenuId(menuId)
+                val normalized = featureRegistry.normalizeMenuId(menuId)
                 expandedMenuIds = expandedMenuIds.toMutableSet().apply {
                     if (!add(normalized)) {
                         remove(normalized)
@@ -112,13 +112,13 @@ private fun VibePocketAppRoot() {
 
 @Composable
 private fun MainScreen(
-    pluginRegistry: VibePocketPluginRegistry,
+    featureRegistry: VibePocketFeatureRegistry,
     selectedMenuId: String,
     expandedMenuIds: Set<String>,
     onLeafClick: (String) -> Unit,
     onGroupToggle: (String) -> Unit,
 ) {
-    val selectedNode = pluginRegistry.findLeaf(selectedMenuId)
+    val selectedNode = featureRegistry.findLeaf(selectedMenuId)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -127,22 +127,22 @@ private fun MainScreen(
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             ElevatedCard(
                 modifier = Modifier
-                    .width(256.dp)
+                    .width(232.dp)
                     .fillMaxHeight(),
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    VibePocketPluginSidebar(
-                        nodes = pluginRegistry.menuTree,
+                    VibePocketFeatureSidebar(
+                        nodes = featureRegistry.menuTree,
                         selectedId = selectedNode?.id.orEmpty(),
                         expandedIds = expandedMenuIds,
                         onLeafClick = onLeafClick,
@@ -165,16 +165,16 @@ private fun MainScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
+                            .padding(12.dp),
                     ) {
                         val content = selectedNode?.entry?.content
                         if (content == null) {
-                            PlaceholderScreen("🧩", "这个插件页面暂时还没有挂载内容。")
+                            PlaceholderScreen("🧩", "这个功能页面暂时还没有挂载内容。")
                         } else {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(vertical = 4.dp),
+                                    .padding(vertical = 2.dp),
                             ) {
                                 content()
                             }

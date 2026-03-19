@@ -13,8 +13,8 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.concurrent.thread
 
 @Composable
@@ -35,6 +35,10 @@ private class JvmPlaylistPlayerEngine : PlaylistPlayerEngine {
     private var targetVolume = 1.0
     private var loaderThread: Thread? = null
     private val remoteMediaCache = linkedMapOf<String, File>()
+
+    init {
+        JavaFxRuntime.ensureStartedAsync()
+    }
 
     override fun load(
         media: PlaylistEngineMedia,
@@ -310,29 +314,55 @@ private class JvmPlaylistPlayerEngine : PlaylistPlayerEngine {
 }
 
 private object JavaFxRuntime {
-    private val initialized = AtomicBoolean(false)
+    private val startRequested = AtomicBoolean(false)
+    private val started = AtomicBoolean(false)
+    private val pendingActions = ConcurrentLinkedQueue<() -> Unit>()
 
-    fun ensureStarted() {
-        if (initialized.compareAndSet(false, true)) {
-            val latch = CountDownLatch(1)
+    fun ensureStartedAsync() {
+        if (started.get()) {
+            return
+        }
+        if (!startRequested.compareAndSet(false, true)) {
+            return
+        }
+
+        thread(
+            start = true,
+            isDaemon = true,
+            name = "playlist-player-javafx-bootstrap",
+        ) {
             runCatching {
                 JfxPlatform.startup {
-                    latch.countDown()
+                    started.set(true)
+                    flushPendingActions()
                 }
             }.onFailure { error ->
                 if (error.message?.contains("Toolkit already initialized") == true) {
-                    latch.countDown()
+                    started.set(true)
+                    flushPendingActions()
                 } else {
-                    throw error
+                    startRequested.set(false)
+                    started.set(false)
                 }
             }
-            latch.await()
         }
     }
 
     fun runLater(action: () -> Unit) {
-        ensureStarted()
-        JfxPlatform.runLater(action)
+        if (started.get()) {
+            JfxPlatform.runLater(action)
+            return
+        }
+
+        pendingActions.add(action)
+        ensureStartedAsync()
+    }
+
+    private fun flushPendingActions() {
+        while (true) {
+            val pending = pendingActions.poll() ?: break
+            JfxPlatform.runLater(pending)
+        }
     }
 }
 

@@ -17,6 +17,7 @@ import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.notes.server.generated.springktor.registerGeneratedSpringRoutes
 import site.addzero.notes.server.store.NoteStoreService
 import site.addzero.starter.koin.installKoin
+import site.addzero.starter.statuspages.installDefaultStatusPages
 import java.io.File
 
 fun main(args: Array<String>) {
@@ -41,6 +42,7 @@ fun Application.module() {
             }
         )
     }
+    installDefaultStatusPages()
 
     install(CORS) {
         anyHost()

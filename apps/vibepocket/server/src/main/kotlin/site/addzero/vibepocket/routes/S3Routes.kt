@@ -4,13 +4,9 @@ import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
-import io.ktor.util.cio.toByteArray
+import io.ktor.util.cio.*
 import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.*
-import site.addzero.springktor.runtime.SpringRouteResult
-import site.addzero.springktor.runtime.springBadRequest
-import site.addzero.springktor.runtime.springOk
-import site.addzero.starter.statuspages.ErrorResponse
 import site.addzero.vibepocket.dto.OkResponse
 import site.addzero.vibepocket.dto.S3ObjectDto
 import site.addzero.vibepocket.dto.S3UploadResponse
@@ -22,7 +18,7 @@ import java.util.*
  * S3 存储桶相关 API
  */
 @PostMapping("/api/s3/upload")
-suspend fun uploadToS3(call: ApplicationCall): SpringRouteResult<Any> {
+suspend fun uploadToS3(call: ApplicationCall): S3UploadResponse {
     val s3Service = s3Service()
     val multipart = call.receiveMultipart()
     var fileKey: String? = null
@@ -50,15 +46,13 @@ suspend fun uploadToS3(call: ApplicationCall): SpringRouteResult<Any> {
 
     val uploadedKey = fileKey
     if (uploadedKey != null) {
-        return springOk(
-            S3UploadResponse(
-                key = uploadedKey,
-                url = s3Service.getUrl(uploadedKey),
-            ),
+        return S3UploadResponse(
+            key = uploadedKey,
+            url = s3Service.getUrl(uploadedKey),
         )
     }
 
-    return springBadRequest(ErrorResponse(400, "No file uploaded"))
+    throw IllegalArgumentException("No file uploaded")
 }
 
 @GetMapping("/api/s3/{key}")

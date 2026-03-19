@@ -65,6 +65,35 @@ data class SunoUploadCoverRequest(
     val audioWeight: Double? = null,
 )
 
+/** POST /api/file-url-upload — 从远程 URL 上传文件 */
+@Serializable
+data class SunoFileUrlUploadRequest(
+    val fileUrl: String,
+    val uploadPath: String = "audio",
+    val fileName: String,
+)
+
+/** 文件上传服务返回的文件信息 */
+@Serializable
+data class SunoUploadedFileData(
+    val success: Boolean? = null,
+    val fileId: String? = null,
+    val fileName: String? = null,
+    val originalName: String? = null,
+    val fileSize: Long? = null,
+    val mimeType: String? = null,
+    val uploadPath: String? = null,
+    val filePath: String? = null,
+    val fileUrl: String? = null,
+    val downloadUrl: String? = null,
+    val uploadTime: String? = null,
+    val uploadedAt: String? = null,
+    val expiresAt: String? = null,
+) {
+    val resolvedUrl: String
+        get() = fileUrl ?: downloadUrl ?: throw IllegalStateException("文件上传成功，但没有返回可用 URL")
+}
+
 
 /** POST /api/v1/generate/upload-extend — 上传并扩展 */
 @Serializable
@@ -208,6 +237,7 @@ data class SunoTrack(
     val modelName: String? = null,
     val title: String? = null,
     val tags: String? = null,
+    @Serializable(with = LenientStringSerializer::class)
     val createTime: String? = null,
     val duration: Double? = null,
 )
@@ -228,19 +258,24 @@ data class SunoTaskDetail(
     val response: SunoTaskResponse? = null,
     val status: String? = null,
     val type: String? = null,
+    @Serializable(with = LenientStringSerializer::class)
     val errorCode: String? = null,
     val errorMessage: String? = null,
 ) {
     val isSuccess get() = status == "SUCCESS"
-    val isFailed get() = status == "FAILED"
-    val isProcessing get() = status != "SUCCESS" && status != "FAILED"
+    val isFailed get() = status == "FAILED" ||
+        status?.endsWith("_FAILED") == true ||
+        !errorMessage.isNullOrBlank() ||
+        errorCode != null
+    val isProcessing get() = !isSuccess && !isFailed
     val displayStatus: String
         get() = when (status) {
             "SUCCESS" -> "已完成 ✓"
             "FAILED" -> "失败 ✗"
             "QUEUED" -> "排队中..."
             "PROCESSING" -> "生成中..."
-            else -> status ?: "未知"
+            "PENDING" -> "处理中..."
+            else -> if (isFailed) "失败 ✗" else status ?: "未知"
         }
     val firstTrack: SunoTrack? get() = response?.sunoData?.firstOrNull()
 }
@@ -269,6 +304,7 @@ data class SunoLyricsTaskDetail(
     val response: SunoLyricsResponse? = null,
     val status: String? = null,
     val type: String? = null,
+    @Serializable(with = LenientStringSerializer::class)
     val errorCode: String? = null,
     val errorMessage: String? = null,
 ) {
@@ -320,6 +356,7 @@ data class SunoBoostStyleData(
     val successFlag: String? = null,
     val errorCode: Int? = null,
     val errorMessage: String? = null,
+    @Serializable(with = LenientStringSerializer::class)
     val createTime: String? = null,
 )
 

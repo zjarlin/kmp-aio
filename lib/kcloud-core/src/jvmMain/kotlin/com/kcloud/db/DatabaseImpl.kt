@@ -638,28 +638,3 @@ class DatabaseImpl(
         return if (wasNull()) null else value
     }
 }
-
-/**
- * 数据库管理器 - 单例
- */
-object DatabaseManager {
-    private var instance: Database? = null
-
-    fun initialize(dbPath: String = DatabaseImpl.getDefaultDbPath()): Database {
-        if (instance == null) {
-            instance = DatabaseImpl(dbPath).apply {
-                initialize()
-            }
-        }
-        return instance!!
-    }
-
-    fun get(): Database {
-        return instance ?: throw IllegalStateException("数据库未初始化，请先调用initialize()")
-    }
-
-    fun close() {
-        instance?.close()
-        instance = null
-    }
-}

@@ -237,6 +237,9 @@ internal fun DialogTrackResults(
         coverUrlOf = { track ->
             track.imageUrl
         },
+        hasResolvableAudioOf = { track ->
+            !track.audioUrl.isNullOrBlank() || !track.streamAudioUrl.isNullOrBlank()
+        },
         resolveAudioSource = { track ->
             track.resolvedAudioSource()
         },

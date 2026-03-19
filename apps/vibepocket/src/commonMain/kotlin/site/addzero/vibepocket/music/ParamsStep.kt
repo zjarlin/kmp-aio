@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +42,8 @@ fun ParamsStep(
     personas: List<PersonaItem> = emptyList(),
     selectedPersonaId: String? = null,
     onPersonaChange: (String?) -> Unit = {},
+    onRefreshPersonas: (() -> Unit)? = null,
+    isRefreshingPersonas: Boolean = false,
 ) {
     @Composable
     fun BasicInfoPanel() {
@@ -100,10 +100,12 @@ fun ParamsStep(
             )
 
             FieldLabel("Persona 声音角色")
-            PersonaSelector(
+            PersonaSelectionPanel(
                 personas = personas,
                 selectedPersonaId = selectedPersonaId,
                 onPersonaChange = onPersonaChange,
+                onRefresh = onRefreshPersonas,
+                isRefreshing = isRefreshingPersonas,
             )
 
             Row(
@@ -139,18 +141,22 @@ fun ParamsStep(
     fun PromptPanel() {
         StudioSectionCard(
             title = "AI 灵感描述",
-            subtitle = "可选。用自然语言描述你希望得到的音乐气质。",
+            subtitle = "可选。这里会和风格标签一起写入 Suno 的 style 字段，不再只是摆设。",
         ) {
+            MusicPromptPresetSection(
+                onApplyPrompt = onGptDescriptionPromptChange,
+                onApplyStyle = onTagsChange,
+            )
             OutlinedTextField(
                 value = gptDescriptionPrompt,
                 onValueChange = onGptDescriptionPromptChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 120.dp),
+                    .heightIn(min = 100.dp),
                 label = { Text("描述词") },
                 placeholder = { Text("例如：Powerful black male gospel lead vocal, deep and soulful...") },
                 singleLine = false,
-                minLines = 5,
+                minLines = 4,
             )
         }
     }
@@ -158,21 +164,21 @@ fun ParamsStep(
     BoxWithConstraints {
         val useWideLayout = maxWidth >= 980.dp
         if (useWideLayout) {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         BasicInfoPanel()
                     }
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         VoicePanel()
                     }
@@ -180,7 +186,7 @@ fun ParamsStep(
                 PromptPanel()
             }
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 BasicInfoPanel()
                 VoicePanel()
                 PromptPanel()
@@ -209,7 +215,7 @@ fun ChipSelector(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         options.forEachIndexed { index, option ->
             val displayLabel = labels?.getOrNull(index) ?: option
@@ -217,38 +223,6 @@ fun ChipSelector(
                 selected = option == selected,
                 onClick = { onSelect(option) },
                 label = { Text(displayLabel) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun PersonaSelector(
-    personas: List<PersonaItem>,
-    selectedPersonaId: String?,
-    onPersonaChange: (String?) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        FilterChip(
-            selected = selectedPersonaId == null,
-            onClick = { onPersonaChange(null) },
-            label = { Text("无") },
-        )
-        personas.forEach { persona ->
-            FilterChip(
-                selected = persona.personaId == selectedPersonaId,
-                onClick = { onPersonaChange(persona.personaId) },
-                label = {
-                    Text(
-                        text = persona.name,
-                        modifier = Modifier.widthIn(max = 180.dp),
-                    )
-                },
             )
         }
     }

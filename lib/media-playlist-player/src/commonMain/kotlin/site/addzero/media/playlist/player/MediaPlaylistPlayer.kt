@@ -81,6 +81,7 @@ fun <T> DefaultPlaylistPlayer(
     subtitleOf: (T) -> String,
     durationMsOf: (T) -> Long?,
     coverUrlOf: (T) -> String?,
+    hasResolvableAudioOf: (T) -> Boolean = { true },
     resolveAudioSource: suspend (T) -> PlaylistAudioSource,
     emptyHint: String = "从下方列表选择一首歌开始试听",
     resolveErrorMessage: (Throwable) -> String = { it.message ?: "加载音频失败" },
@@ -96,6 +97,7 @@ fun <T> DefaultPlaylistPlayer(
         subtitleOf = subtitleOf,
         durationMsOf = durationMsOf,
         coverUrlOf = coverUrlOf,
+        hasResolvableAudioOf = hasResolvableAudioOf,
         resolveAudioSource = resolveAudioSource,
         resolveLyrics = resolveLyrics,
         resolveErrorMessage = resolveErrorMessage,
@@ -135,6 +137,7 @@ fun <T> MediaPlaylistPlayer(
     artistOf: (T) -> String,
     durationMsOf: (T) -> Long?,
     coverUrlOf: (T) -> String?,
+    hasResolvableAudioOf: (T) -> Boolean = { true },
     resolveUrl: suspend (T) -> String,
     headersOf: (T) -> Map<String, String> = { emptyMap() },
     emptyHint: String = "从下方列表选择一首歌开始试听",
@@ -155,6 +158,7 @@ fun <T> MediaPlaylistPlayer(
         subtitleOf = artistOf,
         durationMsOf = durationMsOf,
         coverUrlOf = coverUrlOf,
+        hasResolvableAudioOf = hasResolvableAudioOf,
         resolveAudioSource = { item ->
             PlaylistAudioSource(
                 url = resolveUrl(item),
@@ -220,19 +224,19 @@ private fun <T> PlaylistPlayerLayout(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         BoxWithConstraints {
             val wideLayout = maxWidth >= 1080.dp && showLyrics
             if (wideLayout) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
                     ElevatedCard(
                         modifier = Modifier.weight(1.2f),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
@@ -240,8 +244,8 @@ private fun <T> PlaylistPlayerLayout(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                                .padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             PlaylistPlayerHeader(
                                 title = displayTitle,
@@ -254,7 +258,7 @@ private fun <T> PlaylistPlayerLayout(
                     }
                     ElevatedCard(
                         modifier = Modifier.weight(0.9f),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(18.dp),
                         colors = CardDefaults.elevatedCardColors(
                             containerColor = MaterialTheme.colorScheme.surface,
                         ),
@@ -262,7 +266,7 @@ private fun <T> PlaylistPlayerLayout(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(20.dp),
+                                .padding(14.dp),
                         ) {
                             PlaylistLyricsCard(
                                 lyrics = controller.currentLyrics,
@@ -279,7 +283,7 @@ private fun <T> PlaylistPlayerLayout(
             } else {
                 ElevatedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp),
+                    shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.elevatedCardColors(
                         containerColor = MaterialTheme.colorScheme.surface,
                     ),
@@ -287,8 +291,8 @@ private fun <T> PlaylistPlayerLayout(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         PlaylistPlayerHeader(
                             title = displayTitle,
@@ -315,7 +319,7 @@ private fun <T> PlaylistPlayerLayout(
 
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(18.dp),
             colors = CardDefaults.elevatedCardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             ),
@@ -323,8 +327,8 @@ private fun <T> PlaylistPlayerLayout(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -414,8 +418,8 @@ private fun <T> PlaylistPlayerLayout(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(max = 460.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                            .heightIn(max = 400.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(
                             items = items,
@@ -541,12 +545,12 @@ private fun <T> DefaultPlaylistPlayerContent(
     val sliderProgress = (draggingProgress ?: snapshot.progress).coerceIn(0f, 1f)
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         when {
             controller.resolvingPlaybackId != null && snapshot.currentPlaybackId == null -> {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(18.dp))
@@ -561,7 +565,7 @@ private fun <T> DefaultPlaylistPlayerContent(
             hasPlayback -> {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f),
                     border = BorderStroke(
                         width = 1.dp,
@@ -571,8 +575,8 @@ private fun <T> DefaultPlaylistPlayerContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(18.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -607,7 +611,7 @@ private fun <T> DefaultPlaylistPlayerContent(
                         }
 
                         Column(
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -853,12 +857,12 @@ private fun PlaylistTransportButton(
     OutlinedIconButton(
         onClick = { onClick() },
         enabled = enabled,
-        modifier = Modifier.size(52.dp),
+        modifier = Modifier.size(42.dp),
     ) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(22.dp),
         )
     }
 }
@@ -884,7 +888,7 @@ private fun PlaylistVolumeRow(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
         border = BorderStroke(
             width = 1.dp,
@@ -894,8 +898,8 @@ private fun PlaylistVolumeRow(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

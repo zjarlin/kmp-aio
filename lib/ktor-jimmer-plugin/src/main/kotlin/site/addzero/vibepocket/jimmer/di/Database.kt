@@ -4,6 +4,7 @@ import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
+import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
@@ -16,7 +17,6 @@ import javax.sql.DataSource
 
 private const val APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
-private const val EMBEDDED_SQLITE_URL_PROPERTY = "vibepocket.embedded.sqlite.url"
 private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:vibepocket-desktop.db"
 
 /**
@@ -66,9 +66,13 @@ private fun buildSqlClient(
     spi: DatabaseDriverSpi,
     interceptor: BaseEntityDraftInterceptor,
 ): KSqlClient = newKSqlClient {
-    setDialect(spi.dialect())
+    val dialect = spi.dialect()
+    setDialect(dialect)
     addDraftInterceptor(interceptor)
     setDatabaseNamingStrategy(DefaultDatabaseNamingStrategy.LOWER_CASE)
+    if (dialect is SQLiteDialect) {
+        addScalarProvider(SqliteLocalDateTimeScalarProvider)
+    }
     setConnectionManager { dataSource.connection.use { proceed(it) } }
 }
 
@@ -87,6 +91,34 @@ private fun runSchema(dataSource: DataSource, schemaFile: String) {
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
                 .forEach { stmt.executeUpdate(it) }
+        }
+    }
+}
+
+private fun normalizeSqliteEpochDateTimeColumns(dataSource: DataSource) {
+    val tableColumns = mapOf(
+        "music_task" to listOf("created_at", "updated_at"),
+        "favorite_track" to listOf("created_at"),
+        "music_history" to listOf("created_at"),
+        "persona_record" to listOf("created_at"),
+        "suno_task_resource" to listOf("created_at", "updated_at"),
+    )
+    dataSource.connection.use { conn ->
+        conn.createStatement().use { stmt ->
+            tableColumns.forEach { (table, columns) ->
+                columns.forEach { column ->
+                    stmt.executeUpdate(
+                        """
+                        UPDATE $table
+                        SET $column = datetime(CAST($column AS INTEGER) / 1000, 'unixepoch', 'localtime')
+                        WHERE trim($column) GLOB '[0-9]*'
+                          AND length(trim($column)) >= 10
+                          AND instr($column, '-') = 0
+                          AND instr($column, ':') = 0
+                        """.trimIndent()
+                    )
+                }
+            }
         }
     }
 }
@@ -137,7 +169,7 @@ class DatasourceRegistry(
         val datasources = loadAllDatasources(config)
             .filter { it.enabled }
             .ifEmpty {
-                fallbackEmbeddedDesktopDatasource()?.let(::listOf) ?: emptyList()
+                fallbackEmbeddedDesktopDatasource(config)?.let(::listOf) ?: emptyList()
             }
 
         val runtimes = LinkedHashMap<String, DatasourceRuntime>()
@@ -145,6 +177,9 @@ class DatasourceRegistry(
             val spi = driverResolver.resolve(props.driver)
             val dataSource = spi.createDataSource(props)
             spi.schemaFile()?.let { runSchema(dataSource, it) }
+            if (spi.dialect() is SQLiteDialect) {
+                normalizeSqliteEpochDateTimeColumns(dataSource)
+            }
             val sqlClient = buildSqlClient(dataSource, spi, interceptor)
             runtimes[props.name] = DatasourceRuntime(props, dataSource, sqlClient)
         }
@@ -152,7 +187,7 @@ class DatasourceRegistry(
     }
 }
 
-private fun fallbackEmbeddedDesktopDatasource(): DatasourceProperties? {
+private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): DatasourceProperties? {
     val isEmbeddedDesktop = System.getProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
         ?.toBooleanStrictOrNull()
         ?: false
@@ -160,15 +195,20 @@ private fun fallbackEmbeddedDesktopDatasource(): DatasourceProperties? {
         return null
     }
 
-    val sqliteUrl = System.getProperty(EMBEDDED_SQLITE_URL_PROPERTY)
+    val sqliteUrl = config.propertyOrNull("datasources.sqlite.url")
+        ?.getString()
         ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_EMBEDDED_SQLITE_URL
+    val sqliteDriver = config.propertyOrNull("datasources.sqlite.driver")
+        ?.getString()
+        ?.takeIf { it.isNotBlank() }
+        ?: "org.sqlite.SQLiteDriver"
 
     return DatasourceProperties(
         name = "sqlite",
         enabled = true,
         url = sqliteUrl,
-        driver = "org.sqlite.SQLiteDriver",
+        driver = sqliteDriver,
     )
 }
 

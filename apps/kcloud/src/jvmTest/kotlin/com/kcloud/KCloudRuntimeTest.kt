@@ -1,20 +1,25 @@
 package com.kcloud
 
-import com.kcloud.app.KCloudPluginRegistry
-import com.kcloud.plugin.KCloudMenuGroups
-import com.kcloud.plugins.ai.spi.AiDiagnosticsService
-import com.kcloud.plugins.dotfiles.DotfilesPluginMenus
-import com.kcloud.plugins.environment.EnvironmentPluginMenus
-import com.kcloud.plugins.file.FilePluginMenus
-import com.kcloud.plugins.notes.NotesPluginMenus
-import com.kcloud.plugins.packages.PackageOrganizerPluginMenus
-import com.kcloud.plugins.quicktransfer.QuickTransferPluginMenus
-import com.kcloud.plugins.servermanagement.ServerManagementPluginMenus
-import com.kcloud.plugins.ssh.SshPluginMenus
-import com.kcloud.plugins.settings.SettingsSectionRegistry
-import com.kcloud.plugins.settings.SettingsPluginMenus
-import com.kcloud.plugins.transferhistory.TransferHistoryPluginMenus
-import com.kcloud.plugins.webdav.WebDavPluginMenus
+import com.kcloud.app.KCloudFeatureRegistry
+import com.kcloud.feature.KCloudMenuGroups
+import com.kcloud.feature.ShellSettingsService
+import com.kcloud.features.ai.spi.AiDiagnosticsService
+import com.kcloud.features.compose.ComposeFeatureMenus
+import com.kcloud.features.dotfiles.DotfilesFeatureMenus
+import com.kcloud.features.environment.EnvironmentFeatureMenus
+import com.kcloud.features.file.FileFeatureMenus
+import com.kcloud.features.notes.NotesFeatureMenus
+import com.kcloud.features.packages.PackageOrganizerFeatureMenus
+import com.kcloud.features.quicktransfer.QuickTransferDropService
+import com.kcloud.features.quicktransfer.QuickTransferFeatureMenus
+import com.kcloud.features.quicktransfer.QuickTransferService
+import com.kcloud.features.servermanagement.ServerManagementFeatureMenus
+import com.kcloud.features.ssh.SshFeatureMenus
+import com.kcloud.features.settings.SettingsEditorService
+import com.kcloud.features.settings.SettingsSectionRegistry
+import com.kcloud.features.settings.SettingsFeatureMenus
+import com.kcloud.features.transferhistory.TransferHistoryFeatureMenus
+import com.kcloud.features.webdav.WebDavFeatureMenus
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -24,12 +29,12 @@ import org.koin.core.context.stopKoin
 
 class KCloudRuntimeTest {
     @Test
-    fun `aggregates plugin menus into sidebar tree`() {
+    fun `aggregates feature menus into sidebar tree`() {
         stopKoin()
         val runtime = createKCloudRuntime()
 
         try {
-            val registry = runtime.koin.get<KCloudPluginRegistry>()
+            val registry = runtime.koin.get<KCloudFeatureRegistry>()
             val rootNodes = registry.menuTree.associateBy { node -> node.id }
 
             assertEquals(
@@ -43,27 +48,28 @@ class KCloudRuntimeTest {
 
             assertEquals(
                 listOf(
-                    QuickTransferPluginMenus.QUICK_TRANSFER,
-                    TransferHistoryPluginMenus.TRANSFER_HISTORY
+                    QuickTransferFeatureMenus.QUICK_TRANSFER,
+                    TransferHistoryFeatureMenus.TRANSFER_HISTORY
                 ),
                 rootNodes.getValue(KCloudMenuGroups.SYNC).children.map { node -> node.id }
             )
             assertEquals(
                 listOf(
-                    ServerManagementPluginMenus.SERVER_MANAGEMENT,
-                    FilePluginMenus.FILE_MANAGER,
-                    NotesPluginMenus.NOTES,
-                    PackageOrganizerPluginMenus.PACKAGES,
-                    SshPluginMenus.SSH,
-                    WebDavPluginMenus.WEBDAV
+                    ServerManagementFeatureMenus.SERVER_MANAGEMENT,
+                    ComposeFeatureMenus.COMPOSE_MANAGER,
+                    FileFeatureMenus.FILE_MANAGER,
+                    NotesFeatureMenus.NOTES,
+                    PackageOrganizerFeatureMenus.PACKAGES,
+                    SshFeatureMenus.SSH,
+                    WebDavFeatureMenus.WEBDAV
                 ),
                 rootNodes.getValue(KCloudMenuGroups.MANAGEMENT).children.map { node -> node.id }
             )
             assertEquals(
                 listOf(
-                    DotfilesPluginMenus.DOTFILES,
-                    EnvironmentPluginMenus.ENVIRONMENT_SETUP,
-                    SettingsPluginMenus.SETTINGS
+                    DotfilesFeatureMenus.DOTFILES,
+                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
+                    SettingsFeatureMenus.SETTINGS
                 ),
                 rootNodes.getValue(KCloudMenuGroups.SYSTEM).children.map { node -> node.id }
             )
@@ -71,17 +77,18 @@ class KCloudRuntimeTest {
             val visibleLeafIds = registry.visibleLeaves.map { node -> node.id }
             assertEquals(
                 listOf(
-                    QuickTransferPluginMenus.QUICK_TRANSFER,
-                    TransferHistoryPluginMenus.TRANSFER_HISTORY,
-                    ServerManagementPluginMenus.SERVER_MANAGEMENT,
-                    FilePluginMenus.FILE_MANAGER,
-                    NotesPluginMenus.NOTES,
-                    PackageOrganizerPluginMenus.PACKAGES,
-                    SshPluginMenus.SSH,
-                    WebDavPluginMenus.WEBDAV,
-                    DotfilesPluginMenus.DOTFILES,
-                    EnvironmentPluginMenus.ENVIRONMENT_SETUP,
-                    SettingsPluginMenus.SETTINGS
+                    QuickTransferFeatureMenus.QUICK_TRANSFER,
+                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
+                    ServerManagementFeatureMenus.SERVER_MANAGEMENT,
+                    ComposeFeatureMenus.COMPOSE_MANAGER,
+                    FileFeatureMenus.FILE_MANAGER,
+                    NotesFeatureMenus.NOTES,
+                    PackageOrganizerFeatureMenus.PACKAGES,
+                    SshFeatureMenus.SSH,
+                    WebDavFeatureMenus.WEBDAV,
+                    DotfilesFeatureMenus.DOTFILES,
+                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
+                    SettingsFeatureMenus.SETTINGS
                 ),
                 visibleLeafIds
             )
@@ -97,45 +104,47 @@ class KCloudRuntimeTest {
     }
 
     @Test
-    fun `registers initial ui and server plugins`() {
+    fun `registers initial ui and server features`() {
         stopKoin()
         val runtime = createKCloudRuntime()
 
         try {
-            val pluginRegistry = runtime.pluginRegistry
+            val featureRegistry = runtime.featureRegistry
 
             assertEquals(
                 listOf(
-                    "desktop-integration-plugin",
-                    "quick-transfer-plugin",
-                    "server-management-plugin",
-                    "file-plugin",
-                    "notes-plugin",
-                    "transfer-history-plugin",
-                    "package-organizer-plugin",
-                    "ssh-plugin",
-                    "webdav-plugin",
-                    "dotfiles-plugin",
-                    "environment-plugin",
-                    "settings-plugin"
+                    "desktop-integration",
+                    "quick-transfer",
+                    "server-management",
+                    "compose",
+                    "file",
+                    "notes",
+                    "transfer-history",
+                    "package-organizer",
+                    "ssh",
+                    "webdav",
+                    "dotfiles",
+                    "environment",
+                    "settings"
                 ),
-                pluginRegistry.plugins.map { plugin -> plugin.pluginId }
+                featureRegistry.features.map { feature -> feature.featureId }
             )
             assertEquals(
                 listOf(
-                    "quick-transfer-server-plugin",
-                    "server-management-server-plugin",
-                    "file-server-plugin",
-                    "notes-server-plugin",
-                    "transfer-history-server-plugin",
-                    "package-organizer-server-plugin",
-                    "ssh-server-plugin",
-                    "webdav-server-plugin",
-                    "dotfiles-server-plugin",
-                    "environment-server-plugin",
-                    "ai-server-plugin"
+                    "quick-transfer",
+                    "server-management",
+                    "compose",
+                    "file",
+                    "notes",
+                    "transfer-history",
+                    "package-organizer",
+                    "ssh",
+                    "webdav",
+                    "dotfiles",
+                    "environment",
+                    "ai"
                 ),
-                runtime.serverPlugins.map { plugin -> plugin.pluginId }
+                runtime.serverFeatures.map { feature -> feature.featureId }
             )
         } finally {
             runtime.stopServer()
@@ -144,29 +153,19 @@ class KCloudRuntimeTest {
     }
 
     @Test
-    fun `supports legacy menu aliases`() {
+    fun `falls back to default leaf for unknown menu ids`() {
         stopKoin()
         val runtime = createKCloudRuntime()
 
         try {
-            val registry = runtime.koin.get<KCloudPluginRegistry>()
+            val registry = runtime.koin.get<KCloudFeatureRegistry>()
 
-            assertEquals(
-                QuickTransferPluginMenus.QUICK_TRANSFER,
-                registry.normalizeMenuId("quick")
-            )
-            assertEquals(
-                FilePluginMenus.FILE_MANAGER,
-                registry.normalizeMenuId("file")
-            )
-            assertEquals(NotesPluginMenus.NOTES, registry.normalizeMenuId("notes"))
-            assertEquals(PackageOrganizerPluginMenus.PACKAGES, registry.normalizeMenuId("packages"))
-            assertEquals(SshPluginMenus.SSH, registry.normalizeMenuId("ssh"))
-            assertEquals(WebDavPluginMenus.WEBDAV, registry.normalizeMenuId("webdav"))
-            assertEquals(DotfilesPluginMenus.DOTFILES, registry.normalizeMenuId("dotfiles"))
-            assertEquals(EnvironmentPluginMenus.ENVIRONMENT_SETUP, registry.normalizeMenuId("environment"))
+            assertEquals(registry.defaultLeafId, registry.normalizeMenuId(""))
+            assertEquals(registry.defaultLeafId, registry.normalizeMenuId("quick"))
+            assertEquals(registry.defaultLeafId, registry.normalizeMenuId("docker-compose"))
+            assertEquals(NotesFeatureMenus.NOTES, registry.normalizeMenuId(NotesFeatureMenus.NOTES))
             assertNotNull(registry.findLeaf("quick")?.entry?.content)
-            assertNotNull(registry.findLeaf("notes")?.entry?.content)
+            assertNotNull(registry.findLeaf(NotesFeatureMenus.NOTES)?.entry?.content)
         } finally {
             runtime.stopServer()
             stopKoin()
@@ -202,6 +201,22 @@ class KCloudRuntimeTest {
             val providerIds = diagnosticsService.availableProviders().map { provider -> provider.providerId }
 
             assertContains(providerIds, "ollama")
+        } finally {
+            runtime.stopServer()
+            stopKoin()
+        }
+    }
+
+    @Test
+    fun `resolves interface based shell and quick transfer services`() {
+        stopKoin()
+        val runtime = createKCloudRuntime()
+
+        try {
+            assertNotNull(runtime.koin.get<ShellSettingsService>())
+            assertNotNull(runtime.koin.get<SettingsEditorService>())
+            assertNotNull(runtime.koin.get<QuickTransferService>())
+            assertNotNull(runtime.koin.get<QuickTransferDropService>())
         } finally {
             runtime.stopServer()
             stopKoin()

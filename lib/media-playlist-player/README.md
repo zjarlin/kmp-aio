@@ -28,6 +28,7 @@ ProvidePlaylistPlayerHost {
         subtitleOf = { it.artist },
         durationMsOf = { it.durationMs },
         coverUrlOf = { it.coverUrl },
+        hasResolvableAudioOf = { !it.audioUrl.isNullOrBlank() },
         resolveAudioSource = { song ->
             PlaylistAudioSource(url = song.audioUrl)
         },
@@ -43,7 +44,7 @@ ProvidePlaylistPlayerHost {
 
 ## APIs
 
-- `DefaultPlaylistPlayer<T>`: 业务默认入口，传列表和映射函数即可。
+- `DefaultPlaylistPlayer<T>`: 业务默认入口，传列表和映射函数即可；如果业务本身已经知道 URL 为空，可以用 `hasResolvableAudioOf` 让“试听 / 复制 / 下载”按钮直接禁用。
 - `rememberPlaylistPlayerController(...)`: 需要外部驱动时使用的语义化控制器，内置 `play / pause / resume / replay / playPrevious / playNext / seekTo / setVolume`。
 - `ProvidePlaylistPlayerHost { ... }`: 让多个页面或弹窗共享同一套播放核心。
 - `MediaPlaylistPlayer<T>`: 旧 API 兼容层，建议逐步迁移到 `DefaultPlaylistPlayer<T>`。

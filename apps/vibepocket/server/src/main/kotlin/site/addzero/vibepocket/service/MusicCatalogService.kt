@@ -1,8 +1,10 @@
 package site.addzero.vibepocket.service
 
+import kotlinx.coroutines.CancellationException
 import org.koin.core.annotation.Single
 import site.addzero.network.call.musiclib.MusicAPIFactory
 import site.addzero.network.call.musiclib.model.Song
+import site.addzero.starter.statuspages.BadGatewayHttpException
 import site.addzero.vibepocket.api.music.MusicLyric
 import site.addzero.vibepocket.api.music.MusicResolvedAsset
 import site.addzero.vibepocket.api.music.MusicTrack
@@ -33,7 +35,9 @@ class MusicLibCatalogService : MusicCatalogService {
         require(normalizedKeyword.isNotBlank()) { "keyword is required" }
 
         val musicProvider = createProvider(normalizedProvider)
-        return musicProvider.search(normalizedKeyword).map(::toTrack)
+        return runMusicProvider {
+            musicProvider.search(normalizedKeyword).map(::toTrack)
+        }
     }
 
     override suspend fun getLyrics(
@@ -49,14 +53,18 @@ class MusicLibCatalogService : MusicCatalogService {
             source = normalizedProvider,
             extra = sourceIdKey(normalizedProvider, normalizedSongId),
         )
-        val lrc = createProvider(normalizedProvider).getLyrics(song)
+        val lrc = runMusicProvider {
+            createProvider(normalizedProvider).getLyrics(song)
+        }
         return MusicLyric(lrc = lrc)
     }
 
     override suspend fun resolve(track: MusicTrack): MusicResolvedAsset {
         val normalizedProvider = normalizeProvider(track.platform)
         val song = track.toSong(normalizedProvider)
-        val resolvedUrl = createProvider(normalizedProvider).getDownloadURL(song)
+        val resolvedUrl = runMusicProvider {
+            createProvider(normalizedProvider).getDownloadURL(song)
+        }
         val fileName = song.copy(url = resolvedUrl).filename()
         return MusicResolvedAsset(
             url = resolvedUrl,
@@ -123,6 +131,19 @@ class MusicLibCatalogService : MusicCatalogService {
             "m4a" -> "audio/mp4"
             "flac" -> "audio/flac"
             else -> null
+        }
+    }
+
+    private inline fun <T> runMusicProvider(block: () -> T): T {
+        return try {
+            block()
+        } catch (error: Throwable) {
+            when (error) {
+                is IllegalArgumentException -> throw error
+                is BadGatewayHttpException -> throw error
+                is CancellationException -> throw error
+                else -> throw BadGatewayHttpException(error.message ?: "Music provider request failed")
+            }
         }
     }
 }

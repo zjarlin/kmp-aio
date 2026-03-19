@@ -16,6 +16,8 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
 
+apply(from = rootProject.file("gradle/spring2ktor-ksp-cache-workaround.gradle.kts"))
+
 val desktopMainClass = "com.kcloud.MainKt"
 val libs = versionCatalogs.named("libs")
 val ktorVersion = libs.findVersion("ktor").get().requiredVersion
@@ -38,34 +40,36 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:ai"))
-            implementation(project(":apps:kcloud:plugins:desktop-integration"))
-            implementation(project(":apps:kcloud:plugins:dotfiles"))
-            implementation(project(":apps:kcloud:plugins:environment"))
-            implementation(project(":apps:kcloud:plugins:file"))
-            implementation(project(":apps:kcloud:plugins:notes"))
-            implementation(project(":apps:kcloud:plugins:plugin-api"))
-            implementation(project(":apps:kcloud:plugins:package-organizer"))
-            implementation(project(":apps:kcloud:plugins:quick-transfer"))
-            implementation(project(":apps:kcloud:plugins:settings"))
-            implementation(project(":apps:kcloud:plugins:server-management"))
-            implementation(project(":apps:kcloud:plugins:ssh"))
-            implementation(project(":apps:kcloud:plugins:transfer-history"))
-            implementation(project(":apps:kcloud:plugins:webdav"))
+            implementation(project(":apps:kcloud:features:ai"))
+            implementation(project(":apps:kcloud:features:compose"))
+            implementation(project(":apps:kcloud:features:desktop-integration"))
+            implementation(project(":apps:kcloud:features:dotfiles"))
+            implementation(project(":apps:kcloud:features:environment"))
+            implementation(project(":apps:kcloud:features:file"))
+            implementation(project(":apps:kcloud:features:notes"))
+            implementation(project(":apps:kcloud:features:feature-api"))
+            implementation(project(":apps:kcloud:features:package-organizer"))
+            implementation(project(":apps:kcloud:features:quick-transfer"))
+            implementation(project(":apps:kcloud:features:settings"))
+            implementation(project(":apps:kcloud:features:server-management"))
+            implementation(project(":apps:kcloud:features:ssh"))
+            implementation(project(":apps:kcloud:features:transfer-history"))
+            implementation(project(":apps:kcloud:features:webdav"))
         }
         jvmMain.dependencies {
             implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
             implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
             implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
             implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
-            implementation("site.addzero:spring2ktor-server-core:2026.03.10")
+            implementation(projects.lib.starterStatuspages)
+            implementation("site.addzero:spring2ktor-server-core:2026.03.13")
             compileOnly("org.springframework:spring-web:5.3.21")
         }
     }
 }
 
 dependencies {
-    add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.10")
+    add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.13")
 }
 
 val java17Launcher = extensions.getByType<JavaToolchainService>().launcherFor {

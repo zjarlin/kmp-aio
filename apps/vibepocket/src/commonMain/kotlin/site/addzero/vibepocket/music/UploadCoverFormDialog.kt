@@ -11,6 +11,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -23,6 +24,11 @@ import site.addzero.vibepocket.api.suno.SUNO_MODELS
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
 import site.addzero.vibepocket.api.suno.SunoUploadCoverRequest
 import site.addzero.vibepocket.api.suno.VOCAL_GENDERS
+import site.addzero.vibepocket.model.PersonaItem
+
+private fun uploadCoverDebug(message: String) {
+    println("[UploadCoverFormDialog] $message")
+}
 
 @Composable
 fun UploadCoverFormDialog(
@@ -36,11 +42,51 @@ fun UploadCoverFormDialog(
     var title by remember { mutableStateOf("") }
     var selectedModel by remember { mutableStateOf("V4_5ALL") }
     var selectedGender by remember { mutableStateOf("m") }
+    var personas by remember { mutableStateOf<List<PersonaItem>>(emptyList()) }
+    var selectedPersonaId by remember { mutableStateOf<String?>(null) }
+    var isRefreshingPersonas by remember { mutableStateOf(false) }
+    var coverFormHistory by remember { mutableStateOf<List<SavedUploadCoverFormDraft>>(emptyList()) }
 
     var isSubmitting by remember { mutableStateOf(false) }
     var statusText by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var resultDetail by remember { mutableStateOf<SunoTaskDetail?>(null) }
+
+    fun applySavedDraft(draft: SavedUploadCoverFormDraft) {
+        uploadUrl = draft.uploadUrl
+        prompt = draft.prompt
+        style = draft.style
+        title = draft.title
+        selectedModel = draft.selectedModel
+        selectedGender = draft.selectedGender
+        selectedPersonaId = draft.selectedPersonaId
+    }
+
+    fun shouldRestoreDraft(): Boolean {
+        return uploadUrl.isBlank() &&
+            prompt.isBlank() &&
+            style.isBlank() &&
+            title.isBlank() &&
+            selectedPersonaId == null &&
+            selectedModel == "V4_5ALL" &&
+            selectedGender == "m"
+    }
+
+    LaunchedEffect(Unit) {
+        coverFormHistory = runCatching { loadUploadCoverFormHistory() }.getOrDefault(emptyList())
+        if (shouldRestoreDraft()) {
+            coverFormHistory.firstOrNull()?.let(::applySavedDraft)
+        }
+        isRefreshingPersonas = true
+        try {
+            personas = loadSavedPersonas()
+            if (!personas.containsPersona(selectedPersonaId)) {
+                selectedPersonaId = null
+            }
+        } finally {
+            isRefreshingPersonas = false
+        }
+    }
 
     MusicActionDialog(
         title = "翻唱上传",
@@ -49,6 +95,16 @@ fun UploadCoverFormDialog(
     ) {
         if (resultDetail == null) {
             DialogHint("输入音频 URL，再选择模型和声线性别，就可以提交翻唱任务。")
+            if (coverFormHistory.isNotEmpty()) {
+                DialogHint("最近填写")
+                RecentFormHistoryChips(
+                    labels = coverFormHistory.map { it.chipLabel() },
+                    onSelectIndex = { index ->
+                        coverFormHistory.getOrNull(index)?.let(::applySavedDraft)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             OutlinedTextField(
                 value = uploadUrl,
                 onValueChange = { uploadUrl = it },
@@ -117,12 +173,42 @@ fun UploadCoverFormDialog(
                 }
             }
 
+            DialogHint("Persona 声音角色")
+            PersonaSelectionPanel(
+                personas = personas,
+                selectedPersonaId = selectedPersonaId,
+                onPersonaChange = { selectedPersonaId = it },
+                onRefresh = {
+                    scope.launch {
+                        if (isRefreshingPersonas) {
+                            return@launch
+                        }
+                        isRefreshingPersonas = true
+                        try {
+                            personas = loadSavedPersonas()
+                            if (!personas.containsPersona(selectedPersonaId)) {
+                                selectedPersonaId = null
+                            }
+                        } finally {
+                            isRefreshingPersonas = false
+                        }
+                    }
+                },
+                isRefreshing = isRefreshingPersonas,
+                emptyMessage = "还没有 Persona。先从生成结果里创建一个，再回来做翻唱复用声线。",
+            )
+
             Button(
                 onClick = {
+                    uploadCoverDebug(
+                        "submit clicked urlBlank=${uploadUrl.isBlank()} model=$selectedModel gender=$selectedGender personaId=$selectedPersonaId"
+                    )
                     if (isSubmitting) {
+                        uploadCoverDebug("ignored duplicated click while submitting")
                         return@Button
                     }
                     if (uploadUrl.isBlank()) {
+                        uploadCoverDebug("validation failed: uploadUrl is blank")
                         errorMessage = "请输入音频 URL"
                         return@Button
                     }
@@ -132,23 +218,54 @@ fun UploadCoverFormDialog(
 
                     scope.launch {
                         try {
+                            val currentDraft = SavedUploadCoverFormDraft(
+                                uploadUrl = uploadUrl,
+                                prompt = prompt,
+                                style = style,
+                                title = title,
+                                selectedModel = selectedModel,
+                                selectedGender = selectedGender,
+                                selectedPersonaId = selectedPersonaId,
+                            )
+                            val draftSaved = runCatching {
+                                saveUploadCoverFormDraft(currentDraft)
+                            }.isSuccess
+                            if (draftSaved) {
+                                coverFormHistory = runCatching {
+                                    loadUploadCoverFormHistory()
+                                }.getOrDefault(coverFormHistory)
+                            }
+                            val preparedUploadUrl = prepareSunoUploadSourceUrl(uploadUrl)
                             val request = SunoUploadCoverRequest(
-                                uploadUrl = uploadUrl.trim(),
+                                uploadUrl = preparedUploadUrl,
                                 prompt = prompt.ifBlank { null },
                                 style = style.ifBlank { null },
                                 title = title.ifBlank { null },
                                 model = selectedModel,
                                 vocalGender = selectedGender,
+                                personaId = selectedPersonaId,
                             )
+                            uploadCoverDebug("request prepared originalUrl=${uploadUrl.trim()} resolvedUrl=$preparedUploadUrl")
+                            uploadCoverDebug("request payload (callback managed by workflow): $request")
                             val detail = SunoWorkflowService.submitTask(
-                                submit = { client -> client.uploadCover(request) },
+                                actionLabel = "提交翻唱",
+                                submit = { client, callbackUrl ->
+                                    client.uploadCover(
+                                        request.copy(callBackUrl = callbackUrl)
+                                    )
+                                },
                                 onStatusUpdate = { status, _ ->
+                                    uploadCoverDebug("status update: $status")
                                     statusText = status
                                 },
                             )
                             resultDetail = detail
+                            uploadCoverDebug(
+                                "submit completed taskId=${detail.taskId} status=${detail.status} error=${detail.errorMessage ?: detail.errorCode}"
+                            )
                             statusText = null
                         } catch (error: Exception) {
+                            uploadCoverDebug("submit failed: ${error::class.simpleName}: ${error.message}")
                             errorMessage = SunoWorkflowService.errorMessage(error)
                             statusText = null
                         } finally {

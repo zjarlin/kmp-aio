@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.springktor.runtime.SpringRouteResult
-import site.addzero.springktor.runtime.springNotFound
-import site.addzero.springktor.runtime.springOk
-import site.addzero.starter.statuspages.ErrorResponse
 import site.addzero.vibepocket.dto.OkResponse
 import site.addzero.vibepocket.model.*
 import site.addzero.vibepocket.model.by
@@ -67,7 +63,7 @@ suspend fun createFavorite(
 @DeleteMapping("/api/favorites/{trackId}")
 suspend fun deleteFavorite(
     @PathVariable trackId: String,
-): SpringRouteResult<Any> {
+): OkResponse {
     val sqlClient = sqlClient()
     val existing = sqlClient.createQuery(FavoriteTrack::class) {
         where(table.trackId eq trackId)
@@ -75,11 +71,11 @@ suspend fun deleteFavorite(
     }.execute().firstOrNull()
 
     if (existing == null) {
-        return springNotFound(ErrorResponse(404, "Favorite not found"))
+        throw NoSuchElementException("Favorite not found")
     }
 
     sqlClient.deleteById(FavoriteTrack::class, existing.id)
-    return springOk(OkResponse())
+    return OkResponse()
 }
 
 @GetMapping("/api/favorites")

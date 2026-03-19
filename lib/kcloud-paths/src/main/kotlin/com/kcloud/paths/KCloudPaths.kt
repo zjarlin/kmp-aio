@@ -19,8 +19,12 @@ object KCloudPaths {
         return (overriddenPath?.let(::File) ?: File(userHome(), "KCloud")).ensureDirectory()
     }
 
+    fun featuresDir(): File {
+        return File(appSupportDir(), "features").ensureDirectory()
+    }
+
     fun pluginsDir(): File {
-        return File(appSupportDir(), "plugins").ensureDirectory()
+        return featuresDir()
     }
 
     fun securityDir(): File {

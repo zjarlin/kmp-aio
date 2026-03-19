@@ -4,33 +4,22 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sync
-import com.kcloud.plugin.KCloudMenuEntry
-import com.kcloud.plugin.KCloudMenuGroups
-import com.kcloud.plugin.KCloudMenuNode
-import com.kcloud.plugin.KCloudMenuTreeBuilder
-import com.kcloud.plugin.KCloudPlugin
-import com.kcloud.plugin.ShellWindowController
-import com.kcloud.plugins.dotfiles.DotfilesPluginMenus
-import com.kcloud.plugins.environment.EnvironmentPluginMenus
-import com.kcloud.plugins.file.FilePluginMenus
-import com.kcloud.plugins.notes.NotesPluginMenus
-import com.kcloud.plugins.packages.PackageOrganizerPluginMenus
-import com.kcloud.plugins.quicktransfer.QuickTransferPluginMenus
-import com.kcloud.plugins.servermanagement.ServerManagementPluginMenus
-import com.kcloud.plugins.settings.SettingsPluginMenus
-import com.kcloud.plugins.ssh.SshPluginMenus
-import com.kcloud.plugins.transferhistory.TransferHistoryPluginMenus
-import com.kcloud.plugins.webdav.WebDavPluginMenus
+import com.kcloud.feature.KCloudMenuEntry
+import com.kcloud.feature.KCloudMenuGroups
+import com.kcloud.feature.KCloudMenuNode
+import com.kcloud.feature.KCloudMenuTreeBuilder
+import com.kcloud.feature.KCloudFeature
+import com.kcloud.feature.ShellWindowController
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.koin.core.annotation.Single
 
 @Single
-class KCloudPluginRegistry(
-    plugins: List<KCloudPlugin>
+class KCloudFeatureRegistry(
+    features: List<KCloudFeature>
 ) {
-    val plugins: List<KCloudPlugin> = plugins.sortedBy { it.order }
+    val features: List<KCloudFeature> = features.sortedBy { it.order }
 
     private val shellGroups = listOf(
         KCloudMenuEntry(
@@ -54,7 +43,7 @@ class KCloudPluginRegistry(
     )
 
     val menuTree: List<KCloudMenuNode> = KCloudMenuTreeBuilder.buildTree(
-        shellGroups + this.plugins.flatMap { plugin -> plugin.menuEntries }
+        shellGroups + this.features.flatMap { feature -> feature.menuEntries }
     )
 
     private val allNodes = KCloudMenuTreeBuilder.flatten(menuTree)
@@ -66,22 +55,8 @@ class KCloudPluginRegistry(
         .map { node -> node.id }
         .toSet()
 
-    private val legacyAliases = mapOf(
-        "quick" to QuickTransferPluginMenus.QUICK_TRANSFER,
-        "file" to FilePluginMenus.FILE_MANAGER,
-        "notes" to NotesPluginMenus.NOTES,
-        "packages" to PackageOrganizerPluginMenus.PACKAGES,
-        "server" to ServerManagementPluginMenus.SERVER_MANAGEMENT,
-        "ssh" to SshPluginMenus.SSH,
-        "history" to TransferHistoryPluginMenus.TRANSFER_HISTORY,
-        "webdav" to WebDavPluginMenus.WEBDAV,
-        "dotfiles" to DotfilesPluginMenus.DOTFILES,
-        "environment" to EnvironmentPluginMenus.ENVIRONMENT_SETUP,
-        "settings" to SettingsPluginMenus.SETTINGS
-    )
-
     fun normalizeMenuId(menuId: String): String {
-        val normalized = legacyAliases[menuId] ?: menuId
+        val normalized = menuId.trim()
         return when {
             normalized.isBlank() -> defaultLeafId
             normalized in nodesById -> normalized
@@ -107,14 +82,14 @@ class KCloudPluginRegistry(
     }
 }
 
-@Single
+@Single(binds = [ShellWindowController::class])
 class KCloudShellState(
-    private val pluginRegistry: KCloudPluginRegistry
+    private val featureRegistry: KCloudFeatureRegistry
 ) : ShellWindowController {
-    private val _selectedMenuId = MutableStateFlow(pluginRegistry.defaultLeafId)
+    private val _selectedMenuId = MutableStateFlow(featureRegistry.defaultLeafId)
     val selectedMenuId: StateFlow<String> = _selectedMenuId.asStateFlow()
 
-    private val _expandedMenuIds = MutableStateFlow(pluginRegistry.defaultExpandedIds)
+    private val _expandedMenuIds = MutableStateFlow(featureRegistry.defaultExpandedIds)
     val expandedMenuIds: StateFlow<Set<String>> = _expandedMenuIds.asStateFlow()
 
     private val _windowVisible = MutableStateFlow(true)
@@ -124,13 +99,13 @@ class KCloudShellState(
     val exitRequested: StateFlow<Boolean> = _exitRequested.asStateFlow()
 
     fun selectMenu(menuId: String) {
-        val leaf = pluginRegistry.findLeaf(menuId) ?: return
+        val leaf = featureRegistry.findLeaf(menuId) ?: return
         _selectedMenuId.value = leaf.id
         expandAncestors(leaf.id)
     }
 
     fun toggleGroup(menuId: String) {
-        val normalized = pluginRegistry.normalizeMenuId(menuId)
+        val normalized = featureRegistry.normalizeMenuId(menuId)
         _expandedMenuIds.value = _expandedMenuIds.value.toMutableSet().apply {
             if (!add(normalized)) {
                 remove(normalized)
@@ -139,7 +114,7 @@ class KCloudShellState(
     }
 
     private fun expandAncestors(menuId: String) {
-        _expandedMenuIds.value = _expandedMenuIds.value + pluginRegistry.ancestorIdsFor(menuId)
+        _expandedMenuIds.value = _expandedMenuIds.value + featureRegistry.ancestorIdsFor(menuId)
     }
 
     override fun showWindow() {

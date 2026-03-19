@@ -55,7 +55,7 @@ fun MusicHistoryPage() {
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
-        val favorites = ServerApiClient.getFavorites()
+        val favorites = ServerApiClient.favoriteApi.getFavorites()
         favorites.forEach { favorite ->
             favoriteSet[favorite.trackId] = true
         }
@@ -70,7 +70,7 @@ fun MusicHistoryPage() {
                 historyLoading = true
                 historyError = null
                 try {
-                    historyItems = ServerApiClient.getHistory()
+                    historyItems = ServerApiClient.historyApi.getHistory()
                 } catch (error: Exception) {
                     historyError = error.message ?: "加载历史记录失败"
                 } finally {
@@ -82,7 +82,7 @@ fun MusicHistoryPage() {
                 favoriteLoading = true
                 favoriteError = null
                 try {
-                    favoriteItems = ServerApiClient.getFavorites()
+                    favoriteItems = ServerApiClient.favoriteApi.getFavorites()
                     favoriteSet.clear()
                     favoriteItems.forEach { favorite ->
                         favoriteSet[favorite.trackId] = true
@@ -135,7 +135,7 @@ fun MusicHistoryPage() {
                             historyLoading = true
                             historyError = null
                             try {
-                                historyItems = ServerApiClient.getHistory()
+                                historyItems = ServerApiClient.historyApi.getHistory()
                             } catch (error: Exception) {
                                 historyError = error.message ?: "加载失败"
                             } finally {
@@ -148,7 +148,7 @@ fun MusicHistoryPage() {
                         scope.launch {
                             try {
                                 if (newFavorite) {
-                                    ServerApiClient.addFavorite(
+                                    ServerApiClient.favoriteApi.addFavorite(
                                         FavoriteRequest(
                                             trackId = trackId,
                                             taskId = taskId,
@@ -161,7 +161,7 @@ fun MusicHistoryPage() {
                                     )
                                     favoriteSet[trackId] = true
                                 } else {
-                                    ServerApiClient.removeFavorite(trackId)
+                                    ServerApiClient.favoriteApi.removeFavorite(trackId)
                                     favoriteSet.remove(trackId)
                                 }
                             } catch (_: Exception) {
@@ -180,7 +180,7 @@ fun MusicHistoryPage() {
                             favoriteLoading = true
                             favoriteError = null
                             try {
-                                favoriteItems = ServerApiClient.getFavorites()
+                                favoriteItems = ServerApiClient.favoriteApi.getFavorites()
                                 favoriteSet.clear()
                                 favoriteItems.forEach { favorite ->
                                     favoriteSet[favorite.trackId] = true
@@ -196,7 +196,7 @@ fun MusicHistoryPage() {
                         scope.launch {
                             try {
                                 if (!newFavorite) {
-                                    ServerApiClient.removeFavorite(trackId)
+                                    ServerApiClient.favoriteApi.removeFavorite(trackId)
                                     favoriteSet.remove(trackId)
                                     favoriteItems = favoriteItems.filter { it.trackId != trackId }
                                 }
@@ -287,6 +287,9 @@ private fun HistoryAllContent(
                 coverUrlOf = { entry ->
                     entry.track.imageUrl
                 },
+                hasResolvableAudioOf = { entry ->
+                    !entry.track.audioUrl.isNullOrBlank() || !entry.track.streamAudioUrl.isNullOrBlank()
+                },
                 resolveAudioSource = { entry ->
                     entry.track.resolvedAudioSource()
                 },
@@ -352,6 +355,9 @@ private fun FavoritesContent(
                 },
                 coverUrlOf = { entry ->
                     entry.track.imageUrl
+                },
+                hasResolvableAudioOf = { entry ->
+                    !entry.track.audioUrl.isNullOrBlank() || !entry.track.streamAudioUrl.isNullOrBlank()
                 },
                 resolveAudioSource = { entry ->
                     entry.track.resolvedAudioSource()

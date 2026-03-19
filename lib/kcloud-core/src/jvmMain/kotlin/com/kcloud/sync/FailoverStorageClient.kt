@@ -330,38 +330,3 @@ data class FailoverStats(
     val isFailoverActive: Boolean,
     val backendStates: Map<StorageBackendType, StorageBackendState>
 )
-
-/**
- * 故障转移管理器 - 单例
- */
-object FailoverStorageManager {
-    private var instance: FailoverStorageClient? = null
-
-    fun initialize(
-        primaryClient: StorageClient,
-        primaryType: StorageBackendType,
-        fallbackClient: StorageClient? = null,
-        fallbackType: StorageBackendType? = null
-    ): FailoverStorageClient {
-        if (instance == null) {
-            instance = FailoverStorageClient(
-                primaryClient = primaryClient,
-                primaryType = primaryType,
-                fallbackClient = fallbackClient,
-                fallbackType = fallbackType
-            ).apply {
-                startHealthCheck()
-            }
-        }
-        return instance!!
-    }
-
-    fun get(): FailoverStorageClient {
-        return instance ?: throw IllegalStateException("FailoverStorageClient未初始化")
-    }
-
-    fun stop() {
-        instance?.close()
-        instance = null
-    }
-}

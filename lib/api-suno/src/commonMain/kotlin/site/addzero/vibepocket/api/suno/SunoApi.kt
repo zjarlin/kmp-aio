@@ -11,6 +11,7 @@ import de.jensklingenberg.ktorfit.http.*
 interface SunoApi {
     // ── 音乐生成 ─────────────────────────────────────────────
     /** 生成音乐 */
+    @Headers("Content-Type: application/json")
     @POST("generate")
     suspend fun generateMusic(
         @Body request: SunoGenerateRequest,
@@ -18,6 +19,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 扩展音乐 */
+    @Headers("Content-Type: application/json")
     @POST("generate/extend")
     suspend fun extendMusic(
         @Body request: SunoExtendRequest,
@@ -25,6 +27,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 上传并翻唱 */
+    @Headers("Content-Type: application/json")
     @POST("generate/upload-cover")
     suspend fun uploadCover(
         @Body request: SunoUploadCoverRequest,
@@ -32,6 +35,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 上传并扩展 */
+    @Headers("Content-Type: application/json")
     @POST("generate/upload-extend")
     suspend fun uploadExtend(
         @Body request: SunoUploadExtendRequest,
@@ -39,6 +43,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 添加人声 */
+    @Headers("Content-Type: application/json")
     @POST("generate/add-vocals")
     suspend fun addVocals(
         @Body request: SunoAddVocalsRequest,
@@ -46,6 +51,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 添加乐器 */
+    @Headers("Content-Type: application/json")
     @POST("generate/add-instrumental")
     suspend fun addInstrumental(
         @Body request: SunoAddInstrumentalRequest,
@@ -53,6 +59,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 生成音乐封面 */
+    @Headers("Content-Type: application/json")
     @POST("generate/music-cover")
     suspend fun generateMusicCover(
         @Body request: SunoMusicCoverRequest,
@@ -60,6 +67,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 替换音乐片段 */
+    @Headers("Content-Type: application/json")
     @POST("generate/replace-section")
     suspend fun replaceSection(
         @Body request: SunoReplaceSectionRequest,
@@ -85,6 +93,7 @@ interface SunoApi {
     // ── 歌词 ─────────────────────────────────────────────────
 
     /** 生成歌词 */
+    @Headers("Content-Type: application/json")
     @POST("lyrics")
     suspend fun generateLyrics(
         @Body request: SunoLyricsRequest,
@@ -99,6 +108,7 @@ interface SunoApi {
     ): ApiResult<SunoLyricsTaskDetail>
 
     /** 获取带时间戳歌词 */
+    @Headers("Content-Type: application/json")
     @POST("get-timestamped-lyrics")
     suspend fun getTimestampedLyrics(
         @Body request: SunoTimestampedLyricsRequest,
@@ -108,6 +118,7 @@ interface SunoApi {
     // ── Persona ──────────────────────────────────────────────
 
     /** 生成 Persona */
+    @Headers("Content-Type: application/json")
     @POST("generate/generate-persona")
     suspend fun generatePersona(
         @Body request: SunoGeneratePersonaRequest,
@@ -117,6 +128,7 @@ interface SunoApi {
     // ── 音频处理 ─────────────────────────────────────────────
 
     /** 人声分离 */
+    @Headers("Content-Type: application/json")
     @POST("vocal-removal/generate")
     suspend fun vocalRemoval(
         @Body request: SunoVocalRemovalRequest,
@@ -124,6 +136,7 @@ interface SunoApi {
     ): ApiResult<SunoSubmitData>
 
     /** 提升音乐风格 */
+    @Headers("Content-Type: application/json")
     @POST("boost-music-style")
     suspend fun boostMusicStyle(
         @Body request: SunoBoostStyleRequest,
@@ -131,6 +144,7 @@ interface SunoApi {
     ): ApiResult<SunoBoostStyleData>
 
     /** WAV 格式转换 */
+    @Headers("Content-Type: application/json")
     @POST("wav")
     suspend fun convertToWav(
         @Body request: SunoWavRequest,

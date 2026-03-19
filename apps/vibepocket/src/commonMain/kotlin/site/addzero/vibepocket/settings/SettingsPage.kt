@@ -27,7 +27,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.ioc.annotation.Bean
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.model.ConfigRuntimeInfo
 import site.addzero.vibepocket.music.SunoWorkflowService
@@ -38,13 +37,13 @@ import site.addzero.vibepocket.ui.StudioSectionCard
 import site.addzero.vibepocket.ui.SunoTokenApplyHint
 
 @Composable
-@Bean(tags = ["screen"])
 fun SettingsPage() {
     val scope = rememberCoroutineScope()
     var sunoToken by remember { mutableStateOf("") }
     var sunoBaseUrl by remember {
         mutableStateOf(site.addzero.vibepocket.api.suno.SunoApiClient.DEFAULT_BASE_URL)
     }
+    var sunoCallbackUrl by remember { mutableStateOf("") }
     var loaded by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var runtimeInfo by remember { mutableStateOf<ConfigRuntimeInfo?>(null) }
@@ -55,6 +54,7 @@ fun SettingsPage() {
         val runtimeConfig = SunoWorkflowService.loadConfig()
         sunoToken = runtimeConfig.apiToken
         sunoBaseUrl = runtimeConfig.baseUrl
+        sunoCallbackUrl = runtimeConfig.callbackUrl
         runtimeInfo = runCatching { ServerApiClient.configApi.getRuntimeInfo() }.getOrNull()
         loaded = true
     }
@@ -82,6 +82,8 @@ fun SettingsPage() {
                 onTokenChange = { sunoToken = it },
                 sunoBaseUrl = sunoBaseUrl,
                 onBaseUrlChange = { sunoBaseUrl = it },
+                sunoCallbackUrl = sunoCallbackUrl,
+                onCallbackUrlChange = { sunoCallbackUrl = it },
                 isSaving = isSaving,
                 feedbackMessage = feedbackMessage,
                 feedbackIsError = feedbackIsError,
@@ -92,6 +94,7 @@ fun SettingsPage() {
                             SunoWorkflowService.saveConfig(
                                 apiToken = sunoToken,
                                 baseUrl = sunoBaseUrl,
+                                callbackUrl = sunoCallbackUrl,
                             )
                             reloadFromServer()
                             feedbackIsError = false
@@ -143,6 +146,8 @@ private fun MusicConfigEditor(
     onTokenChange: (String) -> Unit,
     sunoBaseUrl: String,
     onBaseUrlChange: (String) -> Unit,
+    sunoCallbackUrl: String,
+    onCallbackUrlChange: (String) -> Unit,
     isSaving: Boolean,
     feedbackMessage: String?,
     feedbackIsError: Boolean,
@@ -184,6 +189,19 @@ private fun MusicConfigEditor(
             label = { Text("Suno API Base URL") },
             placeholder = { Text("https://api.sunoapi.org/api/v1") },
             singleLine = true,
+        )
+        OutlinedTextField(
+            value = sunoCallbackUrl,
+            onValueChange = onCallbackUrlChange,
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Suno Callback URL") },
+            placeholder = { Text("https://xxxx.trycloudflare.com/api/suno/callback/default") },
+            singleLine = true,
+        )
+        Text(
+            text = "这里现在是可选项。大多数任务不填也能直接提交并轮询；如果你想在提交响应丢失时自动恢复 taskId，再补一个公网可访问的 HTTPS 回调地址即可。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (feedbackMessage != null) {
             Text(

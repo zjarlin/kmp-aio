@@ -1,6 +1,5 @@
 package site.addzero.vibepocket.music
 
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +28,7 @@ fun CreditsBar(
     }
     val label = when {
         isLoading -> "加载中"
-        credits != null -> "🎵 积分"
+        credits != null -> "Suno 积分"
         else -> "积分未知"
     }
     val containerColor = when {
@@ -41,8 +40,7 @@ fun CreditsBar(
     StudioMetricCard(
         label = label,
         value = value,
-        supporting = "Suno API",
-        modifier = Modifier.width(132.dp).height(88.dp),
+        modifier = Modifier.width(116.dp).height(72.dp),
         containerColor = containerColor,
     )
 }

@@ -51,6 +51,7 @@ suspend fun listPersonas(): List<PersonaResponse> {
             select(table)
         }
         .execute()
+        .sortedByDescending { it.createdAt }
         .map { it.toPersonaResponse() }
 }
 

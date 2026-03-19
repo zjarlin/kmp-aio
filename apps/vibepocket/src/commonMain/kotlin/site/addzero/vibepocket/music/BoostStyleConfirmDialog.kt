@@ -48,6 +48,7 @@ fun BoostStyleConfirmDialog(
                             val request = SunoBoostStyleRequest(
                                 taskId = taskId,
                                 audioId = audioId,
+                                callBackUrl = SunoWorkflowService.loadConfig().callbackUrlOrNull(),
                             )
                             statusText = "正在执行风格提升..."
                             val data = SunoWorkflowService.boostStyle(request)
