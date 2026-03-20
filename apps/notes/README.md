@@ -101,6 +101,7 @@
 
 - 改动 `BASE_URL` 后，需要重新编译客户端
 - Android / iOS / Wasm / Desktop 共用这份编译期配置
+- `buildkonfig.flavor=dev/prod` 时，会继续叠加读取 `apps/notes/.env.dev` / `apps/notes/.env.prod`
 
 ### 服务端配置
 
@@ -118,11 +119,19 @@
 服务端只消费 `SERVER_HOST` / `SERVER_PORT`，但会自动把 `.env` 里的
 `BASE_HOST` / `BASE_PORT` 映射成对应的 `SERVER_*`，因此可以只维护一份 `BASE_*`。
 
+旧 PostgreSQL 变量也做了兼容映射：
+
+- `JDBC_USERNAME` -> `NOTES_SERVER_POSTGRES_USER`
+- `JDBC_PASSWORD` -> `NOTES_SERVER_POSTGRES_PASSWORD`
+- `JDBC_URL` -> `NOTES_SERVER_POSTGRES_URL`
+- `DATABASE_NAME` + `DB_HOST` + `DB_PORT` -> 自动组装 `NOTES_SERVER_POSTGRES_URL`
+
 可选环境变量：
 
 ```bash
-NOTES_API_BASE_URL=http://127.0.0.1:18080/
-NOTES_SERVER_SQLITE_URL=jdbc:sqlite:/abs/path/vibenotes.db
+BASE_URL=http://127.0.0.1:18080/
+NOTES_SERVER_ACTIVE_SOURCE=sqlite
+NOTES_SERVER_SQLITE_PATH=/abs/path/vibenotes.db
 NOTES_SERVER_POSTGRES_URL=jdbc:postgresql://127.0.0.1:5432/vibenotes
 NOTES_SERVER_POSTGRES_USER=postgres
 NOTES_SERVER_POSTGRES_PASSWORD=postgres

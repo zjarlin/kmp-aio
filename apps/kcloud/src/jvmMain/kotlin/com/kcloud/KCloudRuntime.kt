@@ -1,10 +1,9 @@
 package com.kcloud
 
-import com.kcloud.app.KCloudHttpServer
 import com.kcloud.app.KCloudFeatureRegistry
+import com.kcloud.app.KCloudHttpServer
 import com.kcloud.app.KCloudShellState
 import com.kcloud.db.Database
-import com.kcloud.feature.KCloudFeature
 import com.kcloud.feature.KCloudServerFeature
 import org.koin.core.Koin
 import org.koin.core.KoinApplication

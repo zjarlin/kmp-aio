@@ -167,8 +167,41 @@ internal object NotesEnv {
             target = "NOTES_API_BASE_URL",
             source = "BASE_URL"
         )
+        aliasIfMissing(
+            merged = merged,
+            target = "NOTES_SERVER_POSTGRES_USER",
+            source = "JDBC_USERNAME"
+        )
+        aliasIfMissing(
+            merged = merged,
+            target = "NOTES_SERVER_POSTGRES_PASSWORD",
+            source = "JDBC_PASSWORD"
+        )
+        aliasIfMissing(
+            merged = merged,
+            target = "NOTES_SERVER_POSTGRES_URL",
+            source = "JDBC_URL"
+        )
+
+        if (merged["NOTES_SERVER_POSTGRES_URL"].isNullOrBlank()) {
+            val legacyPostgresUrl = buildLegacyPostgresUrl(merged)
+            if (!legacyPostgresUrl.isNullOrBlank()) {
+                merged["NOTES_SERVER_POSTGRES_URL"] = legacyPostgresUrl
+            }
+        }
 
         return merged
+    }
+
+    private fun buildLegacyPostgresUrl(values: Map<String, String>): String? {
+        val databaseName = values["DATABASE_NAME"]?.trim().orEmpty()
+        if (databaseName.isBlank()) {
+            return null
+        }
+
+        val host = values["DB_HOST"]?.trim().orEmpty().ifBlank { "127.0.0.1" }
+        val port = values["DB_PORT"]?.trim().orEmpty().ifBlank { "5432" }
+        return "jdbc:postgresql://$host:$port/$databaseName"
     }
 
     private fun aliasIfMissing(
