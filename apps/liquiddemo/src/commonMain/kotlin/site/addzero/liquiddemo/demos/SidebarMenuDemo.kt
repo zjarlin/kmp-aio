@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
@@ -28,16 +29,45 @@ import site.addzero.liquiddemo.components.LiquidGlassSidebarMenu
 fun SidebarMenuDemo(
     modifier: Modifier = Modifier,
 ) {
-    var selectedId by remember { mutableStateOf("inbox") }
+    var selectedId by remember { mutableStateOf("library-assets") }
     val sidebarItems = remember {
         listOf(
-            LiquidGlassSidebarItem("inbox", "Inbox", "Pinned", Icons.Rounded.Home),
-            LiquidGlassSidebarItem("library", "Library", "Collections", Icons.Rounded.Folder),
-            LiquidGlassSidebarItem("team", "Team", "People", Icons.Rounded.Person),
-            LiquidGlassSidebarItem("settings", "Settings", "Preferences", Icons.Rounded.Settings),
+            LiquidGlassSidebarItem(
+                id = "workspace",
+                title = "Workspace",
+                subtitle = "内容树",
+                icon = Icons.Rounded.Folder,
+                selectable = false,
+                children = listOf(
+                    LiquidGlassSidebarItem("inbox", "Inbox", "Pinned", Icons.Rounded.Home),
+                    LiquidGlassSidebarItem(
+                        id = "library",
+                        title = "Library",
+                        subtitle = "Collections",
+                        icon = Icons.Rounded.Folder,
+                        selectable = false,
+                        children = listOf(
+                            LiquidGlassSidebarItem("library-docs", "Documents", "Specs", Icons.Rounded.Folder),
+                            LiquidGlassSidebarItem("library-assets", "Assets", "Materials", Icons.Rounded.Folder),
+                        ),
+                    ),
+                    LiquidGlassSidebarItem("team", "Team", "People", Icons.Rounded.Person),
+                ),
+            ),
+            LiquidGlassSidebarItem(
+                id = "preferences",
+                title = "Preferences",
+                subtitle = "系统设置",
+                icon = Icons.Rounded.Settings,
+                selectable = false,
+                children = listOf(
+                    LiquidGlassSidebarItem("settings", "Settings", "General", Icons.Rounded.Settings),
+                    LiquidGlassSidebarItem("ai", "AI", "Providers", Icons.Rounded.AutoAwesome),
+                ),
+            ),
         )
     }
-    val selected = sidebarItems.first { it.id == selectedId }
+    val selected = sidebarItems.findSidebarItem(selectedId) ?: sidebarItems.firstSelectableItem()
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -61,10 +91,41 @@ fun SidebarMenuDemo(
                 badge = "Sidebar",
             )
             Text(
-                text = "当前选中的是 ${selected.title}。Apple 的做法更像浮在内容之上的轻面板，因此这里保持了单色图标、弱边框和低饱和高亮。",
+                text = "当前选中的是 ${selected.title}。这个版本已经支持树形侧边栏：父节点负责展开/收起，叶子节点负责实际选中，因此更适合文件、设置和工作区目录这类层级结构。",
                 color = LiquidGlassDefaults.textSecondary,
                 style = MaterialTheme.typography.bodyLarge,
             )
         }
     }
+}
+
+private fun List<LiquidGlassSidebarItem>.findSidebarItem(
+    id: String,
+): LiquidGlassSidebarItem? = asSequence()
+    .mapNotNull { it.findSidebarItem(id) }
+    .firstOrNull()
+
+private fun LiquidGlassSidebarItem.findSidebarItem(
+    id: String,
+): LiquidGlassSidebarItem? {
+    if (this.id == id) {
+        return this
+    }
+    return children.asSequence()
+        .mapNotNull { it.findSidebarItem(id) }
+        .firstOrNull()
+}
+
+private fun List<LiquidGlassSidebarItem>.firstSelectableItem(): LiquidGlassSidebarItem =
+    asSequence()
+        .mapNotNull { it.firstSelectableItemOrNull() }
+        .first()
+
+private fun LiquidGlassSidebarItem.firstSelectableItemOrNull(): LiquidGlassSidebarItem? {
+    if (selectable) {
+        return this
+    }
+    return children.asSequence()
+        .mapNotNull { it.firstSelectableItemOrNull() }
+        .firstOrNull()
 }

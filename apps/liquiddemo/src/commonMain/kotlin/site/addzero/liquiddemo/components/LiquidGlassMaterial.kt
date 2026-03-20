@@ -1,7 +1,6 @@
 package site.addzero.liquiddemo.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -55,89 +54,89 @@ object LiquidGlassDefaults {
         frost = 18.dp,
         refraction = 0.72f,
         curve = 0.36f,
-        edge = 0.05f,
-        tint = Color.White.copy(alpha = 0.05f),
-        saturation = 1.08f,
+        edge = 0.022f,
+        tint = Color.White.copy(alpha = 0.035f),
+        saturation = 1.10f,
         dispersion = 0.048f,
         shape = RoundedCornerShape(999.dp),
-        surfaceColor = Color.White.copy(alpha = 0.06f),
-        borderColor = Color.White.copy(alpha = 0.16f),
+        surfaceColor = Color.White.copy(alpha = 0.024f),
+        borderColor = Color(0xFFCDEEFF).copy(alpha = 0.085f),
     )
 
     val primaryButton = button.copy(
         frost = 20.dp,
         refraction = 0.79f,
         curve = 0.40f,
-        edge = 0.06f,
-        tint = accent.copy(alpha = 0.10f),
-        saturation = 1.14f,
+        edge = 0.028f,
+        tint = accent.copy(alpha = 0.082f),
+        saturation = 1.16f,
         dispersion = 0.082f,
-        surfaceColor = Color.White.copy(alpha = 0.075f),
-        borderColor = Color.White.copy(alpha = 0.20f),
+        surfaceColor = Color.White.copy(alpha = 0.030f),
+        borderColor = Color(0xFFD6F3FF).copy(alpha = 0.11f),
     )
 
     val card = LiquidGlassSpec(
         frost = 22.dp,
-        refraction = 0.68f,
+        refraction = 0.72f,
         curve = 0.50f,
-        edge = 0.05f,
-        tint = Color.White.copy(alpha = 0.045f),
-        saturation = 1.08f,
-        dispersion = 0.036f,
+        edge = 0.014f,
+        tint = accent.copy(alpha = 0.028f),
+        saturation = 1.12f,
+        dispersion = 0.040f,
         shape = RoundedCornerShape(30.dp),
-        surfaceColor = Color.White.copy(alpha = 0.05f),
-        borderColor = Color.White.copy(alpha = 0.14f),
+        surfaceColor = Color.White.copy(alpha = 0.014f),
+        borderColor = Color(0xFFD7F0FF).copy(alpha = 0.070f),
     )
 
     val heroCard = card.copy(
         frost = 24.dp,
-        refraction = 0.74f,
+        refraction = 0.78f,
         curve = 0.56f,
-        edge = 0.06f,
-        tint = accent.copy(alpha = 0.045f),
-        saturation = 1.12f,
-        dispersion = 0.052f,
+        edge = 0.016f,
+        tint = accent.copy(alpha = 0.036f),
+        saturation = 1.16f,
+        dispersion = 0.058f,
         shape = RoundedCornerShape(36.dp),
-        surfaceColor = Color.White.copy(alpha = 0.045f),
-        borderColor = Color.White.copy(alpha = 0.16f),
+        surfaceColor = Color.White.copy(alpha = 0.012f),
+        borderColor = Color(0xFFD7F0FF).copy(alpha = 0.082f),
     )
 
     val sidebar = LiquidGlassSpec(
         frost = 22.dp,
-        refraction = 0.66f,
+        refraction = 0.70f,
         curve = 0.46f,
-        edge = 0.05f,
-        tint = Color.White.copy(alpha = 0.04f),
-        saturation = 1.05f,
-        dispersion = 0.030f,
+        edge = 0.013f,
+        tint = accent.copy(alpha = 0.022f),
+        saturation = 1.10f,
+        dispersion = 0.034f,
         shape = RoundedCornerShape(32.dp),
-        surfaceColor = Color.White.copy(alpha = 0.045f),
-        borderColor = Color.White.copy(alpha = 0.14f),
+        surfaceColor = Color.White.copy(alpha = 0.013f),
+        borderColor = Color(0xFFD7F0FF).copy(alpha = 0.065f),
     )
 
     val sidebarItem = LiquidGlassSpec(
         frost = 16.dp,
-        refraction = 0.56f,
+        refraction = 0.60f,
         curve = 0.28f,
-        edge = 0.04f,
-        tint = Color.White.copy(alpha = 0.03f),
-        saturation = 1.03f,
-        dispersion = 0.022f,
+        edge = 0.010f,
+        tint = accent.copy(alpha = 0.016f),
+        saturation = 1.08f,
+        dispersion = 0.024f,
         shape = RoundedCornerShape(22.dp),
-        surfaceColor = Color.Transparent,
-        borderColor = Color.Transparent,
+        surfaceColor = Color.White.copy(alpha = 0.006f),
+        borderColor = Color(0xFFD7F0FF).copy(alpha = 0.024f),
     )
 
     val sidebarItemSelected = sidebarItem.copy(
         frost = 18.dp,
-        refraction = 0.72f,
+        refraction = 0.76f,
         curve = 0.36f,
-        edge = 0.05f,
-        tint = accent.copy(alpha = 0.085f),
-        saturation = 1.12f,
-        dispersion = 0.060f,
-        surfaceColor = Color.White.copy(alpha = 0.065f),
-        borderColor = Color.White.copy(alpha = 0.16f),
+        edge = 0.018f,
+        tint = accent.copy(alpha = 0.064f),
+        saturation = 1.16f,
+        dispersion = 0.064f,
+        surfaceColor = Color.White.copy(alpha = 0.020f),
+        borderColor = Color(0xFFD7F0FF).copy(alpha = 0.090f),
     )
 }
 
@@ -166,7 +165,6 @@ fun Modifier.liquidGlassSurface(
 ): Modifier = liquidGlassMaterial(spec)
     .clip(spec.shape)
     .background(spec.surfaceColor, spec.shape)
-    .border(1.dp, spec.borderColor, spec.shape)
 
 @Composable
 fun LiquidGlassRoot(
