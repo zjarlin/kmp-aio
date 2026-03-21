@@ -1,9 +1,15 @@
 package site.addzero.vibepocket.ui
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -11,6 +17,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import site.addzero.liquidglass.LiquidGlassCard
+import site.addzero.liquidglass.liquidGlassSurface
 
 @Composable
 fun StudioSectionCard(
@@ -20,18 +28,13 @@ fun StudioSectionCard(
     action: (@Composable RowScope.() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    ElevatedCard(
+    LiquidGlassCard(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-        ),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 1.5.dp),
+        spec = VibePocketLiquidGlass.sectionSpec,
+        contentPadding = StudioSectionCardPadding,
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (title != null || subtitle != null || action != null) {
@@ -81,17 +84,11 @@ fun StudioMetricCard(
     modifier: Modifier = Modifier,
     containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
 ) {
-    ElevatedCard(
+    Box(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = containerColor,
-        ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
+            modifier = Modifier.metricCardSurface(containerColor),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -105,11 +102,6 @@ fun StudioMetricCard(
                 color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.SemiBold,
             )
-//            Text(
-//                text = supporting,
-//                style = MaterialTheme.typography.bodySmall,
-//                color = MaterialTheme.colorScheme.onSurfaceVariant,
-//            )
         }
     }
 }
@@ -121,18 +113,15 @@ fun StudioPill(
     containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(999.dp),
-        color = containerColor,
-        contentColor = contentColor,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.16f)),
+    Box(
+        modifier = modifier.pillSurface(containerColor),
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             style = MaterialTheme.typography.labelLarge,
             textAlign = TextAlign.Center,
+            color = contentColor,
         )
     }
 }
@@ -171,4 +160,22 @@ fun StudioEmptyState(
             )
         }
     }
+}
+
+private val StudioSectionCardPadding = androidx.compose.foundation.layout.PaddingValues(
+    horizontal = 16.dp,
+    vertical = 14.dp,
+)
+
+/** 指标卡片表面：用更紧凑的玻璃小面板承接短指标。 */
+private fun Modifier.metricCardSurface(accent: Color): Modifier {
+    return fillMaxWidth()
+        .liquidGlassSurface(metricCardSpec(accent))
+        .padding(horizontal = 12.dp, vertical = 10.dp)
+}
+
+/** 胶囊标签表面：把状态标签收成一颗轻量的高光小药丸。 */
+private fun Modifier.pillSurface(accent: Color): Modifier {
+    return liquidGlassSurface(pillSpec(accent))
+        .padding(horizontal = 1.dp, vertical = 1.dp)
 }

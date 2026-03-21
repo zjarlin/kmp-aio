@@ -1,0 +1,239 @@
+openapi: 3.0.3
+info:
+  title: VibeNotes API
+  version: 1.0.0
+  description: VibeNotes 后端 API，提供 SQLite/PostgreSQL 双数据源笔记读写能力
+servers:
+  - url: http://127.0.0.1:18080
+    description: 本地开发服务
+tags:
+  - name: health
+    description: 服务与数据源健康状态
+  - name: notes
+    description: 笔记读写（按数据源）
+paths:
+  /health:
+    get:
+      tags:
+        - health
+      summary: 服务健康检查
+      operationId: serviceHealth
+      responses:
+        '200':
+          description: 服务正常
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: ok
+  /api/notes/{source}/health:
+    get:
+      tags:
+        - health
+      summary: 数据源健康检查
+      operationId: dataSourceHealth
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - sqlite
+              - postgres
+          description: 数据源名称
+      responses:
+        '200':
+          description: 数据源健康结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceHealthPayload'
+        '404':
+          description: 未知数据源
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataSourceHealthPayload'
+  /api/notes/{source}:
+    get:
+      tags:
+        - notes
+      summary: 获取指定数据源的笔记列表
+      operationId: listNotes
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - sqlite
+              - postgres
+          description: 数据源名称
+      responses:
+        '200':
+          description: 笔记列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotePayload'
+        '404':
+          description: 未知数据源
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotePayload'
+        '503':
+          description: 数据源不可用
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NotePayload'
+  /api/notes/{source}/{id}:
+    put:
+      tags:
+        - notes
+      summary: 新增或更新笔记
+      operationId: upsertNote
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - sqlite
+              - postgres
+          description: 数据源名称
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 笔记 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NoteUpsertRequest'
+      responses:
+        '200':
+          description: 保存后的笔记
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotePayload'
+        '404':
+          description: 未知数据源
+        '503':
+          description: 数据源不可用
+    delete:
+      tags:
+        - notes
+      summary: 删除笔记
+      operationId: deleteNote
+      parameters:
+        - name: source
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - sqlite
+              - postgres
+          description: 数据源名称
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: 笔记 ID
+      responses:
+        '200':
+          description: 删除成功
+        '404':
+          description: 未知数据源
+components:
+  schemas:
+    DataSourceHealthPayload:
+      type: object
+      required:
+        - source
+        - available
+        - message
+      properties:
+        source:
+          type: string
+          example: sqlite
+        available:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: ok
+    NotePayload:
+      type: object
+      required:
+        - id
+        - path
+        - title
+        - markdown
+        - pinned
+        - version
+      properties:
+        id:
+          type: string
+          example: note-100001-1000
+        path:
+          type: string
+          example: /notes/roadmap.md
+        title:
+          type: string
+          example: 项目路线图
+        markdown:
+          type: string
+          example: "# 项目路线图\n\n- [ ] 搭建 API"
+        pinned:
+          type: boolean
+          example: false
+        version:
+          type: integer
+          format: int64
+          example: 2
+    NoteUpsertRequest:
+      type: object
+      required:
+        - id
+        - path
+        - title
+        - markdown
+        - pinned
+        - version
+      properties:
+        id:
+          type: string
+          example: note-100001-1000
+        path:
+          type: string
+          example: /notes/roadmap.md
+        title:
+          type: string
+          example: 项目路线图
+        markdown:
+          type: string
+          example: "# 项目路线图\n\n- [ ] 搭建 API"
+        pinned:
+          type: boolean
+          example: false
+        version:
+          type: integer
+          format: int64
+          example: 2

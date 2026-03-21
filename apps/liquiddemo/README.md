@@ -1,6 +1,9 @@
 # Liquid Demo
 
-一个最小可跑的 Compose Multiplatform 桌面示例，用来演示 `io.github.fletchmckee.liquid:liquid:1.1.1` 的 `liquefiable` / `liquid` 协作模式。
+`apps/liquiddemo` 现在只是 `lib/compose/liquid-glass` 的桌面 showcase 宿主。
+
+- 组件库模块：`lib/compose/liquid-glass`
+- Maven coordinate：`site.addzero:liquid-glass`
 
 ## Run
 
