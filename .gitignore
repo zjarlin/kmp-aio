@@ -19,6 +19,8 @@ captures
 node_modules/
 /composeApp/hs_err_pid42727.log
 .kiro
+bin/
+out/
 /kotlin-js-store/wasm/yarn.lock
 /.gradle-user-home/
 /.claude/
