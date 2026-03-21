@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,8 +27,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -35,11 +38,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import site.addzero.appsidebar.AdminWorkbenchScaffold
 import site.addzero.appsidebar.AppSidebar
 import site.addzero.appsidebar.WorkbenchScaffold
 import site.addzero.appsidebar.findItemById
 import site.addzero.appsidebar.rememberAppSidebarState
 import site.addzero.liquiddemo.demos.DemoTokens
+import site.addzero.liquiddemo.demos.adminBackendSidebarScene
 import site.addzero.liquiddemo.demos.musicStudioSidebarScene
 import site.addzero.liquiddemo.demos.projectWorkbenchSidebarScene
 import site.addzero.liquiddemo.demos.settingsConsoleSidebarScene
@@ -68,14 +73,19 @@ private fun SidebarShowcaseShell(
 ) {
     val scenes = remember {
         listOf(
+            adminBackendSidebarScene(),
             musicStudioSidebarScene(),
             projectWorkbenchSidebarScene(),
             settingsConsoleSidebarScene(),
         )
     }
-    var selectedSceneId by remember { mutableStateOf(scenes.first().id) }
+    var selectedSceneId by rememberSaveable { mutableStateOf(scenes.first().id) }
     val selectedScene = scenes.first { scene -> scene.id == selectedSceneId }
     val sidebarState = rememberAppSidebarState()
+    var utilityLanguageLabel by rememberSaveable { mutableStateOf("中文") }
+    var utilityDarkTheme by rememberSaveable { mutableStateOf(true) }
+    var utilityNotificationCount by rememberSaveable { mutableIntStateOf(3) }
+    var utilityLastAction by rememberSaveable { mutableStateOf("还没有触发任何全局动作。") }
 
     LaunchedEffect(selectedScene.id) {
         sidebarState.clearSearch()
@@ -88,6 +98,65 @@ private fun SidebarShowcaseShell(
             ?: selectedScene.items.findItemById(selectedScene.initialSelectedId)
     }
 
+    if (selectedScene.shell == SidebarDemoShell.AdminWorkbench) {
+        AdminWorkbenchShowcase(
+            modifier = modifier,
+            scenes = scenes,
+            selectedSceneId = selectedSceneId,
+            onSceneSelected = { selectedSceneId = it },
+            selectedScene = selectedScene,
+            selectedItem = selectedItem,
+            sidebarState = sidebarState,
+            utilityLanguageLabel = utilityLanguageLabel,
+            utilityDarkTheme = utilityDarkTheme,
+            utilityNotificationCount = utilityNotificationCount,
+            utilityLastAction = utilityLastAction,
+            onGlobalSearch = {
+                utilityLastAction = "打开了全局搜索入口。"
+            },
+            onLanguageToggle = {
+                utilityLanguageLabel = if (utilityLanguageLabel == "中文") "EN" else "中文"
+                utilityLastAction = "切换语言为 $utilityLanguageLabel。"
+            },
+            onThemeToggle = {
+                utilityDarkTheme = !utilityDarkTheme
+                utilityLastAction = if (utilityDarkTheme) {
+                    "切换到深色主题。"
+                } else {
+                    "切换到浅色主题。"
+                }
+            },
+            onNotificationsClick = {
+                utilityNotificationCount = if (utilityNotificationCount >= 9) 1 else utilityNotificationCount + 1
+                utilityLastAction = "查看通知中心，当前角标 ${utilityNotificationCount}。"
+            },
+            onUserClick = {
+                utilityLastAction = "打开了用户菜单。"
+            },
+        )
+    } else {
+        GenericWorkbenchShowcase(
+            modifier = modifier,
+            scenes = scenes,
+            selectedSceneId = selectedSceneId,
+            onSceneSelected = { selectedSceneId = it },
+            selectedScene = selectedScene,
+            selectedItem = selectedItem,
+            sidebarState = sidebarState,
+        )
+    }
+}
+
+@Composable
+private fun GenericWorkbenchShowcase(
+    scenes: List<SidebarDemoScene>,
+    selectedSceneId: String,
+    onSceneSelected: (String) -> Unit,
+    selectedScene: SidebarDemoScene,
+    selectedItem: site.addzero.appsidebar.AppSidebarItem?,
+    sidebarState: site.addzero.appsidebar.AppSidebarState,
+    modifier: Modifier = Modifier,
+) {
     WorkbenchScaffold(
         modifier = modifier.fillMaxSize(),
         defaultSidebarRatio = 0.24f,
@@ -107,15 +176,11 @@ private fun SidebarShowcaseShell(
             )
         },
         contentHeader = {
-            scenes.forEach { scene ->
-                SceneSwitchButton(
-                    title = scene.title,
-                    selected = scene.id == selectedSceneId,
-                    onClick = {
-                        selectedSceneId = scene.id
-                    },
-                )
-            }
+            DemoSceneSwitcher(
+                scenes = scenes,
+                selectedSceneId = selectedSceneId,
+                onSceneSelected = onSceneSelected,
+            )
             Spacer(modifier = Modifier.weight(1f))
             HeaderActionChip(
                 title = "搜索",
@@ -142,6 +207,81 @@ private fun SidebarShowcaseShell(
                 selectedItem = selectedItem,
             )
         },
+    )
+}
+
+@Composable
+private fun AdminWorkbenchShowcase(
+    scenes: List<SidebarDemoScene>,
+    selectedSceneId: String,
+    onSceneSelected: (String) -> Unit,
+    selectedScene: SidebarDemoScene,
+    selectedItem: site.addzero.appsidebar.AppSidebarItem?,
+    sidebarState: site.addzero.appsidebar.AppSidebarState,
+    utilityLanguageLabel: String,
+    utilityDarkTheme: Boolean,
+    utilityNotificationCount: Int,
+    utilityLastAction: String,
+    onGlobalSearch: () -> Unit,
+    onLanguageToggle: () -> Unit,
+    onThemeToggle: () -> Unit,
+    onNotificationsClick: () -> Unit,
+    onUserClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AdminWorkbenchScaffold(
+        modifier = modifier.fillMaxSize(),
+        breadcrumb = listOf("运营后台", selectedScene.title),
+        pageTitle = selectedItem?.title ?: selectedScene.title,
+        pageSubtitle = "后台管理版默认把页面级动作和全局壳层动作分开，避免每个页面都重新拼头部。",
+        defaultSidebarRatio = 0.24f,
+        minSidebarWidth = 268.dp,
+        maxSidebarWidth = 380.dp,
+        outerPadding = PaddingValues(22.dp),
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 20.dp),
+        detailPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+        sidebar = {
+            AppSidebar(
+                title = selectedScene.title,
+                supportText = selectedScene.subtitle,
+                items = selectedScene.items,
+                state = sidebarState,
+                headerSlot = selectedScene.headerSlot,
+                footerSlot = selectedScene.footerSlot,
+            )
+        },
+        pageActions = {
+            DemoSceneSwitcher(
+                scenes = scenes,
+                selectedSceneId = selectedSceneId,
+                onSceneSelected = onSceneSelected,
+            )
+        },
+        content = {
+            AdminDemoMainPanel(
+                selectedScene = selectedScene,
+                selectedItem = selectedItem,
+            )
+        },
+        detail = {
+            AdminDemoInspectorPanel(
+                selectedScene = selectedScene,
+                selectedItem = selectedItem,
+                utilityLanguageLabel = utilityLanguageLabel,
+                utilityDarkTheme = utilityDarkTheme,
+                utilityNotificationCount = utilityNotificationCount,
+                utilityLastAction = utilityLastAction,
+            )
+        },
+        onGlobalSearchClick = onGlobalSearch,
+        languageLabel = utilityLanguageLabel,
+        onLanguageClick = onLanguageToggle,
+        isDarkTheme = utilityDarkTheme,
+        onThemeToggle = onThemeToggle,
+        notificationCount = utilityNotificationCount,
+        onNotificationsClick = onNotificationsClick,
+        userLabel = "zjarlin",
+        onUserClick = onUserClick,
     )
 }
 
@@ -193,6 +333,43 @@ private fun DemoDetailPanel(
 }
 
 @Composable
+private fun AdminDemoMainPanel(
+    selectedScene: SidebarDemoScene,
+    selectedItem: site.addzero.appsidebar.AppSidebarItem?,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().workbenchPanelFrame().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        DemoDetailPanel(
+            selectedScene = selectedScene,
+            selectedItem = selectedItem,
+        )
+        Column(
+            modifier = Modifier.detailSectionFrame(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                text = "后台页头默认元素",
+                color = DemoTokens.textPrimary,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = "左侧是 breadcrumb / 标题 / 副标题，中间是页面级动作，右侧是搜索、语言、主题、通知和用户入口。",
+                color = DemoTokens.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                text = "右侧 Inspector 在中等宽度下会自动隐藏，优先保证主工作区宽度。",
+                color = DemoTokens.textMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+@Composable
 private fun DemoInspectorPanel(
     selectedScene: SidebarDemoScene,
     selectedItem: site.addzero.appsidebar.AppSidebarItem?,
@@ -236,6 +413,86 @@ private fun DemoInspectorPanel(
             text = "窗口变窄时，这一栏会自动折叠，让主工作区优先保住可用宽度。",
             color = DemoTokens.textMuted,
             style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
+private fun AdminDemoInspectorPanel(
+    selectedScene: SidebarDemoScene,
+    selectedItem: site.addzero.appsidebar.AppSidebarItem?,
+    utilityLanguageLabel: String,
+    utilityDarkTheme: Boolean,
+    utilityNotificationCount: Int,
+    utilityLastAction: String,
+) {
+    Column(
+        modifier = Modifier.fillMaxSize().workbenchPanelFrame(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(
+            text = "Inspector",
+            color = DemoTokens.textPrimary,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Black,
+        )
+        DemoInspectorField(
+            label = "当前场景",
+            value = selectedScene.title,
+        )
+        DemoInspectorField(
+            label = "当前节点",
+            value = selectedItem?.title ?: "未选择",
+        )
+        DemoInspectorField(
+            label = "语言按钮",
+            value = utilityLanguageLabel,
+        )
+        DemoInspectorField(
+            label = "主题按钮",
+            value = if (utilityDarkTheme) "深色" else "浅色",
+        )
+        DemoInspectorField(
+            label = "通知角标",
+            value = utilityNotificationCount.toString(),
+        )
+        DemoInspectorField(
+            label = "最近动作",
+            value = utilityLastAction,
+        )
+    }
+}
+
+@Composable
+private fun DemoInspectorField(
+    label: String,
+    value: String,
+) {
+    Text(
+        text = label,
+        color = DemoTokens.textMuted,
+        style = MaterialTheme.typography.labelLarge,
+    )
+    Text(
+        text = value,
+        color = DemoTokens.textPrimary,
+        style = MaterialTheme.typography.bodyLarge,
+    )
+}
+
+@Composable
+private fun RowScope.DemoSceneSwitcher(
+    scenes: List<SidebarDemoScene>,
+    selectedSceneId: String,
+    onSceneSelected: (String) -> Unit,
+) {
+    scenes.forEach { scene ->
+        SceneSwitchButton(
+            title = scene.title,
+            selected = scene.id == selectedSceneId,
+            onClick = {
+                onSceneSelected(scene.id)
+            },
         )
     }
 }

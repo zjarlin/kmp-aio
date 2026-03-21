@@ -3,10 +3,8 @@ package com.kcloud.feature
 import io.ktor.server.routing.*
 import org.koin.core.Koin
 
-interface KCloudFeature {
-    val featureId: String
+interface DesktopLifecycleContributor {
     val order: Int get() = Int.MAX_VALUE
-    val menuEntries: List<KCloudMenuEntry> get() = emptyList()
 
     fun onStart(koin: Koin) {
     }

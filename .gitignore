@@ -22,3 +22,6 @@ node_modules/
 /kotlin-js-store/wasm/yarn.lock
 /.gradle-user-home/
 /.claude/
+/.tmp-liquiddemo-run.log
+/.tmp-vibepocket-run.log
+/.vscode
