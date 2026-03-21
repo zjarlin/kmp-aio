@@ -2,28 +2,23 @@ package com.kcloud.features.dotfiles
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
-import com.kcloud.feature.KCloudMenuEntry
-import com.kcloud.feature.KCloudMenuGroups
-import com.kcloud.feature.KCloudFeature
+import com.kcloud.feature.KCloudScreenRoots
 import com.kcloud.features.dotfiles.ui.DotfilesScreen
 import org.koin.core.annotation.Single
+import site.addzero.workbenchshell.Screen
 
 object DotfilesFeatureMenus {
     const val DOTFILES = "dotfiles"
 }
 
-@Single(binds = [KCloudFeature::class])
-class DotfilesFeature : KCloudFeature {
-    override val featureId = "dotfiles"
-    override val order = 80
-    override val menuEntries = listOf(
-        KCloudMenuEntry(
-            id = DotfilesFeatureMenus.DOTFILES,
-            title = "Dotfiles",
-            icon = Icons.Default.Description,
-            parentId = KCloudMenuGroups.SYSTEM,
-            sortOrder = 80,
-            content = { DotfilesScreen() }
-        )
-    )
+@Single
+class DotfilesFeature : Screen {
+    override val id = DotfilesFeatureMenus.DOTFILES
+    override val pid = KCloudScreenRoots.SYSTEM
+    override val name = "Dotfiles"
+    override val icon = Icons.Default.Description
+    override val sort = 80
+    override val content = {
+        DotfilesScreen()
+    }
 }

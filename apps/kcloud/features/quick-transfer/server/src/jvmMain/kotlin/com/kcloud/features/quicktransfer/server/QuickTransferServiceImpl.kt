@@ -25,9 +25,9 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import org.koin.core.annotation.Single
 
-@Single(binds = [QuickTransferService::class, QuickTransferDropService::class])
+@Single
 class QuickTransferServiceImpl(
-    private val database: Database
+    private val database: Database,
 ) : QuickTransferDropService {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

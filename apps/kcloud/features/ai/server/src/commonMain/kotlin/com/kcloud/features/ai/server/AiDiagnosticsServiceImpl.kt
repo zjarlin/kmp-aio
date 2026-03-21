@@ -8,9 +8,9 @@ import com.kcloud.features.ai.spi.AiProvider
 import com.kcloud.features.ai.spi.AiProviderDescriptor
 import org.koin.core.annotation.Single
 
-@Single(binds = [AiDiagnosticsService::class])
+@Single
 class AiDiagnosticsServiceImpl(
-    providers: List<AiProvider>
+    providers: List<AiProvider>,
 ) : AiDiagnosticsService {
     private val providers: List<AiProvider> = providers.sortedBy { it.descriptor.displayName.lowercase() }
     private val providersById: Map<String, AiProvider> = this.providers.associateBy { it.descriptor.providerId }

@@ -11,6 +11,7 @@ kotlin {
             api(libs.findLibrary("io-insert-koin-koin-compose").get())
             api(libs.findLibrary("io-ktor-ktor-server-core").get())
             api(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-serialization-json").get())
+            api(project(":lib:compose:workbench-shell"))
         }
         jvmMain.dependencies {
             api(libs.findLibrary("io-insert-koin-koin-ktor").get())

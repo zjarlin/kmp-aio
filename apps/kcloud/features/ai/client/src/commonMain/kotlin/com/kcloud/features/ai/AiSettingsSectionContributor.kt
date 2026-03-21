@@ -7,9 +7,9 @@ import com.kcloud.features.ai.ui.AiSettingsSection
 import com.kcloud.features.settings.SettingsSectionContributor
 import org.koin.core.annotation.Single
 
-@Single(binds = [SettingsSectionContributor::class])
+@Single
 class AiSettingsSectionContributor(
-    private val diagnosticsService: AiDiagnosticsService
+    private val diagnosticsService: AiDiagnosticsService,
 ) : SettingsSectionContributor {
     override val sectionId = "settings.ai"
     override val order = 80

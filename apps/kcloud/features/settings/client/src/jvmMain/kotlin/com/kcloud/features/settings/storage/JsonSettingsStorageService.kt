@@ -8,7 +8,7 @@ import com.kcloud.features.settings.SettingsStorageService
 import java.io.File
 import org.koin.core.annotation.Single
 
-@Single(binds = [SettingsStorageService::class])
+@Single
 class JsonSettingsStorageService : SettingsStorageService {
     private val settingsFile: File by lazy {
         File(KCloudLocalPaths.appSupportDir(), "settings.json")

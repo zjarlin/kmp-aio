@@ -5,7 +5,7 @@ import com.kcloud.features.compose.server.generated.springktor.registerGenerated
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class ComposeServerFeature : KCloudServerFeature {
     override val featureId: String = "compose"
     override val order: Int = 25

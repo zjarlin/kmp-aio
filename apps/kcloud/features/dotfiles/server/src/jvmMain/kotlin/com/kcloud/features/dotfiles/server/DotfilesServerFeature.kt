@@ -5,7 +5,7 @@ import com.kcloud.features.dotfiles.server.generated.springktor.registerGenerate
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class DotfilesServerFeature : KCloudServerFeature {
     override val featureId = "dotfiles"
     override val order = 80

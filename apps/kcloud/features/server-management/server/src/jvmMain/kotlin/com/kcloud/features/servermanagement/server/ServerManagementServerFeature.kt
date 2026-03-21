@@ -5,7 +5,7 @@ import com.kcloud.features.servermanagement.server.generated.springktor.register
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class ServerManagementServerFeature : KCloudServerFeature {
     override val featureId = "server-management"
     override val order = 20

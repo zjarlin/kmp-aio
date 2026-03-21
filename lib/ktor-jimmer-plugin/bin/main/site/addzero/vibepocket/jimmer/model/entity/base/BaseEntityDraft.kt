@@ -14,7 +14,7 @@ public interface BaseEntityDraft : BaseEntity, LongIdDraft, CreatedTimeDraft, Up
     public object `$` {
         public val type: ImmutableType = ImmutableType
                     .newBuilder(
-                        "0.9.120",
+                        "0.10.6",
                         BaseEntity::class,
                         listOf(
                             LongIdDraft.`$`.type,

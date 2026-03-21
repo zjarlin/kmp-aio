@@ -5,7 +5,7 @@ import com.kcloud.features.webdav.server.generated.springktor.registerGeneratedS
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class WebDavServerFeature : KCloudServerFeature {
     override val featureId = "webdav"
     override val order = 70

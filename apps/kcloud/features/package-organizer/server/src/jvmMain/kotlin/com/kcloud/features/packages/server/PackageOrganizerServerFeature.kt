@@ -5,7 +5,7 @@ import com.kcloud.features.packages.server.generated.springktor.registerGenerate
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class PackageOrganizerServerFeature : KCloudServerFeature {
     override val featureId = "package-organizer"
     override val order = 45

@@ -37,10 +37,10 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":apps:vibepocket:shared"))
-            implementation(project(":apps:kcloud:features:feature-api"))
             implementation(project(":lib:media-playlist-player"))
             implementation(project(":lib:vibepocket-ui"))
             implementation(project(":lib:compose:app-sidebar"))
+            implementation(project(":lib:compose:workbench-shell"))
             implementation(projects.lib.compose.liquidGlass)
             implementation(project(":lib:api-music-spi"))
             implementation(project(":lib:api-suno"))

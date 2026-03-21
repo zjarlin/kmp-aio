@@ -5,7 +5,7 @@ import com.kcloud.features.quicktransfer.server.generated.springktor.registerGen
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class QuickTransferServerFeature : KCloudServerFeature {
     override val featureId = "quick-transfer"
     override val order = 10

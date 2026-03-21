@@ -21,8 +21,8 @@ import androidx.compose.ui.unit.dp
 import site.addzero.appsidebar.AppSidebarScaffold
 import site.addzero.liquidglass.liquidGlassSurface
 import site.addzero.media.playlist.player.ProvidePlaylistPlayerHost
-import site.addzero.vibepocket.feature.VibePocketFeatureRegistry
 import site.addzero.vibepocket.feature.VibePocketFeatureSidebar
+import site.addzero.vibepocket.feature.vibePocketScreens
 import site.addzero.vibepocket.music.hasCompletedVibePocketSetup
 import site.addzero.vibepocket.music.loadSunoRuntimeConfig
 import site.addzero.vibepocket.screens.PlaceholderScreen
@@ -31,6 +31,7 @@ import site.addzero.vibepocket.ui.StudioSectionCard
 import site.addzero.vibepocket.ui.VibeGlassAppTheme
 import site.addzero.vibepocket.ui.VibePocketLiquidGlass
 import site.addzero.vibepocket.ui.VibePocketLiquidGlassRoot
+import site.addzero.workbenchshell.ScreenCatalog
 
 @Composable
 @Preview
@@ -44,13 +45,13 @@ fun App() {
 
 @Composable
 private fun VibePocketAppRoot() {
-    val featureRegistry = remember { VibePocketFeatureRegistry() }
+    val screenCatalog = remember { ScreenCatalog(vibePocketScreens) }
 
     var isStartupReady by remember { mutableStateOf(false) }
     var isSetupDone by remember { mutableStateOf(false) }
-    var selectedMenuId by remember { mutableStateOf(featureRegistry.defaultLeafId) }
+    var selectedScreenId by remember { mutableStateOf(screenCatalog.defaultLeafId) }
 
-    LaunchedEffect(featureRegistry.defaultLeafId) {
+    LaunchedEffect(screenCatalog.defaultLeafId) {
         val runtimeConfig = try {
             loadSunoRuntimeConfig()
         } catch (_: Exception) {
@@ -65,7 +66,7 @@ private fun VibePocketAppRoot() {
             runtimeConfig?.baseUrl?.takeIf { it != site.addzero.vibepocket.api.suno.SunoApiClient.DEFAULT_BASE_URL } != null
 
         isSetupDone = setupCompleted || hasPersistedConfig
-        selectedMenuId = featureRegistry.normalizeMenuId(selectedMenuId)
+        selectedScreenId = screenCatalog.normalizeScreenId(selectedScreenId)
         isStartupReady = true
     }
 
@@ -81,17 +82,17 @@ private fun VibePocketAppRoot() {
             WelcomeScreenWrapper(
                 onSetupComplete = { _, _ ->
                     isSetupDone = true
-                    selectedMenuId = featureRegistry.defaultLeafId
+                    selectedScreenId = screenCatalog.defaultLeafId
                 },
             )
         }
     } else {
         VibePocketLiquidGlassRoot {
             MainScreen(
-                featureRegistry = featureRegistry,
-                selectedMenuId = selectedMenuId,
-                onLeafClick = { menuId ->
-                    selectedMenuId = featureRegistry.normalizeMenuId(menuId)
+                screenCatalog = screenCatalog,
+                selectedScreenId = selectedScreenId,
+                onLeafClick = { screenId ->
+                    selectedScreenId = screenCatalog.normalizeScreenId(screenId)
                 },
             )
         }
@@ -129,11 +130,11 @@ private fun StartupLoadingScreen() {
 
 @Composable
 private fun MainScreen(
-    featureRegistry: VibePocketFeatureRegistry,
-    selectedMenuId: String,
+    screenCatalog: ScreenCatalog,
+    selectedScreenId: String,
     onLeafClick: (String) -> Unit,
 ) {
-    val selectedNode = featureRegistry.findLeaf(selectedMenuId)
+    val selectedNode = screenCatalog.findLeaf(selectedScreenId)
 
     AppSidebarScaffold(
         modifier = Modifier.workspaceFrame(),
@@ -142,7 +143,7 @@ private fun MainScreen(
         maxSidebarWidth = 340.dp,
         sidebar = {
             VibePocketFeatureSidebar(
-                nodes = featureRegistry.menuTree,
+                screenCatalog = screenCatalog,
                 selectedId = selectedNode?.id.orEmpty(),
                 onLeafClick = onLeafClick,
                 modifier = Modifier.fillMaxSize(),
@@ -152,7 +153,7 @@ private fun MainScreen(
             Box(
                 modifier = Modifier.fillMaxSize().liquidGlassSurface(VibePocketLiquidGlass.workspaceSpec),
             ) {
-                val content = selectedNode?.entry?.content
+                val content = selectedNode?.content
                 if (content == null) {
                     PlaceholderScreen("🧩", "这个功能页面暂时还没有挂载内容。")
                 } else {

@@ -23,9 +23,9 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.logging.Logger
 
-@Single(binds = [ShellLocalServerService::class])
+@Single
 class KCloudHttpServer(
-    serverFeatures: List<KCloudServerFeature>
+    serverFeatures: List<KCloudServerFeature>,
 ) : ShellLocalServerService {
     private val logger = Logger.getLogger(KCloudHttpServer::class.java.name)
     private val serverFeatures = serverFeatures.sortedBy { it.order }

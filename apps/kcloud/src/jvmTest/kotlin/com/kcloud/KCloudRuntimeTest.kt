@@ -1,7 +1,7 @@
 package com.kcloud
 
-import com.kcloud.app.KCloudFeatureRegistry
-import com.kcloud.feature.KCloudMenuGroups
+import com.kcloud.feature.DesktopLifecycleContributor
+import com.kcloud.feature.KCloudScreenRoots
 import com.kcloud.feature.ShellSettingsService
 import com.kcloud.features.ai.spi.AiDiagnosticsService
 import com.kcloud.features.compose.ComposeFeatureMenus
@@ -26,32 +26,34 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.koin.core.context.stopKoin
+import site.addzero.workbenchshell.Screen
+import site.addzero.workbenchshell.ScreenCatalog
 
 class KCloudRuntimeTest {
     @Test
-    fun `aggregates feature menus into sidebar tree`() {
+    fun `aggregates screens into sidebar tree`() {
         stopKoin()
         val runtime = createKCloudRuntime()
 
         try {
-            val registry = runtime.koin.get<KCloudFeatureRegistry>()
-            val rootNodes = registry.menuTree.associateBy { node -> node.id }
+            val catalog = runtime.koin.get<ScreenCatalog>()
+            val rootNodes = catalog.tree.associateBy { node -> node.id }
 
             assertEquals(
                 listOf(
-                    KCloudMenuGroups.SYNC,
-                    KCloudMenuGroups.MANAGEMENT,
-                    KCloudMenuGroups.SYSTEM
+                    KCloudScreenRoots.SYNC,
+                    KCloudScreenRoots.MANAGEMENT,
+                    KCloudScreenRoots.SYSTEM,
                 ),
-                registry.menuTree.map { node -> node.id }
+                catalog.tree.map { node -> node.id },
             )
 
             assertEquals(
                 listOf(
                     QuickTransferFeatureMenus.QUICK_TRANSFER,
-                    TransferHistoryFeatureMenus.TRANSFER_HISTORY
+                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
                 ),
-                rootNodes.getValue(KCloudMenuGroups.SYNC).children.map { node -> node.id }
+                rootNodes.getValue(KCloudScreenRoots.SYNC).children.map { node -> node.id },
             )
             assertEquals(
                 listOf(
@@ -61,20 +63,20 @@ class KCloudRuntimeTest {
                     NotesFeatureMenus.NOTES,
                     PackageOrganizerFeatureMenus.PACKAGES,
                     SshFeatureMenus.SSH,
-                    WebDavFeatureMenus.WEBDAV
+                    WebDavFeatureMenus.WEBDAV,
                 ),
-                rootNodes.getValue(KCloudMenuGroups.MANAGEMENT).children.map { node -> node.id }
+                rootNodes.getValue(KCloudScreenRoots.MANAGEMENT).children.map { node -> node.id },
             )
             assertEquals(
                 listOf(
                     DotfilesFeatureMenus.DOTFILES,
                     EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
-                    SettingsFeatureMenus.SETTINGS
+                    SettingsFeatureMenus.SETTINGS,
                 ),
-                rootNodes.getValue(KCloudMenuGroups.SYSTEM).children.map { node -> node.id }
+                rootNodes.getValue(KCloudScreenRoots.SYSTEM).children.map { node -> node.id },
             )
 
-            val visibleLeafIds = registry.visibleLeaves.map { node -> node.id }
+            val visibleLeafIds = catalog.visibleLeafNodes.map { node -> node.id }
             assertEquals(
                 listOf(
                     QuickTransferFeatureMenus.QUICK_TRANSFER,
@@ -88,15 +90,15 @@ class KCloudRuntimeTest {
                     WebDavFeatureMenus.WEBDAV,
                     DotfilesFeatureMenus.DOTFILES,
                     EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
-                    SettingsFeatureMenus.SETTINGS
+                    SettingsFeatureMenus.SETTINGS,
                 ),
-                visibleLeafIds
+                visibleLeafIds,
             )
-            registry.visibleLeaves.forEach { node ->
+            catalog.visibleLeafNodes.forEach { node ->
                 assertEquals(1, node.level)
-                assertEquals(listOf(node.parentId), node.ancestorIds)
+                assertEquals(listOf(node.pid), node.ancestorIds)
             }
-            assertTrue(registry.defaultLeafId.isNotBlank())
+            assertTrue(catalog.defaultLeafId.isNotBlank())
         } finally {
             runtime.stopServer()
             stopKoin()
@@ -104,16 +106,34 @@ class KCloudRuntimeTest {
     }
 
     @Test
-    fun `registers initial ui and server features`() {
+    fun `resolves screen lifecycle and server collections`() {
         stopKoin()
         val runtime = createKCloudRuntime()
 
         try {
-            val featureRegistry = runtime.featureRegistry
+            val screens = runtime.koin.getAll<Screen>()
+            val lifecycleContributors = runtime.koin.getAll<DesktopLifecycleContributor>()
 
             assertEquals(
                 listOf(
-                    "desktop-integration",
+                    QuickTransferFeatureMenus.QUICK_TRANSFER,
+                    ServerManagementFeatureMenus.SERVER_MANAGEMENT,
+                    ComposeFeatureMenus.COMPOSE_MANAGER,
+                    FileFeatureMenus.FILE_MANAGER,
+                    NotesFeatureMenus.NOTES,
+                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
+                    PackageOrganizerFeatureMenus.PACKAGES,
+                    SshFeatureMenus.SSH,
+                    WebDavFeatureMenus.WEBDAV,
+                    DotfilesFeatureMenus.DOTFILES,
+                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
+                    SettingsFeatureMenus.SETTINGS,
+                ).sorted(),
+                screens.map { screen -> screen.id }.sorted(),
+            )
+            assertTrue(lifecycleContributors.isNotEmpty())
+            assertEquals(
+                listOf(
                     "quick-transfer",
                     "server-management",
                     "compose",
@@ -125,26 +145,9 @@ class KCloudRuntimeTest {
                     "webdav",
                     "dotfiles",
                     "environment",
-                    "settings"
+                    "ai",
                 ),
-                featureRegistry.features.map { feature -> feature.featureId }
-            )
-            assertEquals(
-                listOf(
-                    "quick-transfer",
-                    "server-management",
-                    "compose",
-                    "file",
-                    "notes",
-                    "transfer-history",
-                    "package-organizer",
-                    "ssh",
-                    "webdav",
-                    "dotfiles",
-                    "environment",
-                    "ai"
-                ),
-                runtime.serverFeatures.map { feature -> feature.featureId }
+                runtime.serverFeatures.map { feature -> feature.featureId },
             )
         } finally {
             runtime.stopServer()
@@ -153,19 +156,19 @@ class KCloudRuntimeTest {
     }
 
     @Test
-    fun `falls back to default leaf for unknown menu ids`() {
+    fun `falls back to default leaf for unknown screen ids`() {
         stopKoin()
         val runtime = createKCloudRuntime()
 
         try {
-            val registry = runtime.koin.get<KCloudFeatureRegistry>()
+            val catalog = runtime.koin.get<ScreenCatalog>()
 
-            assertEquals(registry.defaultLeafId, registry.normalizeMenuId(""))
-            assertEquals(registry.defaultLeafId, registry.normalizeMenuId("quick"))
-            assertEquals(registry.defaultLeafId, registry.normalizeMenuId("docker-compose"))
-            assertEquals(NotesFeatureMenus.NOTES, registry.normalizeMenuId(NotesFeatureMenus.NOTES))
-            assertNotNull(registry.findLeaf("quick")?.entry?.content)
-            assertNotNull(registry.findLeaf(NotesFeatureMenus.NOTES)?.entry?.content)
+            assertEquals(catalog.defaultLeafId, catalog.normalizeScreenId(""))
+            assertEquals(catalog.defaultLeafId, catalog.normalizeScreenId("quick"))
+            assertEquals(catalog.defaultLeafId, catalog.normalizeScreenId("docker-compose"))
+            assertEquals(NotesFeatureMenus.NOTES, catalog.normalizeScreenId(NotesFeatureMenus.NOTES))
+            assertNotNull(catalog.findLeaf("quick")?.content)
+            assertNotNull(catalog.findLeaf(NotesFeatureMenus.NOTES)?.content)
         } finally {
             runtime.stopServer()
             stopKoin()

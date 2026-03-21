@@ -5,7 +5,7 @@ import com.kcloud.features.transferhistory.server.generated.springktor.registerG
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class TransferHistoryServerFeature : KCloudServerFeature {
     override val featureId = "transfer-history"
     override val order = 40

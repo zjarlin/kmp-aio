@@ -7,7 +7,7 @@ import java.awt.Desktop
 import java.io.File
 import org.koin.core.annotation.Single
 
-@Single(binds = [FileWorkspaceRevealService::class])
+@Single
 class DesktopFileWorkspaceRevealService : FileWorkspaceRevealService {
     override fun revealPath(path: String): FileWorkspaceActionResult {
         val localFile = File(KCloudLocalPaths.workspaceDir(), path)

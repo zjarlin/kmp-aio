@@ -1,271 +1,207 @@
 package com.kcloud.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.foundation.layout.weight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.kcloud.app.KCloudFeatureRegistry
 import com.kcloud.app.KCloudShellState
-import com.kcloud.feature.KCloudMenuNode
-import com.kcloud.feature.ShellSettingsService
 import com.kcloud.feature.ShellThemeMode
+import com.kcloud.feature.ShellSettingsService
 import com.kcloud.ui.theme.KCloudTheme
 import org.koin.compose.koinInject
+import site.addzero.appsidebar.AppSidebar
+import site.addzero.appsidebar.rememberAppSidebarState
+import site.addzero.appsidebar.WorkbenchScaffold
+import site.addzero.workbenchshell.ScreenCatalog
+import site.addzero.workbenchshell.toAppSidebarItems
 
 @Composable
 fun MainWindow(
-    featureRegistry: KCloudFeatureRegistry = koinInject(),
+    screenCatalog: ScreenCatalog = koinInject(),
     shellState: KCloudShellState = koinInject(),
-    shellSettingsService: ShellSettingsService = koinInject()
+    shellSettingsService: ShellSettingsService = koinInject(),
 ) {
-    val selectedMenuId by shellState.selectedMenuId.collectAsState()
-    val expandedMenuIds by shellState.expandedMenuIds.collectAsState()
+    val selectedScreenId by shellState.selectedScreenId.collectAsState()
     val themeMode by shellSettingsService.themeMode.collectAsState()
+    val selectedNode = remember(screenCatalog, selectedScreenId) {
+        screenCatalog.findLeaf(selectedScreenId)
+    }
+    val sidebarItems = remember(screenCatalog) {
+        screenCatalog.toAppSidebarItems()
+    }
+    val sidebarState = rememberAppSidebarState(
+        initialSelectedId = selectedNode?.id,
+    )
 
-    val selectedNode = featureRegistry.findLeaf(selectedMenuId)
+    LaunchedEffect(selectedNode?.id, sidebarItems) {
+        sidebarState.updateSelectedId(selectedNode?.id)
+        sidebarState.revealSelection(
+            items = sidebarItems,
+            selectedId = selectedNode?.id,
+        )
+    }
 
     KCloudTheme(
         darkTheme = when (themeMode) {
             ShellThemeMode.LIGHT -> false
             ShellThemeMode.DARK -> true
             ShellThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-        }
+        },
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = MaterialTheme.colorScheme.background
+            color = MaterialTheme.colorScheme.background,
         ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                FeatureSidebar(
-                    nodes = featureRegistry.menuTree,
-                    selectedId = selectedMenuId,
-                    expandedIds = expandedMenuIds,
-                    onLeafClick = shellState::selectMenu,
-                    onGroupToggle = shellState::toggleGroup,
-                    modifier = Modifier.width(240.dp)
-                )
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Box(modifier = Modifier.weight(1f)) {
-                        selectedNode?.entry?.content?.invoke()
-                            ?: EmptyShellContent()
-                    }
-                    ShellStatusBar(
-                        currentTitle = selectedNode?.title ?: "未选择页面",
-                        modifier = Modifier.height(60.dp)
+            WorkbenchScaffold(
+                modifier = Modifier.fillMaxSize(),
+                minSidebarWidth = 248.dp,
+                maxSidebarWidth = 340.dp,
+                sidebar = {
+                    AppSidebar(
+                        title = "KCloud",
+                        supportText = "模块化单体工作台",
+                        items = sidebarItems,
+                        state = sidebarState,
+                        modifier = Modifier.fillMaxSize().sidebarFrame(),
+                        onItemClick = { item ->
+                            shellState.selectScreen(item.id)
+                        },
+                        footerSlot = {
+                            SidebarSummaryCard(
+                                pageCount = screenCatalog.visibleLeafNodes.size,
+                            )
+                        },
                     )
-                }
-            }
+                },
+                contentHeaderScrollable = false,
+                contentHeader = {
+                    ScreenHeader(
+                        breadcrumb = screenCatalog.breadcrumbNamesFor(selectedNode?.id.orEmpty()),
+                        title = selectedNode?.name ?: "未选择页面",
+                    )
+                },
+                content = {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxWidth().contentFrame(),
+                        ) {
+                            val content = selectedNode?.content
+                            if (content == null) {
+                                EmptyShellContent()
+                            } else {
+                                content()
+                            }
+                        }
+                        ShellStatusBar(
+                            currentTitle = selectedNode?.name ?: "未选择页面",
+                            pageCount = screenCatalog.visibleLeafNodes.size,
+                            modifier = Modifier.height(60.dp),
+                        )
+                    }
+                },
+            )
         }
     }
 }
 
 @Composable
-private fun FeatureSidebar(
-    nodes: List<KCloudMenuNode>,
-    selectedId: String,
-    expandedIds: Set<String>,
-    onLeafClick: (String) -> Unit,
-    onGroupToggle: (String) -> Unit,
-    modifier: Modifier = Modifier
+private fun SidebarSummaryCard(
+    pageCount: Int,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+        ),
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = "模块化单体",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+            Text(
+                text = "当前聚合了 $pageCount 个页面",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScreenHeader(
+    breadcrumb: List<String>,
+    title: String,
 ) {
     Column(
-        modifier = modifier
-            .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(8.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
+        if (breadcrumb.isNotEmpty()) {
+            Text(
+                text = breadcrumb.joinToString(" / "),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
-            text = "KCloud",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(16.dp)
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground,
         )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-        ) {
-            nodes.forEach { node ->
-                FeatureMenuRow(
-                    node = node,
-                    selectedId = selectedId,
-                    expandedIds = expandedIds,
-                    onLeafClick = onLeafClick,
-                    onGroupToggle = onGroupToggle
-                )
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Text(
-                    text = "模块化壳层",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-                Text(
-                    text = "功能由 feature 聚合",
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FeatureMenuRow(
-    node: KCloudMenuNode,
-    selectedId: String,
-    expandedIds: Set<String>,
-    onLeafClick: (String) -> Unit,
-    onGroupToggle: (String) -> Unit
-) {
-    if (!node.visible) {
-        return
-    }
-
-    val isSelected = node.id == selectedId
-    val isExpanded = node.id in expandedIds
-    val backgroundColor = if (isSelected) {
-        MaterialTheme.colorScheme.primaryContainer
-    } else {
-        Color.Transparent
-    }
-    val contentColor = if (isSelected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
-    } else {
-        MaterialTheme.colorScheme.onSurface
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(backgroundColor)
-            .clickable {
-                if (node.children.isEmpty()) {
-                    onLeafClick(node.id)
-                } else {
-                    onGroupToggle(node.id)
-                }
-            }
-            .padding(start = (12 + node.level * 18).dp, top = 10.dp, end = 12.dp, bottom = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (node.children.isNotEmpty()) {
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-        } else {
-            Spacer(modifier = Modifier.width(24.dp))
-        }
-
-        node.icon?.let { icon ->
-            Icon(
-                imageVector = icon,
-                contentDescription = node.title,
-                tint = contentColor,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-        }
-
-        Text(
-            text = node.title,
-            color = contentColor,
-            fontWeight = if (node.children.isEmpty()) FontWeight.Medium else FontWeight.SemiBold
-        )
-    }
-
-    if (isExpanded) {
-        node.children.forEach { child ->
-            FeatureMenuRow(
-                node = child,
-                selectedId = selectedId,
-                expandedIds = expandedIds,
-                onLeafClick = onLeafClick,
-                onGroupToggle = onGroupToggle
-            )
-        }
     }
 }
 
 @Composable
 private fun ShellStatusBar(
     currentTitle: String,
-    modifier: Modifier = Modifier
+    pageCount: Int,
+    modifier: Modifier = Modifier,
 ) {
     Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
-        )
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+        ),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = currentTitle,
                 style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "本地插件已聚合",
+                text = "已接入 $pageCount 个 Screen 节点",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
             )
         }
     }
@@ -275,11 +211,21 @@ private fun ShellStatusBar(
 private fun EmptyShellContent() {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = "暂无可用页面",
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
         )
     }
+}
+
+/** 侧栏外壳：让导航区和业务区保持稳定间距。 */
+private fun Modifier.sidebarFrame(): Modifier {
+    return fillMaxSize().padding(12.dp)
+}
+
+/** 内容安全区：避免业务页面直接贴到工作台边界。 */
+private fun Modifier.contentFrame(): Modifier {
+    return fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp)
 }

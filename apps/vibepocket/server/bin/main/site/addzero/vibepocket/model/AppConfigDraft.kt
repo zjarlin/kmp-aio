@@ -21,7 +21,6 @@ import org.babyfish.jimmer.DraftConsumer
 import org.babyfish.jimmer.ImmutableObjects
 import org.babyfish.jimmer.UnloadedException
 import org.babyfish.jimmer.`internal`.GeneratedBy
-import org.babyfish.jimmer.client.Description
 import org.babyfish.jimmer.jackson.ImmutableModuleRequiredException
 import org.babyfish.jimmer.kt.DslScope
 import org.babyfish.jimmer.kt.ImmutableCreator
@@ -57,7 +56,7 @@ public interface AppConfigDraft : AppConfig, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.9.120",
+                "0.10.6",
                 AppConfig::class,
                 listOf(
 
@@ -161,7 +160,6 @@ public interface AppConfigDraft : AppConfig, Draft {
                     return __idValue
                 }
 
-            @Description(value = "配置键，唯一 ")
             override val key: String
                 get() {
                     val __keyValue = this.__keyValue
@@ -171,7 +169,6 @@ public interface AppConfigDraft : AppConfig, Draft {
                     return __keyValue
                 }
 
-            @Description(value = "配置值 ")
             override val `value`: String
                 get() {
                     val __valueValue = this.__valueValue
@@ -181,7 +178,6 @@ public interface AppConfigDraft : AppConfig, Draft {
                     return __valueValue
                 }
 
-            @Description(value = "描述 ")
             override val description: String?
                 get() {
                     if (!__descriptionLoaded) {

@@ -15,7 +15,7 @@ import com.kcloud.features.ai.spi.AiProviderDescriptor
 import com.kcloud.features.ai.spi.AiProviderType
 import org.koin.core.annotation.Single
 
-@Single(binds = [AiProvider::class])
+@Single
 class OllamaAiProvider : AiProvider {
     override val descriptor = AiProviderDescriptor(
         providerId = AiProviderIds.OLLAMA,

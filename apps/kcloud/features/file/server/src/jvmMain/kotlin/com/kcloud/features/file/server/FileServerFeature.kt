@@ -5,7 +5,7 @@ import com.kcloud.features.file.server.generated.springktor.registerGeneratedSpr
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class FileServerFeature : KCloudServerFeature {
     override val featureId = "file"
     override val order = 30

@@ -15,9 +15,9 @@ interface SettingsStorageService {
     fun saveSettings(settings: AppSettings)
 }
 
-@Single(binds = [ShellSettingsService::class, SettingsEditorService::class])
+@Single
 class SettingsService(
-    private val storageService: SettingsStorageService
+    private val storageService: SettingsStorageService,
 ) : ShellSettingsService, SettingsEditorService {
     private val _settings = MutableStateFlow(storageService.loadSettings())
     override val settings: StateFlow<AppSettings> = _settings.asStateFlow()

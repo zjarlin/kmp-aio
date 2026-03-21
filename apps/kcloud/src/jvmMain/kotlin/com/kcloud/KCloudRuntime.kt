@@ -1,21 +1,23 @@
 package com.kcloud
 
-import com.kcloud.app.KCloudFeatureRegistry
 import com.kcloud.app.KCloudHttpServer
 import com.kcloud.app.KCloudShellState
 import com.kcloud.db.Database
+import com.kcloud.feature.DesktopLifecycleContributor
 import com.kcloud.feature.KCloudServerFeature
 import org.koin.core.Koin
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.workbenchshell.ScreenCatalog
 
 class KCloudRuntime(
     private val koinApplication: KoinApplication,
     val shellState: KCloudShellState,
-    val featureRegistry: KCloudFeatureRegistry,
+    val screenCatalog: ScreenCatalog,
+    val desktopLifecycleContributors: List<DesktopLifecycleContributor>,
     val serverFeatures: List<KCloudServerFeature>,
-    private val httpServer: KCloudHttpServer
+    private val httpServer: KCloudHttpServer,
 ) {
     val koin: Koin
         get() = koinApplication.koin
@@ -25,8 +27,8 @@ class KCloudRuntime(
         serverFeatures.forEach { feature ->
             feature.onStart()
         }
-        featureRegistry.features.forEach { feature ->
-            feature.onStart(koin)
+        desktopLifecycleContributors.forEach { contributor ->
+            contributor.onStart(koin)
         }
     }
 
@@ -38,9 +40,9 @@ class KCloudRuntime(
     }
 
     fun stopDesktop() {
-        featureRegistry.features
+        desktopLifecycleContributors
             .asReversed()
-            .forEach { feature -> feature.onStop(koin) }
+            .forEach { contributor -> contributor.onStop(koin) }
         httpServer.stop()
         serverFeatures
             .asReversed()
@@ -67,8 +69,9 @@ fun createKCloudRuntime(): KCloudRuntime {
     return KCloudRuntime(
         koinApplication = koinApplication,
         shellState = koin.get(),
-        featureRegistry = koin.get(),
+        screenCatalog = koin.get(),
+        desktopLifecycleContributors = koin.getAll<DesktopLifecycleContributor>().sortedBy { it.order },
         serverFeatures = koin.getAll<KCloudServerFeature>().sortedBy { it.order },
-        httpServer = koin.get()
+        httpServer = koin.get(),
     )
 }

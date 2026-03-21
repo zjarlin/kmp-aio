@@ -22,7 +22,6 @@ import org.babyfish.jimmer.DraftConsumer
 import org.babyfish.jimmer.ImmutableObjects
 import org.babyfish.jimmer.UnloadedException
 import org.babyfish.jimmer.`internal`.GeneratedBy
-import org.babyfish.jimmer.client.Description
 import org.babyfish.jimmer.jackson.ImmutableModuleRequiredException
 import org.babyfish.jimmer.kt.DslScope
 import org.babyfish.jimmer.kt.ImmutableCreator
@@ -62,7 +61,7 @@ public interface PersonaRecordDraft : PersonaRecord, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.9.120",
+                "0.10.6",
                 PersonaRecord::class,
                 listOf(
 
@@ -171,7 +170,6 @@ public interface PersonaRecordDraft : PersonaRecord, Draft {
                     return __idValue
                 }
 
-            @Description(value = "Persona ID（唯一标识） ")
             override val personaId: String
                 get() {
                     val __personaIdValue = this.__personaIdValue
@@ -181,7 +179,6 @@ public interface PersonaRecordDraft : PersonaRecord, Draft {
                     return __personaIdValue
                 }
 
-            @Description(value = "名称 ")
             override val name: String
                 get() {
                     val __nameValue = this.__nameValue
@@ -191,7 +188,6 @@ public interface PersonaRecordDraft : PersonaRecord, Draft {
                     return __nameValue
                 }
 
-            @Description(value = "描述 ")
             override val description: String
                 get() {
                     val __descriptionValue = this.__descriptionValue
@@ -201,7 +197,6 @@ public interface PersonaRecordDraft : PersonaRecord, Draft {
                     return __descriptionValue
                 }
 
-            @Description(value = "创建时间 ")
             override val createdAt: LocalDateTime
                 get() {
                     val __createdAtValue = this.__createdAtValue

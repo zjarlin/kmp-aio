@@ -6,9 +6,9 @@ import org.koin.core.annotation.Single
 import site.addzero.notes.server.generated.springktor.registerGeneratedSpringRoutes
 import site.addzero.notes.server.store.NoteStoreService
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class NotesServerFeature(
-    private val noteStoreService: NoteStoreService
+    private val noteStoreService: NoteStoreService,
 ) : KCloudServerFeature {
     override val featureId = "notes"
     override val order = 35

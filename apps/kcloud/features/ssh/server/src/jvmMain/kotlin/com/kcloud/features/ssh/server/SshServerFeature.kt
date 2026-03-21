@@ -5,7 +5,7 @@ import com.kcloud.features.ssh.server.generated.springktor.registerGeneratedSpri
 import io.ktor.server.routing.Routing
 import org.koin.core.annotation.Single
 
-@Single(binds = [KCloudServerFeature::class])
+@Single
 class SshServerFeature : KCloudServerFeature {
     override val featureId = "ssh"
     override val order = 60

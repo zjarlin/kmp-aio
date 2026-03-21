@@ -22,7 +22,6 @@ import org.babyfish.jimmer.DraftConsumer
 import org.babyfish.jimmer.ImmutableObjects
 import org.babyfish.jimmer.UnloadedException
 import org.babyfish.jimmer.`internal`.GeneratedBy
-import org.babyfish.jimmer.client.Description
 import org.babyfish.jimmer.jackson.ImmutableModuleRequiredException
 import org.babyfish.jimmer.kt.DslScope
 import org.babyfish.jimmer.kt.ImmutableCreator
@@ -90,7 +89,7 @@ public interface MusicTaskDraft : MusicTask, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.9.120",
+                "0.10.6",
                 MusicTask::class,
                 listOf(
 
@@ -276,7 +275,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __idValue
                 }
 
-            @Description(value = "Suno 任务 ID ")
             override val taskId: String
                 get() {
                     val __taskIdValue = this.__taskIdValue
@@ -286,7 +284,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __taskIdValue
                 }
 
-            @Description(value = "任务状态: queued / processing / complete / error ")
             override val status: String
                 get() {
                     val __statusValue = this.__statusValue
@@ -296,7 +293,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __statusValue
                 }
 
-            @Description(value = "歌曲标题 ")
             override val title: String?
                 get() {
                     if (!__titleLoaded) {
@@ -305,7 +301,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __titleValue
                 }
 
-            @Description(value = "风格标签 ")
             override val tags: String?
                 get() {
                     if (!__tagsLoaded) {
@@ -314,7 +309,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __tagsValue
                 }
 
-            @Description(value = "歌词 ")
             override val prompt: String?
                 get() {
                     if (!__promptLoaded) {
@@ -323,7 +317,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __promptValue
                 }
 
-            @Description(value = "模型版本 ")
             override val mv: String?
                 get() {
                     if (!__mvLoaded) {
@@ -332,7 +325,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __mvValue
                 }
 
-            @Description(value = "音频 URL ")
             override val audioUrl: String?
                 get() {
                     if (!__audioUrlLoaded) {
@@ -341,7 +333,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __audioUrlValue
                 }
 
-            @Description(value = "视频 URL ")
             override val videoUrl: String?
                 get() {
                     if (!__videoUrlLoaded) {
@@ -350,7 +341,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __videoUrlValue
                 }
 
-            @Description(value = "错误信息 ")
             override val errorMessage: String?
                 get() {
                     if (!__errorMessageLoaded) {
@@ -359,7 +349,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __errorMessageValue
                 }
 
-            @Description(value = "创建时间 ")
             override val createdAt: LocalDateTime
                 get() {
                     val __createdAtValue = this.__createdAtValue
@@ -369,7 +358,6 @@ public interface MusicTaskDraft : MusicTask, Draft {
                     return __createdAtValue
                 }
 
-            @Description(value = "更新时间 ")
             override val updatedAt: LocalDateTime
                 get() {
                     val __updatedAtValue = this.__updatedAtValue
