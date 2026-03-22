@@ -183,7 +183,7 @@ apps/kcloud/
 ### IDE 指引
 
 - Gradle Run Configuration 指向 `:apps:kcloud:jvmRun`
-- 或直接以主类 `com.kcloud.MainKt` 启动
+- 或直接以主类 `site.addzero.kcloud.MainKt` 启动
 
 ### 不要这样运行
 

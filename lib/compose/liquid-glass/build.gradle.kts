@@ -8,9 +8,9 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.io.github.kyant0.backdrop)
-            implementation(libs.io.github.fletchmckee.liquid.liquid)
-            implementation(libs.io.github.kyant0.shapes)
+            implementation(libs.findLibrary("io-github-kyant0-backdrop").get())
+            implementation(libs.findLibrary("io-github-fletchmckee-liquid-liquid").get())
+            implementation(libs.findLibrary("io-github-kyant0-shapes").get())
             implementation("org.jetbrains:annotations:26.0.2-1")
         }
     }

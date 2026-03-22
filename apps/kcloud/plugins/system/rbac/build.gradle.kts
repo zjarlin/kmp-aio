@@ -1,11 +1,12 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.kmp-koin-core")
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(project(":apps:kcloud:plugins:system:rbac:client"))
+//            implementation(project(":apps:kcloud:plugins:feature-api"))
         }
     }
 }

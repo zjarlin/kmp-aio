@@ -4,14 +4,14 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.io.swagger.parser.v3.swagger.parser)
-            implementation(libs.com.squareup.kotlinpoet)
-            implementation(libs.com.squareup.kotlinpoet.ksp)
+            implementation(libs.findLibrary("io-swagger-parser-v3-swagger-parser").get())
+            implementation(libs.findLibrary("com-squareup-kotlinpoet").get())
+            implementation(libs.findLibrary("com-squareup-kotlinpoet-ksp").get())
         }
         commonTest.dependencies {
-            implementation(libs.io.kotest.kotest.property)
-            implementation(libs.io.kotest.kotest.assertions.core)
-            implementation(libs.org.jetbrains.kotlin.kotlin.test)
+            implementation(libs.findLibrary("io-kotest-kotest-property").get())
+            implementation(libs.findLibrary("io-kotest-kotest-assertions-core").get())
+            implementation(libs.findLibrary("org-jetbrains-kotlin-kotlin-test").get())
         }
     }
 }

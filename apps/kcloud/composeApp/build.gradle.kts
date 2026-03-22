@@ -1,222 +1,34 @@
 @file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.ConfigurableFileCollection
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.CacheableTask
-import org.gradle.api.tasks.Classpath
-import org.gradle.api.tasks.OutputDirectory
-import org.gradle.api.tasks.TaskAction
-import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.jvm.toolchain.JavaToolchainService
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import java.io.File
-import java.util.Enumeration
-import java.util.jar.JarFile
-
 /**
- * KCloud - 类 Nextcloud 的跨平台同步客户端
+ * VibePocket 应用模块 - KMP Compose Multiplatform 桌面应用
  *
- * 支持 WebDAV/S3/SSH 多种存储后端，端到端加密
+ * 复制此模块创建新应用:
+ * 1. 复制 apps/vibepocket 到 apps/{your-app-name}
+ * 2. 修改 namespace 和 artifact
+ * 3. 更新依赖
  */
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-aio")
-    id("site.addzero.buildlogic.kmp.kmp-koin-core")
-    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
 
-
-
-val desktopMainClass = "com.kcloud.MainKt"
-val libs = versionCatalogs.named("libs")
-val ktorVersion = libs.findVersion("ktor").get().requiredVersion
-val aggregateGeneratedJvmPath = layout.buildDirectory.dir("generated/source/crossModuleAggregates/jvmMain/kotlin")
-
-@CacheableTask
-abstract class GenerateCrossModuleAggregatesTask : DefaultTask() {
-    @get:Classpath
-    abstract val classpath: ConfigurableFileCollection
-
-    @get:OutputDirectory
-    abstract val outputDir: DirectoryProperty
-
-    @TaskAction
-    fun generate() {
-        val outputRoot = outputDir.get().asFile
-        val classpathFiles = classpath.files
-        val springRoutePackages = classpathFiles
-            .flatMap { it.findGeneratedClasses("/generated/springktor/GeneratedSpringRoutesKt.class") }
-            .map { it.substringBeforeLast(".GeneratedSpringRoutesKt") }
-            .distinct()
-            .sorted()
-        val iocProviders = classpathFiles
-            .flatMap { it.findGeneratedClasses("/ThisModuleProvider.class") }
-            .distinct()
-            .sorted()
-
-        outputRoot.resolve(
-            "com/kcloud/app/generated/springktor/aggregate/GeneratedFeatureSpringRoutes.kt"
-        ).apply {
-            parentFile.mkdirs()
-            writeText(
-                buildString {
-                    appendLine("package com.kcloud.app.generated.springktor.aggregate")
-                    appendLine()
-                    appendLine("import io.ktor.server.routing.Route")
-                    if (springRoutePackages.isNotEmpty()) {
-                        appendLine()
-                        springRoutePackages.forEachIndexed { index, packageName ->
-                            appendLine(
-                                "import $packageName.registerGeneratedSpringRoutes as registerAggregatedSpringRoutes$index"
-                            )
-                        }
-                    }
-                    appendLine()
-                    appendLine("fun Route.registerAggregatedFeatureSpringRoutes() {")
-                    springRoutePackages.forEachIndexed { index, _ ->
-                        appendLine("    registerAggregatedSpringRoutes$index()")
-                    }
-                    appendLine("}")
-                }
-            )
-        }
-
-        outputRoot.resolve(
-            "com/kcloud/app/generated/ioc/aggregate/GeneratedIocModuleBootstrap.kt"
-        ).apply {
-            parentFile.mkdirs()
-            writeText(
-                buildString {
-                    appendLine("package com.kcloud.app.generated.ioc.aggregate")
-                    appendLine()
-                    if (iocProviders.isNotEmpty()) {
-                        appendLine("import site.addzero.ioc.spi.IocModuleRegistry")
-                        appendLine()
-                    }
-                    appendLine("fun registerAggregatedIocModules() {")
-                    iocProviders.forEach { providerName ->
-                        appendLine("    IocModuleRegistry.register($providerName)")
-                    }
-                    appendLine("}")
-                }
-            )
-        }
-    }
-
-    private fun <T> Enumeration<T>.asSequence(): Sequence<T> = sequence {
-        while (hasMoreElements()) {
-            yield(nextElement())
-        }
-    }
-
-    private fun File.findGeneratedClasses(suffix: String): List<String> {
-        return when {
-            isDirectory -> walkTopDown()
-                .filter { it.isFile }
-                .map { it.relativeTo(this).invariantSeparatorsPath }
-                .filter { it.endsWith(suffix) }
-                .map { it.removeSuffix(".class").replace('/', '.') }
-                .toList()
-
-            isFile && extension == "jar" -> JarFile(this).use { jarFile ->
-                jarFile.entries()
-                    .asSequence()
-                    .filter { !it.isDirectory && it.name.endsWith(suffix) }
-                    .map { it.name.removeSuffix(".class").replace('/', '.') }
-                    .toList()
-            }
-
-            else -> emptyList()
-        }
-    }
-}
-
-ksp {
-    arg("springKtor.generatedPackage", "com.kcloud.app.generated.springktor")
-}
 
 kotlin {
-    jvmToolchain(17)
-    jvm {
-        compilations.all {
-            compileTaskProvider.configure {
-                compilerOptions {
-                    jvmTarget.set(JvmTarget.JVM_17)
-                }
-            }
-        }
+    dependencies {
+//        implementation(project(":lib:compose:media-playlist-player"))
+//        implementation(project(":lib:compose:app-sidebar"))
+//        implementation(project(":lib:compose:workbench-shell"))
+//        implementation(projects.lib.compose.liquidGlass)
+//        implementation(project(":lib:api:api-music-spi"))
+//        implementation(project(":lib:api:api-suno"))
     }
 
-    sourceSets {
-        commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:ai"))
-            implementation(project(":apps:kcloud:plugins:compose"))
-            implementation(project(":apps:kcloud:plugins:desktop-integration"))
-            implementation(project(":apps:kcloud:plugins:dotfiles"))
-            implementation(project(":apps:kcloud:plugins:environment"))
-            implementation(project(":apps:kcloud:plugins:file"))
-            implementation(project(":apps:kcloud:plugins:notes"))
-            implementation(project(":apps:kcloud:plugins:feature-api"))
-            implementation(project(":apps:kcloud:plugins:package-organizer"))
-            implementation(project(":apps:kcloud:plugins:quick-transfer"))
-            implementation(project(":apps:kcloud:plugins:system:settings"))
-            implementation(project(":apps:kcloud:plugins:server-management"))
-            implementation(project(":apps:kcloud:plugins:ssh"))
-            implementation(project(":apps:kcloud:plugins:transfer-history"))
-            implementation(project(":apps:kcloud:plugins:webdav"))
-        }
-        jvmMain.dependencies {
-            implementation("io.ktor:ktor-server-cio-jvm:$ktorVersion")
-            implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
-            implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
-            implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
-            implementation(projects.lib.starterStatuspages)
-            implementation(libs.findLibrary("site-addzero-ioc-core").get())
-            implementation("site.addzero:spring2ktor-server-core:2026.03.13")
-            compileOnly("org.springframework:spring-web:5.3.21")
-        }
-    }
+//    sourceSets {
+//        jvmMain.dependencies {
+//            implementation(project(":apps:vibepocket:server"))
+//        }
+//    }
 }
 
-dependencies {
-    add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.13")
-}
 
-val jvmCompileClasspath = configurations.named("jvmCompileClasspath")
-val generateCrossModuleAggregates = tasks.register<GenerateCrossModuleAggregatesTask>("generateCrossModuleAggregates") {
-    dependsOn(jvmCompileClasspath)
-    classpath.from(jvmCompileClasspath)
-    outputDir.set(aggregateGeneratedJvmPath)
-}
 
-val java17Launcher = extensions.getByType<JavaToolchainService>().launcherFor {
-    languageVersion.set(JavaLanguageVersion.of(17))
-}
-
-kotlin.sourceSets.named("jvmMain") {
-    kotlin.srcDir(aggregateGeneratedJvmPath)
-}
-
-kotlin.jvm().mainRun {
-    mainClass.set(desktopMainClass)
-}
-
-tasks.withType<JavaExec>().configureEach {
-    if (name == "jvmRun") {
-        javaLauncher.set(java17Launcher)
-    }
-}
-
-val aggregateConsumerTasks = setOf("kspKotlinJvm", "compileKotlinJvm", "jvmSourcesJar", "jvmJar")
-tasks.configureEach {
-    if (name in aggregateConsumerTasks) {
-        dependsOn(generateCrossModuleAggregates)
-    }
-}
-
-compose.desktop {
-    application {
-        mainClass = desktopMainClass
-    }
-}

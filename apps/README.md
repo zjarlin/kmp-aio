@@ -100,7 +100,7 @@ apps/myapp/build/compose-binaries/
 | 配置项 | 说明 | 示例 |
 |--------|------|------|
 | `appName` | 应用名，决定打包文件名 | `"vibepocket"` |
-| `appNamespace` | 包名 | `"site.addzero.vibepocket"` |
+| `appNamespace` | 包名 | `"site.addzero.kcloud"` |
 | `appVersion` | 版本号 | `"1.0.0"` |
 | `mainClass` | 主类 | `"$appNamespace.MainKt"` |
 
