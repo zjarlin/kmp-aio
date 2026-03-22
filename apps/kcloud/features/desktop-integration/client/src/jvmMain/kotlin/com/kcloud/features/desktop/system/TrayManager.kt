@@ -14,6 +14,7 @@ class SystemTrayManager {
     private var trayIcon: TrayIcon? = null
 
     fun install(
+        onTogglePanel: () -> Unit,
         onShowWindow: () -> Unit,
         onExit: () -> Unit
     ): Boolean {
@@ -26,7 +27,7 @@ class SystemTrayManager {
             val popup = java.awt.PopupMenu()
 
             val showItem = java.awt.MenuItem("打开面板")
-            showItem.addActionListener { onShowWindow() }
+            showItem.addActionListener { onTogglePanel() }
             popup.add(showItem)
 
             val mountItem = java.awt.MenuItem("挂载远程目录")
@@ -36,7 +37,7 @@ class SystemTrayManager {
             popup.addSeparator()
 
             val settingsItem = java.awt.MenuItem("设置")
-            settingsItem.addActionListener { /* TODO */ }
+            settingsItem.addActionListener { onShowWindow() }
             popup.add(settingsItem)
 
             popup.addSeparator()
@@ -49,7 +50,7 @@ class SystemTrayManager {
             val icon = loadTrayIcon()
             trayIcon = TrayIcon(icon, "KCloud", popup).apply {
                 isImageAutoSize = true
-                addActionListener { onShowWindow() }
+                addActionListener { onTogglePanel() }
             }
 
             tray.add(trayIcon)

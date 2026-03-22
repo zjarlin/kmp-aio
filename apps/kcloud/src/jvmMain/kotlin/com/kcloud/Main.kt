@@ -9,6 +9,7 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import com.kcloud.features.desktop.system.isSystemTraySupported
 import com.kcloud.ui.MainWindow
+import com.kcloud.ui.tray.KCloudTrayPanelWindow
 
 fun main() {
     val runtime = createKCloudRuntime()
@@ -18,6 +19,7 @@ fun main() {
         val shellState = runtime.shellState
         val windowVisible by shellState.windowVisible.collectAsState()
         val exitRequested by shellState.exitRequested.collectAsState()
+        val trayPanelVisible by shellState.trayPanelVisible.collectAsState()
 
         if (exitRequested) {
             LaunchedEffect(Unit) {
@@ -39,6 +41,20 @@ fun main() {
                 state = WindowState(width = 1280.dp, height = 860.dp)
             ) {
                 MainWindow()
+            }
+        }
+
+        if (trayPanelVisible && !exitRequested) {
+            Window(
+                onCloseRequest = {
+                    shellState.hideTrayPanel()
+                },
+                title = "KCloud 传输面板",
+                state = WindowState(width = 420.dp, height = 560.dp),
+                resizable = false,
+                alwaysOnTop = true,
+            ) {
+                KCloudTrayPanelWindow()
             }
         }
     }

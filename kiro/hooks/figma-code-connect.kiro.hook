@@ -7,7 +7,7 @@
     "type": "fileEdited",
     "patterns": [
       "apps/vibepocket/src/commonMain/kotlin/**/*.kt",
-      "lib/vibepocket-ui/src/commonMain/kotlin/**/*.kt"
+      "lib/compose/liquid-glass/src/commonMain/kotlin/**/*.kt"
     ]
   },
   "then": {

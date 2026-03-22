@@ -1,0 +1,12 @@
+package site.addzero.remotecompose.server
+
+import org.koin.core.module.Module
+import org.koin.dsl.module
+
+fun remoteComposeServerModule(): Module {
+    return module {
+        single {
+            RemoteComposeSchemaService()
+        }
+    }
+}

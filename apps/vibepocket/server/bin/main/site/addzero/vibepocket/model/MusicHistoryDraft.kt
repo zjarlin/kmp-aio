@@ -22,6 +22,7 @@ import org.babyfish.jimmer.DraftConsumer
 import org.babyfish.jimmer.ImmutableObjects
 import org.babyfish.jimmer.UnloadedException
 import org.babyfish.jimmer.`internal`.GeneratedBy
+import org.babyfish.jimmer.client.Description
 import org.babyfish.jimmer.jackson.ImmutableModuleRequiredException
 import org.babyfish.jimmer.kt.DslScope
 import org.babyfish.jimmer.kt.ImmutableCreator
@@ -65,7 +66,7 @@ public interface MusicHistoryDraft : MusicHistory, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.10.6",
+                "0.9.120",
                 MusicHistory::class,
                 listOf(
 
@@ -182,6 +183,7 @@ public interface MusicHistoryDraft : MusicHistory, Draft {
                     return __idValue
                 }
 
+            @Description(value = "任务 ID（唯一标识） ")
             override val taskId: String
                 get() {
                     val __taskIdValue = this.__taskIdValue
@@ -191,6 +193,7 @@ public interface MusicHistoryDraft : MusicHistory, Draft {
                     return __taskIdValue
                 }
 
+            @Description(value = "任务类型（如 generate、extend 等） ")
             override val type: String
                 get() {
                     val __typeValue = this.__typeValue
@@ -200,6 +203,7 @@ public interface MusicHistoryDraft : MusicHistory, Draft {
                     return __typeValue
                 }
 
+            @Description(value = "任务状态 ")
             override val status: String
                 get() {
                     val __statusValue = this.__statusValue
@@ -209,6 +213,7 @@ public interface MusicHistoryDraft : MusicHistory, Draft {
                     return __statusValue
                 }
 
+            @Description(value = "JSON 序列化的 tracks 列表 ")
             override val tracksJson: String
                 get() {
                     val __tracksJsonValue = this.__tracksJsonValue
@@ -218,6 +223,7 @@ public interface MusicHistoryDraft : MusicHistory, Draft {
                     return __tracksJsonValue
                 }
 
+            @Description(value = "创建时间 ")
             override val createdAt: LocalDateTime
                 get() {
                     val __createdAtValue = this.__createdAtValue

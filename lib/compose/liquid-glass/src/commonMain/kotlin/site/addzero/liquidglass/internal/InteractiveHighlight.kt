@@ -9,13 +9,10 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.util.fastCoerceIn
-import com.kyant.backdrop.RuntimeShader
-import com.kyant.backdrop.asComposeShader
-import com.kyant.backdrop.isRuntimeShaderSupported
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -40,53 +37,30 @@ internal class InteractiveHighlight(
     val offset: Offset
         get() = positionAnimation.value - startPosition
 
-    private val shader = if (isRuntimeShaderSupported()) {
-        RuntimeShader(
-            """
-uniform float2 size;
-layout(color) uniform half4 color;
-uniform float radius;
-uniform float2 position;
-
-half4 main(float2 coord) {
-    float dist = distance(coord, position);
-    float intensity = smoothstep(radius, radius * 0.5, dist);
-    return color * intensity;
-}"""
-        )
-    } else {
-        null
-    }
-
     val modifier: Modifier = Modifier.drawWithContent {
         val progress = pressProgressAnimation.value
         if (progress > 0f) {
-            if (shader != null) {
-                drawRect(
-                    color = Color.White.copy(alpha = 0.08f * progress),
-                    blendMode = BlendMode.Plus,
-                )
-                shader.apply {
-                    val resolvedPosition = position(size, positionAnimation.value)
-                    setFloatUniform("size", size.width, size.height)
-                    setColorUniform("color", Color.White.copy(alpha = 0.15f * progress))
-                    setFloatUniform("radius", size.minDimension * 1.5f)
-                    setFloatUniform(
-                        "position",
-                        resolvedPosition.x.fastCoerceIn(0f, size.width),
-                        resolvedPosition.y.fastCoerceIn(0f, size.height),
-                    )
-                }
-                drawRect(
-                    brush = ShaderBrush(shader.asComposeShader()),
-                    blendMode = BlendMode.Plus,
-                )
-            } else {
-                drawRect(
-                    color = Color.White.copy(alpha = 0.25f * progress),
-                    blendMode = BlendMode.Plus,
-                )
-            }
+            val resolvedPosition = position(size, positionAnimation.value)
+            val clampedPosition = Offset(
+                x = resolvedPosition.x.fastCoerceIn(0f, size.width),
+                y = resolvedPosition.y.fastCoerceIn(0f, size.height),
+            )
+            drawRect(
+                color = Color.White.copy(alpha = 0.06f * progress),
+                blendMode = BlendMode.Plus,
+            )
+            drawRect(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.22f * progress),
+                        Color.White.copy(alpha = 0.10f * progress),
+                        Color.Transparent,
+                    ),
+                    center = clampedPosition,
+                    radius = size.minDimension * 1.45f,
+                ),
+                blendMode = BlendMode.Plus,
+            )
         }
         drawContent()
     }

@@ -17,11 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import site.addzero.liquidglass.LiquidGlassButton
 import site.addzero.liquidglass.LiquidGlassButtonStyle
+import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
 import site.addzero.liquidglass.liquidGlassSurface
 import site.addzero.vibepocket.ui.StudioPill
 import site.addzero.vibepocket.ui.StudioSectionCard
 import site.addzero.vibepocket.ui.SunoTokenApplyHint
-import site.addzero.vibepocket.ui.VibePocketLiquidGlass
 
 @Composable
 fun WelcomePage(
@@ -229,7 +229,7 @@ private fun Modifier.welcomeCardFrame(): Modifier {
 /** 输入框玻璃底座：把表单控件压进统一材质，而不是默认纯色输入框。 */
 private fun Modifier.welcomeInputSurface(): Modifier {
     return fillMaxWidth()
-        .liquidGlassSurface(VibePocketLiquidGlass.sectionSpec)
+        .liquidGlassSurface(LiquidGlassWorkbenchDefaults.section)
         .background(Color.Transparent, RoundedCornerShape(18.dp))
 }
 

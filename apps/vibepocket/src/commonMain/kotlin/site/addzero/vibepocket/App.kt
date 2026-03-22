@@ -2,8 +2,8 @@ package site.addzero.vibepocket
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -16,27 +16,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import site.addzero.appsidebar.AppSidebarScaffold
-import site.addzero.liquidglass.liquidGlassSurface
+import org.koin.compose.koinInject
+import site.addzero.liquidglass.LiquidGlassAppTheme
+import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 import site.addzero.media.playlist.player.ProvidePlaylistPlayerHost
-import site.addzero.vibepocket.feature.VibePocketFeatureSidebar
-import site.addzero.vibepocket.feature.vibePocketScreens
 import site.addzero.vibepocket.music.hasCompletedVibePocketSetup
 import site.addzero.vibepocket.music.loadSunoRuntimeConfig
-import site.addzero.vibepocket.screens.PlaceholderScreen
+import site.addzero.vibepocket.render.VibePocketShellState
 import site.addzero.vibepocket.screens.WelcomeScreenWrapper
 import site.addzero.vibepocket.ui.StudioSectionCard
-import site.addzero.vibepocket.ui.VibeGlassAppTheme
-import site.addzero.vibepocket.ui.VibePocketLiquidGlass
-import site.addzero.vibepocket.ui.VibePocketLiquidGlassRoot
-import site.addzero.workbenchshell.ScreenCatalog
+import site.addzero.workbenchshell.RenderWorkbenchScaffold
 
 @Composable
-@Preview
 fun App() {
-    VibeGlassAppTheme {
+    LiquidGlassAppTheme {
         ProvidePlaylistPlayerHost {
             VibePocketAppRoot()
         }
@@ -45,13 +39,11 @@ fun App() {
 
 @Composable
 private fun VibePocketAppRoot() {
-    val screenCatalog = remember { ScreenCatalog(vibePocketScreens) }
-
+    val shellState: VibePocketShellState = koinInject()
     var isStartupReady by remember { mutableStateOf(false) }
     var isSetupDone by remember { mutableStateOf(false) }
-    var selectedScreenId by remember { mutableStateOf(screenCatalog.defaultLeafId) }
 
-    LaunchedEffect(screenCatalog.defaultLeafId) {
+    LaunchedEffect(Unit) {
         val runtimeConfig = try {
             loadSunoRuntimeConfig()
         } catch (_: Exception) {
@@ -66,37 +58,40 @@ private fun VibePocketAppRoot() {
             runtimeConfig?.baseUrl?.takeIf { it != site.addzero.vibepocket.api.suno.SunoApiClient.DEFAULT_BASE_URL } != null
 
         isSetupDone = setupCompleted || hasPersistedConfig
-        selectedScreenId = screenCatalog.normalizeScreenId(selectedScreenId)
         isStartupReady = true
     }
 
     if (!isStartupReady) {
-        VibePocketLiquidGlassRoot {
+        VibePocketWorkbenchRoot {
             StartupLoadingScreen()
         }
         return
     }
 
     if (!isSetupDone) {
-        VibePocketLiquidGlassRoot {
+        VibePocketWorkbenchRoot {
             WelcomeScreenWrapper(
                 onSetupComplete = { _, _ ->
                     isSetupDone = true
-                    selectedScreenId = screenCatalog.defaultLeafId
+                    shellState.selectDefaultScreen()
                 },
             )
         }
     } else {
-        VibePocketLiquidGlassRoot {
-            MainScreen(
-                screenCatalog = screenCatalog,
-                selectedScreenId = selectedScreenId,
-                onLeafClick = { screenId ->
-                    selectedScreenId = screenCatalog.normalizeScreenId(screenId)
-                },
-            )
+        VibePocketWorkbenchRoot {
+            MainScreen()
         }
     }
+}
+
+@Composable
+private fun VibePocketWorkbenchRoot(
+    content: @Composable BoxScope.() -> Unit,
+) {
+    LiquidGlassWorkbenchRoot(
+        modifier = Modifier.fillMaxSize(),
+        content = content,
+    )
 }
 
 @Composable
@@ -129,51 +124,12 @@ private fun StartupLoadingScreen() {
 }
 
 @Composable
-private fun MainScreen(
-    screenCatalog: ScreenCatalog,
-    selectedScreenId: String,
-    onLeafClick: (String) -> Unit,
-) {
-    val selectedNode = screenCatalog.findLeaf(selectedScreenId)
-
-    AppSidebarScaffold(
-        modifier = Modifier.workspaceFrame(),
+private fun MainScreen() {
+    RenderWorkbenchScaffold(
+        modifier = Modifier.fillMaxSize(),
         defaultSidebarRatio = 0.18f,
+        contentHeaderScrollable = false,
         minSidebarWidth = 252.dp,
         maxSidebarWidth = 340.dp,
-        sidebar = {
-            VibePocketFeatureSidebar(
-                screenCatalog = screenCatalog,
-                selectedId = selectedNode?.id.orEmpty(),
-                onLeafClick = onLeafClick,
-                modifier = Modifier.fillMaxSize(),
-            )
-        },
-        content = {
-            Box(
-                modifier = Modifier.fillMaxSize().liquidGlassSurface(VibePocketLiquidGlass.workspaceSpec),
-            ) {
-                val content = selectedNode?.content
-                if (content == null) {
-                    PlaceholderScreen("🧩", "这个功能页面暂时还没有挂载内容。")
-                } else {
-                    Box(
-                        modifier = Modifier.contentPaddingFrame(),
-                    ) {
-                        content()
-                    }
-                }
-            }
-        },
     )
-}
-
-/** 主工作台留白：让整个玻璃壳体和窗口边缘拉开呼吸距离。 */
-private fun Modifier.workspaceFrame(): Modifier {
-    return fillMaxSize().padding(16.dp)
-}
-
-/** 内容内边距：给业务页面留安全区，避免控件直接贴到玻璃边缘。 */
-private fun Modifier.contentPaddingFrame(): Modifier {
-    return fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp)
 }

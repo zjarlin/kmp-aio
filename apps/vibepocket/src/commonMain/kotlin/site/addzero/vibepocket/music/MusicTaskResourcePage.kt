@@ -28,12 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,14 +36,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
-import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
 import site.addzero.vibepocket.model.SunoTaskResourceItem
+import site.addzero.vibepocket.screens.creativeassets.CreativeAssetsViewModel
 import site.addzero.vibepocket.ui.StudioEmptyState
 import site.addzero.vibepocket.ui.StudioMetricCard
 import site.addzero.vibepocket.ui.StudioPill
@@ -61,120 +55,9 @@ private val taskResourcePrettyJson = Json {
 }
 
 @Composable
-fun MusicTaskResourcePage() {
-    val scope = rememberCoroutineScope()
-
-    var keyword by remember { mutableStateOf("") }
-    var items by remember { mutableStateOf<List<SunoTaskResourceItem>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-    var selectedTaskId by remember { mutableStateOf<String?>(null) }
-    var liveDetail by remember(selectedTaskId) { mutableStateOf<SunoTaskDetail?>(null) }
-    var liveSyncMessage by remember(selectedTaskId) { mutableStateOf<String?>(null) }
-    var isRefreshingLiveDetail by remember(selectedTaskId) { mutableStateOf(false) }
-
-    suspend fun refreshTaskFromSuno(
-        currentItem: SunoTaskResourceItem,
-        manual: Boolean,
-    ) {
-        isRefreshingLiveDetail = true
-        liveSyncMessage = if (manual) {
-            "正在按 taskId 查询 Suno..."
-        } else {
-            "正在自动按 taskId 回查 Suno..."
-        }
-        try {
-            val refreshedSnapshot = refreshSunoTaskSnapshotById(
-                taskId = currentItem.taskId,
-                fallbackType = currentItem.type,
-                requestJson = currentItem.requestJson,
-            )
-            liveDetail = refreshedSnapshot.detail
-            liveSyncMessage = buildString {
-                append(if (manual) "已按 taskId 从 Suno 刷新：" else "已自动按 taskId 从 Suno 刷新：")
-                append(refreshedSnapshot.detail.displayStatus)
-                append("。")
-                append(refreshedSnapshot.archiveStatus)
-            }
-            refreshedSnapshot.archivedItem?.let { archivedItem ->
-                items = items.replaceTaskResource(archivedItem)
-            }
-        } catch (error: Exception) {
-            liveSyncMessage = buildString {
-                append(if (manual) "按 taskId 查询失败：" else "自动按 taskId 回查失败：")
-                append(SunoWorkflowService.errorMessage(error))
-            }
-        } finally {
-            isRefreshingLiveDetail = false
-        }
-    }
-
-    fun refreshTaskResources() {
-        scope.launch {
-            isLoading = true
-            errorMessage = null
-            try {
-                val loaded = ServerApiClient.sunoTaskResourceApi.list()
-                val runtimeConfig = runCatching { SunoWorkflowService.loadConfig() }
-                    .getOrDefault(SunoRuntimeConfig())
-                val reconciled = if (runtimeConfig.hasToken) {
-                    loaded.reconcileTaskResourcesWithSuno { partial ->
-                        items = partial
-                    }
-                } else {
-                    loaded
-                }
-                items = reconciled
-                if (reconciled.none { it.taskId == selectedTaskId }) {
-                    selectedTaskId = reconciled.firstOrNull()?.taskId
-                }
-            } catch (error: Exception) {
-                errorMessage = error.message ?: "加载生成日志失败"
-            } finally {
-                isLoading = false
-            }
-        }
-    }
-
-    fun refreshSelectedTaskFromSuno() {
-        val currentItem = items.firstOrNull { it.taskId == selectedTaskId } ?: return
-        scope.launch { refreshTaskFromSuno(currentItem, manual = true) }
-    }
-
-    LaunchedEffect(Unit) {
-        refreshTaskResources()
-    }
-
-    val filteredItems = remember(items, keyword) {
-        val normalizedKeyword = keyword.trim()
-        if (normalizedKeyword.isBlank()) {
-            items
-        } else {
-            items.filter { item -> item.matchesKeyword(normalizedKeyword) }
-        }
-    }
-    val selectedItem = filteredItems.firstOrNull { it.taskId == selectedTaskId }
-        ?: filteredItems.firstOrNull()
-
-    LaunchedEffect(selectedItem?.taskId) {
-        if (selectedItem != null && selectedTaskId != selectedItem.taskId) {
-            selectedTaskId = selectedItem.taskId
-        }
-    }
-
-    LaunchedEffect(selectedItem?.taskId) {
-        selectedItem?.let { item ->
-            refreshTaskFromSuno(
-                currentItem = item,
-                manual = false,
-            )
-        }
-    }
-
-    val successCount = remember(items) { items.count { it.isSuccessStatus() } }
-    val failedCount = remember(items) { items.count { it.isFailedStatus() } }
-    val runningCount = remember(items) { items.count { it.isRunningStatus() } }
-
+fun MusicTaskResourcePage(
+    viewModel: CreativeAssetsViewModel,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -182,12 +65,12 @@ fun MusicTaskResourcePage() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         StudioPill(
-            text = "Task Resources",
+            text = "Creative Assets",
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
         )
         Text(
-            text = "生成管理",
+            text = "创作资产",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
@@ -203,25 +86,25 @@ fun MusicTaskResourcePage() {
         ) {
             StudioMetricCard(
                 label = "总任务",
-                value = items.size.toString(),
+                value = viewModel.items.size.toString(),
                 modifier = Modifier.width(112.dp),
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
             )
             StudioMetricCard(
                 label = "成功",
-                value = successCount.toString(),
+                value = viewModel.successCount.toString(),
                 modifier = Modifier.width(112.dp),
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
             )
             StudioMetricCard(
                 label = "失败",
-                value = failedCount.toString(),
+                value = viewModel.failedCount.toString(),
                 modifier = Modifier.width(112.dp),
                 containerColor = MaterialTheme.colorScheme.errorContainer,
             )
             StudioMetricCard(
                 label = "进行中",
-                value = runningCount.toString(),
+                value = viewModel.runningCount.toString(),
                 modifier = Modifier.width(112.dp),
                 containerColor = MaterialTheme.colorScheme.tertiaryContainer,
             )
@@ -232,16 +115,16 @@ fun MusicTaskResourcePage() {
             subtitle = "支持按 taskId、类型、状态、标题和错误消息筛选。",
             action = {
                 OutlinedButton(
-                    onClick = ::refreshTaskResources,
-                    enabled = !isLoading,
+                    onClick = viewModel::refreshTaskResources,
+                    enabled = !viewModel.isLoading,
                 ) {
-                    Text(if (isLoading) "刷新中..." else "刷新")
+                    Text(if (viewModel.isLoading) "刷新中..." else "刷新")
                 }
             },
         ) {
             OutlinedTextField(
-                value = keyword,
-                onValueChange = { keyword = it },
+                value = viewModel.keyword,
+                onValueChange = viewModel::updateKeyword,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("搜索任务") },
                 placeholder = { Text("输入 taskId / 类型 / 标题 / 状态 / 错误关键词") },
@@ -261,16 +144,16 @@ fun MusicTaskResourcePage() {
                 subtitle = "按最近更新时间倒序显示。",
             ) {
                 when {
-                    isLoading && items.isEmpty() -> ResourceLoadingState()
-                    errorMessage != null && items.isEmpty() -> ResourceErrorState(
-                        message = errorMessage.orEmpty(),
-                        onRetry = ::refreshTaskResources,
+                    viewModel.isLoading && viewModel.items.isEmpty() -> ResourceLoadingState()
+                    viewModel.errorMessage != null && viewModel.items.isEmpty() -> ResourceErrorState(
+                        message = viewModel.errorMessage.orEmpty(),
+                        onRetry = viewModel::refreshTaskResources,
                     )
 
-                    filteredItems.isEmpty() -> StudioEmptyState(
+                    viewModel.filteredItems.isEmpty() -> StudioEmptyState(
                         icon = "🧾",
                         title = "暂无生成日志",
-                        description = if (keyword.isBlank()) {
+                        description = if (viewModel.keyword.isBlank()) {
                             "先去音乐工作台提交一次任务，这里就会出现记录。"
                         } else {
                             "没有匹配当前筛选条件的任务。"
@@ -284,13 +167,13 @@ fun MusicTaskResourcePage() {
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             items(
-                                items = filteredItems,
+                                items = viewModel.filteredItems,
                                 key = { item -> item.taskId },
                             ) { item ->
                                 TaskResourceListItem(
                                     item = item,
-                                    selected = item.taskId == selectedItem?.taskId,
-                                    onClick = { selectedTaskId = item.taskId },
+                                    selected = item.taskId == viewModel.selectedItem?.taskId,
+                                    onClick = { viewModel.selectTask(item.taskId) },
                                 )
                             }
                         }
@@ -305,16 +188,17 @@ fun MusicTaskResourcePage() {
                 title = "任务详情",
                 subtitle = "选中一条任务后，可以查看请求体、Suno 返回详情和结果音轨。taskId 可随时回查远端。",
                 action = {
-                    if (selectedItem != null) {
+                    if (viewModel.selectedItem != null) {
                         OutlinedButton(
-                            onClick = ::refreshSelectedTaskFromSuno,
-                            enabled = !isRefreshingLiveDetail,
+                            onClick = viewModel::refreshSelectedTaskFromSuno,
+                            enabled = !viewModel.isRefreshingLiveDetail,
                         ) {
-                            Text(if (isRefreshingLiveDetail) "查询中..." else "按 taskId 查询")
+                            Text(if (viewModel.isRefreshingLiveDetail) "查询中..." else "按 taskId 查询")
                         }
                     }
                 },
             ) {
+                val selectedItem = viewModel.selectedItem
                 if (selectedItem == null) {
                     StudioEmptyState(
                         icon = "🎛",
@@ -325,8 +209,8 @@ fun MusicTaskResourcePage() {
                 } else {
                     TaskResourceDetail(
                         item = selectedItem,
-                        liveDetail = liveDetail,
-                        liveSyncMessage = liveSyncMessage,
+                        liveDetail = viewModel.liveDetail,
+                        liveSyncMessage = viewModel.liveSyncMessage,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -729,7 +613,7 @@ private fun ResourceErrorState(
     }
 }
 
-private fun SunoTaskResourceItem.matchesKeyword(keyword: String): Boolean {
+internal fun SunoTaskResourceItem.matchesKeyword(keyword: String): Boolean {
     val normalizedKeyword = keyword.trim()
     if (normalizedKeyword.isBlank()) {
         return true
@@ -748,7 +632,7 @@ private fun SunoTaskResourceItem.matchesKeyword(keyword: String): Boolean {
     }
 }
 
-private fun SunoTaskResourceItem.displayTitle(): String {
+internal fun SunoTaskResourceItem.displayTitle(): String {
     return tracks.firstOrNull()?.title?.takeIf { it.isNotBlank() }
         ?: when (type.lowercase()) {
             "upload_cover" -> "翻唱任务"
@@ -757,7 +641,7 @@ private fun SunoTaskResourceItem.displayTitle(): String {
         }
 }
 
-private fun SunoTaskResourceItem.displayStatus(): String {
+internal fun SunoTaskResourceItem.displayStatus(): String {
     return when (status.uppercase()) {
         "SUCCESS" -> "成功"
         "FAILED" -> "失败"
@@ -767,15 +651,15 @@ private fun SunoTaskResourceItem.displayStatus(): String {
     }
 }
 
-private fun SunoTaskResourceItem.isSuccessStatus(): Boolean {
+internal fun SunoTaskResourceItem.isSuccessStatus(): Boolean {
     return status.equals("SUCCESS", ignoreCase = true)
 }
 
-private fun SunoTaskResourceItem.isFailedStatus(): Boolean {
+internal fun SunoTaskResourceItem.isFailedStatus(): Boolean {
     return status.equals("FAILED", ignoreCase = true)
 }
 
-private fun SunoTaskResourceItem.isRunningStatus(): Boolean {
+internal fun SunoTaskResourceItem.isRunningStatus(): Boolean {
     return !isSuccessStatus() && !isFailedStatus()
 }
 
@@ -790,7 +674,7 @@ private fun String.prettyJsonOrRaw(): String {
     }.getOrDefault(raw)
 }
 
-private fun List<SunoTaskResourceItem>.replaceTaskResource(
+internal fun List<SunoTaskResourceItem>.replaceTaskResource(
     refreshedItem: SunoTaskResourceItem,
 ): List<SunoTaskResourceItem> {
     return map { current ->
@@ -798,7 +682,7 @@ private fun List<SunoTaskResourceItem>.replaceTaskResource(
     }
 }
 
-private suspend fun List<SunoTaskResourceItem>.reconcileTaskResourcesWithSuno(
+internal suspend fun List<SunoTaskResourceItem>.reconcileTaskResourcesWithSuno(
     onPartialUpdate: (List<SunoTaskResourceItem>) -> Unit,
 ): List<SunoTaskResourceItem> {
     var current = this

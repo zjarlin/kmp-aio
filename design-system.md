@@ -46,10 +46,10 @@ The goal is to make Vibepocket feel like a creative instrument panel instead of 
 
 ### Foundation
 
-- `VibeGlassAppTheme`
-- `VibeGlassBackdrop`
-- `VibeGlassPanel`
-- `VibeGlassScreenPanel`
+- `LiquidGlassAppTheme`
+- `LiquidGlassWorkbenchRoot`
+- `LiquidGlassCard`
+- `LiquidGlassSidebarMenu`
 
 ### Inputs and actions
 

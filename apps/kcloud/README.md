@@ -49,35 +49,43 @@ Koin 根入口在 [`src/jvmMain/kotlin/com/kcloud/KCloudKoinApplication.kt`](src
 
 [`src/jvmMain/kotlin/com/kcloud/KCloudRuntime.kt`](src/jvmMain/kotlin/com/kcloud/KCloudRuntime.kt) 负责：
 
-1. 解析 `KCloudFeatureRegistry`
-2. 聚合全部 `KCloudServerFeature`
+1. 解析 `ScreenCatalog`
+2. 聚合全部 `ServerLifecycleContributor`
 3. 启动本地 HTTP 服务
-4. 驱动桌面 feature 生命周期
+4. 驱动桌面生命周期贡献者
 
 [`src/commonMain/kotlin/com/kcloud/app/KCloudShellState.kt`](src/commonMain/kotlin/com/kcloud/app/KCloudShellState.kt) 只做壳层逻辑：
 
 - 固定三组根菜单：`同步`、`管理`、`系统`
-- 基于 feature 自己声明的菜单构建树
-- 维护选中项和展开项
+- 基于 `Screen` 树维护选中页
 - 不再硬编码 `quick` / `docker-compose` / `server` / `history` 等旧 alias
 
 ### 3. feature 契约
 
-共享契约在 [`features/feature-api`](features/feature-api)：
+共享契约分两层：
+
+`features/feature-api`：
 
 | Contract | 作用 |
 | --- | --- |
-| [`KCloudFeature`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudFeature.kt) | 客户端页面、生命周期、菜单入口 |
-| [`KCloudServerFeature`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudFeature.kt) | 本地 HTTP 路由扩展入口 |
-| [`KCloudMenuEntry`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudMenu.kt) | 菜单描述，支持 `parentId`、`visible`、`content` |
-| [`KCloudMenuTreeBuilder`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudMenu.kt) | 树构建、循环校验、可见叶子展开 |
+| [`DesktopLifecycleContributor`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudFeature.kt) | 桌面端生命周期扩展 |
+| [`ServerLifecycleContributor`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudFeature.kt) | 本地服务生命周期扩展 |
+| [`KCloudScreenRoots`](features/feature-api/src/commonMain/kotlin/com/kcloud/feature/KCloudScreenRoots.kt) | `kcloud` 默认根节点常量 |
 
-菜单规则：
+`lib/compose/workbench-shell`：
 
-- `parentId` 声明父子关系
-- `visible` 控制是否显示
-- `level` 是 `KCloudMenuNode` 的计算属性，不是配置字段
-- 壳层默认根组固定为 `group.sync`、`group.management`、`group.system`
+| Contract | 作用 |
+| --- | --- |
+| [`Screen`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/Screen.kt) | 通用树节点 SPI；`content == null` 表示容器节点 |
+| [`ScreenCatalog`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenCatalog.kt) | 树构建、循环校验、默认页与面包屑计算 |
+| [`ScreenSidebarAdapter`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebarAdapter.kt) | 适配 `AppSidebar` 数据模型 |
+
+树规则：
+
+- `id / pid / sort / visible` 统一由 `Screen` 描述
+- 同父节点按 `sort` 升序，再按 `name` 兜底
+- 有 children 的节点必须是纯容器，不能再带 `content`
+- `kcloud` 壳层默认根组固定为 `同步`、`管理`、`系统`
 
 ### 4. 目录形态
 
@@ -132,7 +140,7 @@ apps/kcloud/
 
 ### 当前本地 HTTP 聚合层
 
-桌面壳会先启动本地 Ktor 服务，再由各 `KCloudServerFeature` 把路由挂进来。当前可见前缀包括：
+桌面壳会先启动本地 Ktor 服务，再由根模块编译期聚合全部 `spring2ktor` 生成路由。当前可见前缀包括：
 
 - `/api/notes`
 - `/api/packages`

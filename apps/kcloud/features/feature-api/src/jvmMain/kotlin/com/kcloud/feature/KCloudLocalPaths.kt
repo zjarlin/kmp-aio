@@ -12,10 +12,6 @@ object KCloudLocalPaths {
         return File(KCloudPaths.featuresDir(), featureId).ensureDirectory()
     }
 
-    fun pluginDir(pluginId: String): File {
-        return featureDir(pluginId)
-    }
-
     fun workspaceDir(): File {
         return KCloudPaths.workspaceDir()
     }

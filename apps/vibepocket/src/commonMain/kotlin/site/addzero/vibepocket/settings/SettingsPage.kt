@@ -18,58 +18,26 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.model.ConfigRuntimeInfo
-import site.addzero.vibepocket.music.SunoWorkflowService
-import site.addzero.vibepocket.platform.DirectoryLauncher
+import site.addzero.vibepocket.screens.settings.SettingsViewModel
 import site.addzero.vibepocket.ui.StudioEmptyState
 import site.addzero.vibepocket.ui.StudioPill
 import site.addzero.vibepocket.ui.StudioSectionCard
 import site.addzero.vibepocket.ui.SunoTokenApplyHint
 
 @Composable
-fun SettingsPage() {
-    val scope = rememberCoroutineScope()
-    var sunoToken by remember { mutableStateOf("") }
-    var sunoBaseUrl by remember {
-        mutableStateOf(site.addzero.vibepocket.api.suno.SunoApiClient.DEFAULT_BASE_URL)
-    }
-    var sunoCallbackUrl by remember { mutableStateOf("") }
-    var loaded by remember { mutableStateOf(false) }
-    var isSaving by remember { mutableStateOf(false) }
-    var runtimeInfo by remember { mutableStateOf<ConfigRuntimeInfo?>(null) }
-    var feedbackMessage by remember { mutableStateOf<String?>(null) }
-    var feedbackIsError by remember { mutableStateOf(false) }
-
-    suspend fun reloadFromServer() {
-        val runtimeConfig = SunoWorkflowService.loadConfig()
-        sunoToken = runtimeConfig.apiToken
-        sunoBaseUrl = runtimeConfig.baseUrl
-        sunoCallbackUrl = runtimeConfig.callbackUrl
-        runtimeInfo = runCatching { ServerApiClient.configApi.getRuntimeInfo() }.getOrNull()
-        loaded = true
-    }
-
-    LaunchedEffect(Unit) {
-        reloadFromServer()
-    }
-
+fun SettingsPage(
+    viewModel: SettingsViewModel,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        if (!loaded) {
+        if (!viewModel.loaded) {
             StudioEmptyState(
                 icon = "⏳",
                 title = "读取配置中",
@@ -78,63 +46,21 @@ fun SettingsPage() {
             )
         } else {
             MusicConfigEditor(
-                sunoToken = sunoToken,
-                onTokenChange = { sunoToken = it },
-                sunoBaseUrl = sunoBaseUrl,
-                onBaseUrlChange = { sunoBaseUrl = it },
-                sunoCallbackUrl = sunoCallbackUrl,
-                onCallbackUrlChange = { sunoCallbackUrl = it },
-                isSaving = isSaving,
-                feedbackMessage = feedbackMessage,
-                feedbackIsError = feedbackIsError,
-                onSave = {
-                    scope.launch {
-                        isSaving = true
-                        try {
-                            SunoWorkflowService.saveConfig(
-                                apiToken = sunoToken,
-                                baseUrl = sunoBaseUrl,
-                                callbackUrl = sunoCallbackUrl,
-                            )
-                            reloadFromServer()
-                            feedbackIsError = false
-                            feedbackMessage = when (runtimeInfo?.storage) {
-                                "sqlite" -> "已保存到本地 SQLite。"
-                                else -> "配置已保存。"
-                            }
-                        } catch (error: Throwable) {
-                            feedbackIsError = true
-                            feedbackMessage = error.message?.takeIf { it.isNotBlank() } ?: "保存配置失败"
-                        } finally {
-                            isSaving = false
-                        }
-                    }
-                },
-                onReload = {
-                    scope.launch {
-                        reloadFromServer()
-                        feedbackIsError = false
-                        feedbackMessage = "已重新读取当前本地配置。"
-                    }
-                },
+                sunoToken = viewModel.sunoToken,
+                onTokenChange = viewModel::updateSunoToken,
+                sunoBaseUrl = viewModel.sunoBaseUrl,
+                onBaseUrlChange = viewModel::updateSunoBaseUrl,
+                sunoCallbackUrl = viewModel.sunoCallbackUrl,
+                onCallbackUrlChange = viewModel::updateSunoCallbackUrl,
+                isSaving = viewModel.isSaving,
+                feedbackMessage = viewModel.feedbackMessage,
+                feedbackIsError = viewModel.feedbackIsError,
+                onSave = viewModel::saveConfig,
+                onReload = viewModel::reloadWithFeedback,
             )
             LocalStorageCard(
-                runtimeInfo = runtimeInfo,
-                onOpenCacheDir = {
-                    val cacheDir = runtimeInfo?.cacheDir
-                    if (cacheDir.isNullOrBlank()) {
-                        feedbackIsError = true
-                        feedbackMessage = "当前没有可打开的缓存目录。"
-                    } else {
-                        val opened = DirectoryLauncher.openDirectory(cacheDir)
-                        feedbackIsError = !opened
-                        feedbackMessage = if (opened) {
-                            "已打开缓存目录。"
-                        } else {
-                            "打开缓存目录失败：$cacheDir"
-                        }
-                    }
-                },
+                runtimeInfo = viewModel.runtimeInfo,
+                onOpenCacheDir = viewModel::openCacheDir,
             )
         }
     }

@@ -23,6 +23,7 @@ import org.babyfish.jimmer.DraftConsumer
 import org.babyfish.jimmer.ImmutableObjects
 import org.babyfish.jimmer.UnloadedException
 import org.babyfish.jimmer.`internal`.GeneratedBy
+import org.babyfish.jimmer.client.Description
 import org.babyfish.jimmer.jackson.ImmutableModuleRequiredException
 import org.babyfish.jimmer.kt.DslScope
 import org.babyfish.jimmer.kt.ImmutableCreator
@@ -78,7 +79,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.10.6",
+                "0.9.120",
                 FavoriteTrack::class,
                 listOf(
 
@@ -234,6 +235,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __idValue
                 }
 
+            @Description(value = "音轨 ID（唯一标识） ")
             override val trackId: String
                 get() {
                     val __trackIdValue = this.__trackIdValue
@@ -243,6 +245,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __trackIdValue
                 }
 
+            @Description(value = "所属任务 ID ")
             override val taskId: String
                 get() {
                     val __taskIdValue = this.__taskIdValue
@@ -252,6 +255,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __taskIdValue
                 }
 
+            @Description(value = "音频 URL ")
             override val audioUrl: String?
                 get() {
                     if (!__audioUrlLoaded) {
@@ -260,6 +264,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __audioUrlValue
                 }
 
+            @Description(value = "标题 ")
             override val title: String?
                 get() {
                     if (!__titleLoaded) {
@@ -268,6 +273,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __titleValue
                 }
 
+            @Description(value = "风格标签 ")
             override val tags: String?
                 get() {
                     if (!__tagsLoaded) {
@@ -276,6 +282,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __tagsValue
                 }
 
+            @Description(value = "封面图 URL ")
             override val imageUrl: String?
                 get() {
                     if (!__imageUrlLoaded) {
@@ -284,6 +291,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __imageUrlValue
                 }
 
+            @Description(value = "时长（秒） ")
             override val duration: Double?
                 get() {
                     if (!__durationLoaded) {
@@ -292,6 +300,7 @@ public interface FavoriteTrackDraft : FavoriteTrack, Draft {
                     return __durationValue
                 }
 
+            @Description(value = "创建时间 ")
             override val createdAt: LocalDateTime
                 get() {
                     val __createdAtValue = this.__createdAtValue

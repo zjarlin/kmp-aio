@@ -4,13 +4,13 @@ class ScreenCatalog(
     screens: List<Screen>,
 ) {
     val screens: List<Screen> = screens
-        .sortedWith(compareBy<Screen> { it.sort }.thenBy { it.name })
+        .sortedWith(compareBy<Screen> { screen: Screen -> screen.sort }.thenBy { screen: Screen -> screen.name })
 
-    private val screensById: Map<String, Screen> = this.screens.associateBy { screen -> screen.id }
+    private val screensById: Map<String, Screen> = this.screens.associateBy { screen: Screen -> screen.id }
     private val childrenByParentId: Map<String?, List<Screen>> = this.screens
-        .groupBy { screen -> screen.pid }
+        .groupBy { screen: Screen -> screen.pid }
         .mapValues { (_, siblings) ->
-            siblings.sortedWith(compareBy<Screen> { it.sort }.thenBy { it.name })
+            siblings.sortedWith(compareBy<Screen> { screen: Screen -> screen.sort }.thenBy { screen: Screen -> screen.name })
         }
 
     init {
@@ -22,12 +22,12 @@ class ScreenCatalog(
 
     val tree: List<ScreenNode> = childrenByParentId[null]
         .orEmpty()
-        .map { screen -> buildNode(screen, emptyList()) }
+        .map { screen: Screen -> buildNode(screen, emptyList()) }
 
     private val allNodes: List<ScreenNode> = buildList {
         tree.forEach { node -> addSubtree(node) }
     }
-    private val nodesById: Map<String, ScreenNode> = allNodes.associateBy { node -> node.id }
+    private val nodesById: Map<String, ScreenNode> = allNodes.associateBy { node: ScreenNode -> node.id }
 
     val visibleLeafNodes: List<ScreenNode> = buildList {
         tree.forEach { node -> collectVisibleLeaves(node) }
@@ -36,8 +36,8 @@ class ScreenCatalog(
     val defaultLeafId: String = visibleLeafNodes.firstOrNull()?.id.orEmpty()
 
     val defaultExpandedIds: Set<String> = allNodes
-        .filter { node -> node.children.isNotEmpty() && node.visible }
-        .map { node -> node.id }
+        .filter { node: ScreenNode -> node.children.isNotEmpty() && node.visible }
+        .map { node: ScreenNode -> node.id }
         .toSet()
 
     fun normalizeScreenId(screenId: String): String {
@@ -75,8 +75,8 @@ class ScreenCatalog(
 
     private fun validateDuplicateIds() {
         val duplicateIds = screens
-            .groupBy { screen -> screen.id }
-            .filterValues { duplicates -> duplicates.size > 1 }
+            .groupBy { screen: Screen -> screen.id }
+            .filterValues { duplicates: List<Screen> -> duplicates.size > 1 }
             .keys
         require(duplicateIds.isEmpty()) {
             "检测到重复 screen id: ${duplicateIds.joinToString()}"

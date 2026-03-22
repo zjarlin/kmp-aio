@@ -28,7 +28,7 @@ import org.koin.core.annotation.Single
 @Single
 class QuickTransferServiceImpl(
     private val database: Database,
-) : QuickTransferDropService {
+) : QuickTransferDropService, QuickTransferService {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override val state: StateFlow<QuickTransferState> = AppStateManager.state

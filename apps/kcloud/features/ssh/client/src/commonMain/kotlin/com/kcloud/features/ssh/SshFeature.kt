@@ -2,6 +2,7 @@ package com.kcloud.features.ssh
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.runtime.Composable
 import com.kcloud.feature.KCloudScreenRoots
 import com.kcloud.features.ssh.ui.SshWorkspaceScreen
 import org.koin.core.annotation.Single
@@ -14,11 +15,11 @@ object SshFeatureMenus {
 @Single
 class SshFeature : Screen {
     override val id = SshFeatureMenus.SSH
-    override val pid = KCloudScreenRoots.MANAGEMENT
+    override val pid = KCloudScreenRoots.OPS
     override val name = "SSH 连接"
     override val icon = Icons.Default.Terminal
     override val sort = 60
-    override val content = {
+    override val content: (@Composable () -> Unit) = {
         SshWorkspaceScreen()
     }
 }

@@ -1,5 +1,7 @@
 package site.addzero.workbenchshell
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 
@@ -9,7 +11,7 @@ interface Screen {
         get() = null
     val name: String
     val icon: ImageVector?
-        get() = null
+        get() = Icons.Default.Apps
     val sort: Int
         get() = Int.MAX_VALUE
     val visible: Boolean

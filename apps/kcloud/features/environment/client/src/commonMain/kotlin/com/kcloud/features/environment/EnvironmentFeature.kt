@@ -2,6 +2,7 @@ package com.kcloud.features.environment
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.runtime.Composable
 import com.kcloud.feature.KCloudScreenRoots
 import com.kcloud.features.environment.ui.EnvironmentSetupScreen
 import org.koin.core.annotation.Single
@@ -18,7 +19,7 @@ class EnvironmentFeature : Screen {
     override val name = "环境搭建"
     override val icon = Icons.Default.Build
     override val sort = 90
-    override val content = {
+    override val content: (@Composable () -> Unit) = {
         EnvironmentSetupScreen()
     }
 }

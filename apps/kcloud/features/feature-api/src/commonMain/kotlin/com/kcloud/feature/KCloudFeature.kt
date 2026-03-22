@@ -1,6 +1,5 @@
 package com.kcloud.feature
 
-import io.ktor.server.routing.*
 import org.koin.core.Koin
 
 interface DesktopLifecycleContributor {
@@ -13,16 +12,12 @@ interface DesktopLifecycleContributor {
     }
 }
 
-interface KCloudServerFeature {
-    val featureId: String
+interface ServerLifecycleContributor {
     val order: Int get() = 100
 
     fun onStart() {
     }
 
     fun onStop() {
-    }
-
-    fun installHttp(routing: Routing) {
     }
 }

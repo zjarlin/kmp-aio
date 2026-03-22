@@ -8,9 +8,13 @@ Apple 风格液态玻璃 Compose Multiplatform 组件库，提供开箱即用的
 ## Components
 
 - `LiquidGlassRoot`
+- `LiquidGlassAppTheme`
 - `LiquidGlassButton`
 - `LiquidGlassIconButton`
 - `LiquidGlassCard`
+- `LiquidGlassWorkbenchRoot`
+- `LiquidGlassWorkbenchDefaults`
+- `LiquidGlassTabs`
 - `LiquidGlassSidebarMenu`
 - `LiquidGlassSidebarItem`
 - `LiquidButton`
@@ -22,32 +26,39 @@ Apple 风格液态玻璃 Compose Multiplatform 组件库，提供开箱即用的
 ## Usage
 
 ```kotlin
+import site.addzero.liquidglass.LiquidGlassAppTheme
 import site.addzero.liquidglass.LiquidGlassButton
 import site.addzero.liquidglass.LiquidGlassCard
 import site.addzero.liquidglass.LiquidGlassCardHeader
-import site.addzero.liquidglass.LiquidGlassRoot
+import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
+import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 
-LiquidGlassRoot(
-    background = {
-        // 背景内容
-    },
-) {
-    LiquidGlassCard {
-        LiquidGlassCardHeader(
-            title = "Liquid Glass",
-            subtitle = "Compose 组件库",
-        )
-        LiquidGlassButton(
-            text = "Primary",
-            onClick = {},
-        )
+LiquidGlassAppTheme {
+    LiquidGlassWorkbenchRoot(
+        wallpaper = {
+            // 可选壁纸或背景图
+        },
+    ) {
+        LiquidGlassCard(
+            spec = LiquidGlassWorkbenchDefaults.section,
+        ) {
+            LiquidGlassCardHeader(
+                title = "Liquid Glass",
+                subtitle = "Compose 组件库",
+            )
+            LiquidGlassButton(
+                text = "Primary",
+                onClick = {},
+            )
+        }
     }
 }
 ```
 
 ## Notes
 
+- 直接依赖官方 `io.github.kyant0:backdrop`
 - 目前依赖 `io.github.fletchmckee.liquid:liquid`
-- 已将 AndroidLiquidGlass 所需的 `backdrop` runtime 源码内置到当前模块，避免外部镜像仓库缺包导致无法编译
 - 额外依赖 `io.github.kyant0:shapes`，用于迁入 AndroidLiquidGlass 风格控制组件
 - 组件代码放在 `commonMain`，适合 Compose Multiplatform 复用
+- `LiquidGlassWorkbenchDefaults` 提供一套更适合桌面工作台的蓝色紧凑材质参数，可直接拿来做侧边栏、内容区、小指标卡和胶囊标签

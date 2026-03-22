@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import site.addzero.liquidglass.LiquidGlassCard
+import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
 import site.addzero.liquidglass.liquidGlassSurface
 
 @Composable
@@ -30,7 +31,7 @@ fun StudioSectionCard(
 ) {
     LiquidGlassCard(
         modifier = modifier,
-        spec = VibePocketLiquidGlass.sectionSpec,
+        spec = LiquidGlassWorkbenchDefaults.section,
         contentPadding = StudioSectionCardPadding,
     ) {
         Column(
@@ -170,12 +171,12 @@ private val StudioSectionCardPadding = androidx.compose.foundation.layout.Paddin
 /** 指标卡片表面：用更紧凑的玻璃小面板承接短指标。 */
 private fun Modifier.metricCardSurface(accent: Color): Modifier {
     return fillMaxWidth()
-        .liquidGlassSurface(metricCardSpec(accent))
+        .liquidGlassSurface(LiquidGlassWorkbenchDefaults.metric(accent))
         .padding(horizontal = 12.dp, vertical = 10.dp)
 }
 
 /** 胶囊标签表面：把状态标签收成一颗轻量的高光小药丸。 */
 private fun Modifier.pillSurface(accent: Color): Modifier {
-    return liquidGlassSurface(pillSpec(accent))
+    return liquidGlassSurface(LiquidGlassWorkbenchDefaults.pill(accent))
         .padding(horizontal = 1.dp, vertical = 1.dp)
 }

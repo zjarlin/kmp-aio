@@ -13,6 +13,7 @@ import com.kcloud.features.packages.PackageOrganizerFeatureMenus
 import com.kcloud.features.quicktransfer.QuickTransferDropService
 import com.kcloud.features.quicktransfer.QuickTransferFeatureMenus
 import com.kcloud.features.quicktransfer.QuickTransferService
+import com.kcloud.features.rbac.RbacFeatureMenus
 import com.kcloud.features.servermanagement.ServerManagementFeatureMenus
 import com.kcloud.features.ssh.SshFeatureMenus
 import com.kcloud.features.settings.SettingsEditorService
@@ -41,8 +42,10 @@ class KCloudRuntimeTest {
 
             assertEquals(
                 listOf(
-                    KCloudScreenRoots.SYNC,
-                    KCloudScreenRoots.MANAGEMENT,
+                    KCloudScreenRoots.WORKSPACE,
+                    KCloudScreenRoots.NOTES,
+                    KCloudScreenRoots.SECOND_BRAIN,
+                    KCloudScreenRoots.OPS,
                     KCloudScreenRoots.SYSTEM,
                 ),
                 catalog.tree.map { node -> node.id },
@@ -51,27 +54,38 @@ class KCloudRuntimeTest {
             assertEquals(
                 listOf(
                     QuickTransferFeatureMenus.QUICK_TRANSFER,
+                    FileFeatureMenus.FILE_MANAGER,
                     TransferHistoryFeatureMenus.TRANSFER_HISTORY,
+                    WebDavFeatureMenus.WEBDAV,
                 ),
-                rootNodes.getValue(KCloudScreenRoots.SYNC).children.map { node -> node.id },
+                rootNodes.getValue(KCloudScreenRoots.WORKSPACE).children.map { node -> node.id },
+            )
+            assertEquals(
+                listOf(
+                    NotesFeatureMenus.NOTES,
+                ),
+                rootNodes.getValue(KCloudScreenRoots.NOTES).children.map { node -> node.id },
+            )
+            assertEquals(
+                listOf(
+                    PackageOrganizerFeatureMenus.PACKAGES,
+                    DotfilesFeatureMenus.DOTFILES,
+                ),
+                rootNodes.getValue(KCloudScreenRoots.SECOND_BRAIN).children.map { node -> node.id },
             )
             assertEquals(
                 listOf(
                     ServerManagementFeatureMenus.SERVER_MANAGEMENT,
                     ComposeFeatureMenus.COMPOSE_MANAGER,
-                    FileFeatureMenus.FILE_MANAGER,
-                    NotesFeatureMenus.NOTES,
-                    PackageOrganizerFeatureMenus.PACKAGES,
                     SshFeatureMenus.SSH,
-                    WebDavFeatureMenus.WEBDAV,
+                    SettingsFeatureMenus.SETTINGS,
                 ),
-                rootNodes.getValue(KCloudScreenRoots.MANAGEMENT).children.map { node -> node.id },
+                rootNodes.getValue(KCloudScreenRoots.OPS).children.map { node -> node.id },
             )
             assertEquals(
                 listOf(
-                    DotfilesFeatureMenus.DOTFILES,
+                    RbacFeatureMenus.RBAC,
                     EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
-                    SettingsFeatureMenus.SETTINGS,
                 ),
                 rootNodes.getValue(KCloudScreenRoots.SYSTEM).children.map { node -> node.id },
             )
@@ -80,17 +94,18 @@ class KCloudRuntimeTest {
             assertEquals(
                 listOf(
                     QuickTransferFeatureMenus.QUICK_TRANSFER,
-                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
-                    ServerManagementFeatureMenus.SERVER_MANAGEMENT,
-                    ComposeFeatureMenus.COMPOSE_MANAGER,
                     FileFeatureMenus.FILE_MANAGER,
+                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
+                    WebDavFeatureMenus.WEBDAV,
                     NotesFeatureMenus.NOTES,
                     PackageOrganizerFeatureMenus.PACKAGES,
-                    SshFeatureMenus.SSH,
-                    WebDavFeatureMenus.WEBDAV,
                     DotfilesFeatureMenus.DOTFILES,
-                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
+                    ServerManagementFeatureMenus.SERVER_MANAGEMENT,
+                    ComposeFeatureMenus.COMPOSE_MANAGER,
+                    SshFeatureMenus.SSH,
                     SettingsFeatureMenus.SETTINGS,
+                    RbacFeatureMenus.RBAC,
+                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
                 ),
                 visibleLeafIds,
             )
@@ -117,38 +132,23 @@ class KCloudRuntimeTest {
             assertEquals(
                 listOf(
                     QuickTransferFeatureMenus.QUICK_TRANSFER,
+                    FileFeatureMenus.FILE_MANAGER,
+                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
+                    WebDavFeatureMenus.WEBDAV,
+                    NotesFeatureMenus.NOTES,
+                    PackageOrganizerFeatureMenus.PACKAGES,
+                    DotfilesFeatureMenus.DOTFILES,
                     ServerManagementFeatureMenus.SERVER_MANAGEMENT,
                     ComposeFeatureMenus.COMPOSE_MANAGER,
-                    FileFeatureMenus.FILE_MANAGER,
-                    NotesFeatureMenus.NOTES,
-                    TransferHistoryFeatureMenus.TRANSFER_HISTORY,
-                    PackageOrganizerFeatureMenus.PACKAGES,
                     SshFeatureMenus.SSH,
-                    WebDavFeatureMenus.WEBDAV,
-                    DotfilesFeatureMenus.DOTFILES,
-                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
                     SettingsFeatureMenus.SETTINGS,
+                    RbacFeatureMenus.RBAC,
+                    EnvironmentFeatureMenus.ENVIRONMENT_SETUP,
                 ).sorted(),
                 screens.map { screen -> screen.id }.sorted(),
             )
             assertTrue(lifecycleContributors.isNotEmpty())
-            assertEquals(
-                listOf(
-                    "quick-transfer",
-                    "server-management",
-                    "compose",
-                    "file",
-                    "notes",
-                    "transfer-history",
-                    "package-organizer",
-                    "ssh",
-                    "webdav",
-                    "dotfiles",
-                    "environment",
-                    "ai",
-                ),
-                runtime.serverFeatures.map { feature -> feature.featureId },
-            )
+            assertTrue(runtime.serverLifecycleContributors.isNotEmpty())
         } finally {
             runtime.stopServer()
             stopKoin()

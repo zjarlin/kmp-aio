@@ -19,7 +19,7 @@ public interface CreatedTimeDraft : CreatedTime, Draft {
     public object `$` {
         public val type: ImmutableType = ImmutableType
                     .newBuilder(
-                        "0.10.6",
+                        "0.9.120",
                         CreatedTime::class,
                         listOf(
 

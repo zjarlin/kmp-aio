@@ -2,9 +2,10 @@ package com.kcloud
 
 import com.kcloud.app.KCloudHttpServer
 import com.kcloud.app.KCloudShellState
+import com.kcloud.app.generated.ioc.aggregate.registerAggregatedIocModules
 import com.kcloud.db.Database
 import com.kcloud.feature.DesktopLifecycleContributor
-import com.kcloud.feature.KCloudServerFeature
+import com.kcloud.feature.ServerLifecycleContributor
 import org.koin.core.Koin
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
@@ -16,7 +17,7 @@ class KCloudRuntime(
     val shellState: KCloudShellState,
     val screenCatalog: ScreenCatalog,
     val desktopLifecycleContributors: List<DesktopLifecycleContributor>,
-    val serverFeatures: List<KCloudServerFeature>,
+    val serverLifecycleContributors: List<ServerLifecycleContributor>,
     private val httpServer: KCloudHttpServer,
 ) {
     val koin: Koin
@@ -24,8 +25,8 @@ class KCloudRuntime(
 
     fun startDesktop() {
         httpServer.start(wait = false)
-        serverFeatures.forEach { feature ->
-            feature.onStart()
+        serverLifecycleContributors.forEach { contributor ->
+            contributor.onStart()
         }
         desktopLifecycleContributors.forEach { contributor ->
             contributor.onStart(koin)
@@ -34,8 +35,8 @@ class KCloudRuntime(
 
     fun startServer(wait: Boolean) {
         httpServer.start(wait = wait)
-        serverFeatures.forEach { feature ->
-            feature.onStart()
+        serverLifecycleContributors.forEach { contributor ->
+            contributor.onStart()
         }
     }
 
@@ -44,24 +45,25 @@ class KCloudRuntime(
             .asReversed()
             .forEach { contributor -> contributor.onStop(koin) }
         httpServer.stop()
-        serverFeatures
+        serverLifecycleContributors
             .asReversed()
-            .forEach { feature -> feature.onStop() }
+            .forEach { contributor -> contributor.onStop() }
         koin.get<Database>().close()
         koinApplication.close()
     }
 
     fun stopServer() {
         httpServer.stop()
-        serverFeatures
+        serverLifecycleContributors
             .asReversed()
-            .forEach { feature -> feature.onStop() }
+            .forEach { contributor -> contributor.onStop() }
         koin.get<Database>().close()
         koinApplication.close()
     }
 }
 
 fun createKCloudRuntime(): KCloudRuntime {
+    registerAggregatedIocModules()
     val koinApplication = startKoin {
         withConfiguration<KCloudKoinApplication>()
     }
@@ -71,7 +73,7 @@ fun createKCloudRuntime(): KCloudRuntime {
         shellState = koin.get(),
         screenCatalog = koin.get(),
         desktopLifecycleContributors = koin.getAll<DesktopLifecycleContributor>().sortedBy { it.order },
-        serverFeatures = koin.getAll<KCloudServerFeature>().sortedBy { it.order },
+        serverLifecycleContributors = koin.getAll<ServerLifecycleContributor>().sortedBy { it.order },
         httpServer = koin.get(),
     )
 }

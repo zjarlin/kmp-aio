@@ -1,7 +1,7 @@
 package com.kcloud.app
 
-import com.kcloud.feature.KCloudServerFeature
 import com.kcloud.feature.ShellLocalServerService
+import com.kcloud.app.generated.springktor.aggregate.registerAggregatedFeatureSpringRoutes
 import com.kcloud.app.generated.springktor.registerGeneratedSpringRoutes
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpMethod
@@ -24,11 +24,8 @@ import java.net.ServerSocket
 import java.util.logging.Logger
 
 @Single
-class KCloudHttpServer(
-    serverFeatures: List<KCloudServerFeature>,
-) : ShellLocalServerService {
+class KCloudHttpServer : ShellLocalServerService {
     private val logger = Logger.getLogger(KCloudHttpServer::class.java.name)
-    private val serverFeatures = serverFeatures.sortedBy { it.order }
     private var server: EmbeddedServer<*, *>? = null
     private var port: Int? = null
     private val _baseUrl = MutableStateFlow<String?>(null)
@@ -64,9 +61,7 @@ class KCloudHttpServer(
             }
             routing {
                 registerGeneratedSpringRoutes()
-                serverFeatures.forEach { feature ->
-                    feature.installHttp(this)
-                }
+                registerAggregatedFeatureSpringRoutes()
             }
         }.start(wait = wait)
         port = resolvedPort

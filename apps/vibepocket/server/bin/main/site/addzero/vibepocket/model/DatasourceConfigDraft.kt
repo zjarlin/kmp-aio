@@ -21,6 +21,7 @@ import org.babyfish.jimmer.DraftConsumer
 import org.babyfish.jimmer.ImmutableObjects
 import org.babyfish.jimmer.UnloadedException
 import org.babyfish.jimmer.`internal`.GeneratedBy
+import org.babyfish.jimmer.client.Description
 import org.babyfish.jimmer.jackson.ImmutableModuleRequiredException
 import org.babyfish.jimmer.kt.DslScope
 import org.babyfish.jimmer.kt.ImmutableCreator
@@ -80,7 +81,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.10.6",
+                "0.9.120",
                 DatasourceConfig::class,
                 listOf(
 
@@ -244,6 +245,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __idValue
                 }
 
+            @Description(value = "所有者标识（用户ID、组织ID、或任意业务标识） ")
             override val owner: String
                 get() {
                     val __ownerValue = this.__ownerValue
@@ -253,6 +255,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __ownerValue
                 }
 
+            @Description(value = "数据源名称（如 \"main\", \"analytics\", \"readonly\"） ")
             override val name: String
                 get() {
                     val __nameValue = this.__nameValue
@@ -262,6 +265,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __nameValue
                 }
 
+            @Description(value = "数据库类型: SQLITE / MYSQL / POSTGRES ")
             override val dbType: String
                 get() {
                     val __dbTypeValue = this.__dbTypeValue
@@ -271,6 +275,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __dbTypeValue
                 }
 
+            @Description(value = "JDBC URL ")
             override val url: String
                 get() {
                     val __urlValue = this.__urlValue
@@ -280,6 +285,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __urlValue
                 }
 
+            @Description(value = "用户名（可选） ")
             override val username: String?
                 get() {
                     if (!__usernameLoaded) {
@@ -288,6 +294,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __usernameValue
                 }
 
+            @Description(value = "密码（可选） ")
             override val password: String?
                 get() {
                     if (!__passwordLoaded) {
@@ -296,6 +303,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __passwordValue
                 }
 
+            @Description(value = "驱动类名（可选，不填则自动推断） ")
             override val driverClass: String?
                 get() {
                     if (!__driverClassLoaded) {
@@ -304,6 +312,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __driverClassValue
                 }
 
+            @Description(value = "是否启用 ")
             override val enabled: Boolean
                 get() {
                     if (!__enabledLoaded) {
@@ -312,6 +321,7 @@ public interface DatasourceConfigDraft : DatasourceConfig, Draft {
                     return __enabledValue
                 }
 
+            @Description(value = "备注 ")
             override val description: String?
                 get() {
                     if (!__descriptionLoaded) {

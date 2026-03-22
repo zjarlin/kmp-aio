@@ -24,3 +24,9 @@ interface ShellWindowController {
     fun toggleWindow()
     fun requestExit()
 }
+
+interface ShellTrayPanelController {
+    fun showTrayPanel()
+    fun hideTrayPanel()
+    fun toggleTrayPanel()
+}

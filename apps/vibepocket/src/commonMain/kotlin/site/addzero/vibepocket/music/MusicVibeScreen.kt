@@ -18,8 +18,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -37,9 +35,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import site.addzero.liquidglass.LiquidGlassTabs
 import site.addzero.vibepocket.api.suno.SunoGenerateRequest
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
 import site.addzero.vibepocket.model.PersonaItem
+import site.addzero.vibepocket.screens.musicstudio.MusicStudioTab
+import site.addzero.vibepocket.screens.musicstudio.MusicStudioViewModel
 import site.addzero.vibepocket.ui.StudioPill
 import site.addzero.vibepocket.ui.StudioSectionCard
 import site.addzero.vibepocket.ui.SunoTokenApplyHint
@@ -50,49 +51,10 @@ private val prettyJson = Json {
     ignoreUnknownKeys = true
 }
 
-private enum class MusicStudioTab(
-    val title: String,
-    val subtitle: String,
-) {
-    COVER(
-        title = "翻唱",
-        subtitle = "贴 URL 直接翻唱，默认打开这一栏。",
-    ),
-    GENERATE(
-        title = "生成音乐",
-        subtitle = "先整理歌词，再补 persona 和 vibe 参数。",
-    ),
-}
-
 @Composable
-fun MusicVibeScreen() {
-    val scope = rememberCoroutineScope()
-    var selectedTab by remember { mutableStateOf(MusicStudioTab.COVER) }
-    var credits by remember { mutableStateOf<Int?>(null) }
-    var isLoadingCredits by remember { mutableStateOf(false) }
-
-    fun refreshCredits() {
-        scope.launch {
-            val config = runCatching { SunoWorkflowService.loadConfig() }
-                .getOrDefault(SunoRuntimeConfig())
-            if (!config.hasToken) {
-                isLoadingCredits = false
-                credits = null
-                return@launch
-            }
-            isLoadingCredits = true
-            try {
-                credits = SunoWorkflowService.getCreditsOrNull()
-            } finally {
-                isLoadingCredits = false
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        refreshCredits()
-    }
-
+fun MusicVibeScreen(
+    viewModel: MusicStudioViewModel,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -116,8 +78,8 @@ fun MusicVibeScreen() {
                 fontWeight = FontWeight.Bold,
             )
             CreditsBar(
-                credits = credits,
-                isLoading = isLoadingCredits,
+                credits = viewModel.credits,
+                isLoading = viewModel.isLoadingCredits,
             )
         }
         Text(
@@ -125,28 +87,36 @@ fun MusicVibeScreen() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        TabRow(selectedTabIndex = selectedTab.ordinal) {
-            MusicStudioTab.entries.forEach { tab ->
-                Tab(
-                    selected = selectedTab == tab,
-                    onClick = { selectedTab = tab },
-                    text = { Text(tab.title) },
-                )
-            }
+        LiquidGlassTabs(
+            items = MusicStudioTab.entries.toList(),
+            selectedItem = viewModel.selectedTab,
+            onSelectedItemChange = viewModel::selectTab,
+            modifier = Modifier.fillMaxWidth(),
+        ) { tab, selected ->
+            Text(
+                text = tab.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurfaceVariant
+                },
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+            )
         }
         Text(
-            text = selectedTab.subtitle,
+            text = viewModel.selectedTab.subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
-            when (selectedTab) {
+            when (viewModel.selectedTab) {
                 MusicStudioTab.COVER -> UploadCoverWorkbench(
-                    onCreditsRefresh = ::refreshCredits,
+                    onCreditsRefresh = viewModel::refreshCredits,
                 )
                 MusicStudioTab.GENERATE -> GenerateMusicWorkbench(
-                    onCreditsRefresh = ::refreshCredits,
+                    onCreditsRefresh = viewModel::refreshCredits,
                 )
             }
         }

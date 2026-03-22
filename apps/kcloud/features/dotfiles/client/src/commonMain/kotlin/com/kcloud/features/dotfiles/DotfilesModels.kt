@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 data class DotfilesSettings(
     val repoUrl: String = "",
     val workingDirectory: String = "",
-    val sourceDirectory: String = ""
+    val sourceDirectory: String = "",
 )
 
 @Serializable
@@ -14,13 +14,13 @@ data class DotfilesStatus(
     val cliAvailable: Boolean,
     val versionOutput: String,
     val statusOutput: String,
-    val workingDirectory: String
+    val workingDirectory: String,
 )
 
 @Serializable
 data class DotfilesCommandResult(
     val success: Boolean,
-    val output: String
+    val output: String,
 )
 
 interface DotfilesService {

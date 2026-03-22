@@ -81,7 +81,7 @@ public interface SunoTaskResourceDraft : SunoTaskResource, Draft {
 
         public val type: ImmutableType = ImmutableType
             .newBuilder(
-                "0.10.6",
+                "0.9.120",
                 SunoTaskResource::class,
                 listOf(
 

@@ -33,7 +33,7 @@ fun VibePocketFeatureSidebar(
 
     AppSidebar(
         title = "Vibepocket",
-        supportText = "把音乐创作、生成管理和系统配置压进一个更轻的工作台侧栏。",
+        supportText = "只保留音乐工作台、创作资产、设置三页，其余能力都下沉成组件。",
         items = items,
         modifier = modifier,
         state = state,
