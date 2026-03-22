@@ -4,6 +4,7 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
 
 }
+val libs = versionCatalogs.named("libs")
 
 kotlin {
     sourceSets {

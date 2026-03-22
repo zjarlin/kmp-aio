@@ -6,6 +6,8 @@ kotlin {
     sourceSets.all {
         languageSettings.enableLanguageFeature("ContextParameters")
     }
+   val libs = versionCatalogs.named("libs")
+
     sourceSets {
         commonMain.dependencies {
             implementation(libs.findLibrary("io-github-kyant0-backdrop").get())

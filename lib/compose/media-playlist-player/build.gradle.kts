@@ -19,6 +19,7 @@ val javaFxClassifier = run {
         else -> "linux"
     }
 }
+val libs = versionCatalogs.named("libs")
 
 kotlin {
     sourceSets {

@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-//    implementation(projects.lib.starterSpi)
+//     implementation(project(":lib:ktor:starter:starter-spi"))
 //    implementation(libs.io.ktor.ktor.server.core)
 //    implementation(libs.io.ktor.ktor.server.content.negotiation)
 //    implementation(libs.io.ktor.ktor.serialization.kotlinx.json)

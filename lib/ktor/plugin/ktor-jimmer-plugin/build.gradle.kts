@@ -3,9 +3,12 @@ plugins {
     id("site.addzero.buildlogic.jvm.jimmer")
     id("site.addzero.buildlogic.jvm.jvm-koin")
 }
+val libs = versionCatalogs.named("libs")
 
 dependencies {
-    implementation(projects.lib.starterSpi)
+
+
+     implementation(project(":lib:ktor:starter:starter-spi"))
     implementation(libs.findLibrary("io-ktor-ktor-server-core").get())
     implementation(libs.findLibrary("io-insert-koin-koin-ktor").get())
     implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())

@@ -7,6 +7,7 @@ plugins {
 //dependencies {
 //    kspCommonMainMetadata("io.github.ltttttttttttt:LazyPeopleHttp:2.2.5")
 //}
+val libs = versionCatalogs.named("libs")
 
 kotlin {
     dependencies {
