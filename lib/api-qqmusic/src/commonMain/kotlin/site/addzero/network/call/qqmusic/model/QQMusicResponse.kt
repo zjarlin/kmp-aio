@@ -5,8 +5,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 
-// ============ 获取音乐 URL 响应 ============
-
 @Serializable
 data class VkeyResponse(
     @SerialName("req_1") val req1: VkeyReq1Data? = null
@@ -27,8 +25,6 @@ data class VkeyData(
 data class MidUrlInfo(
     val purl: String = ""
 )
-
-// ============ 搜索响应 ============
 
 @Serializable
 data class SearchResponse(
@@ -53,9 +49,6 @@ data class SearchBody(
     val mv: JsonElement? = null,
     val user: JsonElement? = null
 )
-
-
-// ============ 歌单响应 ============
 
 @Serializable
 data class SongListResponse(
@@ -88,8 +81,6 @@ data class AlbumData(
     val name: String? = null,
     val list: List<JsonObject> = emptyList()
 )
-
-// ============ 歌手响应 ============
 
 @Serializable
 data class SingerResponse(

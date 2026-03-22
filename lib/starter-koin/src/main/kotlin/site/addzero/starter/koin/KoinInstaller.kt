@@ -33,22 +33,12 @@ fun Application.installKoin(configure: KoinApplication.() -> Unit = {}) {
 fun Application.runStarters() {
     fun execute(stage: String) {
         if (attributes.getOrNull(startersExecutedKey) == true) return
-
         val app: Application = this
         val koin = app.getKoin()
         val starters = koin
             .getAll<AppStarter>()
             .filter { starter -> with(starter) { app.enable() } }
             .sortedBy { it.order }
-
-        if (starters.isEmpty()) {
-            log.warn(
-                "No AppStarter resolved at stage=$stage. Loaded Koin definitions: {}",
-                describeDefinitions(koin)
-            )
-            return
-        }
-
         attributes.put(startersExecutedKey, true)
         log.info("Resolved ${starters.size} AppStarter(s) at stage=$stage")
         for (starter in starters) {
@@ -56,42 +46,10 @@ fun Application.runStarters() {
             with(starter) { app.onInstall() }
         }
     }
-
     execute(stage = "after-koin-install")
     if (attributes.getOrNull(startersExecutedKey) != true) {
         monitor.subscribe(KoinApplicationStarted) {
             execute(stage = "koin-started")
         }
-    }
-}
-
-private fun describeDefinitions(koin: org.koin.core.Koin): String {
-    return runCatching {
-        val registry = koin.javaClass.getMethod("getInstanceRegistry").invoke(koin)
-        val instances = registry.javaClass.getMethod("getInstances").invoke(registry) as Map<*, *>
-        instances.values
-            .mapNotNull { factory ->
-                val resolvedFactory = factory ?: return@mapNotNull null
-                runCatching {
-                    val beanDefinition = resolvedFactory.javaClass
-                        .getMethod("getBeanDefinition")
-                        .invoke(resolvedFactory)
-                    val primaryType = beanDefinition.javaClass.getMethod("getPrimaryType").invoke(beanDefinition)
-                    val secondaryTypes = beanDefinition.javaClass.getMethod("getSecondaryTypes").invoke(beanDefinition) as List<*>
-                    buildString {
-                        append(primaryType.toString())
-                        if (secondaryTypes.isNotEmpty()) {
-                            append(" binds ")
-                            append(secondaryTypes.joinToString())
-                        }
-                    }
-                }.getOrNull()
-            }
-            .distinct()
-            .sorted()
-            .take(12)
-            .joinToString()
-    }.getOrElse { error ->
-        "unavailable (${error::class.simpleName}: ${error.message})"
     }
 }

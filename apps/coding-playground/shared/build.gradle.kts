@@ -1,0 +1,11 @@
+plugins {
+    id("site.addzero.buildlogic.kmp.kmp-core")
+    id("site.addzero.buildlogic.kmp.kmp-json-withtool")
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+        }
+    }
+}

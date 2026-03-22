@@ -59,7 +59,9 @@ kotlin.jvm().mainRun {
 }
 
 tasks.withType<JavaExec>().configureEach {
-    javaLauncher.set(java17Launcher)
+    if (name == "jvmRun") {
+        javaLauncher.set(java17Launcher)
+    }
 }
 
 compose.desktop {

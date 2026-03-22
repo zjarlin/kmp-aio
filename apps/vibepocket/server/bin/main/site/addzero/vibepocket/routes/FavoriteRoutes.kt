@@ -1,4 +1,9 @@
+@file:RequestMapping("/api/favorites")
 package site.addzero.vibepocket.routes
+
+import org.springframework.web.bind.annotation.RequestMapping
+
+
 
 import kotlinx.serialization.Serializable
 import org.babyfish.jimmer.kt.new

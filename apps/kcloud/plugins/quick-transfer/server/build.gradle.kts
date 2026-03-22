@@ -1,0 +1,28 @@
+plugins {
+    id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.kmp-koin-core")
+    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
+}
+
+
+
+ksp {
+    arg("springKtor.generatedPackage", "com.kcloud.features.quicktransfer.server.generated.springktor")
+}
+
+kotlin {
+    sourceSets {
+        jvmMain.dependencies {
+            implementation(project(":apps:kcloud:plugins:feature-api"))
+            implementation(project(":apps:kcloud:plugins:quick-transfer:client"))
+            implementation(project(":lib:kcloud-core"))
+            implementation(projects.lib.starterStatuspages)
+            implementation("site.addzero:spring2ktor-server-core:2026.03.13")
+            compileOnly("org.springframework:spring-web:5.3.21")
+        }
+    }
+}
+
+dependencies {
+    add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.13")
+}

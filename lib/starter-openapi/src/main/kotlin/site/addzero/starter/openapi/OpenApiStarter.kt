@@ -12,19 +12,12 @@ import org.koin.core.annotation.Single
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 
-@Module
-@Configuration("vibepocket")
-@ComponentScan("site.addzero.starter.openapi")
-class OpenApiStarterKoinModule
-
-@Named("openApiStarter")
 @Single(binds = [AppStarter::class])
 class OpenApiStarter : AppStarter {
 
     override fun Application.enable(): Boolean {
         return effectiveConfig().propertyOrNull("openapi.enabled")?.getString()?.toBoolean() != false
     }
-
     override fun Application.onInstall() {
         val config = effectiveConfig().config("openapi")
         val path = config.propertyOrNull("path")?.getString() ?: "/swagger"

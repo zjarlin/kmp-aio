@@ -5,7 +5,7 @@ plugins {
     id("site.addzero.buildlogic.jvm.jvm-ksp-plugin")
 }
 
-apply(from = rootProject.file("gradle/spring2ktor-ksp-cache-workaround.gradle.kts"))
+
 
 application {
     mainClass.set("site.addzero.notes.server.ApplicationKt")

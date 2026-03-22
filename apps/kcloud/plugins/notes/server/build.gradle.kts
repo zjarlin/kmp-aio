@@ -1,0 +1,13 @@
+plugins {
+    id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.kmp-koin-core")
+}
+
+kotlin {
+    sourceSets {
+        jvmMain.dependencies {
+            implementation(project(":apps:kcloud:plugins:feature-api"))
+            implementation(project(":apps:notes:server"))
+        }
+    }
+}
