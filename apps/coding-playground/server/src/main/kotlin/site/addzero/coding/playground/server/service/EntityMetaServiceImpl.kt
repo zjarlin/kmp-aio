@@ -100,7 +100,9 @@ class EntityMetaServiceImpl(
         if (!check.allowed) {
             throw PlaygroundValidationException(check.reasons.joinToString("; "))
         }
-        support.deleteEntity(id)
+        support.inTransaction {
+            support.deleteEntity(id)
+        }
     }
 
     override suspend fun createField(request: CreateFieldMetaRequest): FieldMetaDto {
@@ -165,8 +167,10 @@ class EntityMetaServiceImpl(
     }
 
     override suspend fun deleteField(id: String) {
-        support.fieldOrThrow(id)
-        support.deleteField(id)
+        support.inTransaction {
+            support.fieldOrThrow(id)
+            support.deleteField(id)
+        }
     }
 
     override suspend fun reorderFields(entityId: String, request: ReorderRequestDto): List<FieldMetaDto> {
@@ -257,7 +261,9 @@ class EntityMetaServiceImpl(
     }
 
     override suspend fun deleteRelation(id: String) {
-        support.relationOrThrow(id)
-        support.sqlClient.deleteById(RelationMeta::class, id)
+        support.inTransaction {
+            support.relationOrThrow(id)
+            support.sqlClient.deleteById(RelationMeta::class, id)
+        }
     }
 }

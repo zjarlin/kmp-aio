@@ -3,6 +3,12 @@ package site.addzero.coding.playground.shared.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class GenerationScaffoldMode {
+    EXISTING_ROOT,
+    NEW_ROOT,
+}
+
+@Serializable
 data class GenerationRequestDto(
     val targetId: String,
     val contextId: String,
@@ -23,6 +29,7 @@ data class RenderedTemplateDto(
 data class GenerationPlanFileDto(
     val templateId: String,
     val templateKey: String,
+    val entityCode: String? = null,
     val relativePath: String,
     val fileName: String,
     val outputKind: TemplateOutputKind,
@@ -34,6 +41,7 @@ data class GenerationPlanDto(
     val request: GenerationRequestDto,
     val target: GenerationTargetMetaDto,
     val context: ContextAggregateDto,
+    val scaffoldMode: GenerationScaffoldMode,
     val files: List<GenerationPlanFileDto>,
 )
 

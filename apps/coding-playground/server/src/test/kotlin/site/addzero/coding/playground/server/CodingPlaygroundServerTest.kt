@@ -7,6 +7,7 @@ import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.opentest4j.TestAbortedException
 import org.sqlite.SQLiteDataSource
+import site.addzero.coding.playground.server.config.PlaygroundJdbcTransactionContext
 import site.addzero.coding.playground.server.config.SqliteLocalDateTimeScalarProvider
 import site.addzero.coding.playground.server.config.initDatabase
 import site.addzero.coding.playground.server.domain.PlaygroundValidationException
@@ -14,6 +15,8 @@ import site.addzero.coding.playground.server.generation.BuiltinTemplateCatalog
 import site.addzero.coding.playground.server.generation.CompositeBuildIntegratorImpl
 import site.addzero.coding.playground.server.generation.EtlWrapperExecutorImpl
 import site.addzero.coding.playground.server.generation.GenerationPlannerImpl
+import site.addzero.coding.playground.server.generation.KcloudStyleScaffoldBootstrapper
+import site.addzero.coding.playground.server.generation.MetadataIrCompiler
 import site.addzero.coding.playground.server.generation.TemplateRendererImpl
 import site.addzero.coding.playground.server.service.ContextMetaServiceImpl
 import site.addzero.coding.playground.server.service.DtoMetaServiceImpl
@@ -38,6 +41,7 @@ import site.addzero.coding.playground.shared.dto.CreateTemplateMetaRequest
 import site.addzero.coding.playground.shared.dto.DtoKind
 import site.addzero.coding.playground.shared.dto.FieldType
 import site.addzero.coding.playground.shared.dto.GenerationRequestDto
+import site.addzero.coding.playground.shared.dto.GenerationScaffoldMode
 import site.addzero.coding.playground.shared.dto.MetadataSearchRequest
 import site.addzero.coding.playground.shared.dto.RelationKind
 import site.addzero.coding.playground.shared.dto.ReorderRequestDto
@@ -177,7 +181,7 @@ class CodingPlaygroundServerTest {
                     projectId = project.id,
                     name = "Banner Wrapper",
                     key = "banner-wrapper",
-                    scriptBody = "/*{{content}}*/",
+                    scriptBody = "return \"/*\" + content + \"*/\"",
                 ),
             )
             val customTemplate = runtime.templateService.create(
@@ -289,7 +293,7 @@ class CodingPlaygroundServerTest {
                 UpdateEtlWrapperMetaRequest(
                     name = "Comment Wrapper",
                     key = "comment-wrapper",
-                    scriptBody = "// {{content}}",
+                    scriptBody = "return \"// \" + content",
                 ),
             )
             val updatedTemplate = runtime.templateService.update(
@@ -446,7 +450,7 @@ class CodingPlaygroundServerTest {
                             projectId = runtime.projectService.create(CreateProjectMetaRequest("Tmp", "tmp")).id,
                             name = "Wrap",
                             key = "wrap",
-                            scriptBody = "/*{{content}}*/",
+                            scriptBody = "return \"/*\" + content + \"*/\"",
                         ),
                     ),
                     rendered = site.addzero.coding.playground.shared.dto.RenderedTemplateDto(
@@ -456,9 +460,37 @@ class CodingPlaygroundServerTest {
                         fileName = "readme.md",
                         content = "payload",
                     ),
+                    template = null,
+                    target = null,
                     variables = emptyMap(),
                 )
                 assertEquals("/*payload*/", rendered.content)
+            }
+
+            runBlocking {
+                val brokenWrapper = runtime.etlWrapperService.create(
+                    CreateEtlWrapperMetaRequest(
+                        projectId = runtime.projectService.create(CreateProjectMetaRequest("Tmp Broken", "tmp-broken")).id,
+                        name = "Broken Wrap",
+                        key = "broken-wrap",
+                        scriptBody = "return variables.getValue(\"missing\")",
+                    ),
+                )
+                assertFailsWith<IllegalStateException> {
+                    runtime.etlExecutor.apply(
+                        wrapper = brokenWrapper,
+                        rendered = site.addzero.coding.playground.shared.dto.RenderedTemplateDto(
+                            templateId = "t",
+                            templateKey = "k",
+                            relativePath = "docs",
+                            fileName = "broken.md",
+                            content = "payload",
+                        ),
+                        template = null,
+                        target = null,
+                        variables = emptyMap(),
+                    )
+                }
             }
 
             runBlocking {
@@ -480,6 +512,65 @@ class CodingPlaygroundServerTest {
     }
 
     @Test
+    fun targetAndEtlDeleteCheckValidateAndConflictPathsAreReadable() = withRuntime { runtime ->
+        runBlocking {
+            val fixture = runtime.seedFixture()
+            val targetValidation = runtime.targetService.validate(fixture.targetId)
+            assertTrue(targetValidation.isEmpty())
+            assertTrue(runtime.targetService.deleteCheck(fixture.targetId).allowed)
+
+            val project = runtime.projectService.get(fixture.projectId)
+            val etl = runtime.etlWrapperService.create(
+                CreateEtlWrapperMetaRequest(
+                    projectId = fixture.projectId,
+                    name = "Audit ETL",
+                    key = "audit-etl",
+                    scriptBody = "return content + \"\\n// audited\"",
+                ),
+            )
+            val template = runtime.templateService.create(
+                CreateTemplateMetaRequest(
+                    contextId = fixture.contextId,
+                    etlWrapperId = etl.id,
+                    name = "Audit Template",
+                    key = "audit-template",
+                    outputKind = TemplateOutputKind.TEXT,
+                    body = "audit",
+                    relativeOutputPath = "docs",
+                    fileNameTemplate = "audit.txt",
+                    managedByGenerator = false,
+                ),
+            )
+
+            assertTrue(runtime.etlWrapperService.validate(etl.id).isEmpty())
+            val etlDeleteCheck = runtime.etlWrapperService.deleteCheck(etl.id)
+            assertFalse(etlDeleteCheck.allowed)
+            assertTrue(etlDeleteCheck.reasons.any { it.contains("template", ignoreCase = true) })
+
+            runtime.templateService.delete(template.id)
+            assertTrue(runtime.etlWrapperService.deleteCheck(etl.id).allowed)
+
+            val conflictRoot = runtime.root.resolve("integration-conflict")
+            conflictRoot.createDirectories()
+            conflictRoot.resolve("settings.gradle.kts").writeText(
+                """
+                rootProject.name = "${project.slug}"
+
+                includeBuild("plugins/catalog")
+                """.trimIndent() + "\n",
+            )
+            val error = assertFailsWith<IllegalStateException> {
+                runtime.compositeIntegrator.integrate(
+                    targetRoot = conflictRoot.absolutePathString(),
+                    includeBuildPath = "plugins/catalog",
+                    marker = "TEST_MARKER",
+                )
+            }
+            assertContains(error.message.orEmpty(), "outside marker")
+        }
+    }
+
+    @Test
     fun generationProducesCrudSkeletonAndGeneratedModulesCompile() = withRuntime { runtime ->
         runBlocking {
             val fixture = runtime.seedFixture()
@@ -490,12 +581,17 @@ class CodingPlaygroundServerTest {
                 ),
             )
 
+            assertEquals(GenerationScaffoldMode.NEW_ROOT, result.plan.scaffoldMode)
             val fileNames = result.files.map { Paths.get(it.absolutePath).fileName.toString() }.toSet()
             assertContains(fileNames, "User.kt")
             assertContains(fileNames, "UserDtos.kt")
             assertContains(fileNames, "UserRepository.kt")
             assertContains(fileNames, "UserService.kt")
             assertContains(fileNames, "UserRoutes.kt")
+            assertContains(fileNames, "UserApi.kt")
+            assertContains(fileNames, "UserCrudState.kt")
+            assertContains(fileNames, "UserCrudScreen.kt")
+            assertContains(fileNames, "CatalogClientWorkbench.kt")
             assertContains(fileNames, "CatalogMetadata.kt")
             assertContains(fileNames, "GeneratedMetadataIndex.kt")
             assertContains(fileNames, "settings.gradle.kts")
@@ -506,6 +602,9 @@ class CodingPlaygroundServerTest {
             val metadataFile = result.files.first { it.templateKey == "metadata-object" }
             assertContains(metadataFile.content, "object CatalogMetadata")
             assertContains(metadataFile.content, "fun findModel")
+            val clientWorkbenchFile = result.files.first { it.templateKey == "client-workbench" }
+            assertContains(clientWorkbenchFile.content, "object CatalogClientFeature")
+            assertContains(clientWorkbenchFile.content, "UserCrudScreen")
 
             val targetSettings = runtime.root.resolve("generated-target/settings.gradle.kts").readText()
             assertContains(targetSettings, "CODING_PLAYGROUND")
@@ -591,7 +690,14 @@ private class PlaygroundTestRuntime private constructor(
                 setDialect(SQLiteDialect())
                 setDatabaseNamingStrategy(DefaultDatabaseNamingStrategy.LOWER_CASE)
                 addScalarProvider(SqliteLocalDateTimeScalarProvider)
-                setConnectionManager { dataSource.connection.use { proceed(it) } }
+                setConnectionManager {
+                    val transactionalConnection = PlaygroundJdbcTransactionContext.connectionOrNull()
+                    if (transactionalConnection != null) {
+                        proceed(transactionalConnection)
+                    } else {
+                        dataSource.connection.use { proceed(it) }
+                    }
+                }
             }
             val catalog = BuiltinTemplateCatalog()
             val support = MetadataPersistenceSupport(
@@ -603,13 +709,16 @@ private class PlaygroundTestRuntime private constructor(
             val pathResolver = PathVariableResolverImpl()
             val etlExecutor = EtlWrapperExecutorImpl()
             val compositeIntegrator = CompositeBuildIntegratorImpl()
+            val irCompiler = MetadataIrCompiler()
+            val scaffoldBootstrapper = KcloudStyleScaffoldBootstrapper()
             val generationPlanner = GenerationPlannerImpl(
                 support = support,
                 pathVariableResolver = pathResolver,
-                templateRenderer = TemplateRendererImpl(catalog),
+                templateRenderer = TemplateRendererImpl(catalog, irCompiler),
                 etlWrapperExecutor = etlExecutor,
                 compositeBuildIntegrator = compositeIntegrator,
                 builtinTemplateCatalog = catalog,
+                scaffoldBootstrapper = scaffoldBootstrapper,
             )
             return PlaygroundTestRuntime(
                 root = root,

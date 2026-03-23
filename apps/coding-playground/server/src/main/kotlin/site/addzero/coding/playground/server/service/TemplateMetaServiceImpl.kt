@@ -59,6 +59,7 @@ class TemplateMetaServiceImpl(
     override suspend fun list(search: MetadataSearchRequest): List<TemplateMetaDto> {
         return support.listTemplates(search.contextId)
             .map { it.toDto(support.json) }
+            .filter { search.includeDisabled || it.enabled }
             .filter {
                 support.matchesSearch(
                     search = search,

@@ -108,8 +108,10 @@ class DtoMetaServiceImpl(
     }
 
     override suspend fun delete(id: String) {
-        support.dtoOrThrow(id)
-        support.deleteDto(id)
+        support.inTransaction {
+            support.dtoOrThrow(id)
+            support.deleteDto(id)
+        }
     }
 
     override suspend fun createField(request: CreateDtoFieldMetaRequest): DtoFieldMetaDto {
@@ -168,8 +170,10 @@ class DtoMetaServiceImpl(
     }
 
     override suspend fun deleteField(id: String) {
-        support.dtoFieldOrThrow(id)
-        support.deleteDtoField(id)
+        support.inTransaction {
+            support.dtoFieldOrThrow(id)
+            support.deleteDtoField(id)
+        }
     }
 
     override suspend fun reorderFields(dtoId: String, request: ReorderRequestDto): List<DtoFieldMetaDto> {

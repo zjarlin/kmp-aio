@@ -17,15 +17,21 @@ class CompositeBuildIntegratorImpl : CompositeBuildIntegrator {
         settingsPath.parent?.createDirectories()
         val begin = "// >>> $marker BEGIN"
         val end = "// <<< $marker END"
+        val includeBuildLine = """includeBuild("$includeBuildPath")"""
         val block = """
             $begin
-            includeBuild("$includeBuildPath")
+            $includeBuildLine
             $end
         """.trimIndent()
         val newContent = if (!settingsPath.exists()) {
             block + "\n"
         } else {
             val current = settingsPath.readText()
+            val unmanagedContent = current
+                .replace(Regex("${Regex.escape(begin)}[\\s\\S]*?${Regex.escape(end)}"), "")
+            if (unmanagedContent.contains(includeBuildLine)) {
+                throw IllegalStateException("Composite build path '$includeBuildPath' is already declared outside marker '$marker'")
+            }
             if (current.contains(begin) && current.contains(end)) {
                 current.replace(Regex("${Regex.escape(begin)}[\\s\\S]*?${Regex.escape(end)}"), block)
             } else {

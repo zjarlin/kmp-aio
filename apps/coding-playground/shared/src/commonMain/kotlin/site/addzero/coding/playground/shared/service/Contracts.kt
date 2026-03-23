@@ -70,6 +70,8 @@ interface EtlWrapperExecutor {
     suspend fun apply(
         wrapper: EtlWrapperMetaDto?,
         rendered: RenderedTemplateDto,
+        template: TemplateMetaDto?,
+        target: GenerationTargetMetaDto?,
         variables: Map<String, String>,
     ): RenderedTemplateDto
 }
@@ -147,6 +149,8 @@ interface GenerationTargetMetaService {
     suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<GenerationTargetMetaDto>
     suspend fun get(id: String): GenerationTargetMetaDto
     suspend fun update(id: String, request: UpdateGenerationTargetMetaRequest): GenerationTargetMetaDto
+    suspend fun deleteCheck(id: String): DeleteCheckResultDto
+    suspend fun validate(id: String): List<ValidationIssueDto>
     suspend fun delete(id: String)
 }
 
@@ -155,5 +159,7 @@ interface EtlWrapperMetaService {
     suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<EtlWrapperMetaDto>
     suspend fun get(id: String): EtlWrapperMetaDto
     suspend fun update(id: String, request: UpdateEtlWrapperMetaRequest): EtlWrapperMetaDto
+    suspend fun deleteCheck(id: String): DeleteCheckResultDto
+    suspend fun validate(id: String): List<ValidationIssueDto>
     suspend fun delete(id: String)
 }

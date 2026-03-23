@@ -9,9 +9,11 @@ import site.addzero.coding.playground.server.entity.TemplateMeta
 import site.addzero.coding.playground.server.entity.by
 import site.addzero.coding.playground.server.entity.toDto
 import site.addzero.coding.playground.shared.dto.CreateEtlWrapperMetaRequest
+import site.addzero.coding.playground.shared.dto.DeleteCheckResultDto
 import site.addzero.coding.playground.shared.dto.EtlWrapperMetaDto
 import site.addzero.coding.playground.shared.dto.MetadataSearchRequest
 import site.addzero.coding.playground.shared.dto.UpdateEtlWrapperMetaRequest
+import site.addzero.coding.playground.shared.dto.ValidationIssueDto
 import site.addzero.coding.playground.shared.service.EtlWrapperMetaService
 
 @Single
@@ -41,6 +43,7 @@ class EtlWrapperMetaServiceImpl(
     override suspend fun list(search: MetadataSearchRequest): List<EtlWrapperMetaDto> {
         return support.listEtlWrappers(search.projectId)
             .map { it.toDto() }
+            .filter { search.includeDisabled || it.enabled }
             .filter {
                 support.matchesSearch(
                     search = search,
@@ -74,11 +77,32 @@ class EtlWrapperMetaServiceImpl(
         return support.sqlClient.save(entity).modifiedEntity.toDto()
     }
 
-    override suspend fun delete(id: String) {
+    override suspend fun deleteCheck(id: String): DeleteCheckResultDto {
         support.etlWrapperOrThrow(id)
         val usageCount = support.listTemplates().count { it.etlWrapperId == id }
-        if (usageCount > 0) {
-            throw PlaygroundValidationException("ETL wrapper is still referenced by $usageCount template(s)")
+        return if (usageCount == 0) {
+            DeleteCheckResultDto(allowed = true)
+        } else {
+            DeleteCheckResultDto(
+                allowed = false,
+                reasons = listOf("ETL wrapper is still referenced by $usageCount template(s)"),
+            )
+        }
+    }
+
+    override suspend fun validate(id: String): List<ValidationIssueDto> {
+        val wrapper = support.etlWrapperOrThrow(id)
+        return buildList {
+            if (wrapper.scriptBody.isBlank()) {
+                add(ValidationIssueDto(field = "scriptBody", message = "Script body cannot be blank"))
+            }
+        }
+    }
+
+    override suspend fun delete(id: String) {
+        val check = deleteCheck(id)
+        if (!check.allowed) {
+            throw PlaygroundValidationException(check.reasons.joinToString("; "))
         }
         support.sqlClient.deleteById(EtlWrapperMeta::class, id)
     }

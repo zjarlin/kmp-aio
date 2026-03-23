@@ -45,7 +45,14 @@ class CodingPlaygroundServerKoinModule {
             setDialect(SQLiteDialect())
             setDatabaseNamingStrategy(DefaultDatabaseNamingStrategy.LOWER_CASE)
             addScalarProvider(SqliteLocalDateTimeScalarProvider)
-            setConnectionManager { dataSource.connection.use { proceed(it) } }
+            setConnectionManager {
+                val transactionalConnection = PlaygroundJdbcTransactionContext.connectionOrNull()
+                if (transactionalConnection != null) {
+                    proceed(transactionalConnection)
+                } else {
+                    dataSource.connection.use { proceed(it) }
+                }
+            }
         }
     }
 }

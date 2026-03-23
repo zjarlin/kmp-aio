@@ -28,6 +28,8 @@ dependencies {
     implementation(libs.io.ktor.ktor.server.core)
     implementation("site.addzero:spring2ktor-server-core:2026.03.13")
     compileOnly(libs.org.springframework.spring.web)
+    implementation(libs.org.jetbrains.kotlin.kotlin.scripting.jsr223)
+    implementation(libs.org.jetbrains.kotlin.kotlin.compiler.embeddable)
 
     implementation(libs.org.xerial.sqlite.jdbc.v3)
 

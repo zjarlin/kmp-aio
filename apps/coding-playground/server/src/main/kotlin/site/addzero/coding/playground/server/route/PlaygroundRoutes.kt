@@ -317,6 +317,16 @@ suspend fun updateGenerationTarget(
     @RequestBody request: UpdateGenerationTargetMetaRequest,
 ): GenerationTargetMetaDto = targetService().update(id, request)
 
+@GetMapping("/api/playground/generation-targets/{id}/delete-check")
+suspend fun checkGenerationTargetDelete(
+    @PathVariable id: String,
+): DeleteCheckResultDto = targetService().deleteCheck(id)
+
+@GetMapping("/api/playground/generation-targets/{id}/validate")
+suspend fun validateGenerationTarget(
+    @PathVariable id: String,
+): List<ValidationIssueDto> = targetService().validate(id)
+
 @DeleteMapping("/api/playground/generation-targets/{id}")
 suspend fun deleteGenerationTarget(
     @PathVariable id: String,
@@ -343,6 +353,16 @@ suspend fun updateEtlWrapper(
     @PathVariable id: String,
     @RequestBody request: UpdateEtlWrapperMetaRequest,
 ): EtlWrapperMetaDto = etlService().update(id, request)
+
+@GetMapping("/api/playground/etl-wrappers/{id}/delete-check")
+suspend fun checkEtlWrapperDelete(
+    @PathVariable id: String,
+): DeleteCheckResultDto = etlService().deleteCheck(id)
+
+@GetMapping("/api/playground/etl-wrappers/{id}/validate")
+suspend fun validateEtlWrapper(
+    @PathVariable id: String,
+): List<ValidationIssueDto> = etlService().validate(id)
 
 @DeleteMapping("/api/playground/etl-wrappers/{id}")
 suspend fun deleteEtlWrapper(

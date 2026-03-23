@@ -14,7 +14,6 @@ import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
 import site.addzero.coding.playground.server.config.PlaygroundServerSettings
 import site.addzero.coding.playground.server.generated.springktor.registerGeneratedSpringRoutes
-import site.addzero.starter.statuspages.installDefaultStatusPages
 
 @Single
 class PlaygroundHttpServer(
@@ -35,7 +34,6 @@ class PlaygroundHttpServer(
                     },
                 )
             }
-            installDefaultStatusPages()
             install(CORS) {
                 anyHost()
                 allowHeader(HttpHeaders.ContentType)

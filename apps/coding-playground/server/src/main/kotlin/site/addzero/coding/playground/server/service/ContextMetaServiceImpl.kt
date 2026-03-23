@@ -20,25 +20,27 @@ class ContextMetaServiceImpl(
     private val support: MetadataPersistenceSupport,
 ) : ContextMetaService {
     override suspend fun create(request: CreateBoundedContextMetaRequest): BoundedContextMetaDto {
-        support.projectOrThrow(request.projectId)
-        support.validateName(request.name, "Context name")
-        support.validateName(request.code, "Context code")
-        support.assertContextCodeUnique(request.projectId, request.code)
-        val now = support.now()
-        val entity = new(BoundedContextMeta::class).by {
-            id = support.newId()
-            project = support.projectRef(request.projectId)
-            name = request.name
-            code = request.code
-            description = request.description
-            tagsJson = support.json.encodeStringList(request.tags)
-            orderIndex = support.nextContextOrder(request.projectId)
-            createdAt = now
-            updatedAt = now
+        return support.inTransaction {
+            support.projectOrThrow(request.projectId)
+            support.validateName(request.name, "Context name")
+            support.validateName(request.code, "Context code")
+            support.assertContextCodeUnique(request.projectId, request.code)
+            val now = support.now()
+            val entity = new(BoundedContextMeta::class).by {
+                id = support.newId()
+                project = support.projectRef(request.projectId)
+                name = request.name
+                code = request.code
+                description = request.description
+                tagsJson = support.json.encodeStringList(request.tags)
+                orderIndex = support.nextContextOrder(request.projectId)
+                createdAt = now
+                updatedAt = now
+            }
+            val saved = support.sqlClient.save(entity).modifiedEntity
+            support.seedBuiltinTemplates(saved.id)
+            saved.toDto(support.json)
         }
-        val saved = support.sqlClient.save(entity).modifiedEntity
-        support.seedBuiltinTemplates(saved.id)
-        return saved.toDto(support.json)
     }
 
     override suspend fun list(search: MetadataSearchRequest): List<BoundedContextMetaDto> {
@@ -91,7 +93,9 @@ class ContextMetaServiceImpl(
     }
 
     override suspend fun delete(id: String) {
-        support.contextOrThrow(id)
-        support.deleteContextCascade(id)
+        support.inTransaction {
+            support.contextOrThrow(id)
+            support.deleteContextCascade(id)
+        }
     }
 }

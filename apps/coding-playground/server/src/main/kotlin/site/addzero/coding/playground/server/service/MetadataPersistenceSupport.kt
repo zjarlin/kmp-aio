@@ -4,6 +4,7 @@ import kotlinx.serialization.json.Json
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
+import site.addzero.coding.playground.server.config.PlaygroundJdbcTransactionContext
 import site.addzero.coding.playground.server.domain.PlaygroundNotFoundException
 import site.addzero.coding.playground.server.domain.PlaygroundValidationException
 import site.addzero.coding.playground.server.entity.BoundedContextMeta
@@ -49,6 +50,18 @@ class MetadataPersistenceSupport(
     fun fieldRef(id: String): FieldMeta = new(FieldMeta::class).by { this.id = id }
     fun dtoRef(id: String): DtoMeta = new(DtoMeta::class).by { this.id = id }
     fun etlWrapperRef(id: String): EtlWrapperMeta = new(EtlWrapperMeta::class).by { this.id = id }
+
+    fun <T> inTransaction(block: () -> T): T {
+        return PlaygroundJdbcTransactionContext.withTransaction(dataSource, block)
+    }
+
+    fun <T> withJdbcConnection(block: (Connection) -> T): T {
+        val current = PlaygroundJdbcTransactionContext.connectionOrNull()
+        if (current != null) {
+            return block(current)
+        }
+        return dataSource.connection.use(block)
+    }
 
     fun projectOrThrow(id: String): ProjectMeta {
         return sqlClient.findById(ProjectMeta::class, id)
@@ -215,7 +228,7 @@ class MetadataPersistenceSupport(
     fun nextTemplateOrder(contextId: String): Int = listTemplates(contextId).size
 
     fun templateIdsForTarget(targetId: String): List<String> {
-        return dataSource.connection.use { connection ->
+        return withJdbcConnection { connection ->
             connection.prepareStatement(
                 """
                 SELECT gtt.template_id
@@ -238,9 +251,8 @@ class MetadataPersistenceSupport(
     }
 
     fun syncTargetTemplates(targetId: String, templateIds: List<String>) {
-        dataSource.connection.use { connection ->
-            connection.autoCommit = false
-            try {
+        inTransaction {
+            withJdbcConnection { connection ->
                 connection.prepareStatement(
                     "DELETE FROM generation_target_template WHERE generation_target_id = ?",
                 ).use { statement ->
@@ -257,12 +269,6 @@ class MetadataPersistenceSupport(
                     }
                     statement.executeBatch()
                 }
-                connection.commit()
-            } catch (ex: Exception) {
-                connection.rollback()
-                throw ex
-            } finally {
-                connection.autoCommit = true
             }
         }
     }
@@ -276,7 +282,7 @@ class MetadataPersistenceSupport(
     }
 
     fun countTargetTemplateReferences(templateId: String): Int {
-        return dataSource.connection.use { connection ->
+        return withJdbcConnection { connection ->
             connection.prepareStatement(
                 "SELECT COUNT(*) FROM generation_target_template WHERE template_id = ?",
             ).use { statement ->
@@ -439,27 +445,29 @@ class MetadataPersistenceSupport(
         if (listTemplates(contextId).isNotEmpty()) {
             return
         }
-        builtinTemplateCatalog.createRequests(contextId).forEachIndexed { index, request ->
-            val now = now()
-            val entity = new(TemplateMeta::class).by {
-                id = newId()
-                context = contextRef(request.contextId)
-                etlWrapper = request.etlWrapperId?.let(::etlWrapperRef)
-                name = request.name
-                key = request.key
-                description = request.description
-                outputKind = request.outputKind.name
-                body = request.body
-                relativeOutputPath = request.relativeOutputPath
-                fileNameTemplate = request.fileNameTemplate
-                tagsJson = json.encodeStringList(request.tags)
-                orderIndex = index
-                enabled = request.enabled
-                managedByGenerator = request.managedByGenerator
-                createdAt = now
-                updatedAt = now
+        inTransaction {
+            builtinTemplateCatalog.createRequests(contextId).forEachIndexed { index, request ->
+                val now = now()
+                val entity = new(TemplateMeta::class).by {
+                    id = newId()
+                    context = contextRef(request.contextId)
+                    etlWrapper = request.etlWrapperId?.let(::etlWrapperRef)
+                    name = request.name
+                    key = request.key
+                    description = request.description
+                    outputKind = request.outputKind.name
+                    body = request.body
+                    relativeOutputPath = request.relativeOutputPath
+                    fileNameTemplate = request.fileNameTemplate
+                    tagsJson = json.encodeStringList(request.tags)
+                    orderIndex = index
+                    enabled = request.enabled
+                    managedByGenerator = request.managedByGenerator
+                    createdAt = now
+                    updatedAt = now
+                }
+                sqlClient.save(entity)
             }
-            sqlClient.save(entity)
         }
     }
 
@@ -569,7 +577,7 @@ class MetadataPersistenceSupport(
     }
 
     private fun executeUpdate(sql: String, value: String) {
-        dataSource.connection.use { connection ->
+        withJdbcConnection { connection ->
             connection.prepareStatement(sql).use { statement ->
                 statement.setString(1, value)
                 statement.executeUpdate()

@@ -81,8 +81,10 @@ class ProjectMetaServiceImpl(
     }
 
     override suspend fun delete(id: String) {
-        support.projectOrThrow(id)
-        support.deleteProjectCascade(id)
+        support.inTransaction {
+            support.projectOrThrow(id)
+            support.deleteProjectCascade(id)
+        }
     }
 
     override suspend fun tree(id: String): ProjectAggregateDto {
