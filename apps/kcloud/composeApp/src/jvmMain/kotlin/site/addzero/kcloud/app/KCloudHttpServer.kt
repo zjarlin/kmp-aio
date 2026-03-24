@@ -1,16 +1,10 @@
 package site.addzero.kcloud.app
 
-import site.addzero.kcloud.feature.ShellLocalServerService
-import site.addzero.kcloud.app.generated.springktor.aggregate.registerAggregatedFeatureSpringRoutes
-import site.addzero.kcloud.app.generated.springktor.registerGeneratedSpringRoutes
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.server.application.install
-import io.ktor.server.cio.CIO
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
+import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
-import site.addzero.starter.statuspages.installDefaultStatusPages
+import site.addzero.kcloud.feature.ShellLocalServerService
+import site.addzero.kcloud.feature.registerKCloudRouteRegistrars
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.logging.Logger
@@ -43,7 +38,7 @@ class KCloudHttpServer : ShellLocalServerService {
             logger.warning("Port $preferredPort is in use, fallback to $resolvedPort")
         }
 
-        server = embeddedServer(CIO, host = "127.0.0.1", port = resolvedPort) {
+        server = embeddedServer(Netty, host = "127.0.0.1", port = resolvedPort) {
             install(ContentNegotiation) {
                 json(
                     Json {
@@ -52,16 +47,8 @@ class KCloudHttpServer : ShellLocalServerService {
                     }
                 )
             }
-            installDefaultStatusPages()
-            install(CORS) {
-                anyHost()
-                allowHeader(HttpHeaders.ContentType)
-                allowMethod(HttpMethod.Get)
-                allowMethod(HttpMethod.Post)
-            }
             routing {
-                registerGeneratedSpringRoutes()
-                registerAggregatedFeatureSpringRoutes()
+                registerKCloudRouteRegistrars()
             }
         }.start(wait = wait)
         port = resolvedPort

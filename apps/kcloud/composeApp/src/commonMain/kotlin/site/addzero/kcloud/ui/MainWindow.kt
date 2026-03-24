@@ -25,7 +25,7 @@ fun MainWindow(
 ) {
     val themeMode by shellSettingsService.themeMode.collectAsState()
 
-    _root_ide_package_.site.addzero.kcloud.ui.theme.KCloudTheme(
+    KCloudTheme(
         darkTheme = when (themeMode) {
             ShellThemeMode.LIGHT -> false
             ShellThemeMode.DARK -> true

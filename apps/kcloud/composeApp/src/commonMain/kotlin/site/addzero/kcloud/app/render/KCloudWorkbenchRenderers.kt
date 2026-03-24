@@ -55,7 +55,7 @@ class KCloudSidebarRenderer(
         modifier: Modifier,
     ) {
         val selectedSceneId by shellState.selectedSceneId.collectAsState()
-        val selectedNode = _root_ide_package_.site.addzero.kcloud.app.render.rememberSelectedNode(
+        val selectedNode = rememberSelectedNode(
             screenCatalog = screenCatalog,
             shellState = shellState,
         )
@@ -94,7 +94,7 @@ class KCloudSidebarRenderer(
                 shellState.selectScreen(item.id)
             },
             footerSlot = {
-                _root_ide_package_.site.addzero.kcloud.app.render.SidebarSummaryCard(
+                SidebarSummaryCard(
                     pageCount = scenePageCount,
                 )
             },
@@ -115,7 +115,7 @@ class KCloudHeaderRenderer(
         val sceneNodes = remember(screenCatalog) {
             screenCatalog.tree.filter { node -> node.visible }
         }
-        val selectedNode = _root_ide_package_.site.addzero.kcloud.app.render.rememberSelectedNode(
+        val selectedNode = rememberSelectedNode(
             screenCatalog = screenCatalog,
             shellState = shellState,
         )
@@ -123,12 +123,12 @@ class KCloudHeaderRenderer(
             modifier = modifier,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            _root_ide_package_.site.addzero.kcloud.app.render.SceneSwitcher(
+            SceneSwitcher(
                 scenes = sceneNodes,
                 selectedSceneId = selectedSceneId,
                 onSceneSelected = shellState::selectScene,
             )
-            _root_ide_package_.site.addzero.kcloud.app.render.ScreenHeader(
+            ScreenHeader(
                 breadcrumb = screenCatalog.breadcrumbNamesFor(selectedNode?.id.orEmpty()),
                 title = selectedNode?.name ?: "未选择页面",
             )
@@ -146,7 +146,7 @@ class KCloudContentRenderer(
         modifier: Modifier,
     ) {
         val selectedSceneId by shellState.selectedSceneId.collectAsState()
-        val selectedNode = _root_ide_package_.site.addzero.kcloud.app.render.rememberSelectedNode(
+        val selectedNode = rememberSelectedNode(
             screenCatalog = screenCatalog,
             shellState = shellState,
         )
@@ -162,12 +162,12 @@ class KCloudContentRenderer(
             ) {
                 val content = selectedNode?.content
                 if (content == null) {
-                    _root_ide_package_.site.addzero.kcloud.app.render.EmptyShellContent()
+                    EmptyShellContent()
                 } else {
                     content()
                 }
             }
-            _root_ide_package_.site.addzero.kcloud.app.render.ShellStatusBar(
+            ShellStatusBar(
                 currentScene = selectedSceneNode?.name ?: "未分组",
                 currentTitle = selectedNode?.name ?: "未选择页面",
                 pageCount = selectedSceneNode.visibleLeafCount(),

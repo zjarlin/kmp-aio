@@ -90,6 +90,7 @@ class ScreenCatalogTest {
 }
 
 private data class TestScreen(
+
     override val id: String,
     override val name: String,
     override val pid: String? = null,

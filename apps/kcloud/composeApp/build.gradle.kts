@@ -1,5 +1,8 @@
 @file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
 
+import org.gradle.api.tasks.testing.Test
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+
 /**
  * VibePocket 应用模块 - KMP Compose Multiplatform 桌面应用
  *
@@ -12,23 +15,35 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-aio")
 }
 
+val libs = versionCatalogs.named("libs")
+val jdkVersion = libs.findVersion("jdk17").get().requiredVersion.toInt()
 
 kotlin {
     dependencies {
-//        implementation(project(":lib:compose:media-playlist-player"))
-//        implementation(project(":lib:compose:app-sidebar"))
-//        implementation(project(":lib:compose:workbench-shell"))
-//        implementation(projects.lib.compose.liquidGlass)
-//        implementation(project(":lib:api:api-music-spi"))
-//        implementation(project(":lib:api:api-suno"))
+        implementation(project(":lib:compose:app-sidebar"))
+        implementation(project(":lib:compose:workbench-shell"))
+        implementation(project(":apps:kcloud:plugins:scene-api"))
+        implementation(project(":apps:kcloud:plugins:scenes:workspace:server"))
+        implementation(project(":apps:kcloud:plugins:scenes:notes:server"))
+        implementation(project(":apps:kcloud:plugins:scenes:second-brain:server"))
+        implementation(project(":apps:kcloud:plugins:scenes:ops:server"))
+        implementation(project(":apps:kcloud:plugins:scenes:system:server"))
     }
 
-//    sourceSets {
-//        jvmMain.dependencies {
-//            implementation(project(":apps:vibepocket:server"))
-//        }
-//    }
+    sourceSets {
+        jvmMain.dependencies {
+            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
+            implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
+            implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
+            implementation(libs.findLibrary("io-ktor-ktor-server-netty-jvm").get())
+        }
+    }
 }
 
-
-
+tasks.withType<Test>().configureEach {
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion.set(JavaLanguageVersion.of(jdkVersion))
+        },
+    )
+}

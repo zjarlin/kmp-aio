@@ -1,15 +1,27 @@
 package site.addzero.kcloud
 
 import site.addzero.kcloud.app.KCloudHttpServer
+import site.addzero.kcloud.app.KCloudCoreKoinModule
 import site.addzero.kcloud.app.KCloudShellState
-import site.addzero.kcloud.app.generated.ioc.aggregate.registerAggregatedIocModules
-import site.addzero.kcloud.db.Database
+import site.addzero.kcloud.app.module as kCloudCoreModule
+import site.addzero.kcloud.feature.KCloudSceneApiKoinModule
+import site.addzero.kcloud.feature.module as sceneApiModule
 import site.addzero.kcloud.feature.DesktopLifecycleContributor
 import site.addzero.kcloud.feature.ServerLifecycleContributor
 import org.koin.core.Koin
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
-import org.koin.plugin.module.dsl.withConfiguration
+import org.koin.core.module.Module
+import site.addzero.kcloud.scenes.notes.NotesSceneServerModule
+import site.addzero.kcloud.scenes.notes.module as notesSceneModule
+import site.addzero.kcloud.scenes.ops.OpsSceneServerModule
+import site.addzero.kcloud.scenes.ops.module as opsSceneModule
+import site.addzero.kcloud.scenes.secondbrain.SecondBrainSceneServerModule
+import site.addzero.kcloud.scenes.secondbrain.module as secondBrainSceneModule
+import site.addzero.kcloud.scenes.system.SystemSceneServerModule
+import site.addzero.kcloud.scenes.system.module as systemSceneModule
+import site.addzero.kcloud.scenes.workspace.WorkspaceSceneServerModule
+import site.addzero.kcloud.scenes.workspace.module as workspaceSceneModule
 import site.addzero.workbenchshell.ScreenCatalog
 
 class KCloudRuntime(
@@ -48,7 +60,6 @@ class KCloudRuntime(
         serverLifecycleContributors
             .asReversed()
             .forEach { contributor -> contributor.onStop() }
-        koin.get<Database>().close()
         koinApplication.close()
     }
 
@@ -57,15 +68,13 @@ class KCloudRuntime(
         serverLifecycleContributors
             .asReversed()
             .forEach { contributor -> contributor.onStop() }
-        koin.get<Database>().close()
         koinApplication.close()
     }
 }
 
 fun createKCloudRuntime(): KCloudRuntime {
-    registerAggregatedIocModules()
     val koinApplication = startKoin {
-        withConfiguration<KCloudKoinApplication>()
+        modules(kCloudDesktopModules())
     }
     val koin = koinApplication.koin
     return KCloudRuntime(
@@ -77,3 +86,13 @@ fun createKCloudRuntime(): KCloudRuntime {
         httpServer = koin.get(),
     )
 }
+
+private fun kCloudDesktopModules(): List<Module> = listOf(
+    KCloudCoreKoinModule().kCloudCoreModule(),
+    KCloudSceneApiKoinModule().sceneApiModule(),
+    WorkspaceSceneServerModule().workspaceSceneModule(),
+    NotesSceneServerModule().notesSceneModule(),
+    SecondBrainSceneServerModule().secondBrainSceneModule(),
+    OpsSceneServerModule().opsSceneModule(),
+    SystemSceneServerModule().systemSceneModule(),
+)

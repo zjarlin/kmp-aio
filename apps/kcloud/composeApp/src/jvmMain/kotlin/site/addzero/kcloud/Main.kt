@@ -38,7 +38,7 @@ fun main() {
                     }
                 },
                 title = "KCloud",
-                state = WindowState(width = 1280.dp, height = 860.dp)
+                state = WindowState(width = 1280.dp, height = 860.dp),
             ) {
                 MainWindow()
             }

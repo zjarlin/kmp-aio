@@ -2,9 +2,21 @@ package site.addzero.kcloud
 
 import site.addzero.kcloud.app.KCloudCoreKoinModule
 import org.koin.core.annotation.KoinApplication
+import site.addzero.kcloud.scenes.notes.NotesSceneServerModule
+import site.addzero.kcloud.scenes.ops.OpsSceneServerModule
+import site.addzero.kcloud.scenes.secondbrain.SecondBrainSceneServerModule
+import site.addzero.kcloud.scenes.system.SystemSceneServerModule
+import site.addzero.kcloud.scenes.workspace.WorkspaceSceneServerModule
 
 @KoinApplication(
     configurations = ["kcloud"],
-    modules = [KCloudCoreKoinModule::class]
+    modules = [
+        KCloudCoreKoinModule::class,
+        WorkspaceSceneServerModule::class,
+        NotesSceneServerModule::class,
+        SecondBrainSceneServerModule::class,
+        OpsSceneServerModule::class,
+        SystemSceneServerModule::class,
+    ]
 )
 object KCloudKoinApplication
