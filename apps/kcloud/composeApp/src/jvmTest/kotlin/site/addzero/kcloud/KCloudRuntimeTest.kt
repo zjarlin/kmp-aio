@@ -5,7 +5,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import org.koin.core.context.stopKoin
 import site.addzero.kcloud.feature.KCloudScenePlugin
-import site.addzero.kcloud.feature.KCloudScreenRoots
 import site.addzero.kcloud.scenes.notes.NotesSceneMenus
 import site.addzero.kcloud.scenes.ops.OpsSceneMenus
 import site.addzero.kcloud.scenes.secondbrain.SecondBrainSceneMenus

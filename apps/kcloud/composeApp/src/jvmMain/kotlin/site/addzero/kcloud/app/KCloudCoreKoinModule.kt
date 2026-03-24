@@ -3,6 +3,7 @@ package site.addzero.kcloud.app
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.feature.kCloudDefaultScreens
 import site.addzero.kcloud.scenes.notes.notesSceneScreens
 import site.addzero.kcloud.scenes.ops.opsSceneScreens
 import site.addzero.kcloud.scenes.secondbrain.secondBrainSceneScreens
@@ -15,11 +16,12 @@ import site.addzero.workbenchshell.ScreenCatalog
 class KCloudCoreKoinModule {
     @Single
     fun screenCatalog(): ScreenCatalog = ScreenCatalog(
-        kCloudShellRootScreens() +
-            workspaceSceneScreens +
-            notesSceneScreens +
-            secondBrainSceneScreens +
-            opsSceneScreens +
-            systemSceneScreens,
+        kCloudDefaultScreens(
+            workspaceScreens = workspaceSceneScreens,
+            notesScreens = notesSceneScreens,
+            secondBrainScreens = secondBrainSceneScreens,
+            opsScreens = opsSceneScreens,
+            systemScreens = systemSceneScreens,
+        ),
     )
 }

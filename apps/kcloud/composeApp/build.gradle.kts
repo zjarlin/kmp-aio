@@ -22,12 +22,6 @@ kotlin {
     dependencies {
         implementation(project(":lib:compose:app-sidebar"))
         implementation(project(":lib:compose:workbench-shell"))
-        implementation(project(":apps:kcloud:plugins:scene-api"))
-        implementation(project(":apps:kcloud:plugins:scenes:workspace:server"))
-        implementation(project(":apps:kcloud:plugins:scenes:notes:server"))
-        implementation(project(":apps:kcloud:plugins:scenes:second-brain:server"))
-        implementation(project(":apps:kcloud:plugins:scenes:ops:server"))
-        implementation(project(":apps:kcloud:plugins:scenes:system:server"))
     }
 
     sourceSets {

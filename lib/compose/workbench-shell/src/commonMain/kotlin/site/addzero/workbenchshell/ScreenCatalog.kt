@@ -73,6 +73,13 @@ class ScreenCatalog(
         }
     }
 
+    fun visibleLeafNodesUnder(screenId: String): List<ScreenNode> {
+        val node = nodesById[normalizeScreenId(screenId)] ?: return emptyList()
+        return buildList {
+            collectVisibleLeaves(node)
+        }
+    }
+
     private fun validateDuplicateIds() {
         val duplicateIds = screens
             .groupBy { screen: Screen -> screen.id }
