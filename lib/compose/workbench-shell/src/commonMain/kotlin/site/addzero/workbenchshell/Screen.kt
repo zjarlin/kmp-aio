@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 interface Screen {
     val id: String
+        get() = this::class.simpleName.orEmpty()
     val pid: String?
         get() = null
     val name: String
@@ -16,10 +17,6 @@ interface Screen {
         get() = Int.MAX_VALUE
     val visible: Boolean
         get() = true
-    val keywords: List<String>
-        get() = emptyList()
-    val badge: String?
-        get() = null
     val content: (@Composable () -> Unit)?
         get() = null
 }

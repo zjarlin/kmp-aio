@@ -29,15 +29,22 @@ WorkbenchScaffold(
     sidebar = {
         AppSidebar(
             title = "Workbench",
-            supportText = "一个拿来就能用的通用应用侧栏。",
             items = sections,
             itemId = ProjectSection::id,
             label = ProjectSection::name,
-            icon = ProjectSection::icon,
-            badge = ProjectSection::badge,
-            keywords = ProjectSection::keywords,
             children = ProjectSection::children,
             state = sidebarState,
+            config = AppSidebarConfig(
+                supportText = "一个拿来就能用的通用应用侧栏。",
+            ),
+            icon = ProjectSection::icon,
+            slots = AppSidebarSlots(
+                trailing = { section, _, _ ->
+                    section.badge?.let { badge ->
+                        Text(badge)
+                    }
+                },
+            ),
         )
     },
     contentHeader = {
@@ -64,12 +71,14 @@ AdminWorkbenchScaffold(
     sidebar = {
         AppSidebar(
             title = "Admin",
-            supportText = "后台工作台",
             items = adminNodes,
             itemId = AdminNode::id,
             label = AdminNode::title,
-            icon = AdminNode::icon,
             children = AdminNode::children,
+            config = AppSidebarConfig(
+                supportText = "后台工作台",
+            ),
+            icon = AdminNode::icon,
         )
     },
     pageActions = {
@@ -102,6 +111,10 @@ AdminWorkbenchScaffold(
 ## Notes
 
 - 默认视觉参数已经写死成更适合商用的暗色桌面风格
+- 可序列化参数统一收进 `AppSidebarConfig`
+- 事件统一收进 `AppSidebarEvents`
+- 插槽统一收进 `AppSidebarSlots`
+- 搜索状态字段统一命名为 `keyword`
 - `AppSidebarScaffold` / `WorkbenchScaffold` 默认都是无缝布局
 - `WorkbenchScaffold` 适合“侧栏 + 顶部工具栏 + 主内容 + 右侧详情栏”
 - `AdminWorkbenchScaffold` 是后台管理版高阶封装，默认头部固定为“面包屑 / 标题 / 副标题 + 页面动作 + 全局工具动作”
@@ -110,4 +123,4 @@ AdminWorkbenchScaffold(
 - `rememberAppSidebarState` / `rememberWorkbenchScaffoldState` 都基于 Compose `rememberSaveable`
 - 左侧栏默认支持拖拽调宽，同时保留默认比例
 - 如果业务需要受控选中态，直接读写 `AppSidebarState.selectedId`
-- 工作台如果已经使用 `Screen` / `ScreenNode`，优先直接接 [`ScreenSidebar`](/Users/zjarlin/IdeaProjects/kmp-aio/lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebarAdapter.kt)
+- 工作台如果已经使用 `Screen` / `ScreenNode`，优先直接接 [`ScreenSidebar`](/Users/zjarlin/IdeaProjects/kmp-aio/lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebar.kt)

@@ -1,92 +1,92 @@
 package site.addzero.kcloud.app
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.feature.ShellWindowController
 import site.addzero.kcloud.feature.ShellTrayPanelController
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import org.koin.core.annotation.Single
-import site.addzero.workbenchshell.ScreenCatalog
+import site.addzero.workbenchshell.ScreenTree
 
 @Single
 class KCloudShellState(
-    private val screenCatalog: ScreenCatalog,
+    private val screenTree: ScreenTree,
 ) : ShellWindowController, ShellTrayPanelController {
-    private val _selectedScreenId = MutableStateFlow(screenCatalog.defaultLeafId)
-    val selectedScreenId: StateFlow<String> = _selectedScreenId.asStateFlow()
+    var selectedScreenId by mutableStateOf(screenTree.defaultLeafId)
+        private set
 
-    private val _selectedSceneId = MutableStateFlow(
-        screenCatalog.sceneRootIdFor(screenCatalog.defaultLeafId),
+    var selectedSceneId by mutableStateOf(
+        screenTree.sceneRootIdFor(screenTree.defaultLeafId),
     )
-    val selectedSceneId: StateFlow<String> = _selectedSceneId.asStateFlow()
+        private set
 
-    private val _windowVisible = MutableStateFlow(true)
-    val windowVisible: StateFlow<Boolean> = _windowVisible.asStateFlow()
+    var windowVisible by mutableStateOf(true)
+        private set
 
-    private val _exitRequested = MutableStateFlow(false)
-    val exitRequested: StateFlow<Boolean> = _exitRequested.asStateFlow()
+    var exitRequested by mutableStateOf(false)
+        private set
 
-    private val _trayPanelVisible = MutableStateFlow(false)
-    val trayPanelVisible: StateFlow<Boolean> = _trayPanelVisible.asStateFlow()
+    var trayPanelVisible by mutableStateOf(false)
+        private set
 
     fun selectScreen(
         screenId: String,
     ) {
-        val leaf = screenCatalog.findLeaf(screenId) ?: return
-        _selectedScreenId.value = leaf.id
-        _selectedSceneId.value = screenCatalog.sceneRootIdFor(leaf.id)
+        val leaf = screenTree.findLeaf(screenId) ?: return
+        selectedScreenId = leaf.id
+        selectedSceneId = screenTree.sceneRootIdFor(leaf.id)
     }
 
     fun selectScene(
         sceneId: String,
     ) {
-        val leafId = screenCatalog.firstVisibleLeafIdUnder(sceneId) ?: return
-        _selectedSceneId.value = sceneId
-        _selectedScreenId.value = leafId
+        val leafId = screenTree.firstVisibleLeafIdUnder(sceneId) ?: return
+        selectedSceneId = sceneId
+        selectedScreenId = leafId
     }
 
     override fun showWindow() {
-        _windowVisible.value = true
+        windowVisible = true
     }
 
     override fun hideWindow() {
-        _windowVisible.value = false
+        windowVisible = false
     }
 
     override fun toggleWindow() {
-        _windowVisible.value = !_windowVisible.value
+        windowVisible = !windowVisible
     }
 
     override fun requestExit() {
-        _trayPanelVisible.value = false
-        _exitRequested.value = true
+        trayPanelVisible = false
+        exitRequested = true
     }
 
     override fun showTrayPanel() {
-        _trayPanelVisible.value = true
+        trayPanelVisible = true
     }
 
     override fun hideTrayPanel() {
-        _trayPanelVisible.value = false
+        trayPanelVisible = false
     }
 
     override fun toggleTrayPanel() {
-        _trayPanelVisible.value = !_trayPanelVisible.value
+        trayPanelVisible = !trayPanelVisible
     }
 }
 
-private fun ScreenCatalog.sceneRootIdFor(
+private fun ScreenTree.sceneRootIdFor(
     screenId: String,
 ): String {
     val node = findLeaf(screenId)
     return when {
-        node == null -> tree.firstOrNull()?.id.orEmpty()
+        node == null -> roots.firstOrNull()?.id.orEmpty()
         node.ancestorIds.isNotEmpty() -> node.ancestorIds.first()
         else -> node.id
     }
 }
 
-private fun ScreenCatalog.firstVisibleLeafIdUnder(
+private fun ScreenTree.firstVisibleLeafIdUnder(
     sceneId: String,
 ): String? {
     return findNode(sceneId)?.firstVisibleLeafId()

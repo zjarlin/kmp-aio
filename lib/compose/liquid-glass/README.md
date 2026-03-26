@@ -16,7 +16,6 @@ Apple 风格液态玻璃 Compose Multiplatform 组件库，提供开箱即用的
 - `LiquidGlassWorkbenchDefaults`
 - `LiquidGlassTabs`
 - `LiquidGlassSidebarMenu`
-- `LiquidGlassSidebarItem`
 - `LiquidButton`
 - `LiquidBottomTab`
 - `LiquidBottomTabs`
@@ -34,11 +33,27 @@ import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
 import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 
 LiquidGlassAppTheme {
+    val items: List<ProjectNode> = loadProjectNodes()
+
     LiquidGlassWorkbenchRoot(
         wallpaper = {
             // 可选壁纸或背景图
         },
     ) {
+        LiquidGlassSidebarMenu(
+            title = "Project",
+            items = items,
+            selectedId = "dashboard",
+            itemId = ProjectNode::id,
+            label = ProjectNode::title,
+            subtitle = ProjectNode::subtitle,
+            icon = ProjectNode::icon,
+            children = ProjectNode::children,
+            onSelect = { node ->
+                navigateTo(node.id)
+            },
+        )
+
         LiquidGlassCard(
             spec = LiquidGlassWorkbenchDefaults.section,
         ) {

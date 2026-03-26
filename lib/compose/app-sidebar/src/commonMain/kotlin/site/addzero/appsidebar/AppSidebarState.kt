@@ -17,7 +17,7 @@ class AppSidebarState internal constructor(
     var selectedId by mutableStateOf(initialSelectedId)
         private set
 
-    var searchQuery by mutableStateOf("")
+    var keyword by mutableStateOf("")
         private set
 
     internal val expandedItems = mutableStateMapOf<String, Boolean>()
@@ -26,12 +26,12 @@ class AppSidebarState internal constructor(
         selectedId = id
     }
 
-    fun updateSearchQuery(query: String) {
-        searchQuery = query
+    fun updateKeyword(nextKeyword: String) {
+        keyword = nextKeyword
     }
 
-    fun clearSearch() {
-        searchQuery = ""
+    fun clearKeyword() {
+        keyword = ""
     }
 
     fun toggleExpanded(id: String) {
@@ -129,7 +129,7 @@ class AppSidebarState internal constructor(
             save = { state ->
                 listOf(
                     state.selectedId,
-                    state.searchQuery,
+                    state.keyword,
                     state.expandedItems.entries.map { entry ->
                         listOf(entry.key, entry.value)
                     },
@@ -139,7 +139,7 @@ class AppSidebarState internal constructor(
                 val state = AppSidebarState(
                     initialSelectedId = restored[0] as String?,
                 )
-                state.updateSearchQuery(restored[1] as String)
+                state.updateKeyword(restored[1] as String)
 
                 @Suppress("UNCHECKED_CAST")
                 val expandedEntries = restored[2] as List<List<Any?>>
@@ -165,14 +165,13 @@ fun rememberAppSidebarState(
 }
 
 internal fun <T> List<T>.filterSidebarItems(
-    query: String,
+    keyword: String,
     itemId: (T) -> String,
     label: (T) -> String,
-    keywords: (T) -> List<String>,
     children: (T) -> List<T>,
 ): List<AppSidebarVisibleNode<T>> {
-    val normalizedQuery = query.trim()
-    if (normalizedQuery.isBlank()) {
+    val normalizedKeyword = keyword.trim()
+    if (normalizedKeyword.isBlank()) {
         return map { item ->
             item.toVisibleSidebarNode(children = children)
         }
@@ -180,35 +179,31 @@ internal fun <T> List<T>.filterSidebarItems(
 
     return mapNotNull { item ->
         item.filterSidebarItem(
-            query = normalizedQuery,
+            keyword = normalizedKeyword,
             itemId = itemId,
             label = label,
-            keywords = keywords,
             children = children,
         )
     }
 }
 
 private fun <T> T.filterSidebarItem(
-    query: String,
+    keyword: String,
     itemId: (T) -> String,
     label: (T) -> String,
-    keywords: (T) -> List<String>,
     children: (T) -> List<T>,
 ): AppSidebarVisibleNode<T>? {
     val childMatches = children(this).mapNotNull { child ->
         child.filterSidebarItem(
-            query = query,
+            keyword = keyword,
             itemId = itemId,
             label = label,
-            keywords = keywords,
             children = children,
         )
     }
 
-    val selfMatches = label(this).contains(query, ignoreCase = true) ||
-        keywords(this).any { keyword -> keyword.contains(query, ignoreCase = true) } ||
-        itemId(this).contains(query, ignoreCase = true)
+    val selfMatches = label(this).contains(keyword, ignoreCase = true) ||
+        itemId(this).contains(keyword, ignoreCase = true)
 
     if (!selfMatches && childMatches.isEmpty()) {
         return null

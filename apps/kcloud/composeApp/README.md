@@ -49,7 +49,7 @@ Koin 根入口在 [`src/jvmMain/kotlin/com/kcloud/KCloudKoinApplication.kt`](src
 
 [`src/jvmMain/kotlin/com/kcloud/KCloudRuntime.kt`](src/jvmMain/kotlin/com/kcloud/KCloudRuntime.kt) 负责：
 
-1. 解析 `ScreenCatalog`
+1. 解析 `ScreenTree`
 2. 聚合全部 `ServerLifecycleContributor`
 3. 启动本地 HTTP 服务
 4. 驱动桌面生命周期贡献者
@@ -77,8 +77,8 @@ Koin 根入口在 [`src/jvmMain/kotlin/com/kcloud/KCloudKoinApplication.kt`](src
 | Contract | 作用 |
 | --- | --- |
 | [`Screen`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/Screen.kt) | 通用树节点 SPI；`content == null` 表示容器节点 |
-| [`ScreenCatalog`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenCatalog.kt) | 树构建、循环校验、默认页与面包屑计算 |
-| [`ScreenSidebarAdapter`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebarAdapter.kt) | 适配 `AppSidebar` 数据模型 |
+| [`ScreenTree`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenTree.kt) | 树构建、循环校验、默认页与面包屑计算 |
+| [`ScreenSidebar`](../../lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebar.kt) | 直接把 `ScreenNode` 渲染进共享侧边栏 |
 
 树规则：
 

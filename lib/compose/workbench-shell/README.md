@@ -8,19 +8,19 @@
 ## Usage
 
 ```kotlin
-val catalog = ScreenCatalog(
+val tree = ScreenTree(
     listOf(
         DemoRootScreen(),
         DemoLeafScreen(),
     ),
 )
 
-val defaultLeafId = catalog.defaultLeafId
+val defaultLeafId = tree.defaultLeafId
 val selectedId = defaultLeafId
 
 ScreenSidebar(
     title = "Workbench",
-    items = catalog.tree,
+    items = tree.roots,
     selectedId = selectedId,
     onLeafClick = { node ->
         navigateTo(node.id)

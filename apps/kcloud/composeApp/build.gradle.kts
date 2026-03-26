@@ -16,7 +16,6 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val jdkVersion = libs.findVersion("jdk17").get().requiredVersion.toInt()
 
 kotlin {
     dependencies {
@@ -24,20 +23,13 @@ kotlin {
         implementation(project(":lib:compose:workbench-shell"))
     }
 
-    sourceSets {
-        jvmMain.dependencies {
-            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
-            implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
-            implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
-            implementation(libs.findLibrary("io-ktor-ktor-server-netty-jvm").get())
-        }
-    }
+//    sourceSets {
+//        jvmMain.dependencies {
+//            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
+//            implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
+//            implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
+//            implementation(libs.findLibrary("io-ktor-ktor-server-netty-jvm").get())
+//        }
+//    }
 }
 
-tasks.withType<Test>().configureEach {
-    javaLauncher.set(
-        javaToolchains.launcherFor {
-            languageVersion.set(JavaLanguageVersion.of(jdkVersion))
-        },
-    )
-}

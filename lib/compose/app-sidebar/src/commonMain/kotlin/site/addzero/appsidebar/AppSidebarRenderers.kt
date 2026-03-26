@@ -3,6 +3,7 @@ package site.addzero.appsidebar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import kotlinx.serialization.Serializable
 import org.koin.compose.getKoin
 import org.koin.compose.koinInject
 
@@ -21,6 +22,7 @@ fun RenderAppSidebar(
     renderer.Render(modifier)
 }
 
+@Serializable
 enum class AppSidebarScaffoldShell {
     Workbench,
     AdminWorkbench,

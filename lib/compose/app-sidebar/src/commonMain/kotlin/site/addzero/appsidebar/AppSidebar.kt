@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -46,11 +45,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-enum class AppSidebarStyle {
-    Default,
-    FlushWorkbench,
-}
-
 @Composable
 fun <T> AppSidebar(
     title: String,
@@ -59,37 +53,22 @@ fun <T> AppSidebar(
     label: (T) -> String,
     modifier: Modifier = Modifier,
     state: AppSidebarState = rememberAppSidebarState(),
-    style: AppSidebarStyle = AppSidebarStyle.Default,
-    supportText: String? = null,
-    searchEnabled: Boolean = true,
-    searchPlaceholder: String = "搜索菜单",
+    config: AppSidebarConfig = AppSidebarConfig(),
     icon: (T) -> ImageVector? = { null },
-    badge: (T) -> String? = { null },
-    keywords: (T) -> List<String> = { emptyList() },
     children: (T) -> List<T> = { emptyList() },
     initiallyExpanded: (T) -> Boolean = { true },
     selectable: (T) -> Boolean = { item -> children(item).isEmpty() },
-    headerSlot: @Composable ColumnScope.() -> Unit = {},
-    footerSlot: @Composable ColumnScope.() -> Unit = {},
-    emptySlot: @Composable ColumnScope.(String) -> Unit = { query ->
-        DefaultSidebarEmpty(
-            query = query,
-        )
-    },
-    leadingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
-    labelSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
-    trailingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
-    onItemClick: (T) -> Unit = {},
+    events: AppSidebarEvents<T> = AppSidebarEvents(),
+    slots: AppSidebarSlots<T> = AppSidebarSlots(),
 ) {
-    val tokens = remember(style) {
-        style.resolveTokens()
+    val tokens = remember(config.style) {
+        config.style.resolveTokens()
     }
-    val visibleItems = remember(items, state.searchQuery) {
+    val visibleItems = remember(items, state.keyword) {
         items.filterSidebarItems(
-            query = state.searchQuery,
+            keyword = state.keyword,
             itemId = itemId,
             label = label,
-            keywords = keywords,
             children = children,
         )
     }
@@ -113,17 +92,23 @@ fun <T> AppSidebar(
         ) {
             SidebarHeader(
                 title = title,
-                supportText = supportText,
-                headerSlot = headerSlot,
+                supportText = config.supportText,
+                headerSlot = slots.header,
                 tokens = tokens,
             )
 
-            if (searchEnabled) {
+            if (config.searchEnabled) {
                 SidebarSearchField(
-                    value = state.searchQuery,
-                    placeholder = searchPlaceholder,
-                    onValueChange = state::updateSearchQuery,
-                    onClear = state::clearSearch,
+                    value = state.keyword,
+                    placeholder = config.searchPlaceholder,
+                    onValueChange = { keyword ->
+                        state.updateKeyword(keyword)
+                        events.onKeywordChange(keyword)
+                    },
+                    onClear = {
+                        state.clearKeyword()
+                        events.onKeywordChange("")
+                    },
                     tokens = tokens,
                 )
             }
@@ -135,10 +120,9 @@ fun <T> AppSidebar(
                     Column(
                         modifier = Modifier.fillMaxSize().padding(vertical = tokens.emptyVerticalPadding),
                         verticalArrangement = Arrangement.Center,
-                        content = {
-                            emptySlot(state.searchQuery)
-                        },
-                    )
+                    ) {
+                        slots.empty.invoke(this, state.keyword)
+                    }
                 } else {
                     Column(
                         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
@@ -150,18 +134,15 @@ fun <T> AppSidebar(
                                 level = 0,
                                 state = state,
                                 tokens = tokens,
-                                searchActive = state.searchQuery.isNotBlank(),
+                                searchActive = state.keyword.isNotBlank(),
                                 itemId = itemId,
                                 label = label,
                                 icon = icon,
-                                badge = badge,
                                 children = children,
                                 initiallyExpanded = initiallyExpanded,
                                 selectable = selectable,
-                                leadingSlot = leadingSlot,
-                                labelSlot = labelSlot,
-                                trailingSlot = trailingSlot,
-                                onItemClick = onItemClick,
+                                slots = slots,
+                                onItemClick = events.onItemClick,
                             )
                         }
                     }
@@ -170,7 +151,7 @@ fun <T> AppSidebar(
 
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                content = footerSlot,
+                content = slots.footer,
             )
         }
     }
@@ -270,13 +251,10 @@ private fun <T> ColumnScope.SidebarTreeItem(
     itemId: (T) -> String,
     label: (T) -> String,
     icon: (T) -> ImageVector?,
-    badge: (T) -> String?,
     children: (T) -> List<T>,
     initiallyExpanded: (T) -> Boolean,
     selectable: (T) -> Boolean,
-    leadingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
-    labelSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
-    trailingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
+    slots: AppSidebarSlots<T>,
     onItemClick: (T) -> Unit,
 ) {
     val item = node.item
@@ -335,30 +313,25 @@ private fun <T> ColumnScope.SidebarTreeItem(
                     state.toggleExpanded(id)
                 },
             )
-            if (leadingSlot == null) {
+            if (slots.leading == null) {
                 SidebarIcon(
                     icon = icon(item),
                     tokens = tokens,
                 )
             } else {
-                leadingSlot(item, selected, descendantSelected)
+                slots.leading.invoke(this, item, selected, descendantSelected)
             }
-            if (labelSlot == null) {
+            if (slots.label == null) {
                 DefaultSidebarLabel(
                     text = label(item),
                     selected = selected,
                     tokens = tokens,
                 )
             } else {
-                labelSlot(item, selected, descendantSelected)
+                slots.label.invoke(this, item, selected, descendantSelected)
             }
-            if (trailingSlot == null) {
-                SidebarBadge(
-                    badge = badge(item),
-                    tokens = tokens,
-                )
-            } else {
-                trailingSlot(item, selected, descendantSelected)
+            if (slots.trailing != null) {
+                slots.trailing.invoke(this, item, selected, descendantSelected)
             }
         }
     }
@@ -374,13 +347,10 @@ private fun <T> ColumnScope.SidebarTreeItem(
                 itemId = itemId,
                 label = label,
                 icon = icon,
-                badge = badge,
                 children = children,
                 initiallyExpanded = initiallyExpanded,
                 selectable = selectable,
-                leadingSlot = leadingSlot,
-                labelSlot = labelSlot,
-                trailingSlot = trailingSlot,
+                slots = slots,
                 onItemClick = onItemClick,
             )
         }
@@ -419,16 +389,16 @@ private fun SidebarBranchToggle(
         contentAlignment = Alignment.Center,
     ) {
         androidx.compose.material3.Icon(
-                imageVector = if (expanded) {
-                    Icons.Rounded.ExpandMore
-                } else {
-                    Icons.AutoMirrored.Rounded.KeyboardArrowRight
-                },
-                contentDescription = null,
-                tint = tokens.textMuted,
-                modifier = Modifier.size(16.dp),
-            )
-        }
+            imageVector = if (expanded) {
+                Icons.Rounded.ExpandMore
+            } else {
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight
+            },
+            contentDescription = null,
+            tint = tokens.textMuted,
+            modifier = Modifier.size(16.dp),
+        )
+    }
 }
 
 @Composable
@@ -450,33 +420,11 @@ private fun SidebarIcon(
 }
 
 @Composable
-private fun SidebarBadge(
-    badge: String?,
-    tokens: SidebarStyleTokens,
-) {
-    if (badge == null) {
-        return
-    }
-
-    Box(
-        modifier = Modifier.badgeFrame(tokens),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = badge,
-            color = tokens.textPrimary,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-        )
-    }
-}
-
-@Composable
-private fun ColumnScope.DefaultSidebarEmpty(
-    query: String,
+internal fun ColumnScope.DefaultSidebarEmpty(
+    keyword: String,
 ) {
     Text(
-        text = "没有找到 “$query” 对应的导航项。",
+        text = "没有找到 “$keyword” 对应的导航项。",
         color = AppSidebarStyle.Default.resolveTokens().textMuted,
         style = MaterialTheme.typography.bodyMedium,
     )
@@ -540,14 +488,6 @@ private fun Modifier.sidebarItemFrame(
     return baseModifier.border(1.dp, border, tokens.itemShape)
 }
 
-/** 角标胶囊：把数量和状态压成很轻的一颗暗色药丸。 */
-private fun Modifier.badgeFrame(
-    tokens: SidebarStyleTokens,
-): Modifier {
-    return background(tokens.badgeBackground, CircleShape)
-        .padding(horizontal = 8.dp, vertical = 4.dp)
-}
-
 @Immutable
 private data class SidebarStyleTokens(
     val contentPadding: PaddingValues,
@@ -564,7 +504,6 @@ private data class SidebarStyleTokens(
     val selectedBorder: Color,
     val ancestorBackground: Color,
     val ancestorBorder: Color,
-    val badgeBackground: Color,
     val textPrimary: Color,
     val textMuted: Color,
     val textFaint: Color,
@@ -601,7 +540,6 @@ private fun AppSidebarStyle.resolveTokens(): SidebarStyleTokens {
             selectedBorder = Color(0xFF9BC1FF).copy(alpha = 0.26f),
             ancestorBackground = Color.White.copy(alpha = 0.05f),
             ancestorBorder = Color.White.copy(alpha = 0.05f),
-            badgeBackground = Color.White.copy(alpha = 0.10f),
             textPrimary = Color.White.copy(alpha = 0.96f),
             textMuted = Color.White.copy(alpha = 0.68f),
             textFaint = Color.White.copy(alpha = 0.46f),
@@ -636,7 +574,6 @@ private fun AppSidebarStyle.resolveTokens(): SidebarStyleTokens {
             selectedBorder = Color(0xFFA9C8FF).copy(alpha = 0.22f),
             ancestorBackground = Color.White.copy(alpha = 0.04f),
             ancestorBorder = Color.Transparent,
-            badgeBackground = Color.White.copy(alpha = 0.08f),
             textPrimary = Color.White.copy(alpha = 0.97f),
             textMuted = Color.White.copy(alpha = 0.72f),
             textFaint = Color.White.copy(alpha = 0.48f),

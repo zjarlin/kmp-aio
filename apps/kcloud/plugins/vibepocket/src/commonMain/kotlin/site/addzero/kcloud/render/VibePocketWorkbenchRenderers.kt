@@ -7,50 +7,51 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.koin.core.annotation.Single
 import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
 import site.addzero.liquidglass.liquidGlassSurface
 import site.addzero.vibepocket.feature.VibePocketFeatureSidebar
 import site.addzero.vibepocket.screens.PlaceholderScreen
-import site.addzero.workbenchshell.ScreenCatalog
+import site.addzero.workbenchshell.ScreenTree
 import site.addzero.workbenchshell.spi.content.WorkbenchContentRenderer
 import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
 import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
 
+@Single(binds = [WorkbenchSidebarRenderer::class])
 internal class VibePocketSidebarRenderer(
-    private val screenCatalog: ScreenCatalog,
+    private val screenTree: ScreenTree,
     private val shellState: VibePocketShellState,
 ) : WorkbenchSidebarRenderer {
     @Composable
     override fun Render(
         modifier: Modifier,
     ) {
-        val selectedScreenId by shellState.selectedScreenId.collectAsState()
+        val selectedScreenId = shellState.selectedScreenId
 
         VibePocketFeatureSidebar(
-            screenCatalog = screenCatalog,
-            selectedId = screenCatalog.findLeaf(selectedScreenId)?.id.orEmpty(),
+            screenTree = screenTree,
+            selectedId = screenTree.findLeaf(selectedScreenId)?.id.orEmpty(),
             onLeafClick = shellState::selectScreen,
             modifier = modifier,
         )
     }
 }
 
+@Single(binds = [WorkbenchHeaderRenderer::class])
 internal class VibePocketHeaderRenderer(
-    private val screenCatalog: ScreenCatalog,
+    private val screenTree: ScreenTree,
     private val shellState: VibePocketShellState,
 ) : WorkbenchHeaderRenderer {
     @Composable
     override fun Render(
         modifier: Modifier,
     ) {
-        val selectedScreenId by shellState.selectedScreenId.collectAsState()
-        val selectedNode = screenCatalog.findLeaf(selectedScreenId)
-        val breadcrumb = screenCatalog.breadcrumbNamesFor(selectedNode?.id.orEmpty())
+        val selectedScreenId = shellState.selectedScreenId
+        val selectedNode = screenTree.findLeaf(selectedScreenId)
+        val breadcrumb = screenTree.breadcrumbNamesFor(selectedNode?.id.orEmpty())
 
         Column(
             modifier = modifier.fillMaxWidth().padding(horizontal = 4.dp),
@@ -72,16 +73,17 @@ internal class VibePocketHeaderRenderer(
     }
 }
 
+@Single(binds = [WorkbenchContentRenderer::class])
 internal class VibePocketContentRenderer(
-    private val screenCatalog: ScreenCatalog,
+    private val screenTree: ScreenTree,
     private val shellState: VibePocketShellState,
 ) : WorkbenchContentRenderer {
     @Composable
     override fun Render(
         modifier: Modifier,
     ) {
-        val selectedScreenId by shellState.selectedScreenId.collectAsState()
-        val selectedNode = screenCatalog.findLeaf(selectedScreenId)
+        val selectedScreenId = shellState.selectedScreenId
+        val selectedNode = screenTree.findLeaf(selectedScreenId)
 
         Box(
             modifier = modifier.fillMaxSize().liquidGlassSurface(LiquidGlassWorkbenchDefaults.workspace),
