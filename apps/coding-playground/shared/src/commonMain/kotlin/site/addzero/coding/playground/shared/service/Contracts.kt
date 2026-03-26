@@ -1,165 +1,188 @@
 package site.addzero.coding.playground.shared.service
 
-import site.addzero.coding.playground.shared.dto.BoundedContextMetaDto
-import site.addzero.coding.playground.shared.dto.CompositeIntegrationResultDto
-import site.addzero.coding.playground.shared.dto.ContextAggregateDto
-import site.addzero.coding.playground.shared.dto.CreateBoundedContextMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateDtoFieldMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateDtoMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateEntityMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateEtlWrapperMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateFieldMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateGenerationTargetMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateProjectMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateRelationMetaRequest
-import site.addzero.coding.playground.shared.dto.CreateTemplateMetaRequest
-import site.addzero.coding.playground.shared.dto.DeleteCheckResultDto
-import site.addzero.coding.playground.shared.dto.DtoFieldMetaDto
-import site.addzero.coding.playground.shared.dto.DtoMetaDto
-import site.addzero.coding.playground.shared.dto.EtlWrapperMetaDto
-import site.addzero.coding.playground.shared.dto.FieldMetaDto
-import site.addzero.coding.playground.shared.dto.GenerationPlanDto
-import site.addzero.coding.playground.shared.dto.GenerationRequestDto
-import site.addzero.coding.playground.shared.dto.GenerationResultDto
-import site.addzero.coding.playground.shared.dto.GenerationTargetMetaDto
-import site.addzero.coding.playground.shared.dto.MetadataImportResultDto
-import site.addzero.coding.playground.shared.dto.MetadataSearchRequest
-import site.addzero.coding.playground.shared.dto.MetadataSnapshotDto
-import site.addzero.coding.playground.shared.dto.ProjectAggregateDto
-import site.addzero.coding.playground.shared.dto.ProjectMetaDto
-import site.addzero.coding.playground.shared.dto.RelationMetaDto
-import site.addzero.coding.playground.shared.dto.RenderedTemplateDto
-import site.addzero.coding.playground.shared.dto.ReorderRequestDto
-import site.addzero.coding.playground.shared.dto.TemplateMetaDto
-import site.addzero.coding.playground.shared.dto.UpdateBoundedContextMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateDtoFieldMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateDtoMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateEntityMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateEtlWrapperMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateFieldMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateGenerationTargetMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateProjectMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateRelationMetaRequest
-import site.addzero.coding.playground.shared.dto.UpdateTemplateMetaRequest
-import site.addzero.coding.playground.shared.dto.ValidationIssueDto
+import site.addzero.coding.playground.shared.dto.*
 
-interface PathVariableResolver {
-    fun resolve(rawPath: String, variables: Map<String, String> = emptyMap()): String
-}
-
-interface MetadataSnapshotService {
-    suspend fun exportProject(projectId: String): MetadataSnapshotDto
-    suspend fun importSnapshot(snapshot: MetadataSnapshotDto): MetadataImportResultDto
-}
-
-interface GenerationPlanner {
-    suspend fun plan(request: GenerationRequestDto): GenerationPlanDto
-    suspend fun generate(request: GenerationRequestDto): GenerationResultDto
-}
-
-interface TemplateRenderer {
-    suspend fun render(
-        template: TemplateMetaDto,
-        context: ContextAggregateDto,
-        target: GenerationTargetMetaDto,
-        variables: Map<String, String>,
-    ): RenderedTemplateDto
-}
-
-interface EtlWrapperExecutor {
-    suspend fun apply(
-        wrapper: EtlWrapperMetaDto?,
-        rendered: RenderedTemplateDto,
-        template: TemplateMetaDto?,
-        target: GenerationTargetMetaDto?,
-        variables: Map<String, String>,
-    ): RenderedTemplateDto
-}
-
-interface CompositeBuildIntegrator {
-    suspend fun integrate(
-        targetRoot: String,
-        includeBuildPath: String,
-        marker: String = "CODING_PLAYGROUND",
-    ): CompositeIntegrationResultDto
-}
-
-interface ProjectMetaService {
-    suspend fun create(request: CreateProjectMetaRequest): ProjectMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<ProjectMetaDto>
-    suspend fun get(id: String): ProjectMetaDto
-    suspend fun update(id: String, request: UpdateProjectMetaRequest): ProjectMetaDto
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
-    suspend fun delete(id: String)
-    suspend fun tree(id: String): ProjectAggregateDto
-}
-
-interface ContextMetaService {
-    suspend fun create(request: CreateBoundedContextMetaRequest): BoundedContextMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<BoundedContextMetaDto>
-    suspend fun get(id: String): BoundedContextMetaDto
-    suspend fun aggregate(id: String): ContextAggregateDto
-    suspend fun update(id: String, request: UpdateBoundedContextMetaRequest): BoundedContextMetaDto
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
+interface LlvmModuleService {
+    suspend fun create(request: CreateLlvmModuleRequest): LlvmModuleDto
+    suspend fun list(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmModuleDto>
+    suspend fun get(id: String): LlvmModuleDto
+    suspend fun aggregate(id: String): LlvmModuleAggregateDto
+    suspend fun update(id: String, request: UpdateLlvmModuleRequest): LlvmModuleDto
+    suspend fun deleteCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun validate(id: String): List<LlvmValidationIssueDto>
     suspend fun delete(id: String)
 }
 
-interface EntityMetaService {
-    suspend fun create(request: CreateEntityMetaRequest): site.addzero.coding.playground.shared.dto.EntityMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<site.addzero.coding.playground.shared.dto.EntityMetaDto>
-    suspend fun get(id: String): site.addzero.coding.playground.shared.dto.EntityMetaDto
-    suspend fun update(id: String, request: UpdateEntityMetaRequest): site.addzero.coding.playground.shared.dto.EntityMetaDto
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
+interface LlvmTypeService {
+    suspend fun create(request: CreateLlvmTypeRequest): LlvmTypeDto
+    suspend fun list(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmTypeDto>
+    suspend fun get(id: String): LlvmTypeDto
+    suspend fun update(id: String, request: UpdateLlvmTypeRequest): LlvmTypeDto
+    suspend fun deleteCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun validate(id: String): List<LlvmValidationIssueDto>
     suspend fun delete(id: String)
-    suspend fun createField(request: CreateFieldMetaRequest): FieldMetaDto
-    suspend fun updateField(id: String, request: UpdateFieldMetaRequest): FieldMetaDto
+    suspend fun createMember(request: CreateLlvmTypeMemberRequest): LlvmTypeMemberDto
+    suspend fun updateMember(id: String, request: UpdateLlvmTypeMemberRequest): LlvmTypeMemberDto
+    suspend fun deleteMember(id: String)
+    suspend fun reorderMembers(typeId: String, request: LlvmReorderRequestDto): List<LlvmTypeMemberDto>
+}
+
+interface LlvmGlobalValueService {
+    suspend fun createGlobal(request: CreateLlvmGlobalVariableRequest): LlvmGlobalVariableDto
+    suspend fun listGlobals(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmGlobalVariableDto>
+    suspend fun getGlobal(id: String): LlvmGlobalVariableDto
+    suspend fun updateGlobal(id: String, request: UpdateLlvmGlobalVariableRequest): LlvmGlobalVariableDto
+    suspend fun deleteGlobalCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteGlobal(id: String)
+
+    suspend fun createAlias(request: CreateLlvmAliasRequest): LlvmAliasDto
+    suspend fun updateAlias(id: String, request: UpdateLlvmAliasRequest): LlvmAliasDto
+    suspend fun deleteAliasCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteAlias(id: String)
+
+    suspend fun createIfunc(request: CreateLlvmIfuncRequest): LlvmIfuncDto
+    suspend fun updateIfunc(id: String, request: UpdateLlvmIfuncRequest): LlvmIfuncDto
+    suspend fun deleteIfuncCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteIfunc(id: String)
+
+    suspend fun createComdat(request: CreateLlvmComdatRequest): LlvmComdatDto
+    suspend fun updateComdat(id: String, request: UpdateLlvmComdatRequest): LlvmComdatDto
+    suspend fun deleteComdatCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteComdat(id: String)
+
+    suspend fun createConstant(request: CreateLlvmConstantRequest): LlvmConstantDto
+    suspend fun listConstants(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmConstantDto>
+    suspend fun getConstant(id: String): LlvmConstantDto
+    suspend fun updateConstant(id: String, request: UpdateLlvmConstantRequest): LlvmConstantDto
+    suspend fun deleteConstantCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteConstant(id: String)
+    suspend fun createConstantItem(request: CreateLlvmConstantItemRequest): LlvmConstantItemDto
+    suspend fun updateConstantItem(id: String, request: UpdateLlvmConstantItemRequest): LlvmConstantItemDto
+    suspend fun deleteConstantItem(id: String)
+    suspend fun reorderConstantItems(constantId: String, request: LlvmReorderRequestDto): List<LlvmConstantItemDto>
+
+    suspend fun createInlineAsm(request: CreateLlvmInlineAsmRequest): LlvmInlineAsmDto
+    suspend fun updateInlineAsm(id: String, request: UpdateLlvmInlineAsmRequest): LlvmInlineAsmDto
+    suspend fun deleteInlineAsmCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteInlineAsm(id: String)
+}
+
+interface LlvmFunctionService {
+    suspend fun create(request: CreateLlvmFunctionRequest): LlvmFunctionDto
+    suspend fun list(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmFunctionDto>
+    suspend fun get(id: String): LlvmFunctionDto
+    suspend fun update(id: String, request: UpdateLlvmFunctionRequest): LlvmFunctionDto
+    suspend fun deleteCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun validate(id: String): List<LlvmValidationIssueDto>
+    suspend fun delete(id: String)
+
+    suspend fun createParam(request: CreateLlvmFunctionParamRequest): LlvmFunctionParamDto
+    suspend fun updateParam(id: String, request: UpdateLlvmFunctionParamRequest): LlvmFunctionParamDto
+    suspend fun deleteParam(id: String)
+    suspend fun reorderParams(functionId: String, request: LlvmReorderRequestDto): List<LlvmFunctionParamDto>
+
+    suspend fun createBlock(request: CreateLlvmBasicBlockRequest): LlvmBasicBlockDto
+    suspend fun updateBlock(id: String, request: UpdateLlvmBasicBlockRequest): LlvmBasicBlockDto
+    suspend fun deleteBlockCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteBlock(id: String)
+    suspend fun reorderBlocks(functionId: String, request: LlvmReorderRequestDto): List<LlvmBasicBlockDto>
+
+    suspend fun createInstruction(request: CreateLlvmInstructionRequest): LlvmInstructionDto
+    suspend fun updateInstruction(id: String, request: UpdateLlvmInstructionRequest): LlvmInstructionDto
+    suspend fun deleteInstructionCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteInstruction(id: String)
+    suspend fun reorderInstructions(blockId: String, request: LlvmReorderRequestDto): List<LlvmInstructionDto>
+
+    suspend fun createOperand(request: CreateLlvmOperandRequest): LlvmOperandDto
+    suspend fun updateOperand(id: String, request: UpdateLlvmOperandRequest): LlvmOperandDto
+    suspend fun deleteOperand(id: String)
+    suspend fun reorderOperands(instructionId: String, request: LlvmReorderRequestDto): List<LlvmOperandDto>
+
+    suspend fun createPhiIncoming(request: CreateLlvmPhiIncomingRequest): LlvmPhiIncomingDto
+    suspend fun updatePhiIncoming(id: String, request: UpdateLlvmPhiIncomingRequest): LlvmPhiIncomingDto
+    suspend fun deletePhiIncoming(id: String)
+    suspend fun reorderPhiIncoming(instructionId: String, request: LlvmReorderRequestDto): List<LlvmPhiIncomingDto>
+
+    suspend fun createClause(request: CreateLlvmInstructionClauseRequest): LlvmInstructionClauseDto
+    suspend fun updateClause(id: String, request: UpdateLlvmInstructionClauseRequest): LlvmInstructionClauseDto
+    suspend fun deleteClause(id: String)
+    suspend fun reorderClauses(instructionId: String, request: LlvmReorderRequestDto): List<LlvmInstructionClauseDto>
+
+    suspend fun createBundle(request: CreateLlvmOperandBundleRequest): LlvmOperandBundleDto
+    suspend fun updateBundle(id: String, request: UpdateLlvmOperandBundleRequest): LlvmOperandBundleDto
+    suspend fun deleteBundle(id: String)
+    suspend fun reorderBundles(instructionId: String, request: LlvmReorderRequestDto): List<LlvmOperandBundleDto>
+}
+
+interface LlvmMetadataService {
+    suspend fun createNamed(request: CreateLlvmNamedMetadataRequest): LlvmNamedMetadataDto
+    suspend fun listNamed(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmNamedMetadataDto>
+    suspend fun getNamed(id: String): LlvmNamedMetadataDto
+    suspend fun updateNamed(id: String, request: UpdateLlvmNamedMetadataRequest): LlvmNamedMetadataDto
+    suspend fun deleteNamedCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteNamed(id: String)
+    suspend fun reorderNamed(moduleId: String, request: LlvmReorderRequestDto): List<LlvmNamedMetadataDto>
+
+    suspend fun createNode(request: CreateLlvmMetadataNodeRequest): LlvmMetadataNodeDto
+    suspend fun listNodes(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmMetadataNodeDto>
+    suspend fun getNode(id: String): LlvmMetadataNodeDto
+    suspend fun updateNode(id: String, request: UpdateLlvmMetadataNodeRequest): LlvmMetadataNodeDto
+    suspend fun deleteNodeCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteNode(id: String)
+
+    suspend fun createField(request: CreateLlvmMetadataFieldRequest): LlvmMetadataFieldDto
+    suspend fun updateField(id: String, request: UpdateLlvmMetadataFieldRequest): LlvmMetadataFieldDto
     suspend fun deleteField(id: String)
-    suspend fun reorderFields(entityId: String, request: ReorderRequestDto): List<FieldMetaDto>
-    suspend fun createRelation(request: CreateRelationMetaRequest): RelationMetaDto
-    suspend fun updateRelation(id: String, request: UpdateRelationMetaRequest): RelationMetaDto
-    suspend fun deleteRelation(id: String)
+    suspend fun reorderNodeFields(metadataNodeId: String, request: LlvmReorderRequestDto): List<LlvmMetadataFieldDto>
+    suspend fun reorderNamedFields(namedMetadataId: String, request: LlvmReorderRequestDto): List<LlvmMetadataFieldDto>
+
+    suspend fun createAttachment(request: CreateLlvmMetadataAttachmentRequest): LlvmMetadataAttachmentDto
+    suspend fun updateAttachment(id: String, request: UpdateLlvmMetadataAttachmentRequest): LlvmMetadataAttachmentDto
+    suspend fun deleteAttachment(id: String)
 }
 
-interface DtoMetaService {
-    suspend fun create(request: CreateDtoMetaRequest): DtoMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<DtoMetaDto>
-    suspend fun get(id: String): DtoMetaDto
-    suspend fun update(id: String, request: UpdateDtoMetaRequest): DtoMetaDto
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
-    suspend fun delete(id: String)
-    suspend fun createField(request: CreateDtoFieldMetaRequest): DtoFieldMetaDto
-    suspend fun updateField(id: String, request: UpdateDtoFieldMetaRequest): DtoFieldMetaDto
-    suspend fun deleteField(id: String)
-    suspend fun reorderFields(dtoId: String, request: ReorderRequestDto): List<DtoFieldMetaDto>
+interface LlvmAttributeService {
+    suspend fun createGroup(request: CreateLlvmAttributeGroupRequest): LlvmAttributeGroupDto
+    suspend fun listGroups(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmAttributeGroupDto>
+    suspend fun getGroup(id: String): LlvmAttributeGroupDto
+    suspend fun updateGroup(id: String, request: UpdateLlvmAttributeGroupRequest): LlvmAttributeGroupDto
+    suspend fun deleteGroupCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun deleteGroup(id: String)
+
+    suspend fun createEntry(request: CreateLlvmAttributeEntryRequest): LlvmAttributeEntryDto
+    suspend fun updateEntry(id: String, request: UpdateLlvmAttributeEntryRequest): LlvmAttributeEntryDto
+    suspend fun deleteEntry(id: String)
+    suspend fun reorderEntries(groupId: String, request: LlvmReorderRequestDto): List<LlvmAttributeEntryDto>
 }
 
-interface TemplateMetaService {
-    suspend fun create(request: CreateTemplateMetaRequest): TemplateMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<TemplateMetaDto>
-    suspend fun get(id: String): TemplateMetaDto
-    suspend fun update(id: String, request: UpdateTemplateMetaRequest): TemplateMetaDto
-    suspend fun reorder(contextId: String, request: ReorderRequestDto): List<TemplateMetaDto>
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
-    suspend fun delete(id: String)
-    suspend fun validate(id: String): List<ValidationIssueDto>
+interface LlvmValidationService {
+    suspend fun validateModule(moduleId: String): List<LlvmValidationIssueDto>
 }
 
-interface GenerationTargetMetaService {
-    suspend fun create(request: CreateGenerationTargetMetaRequest): GenerationTargetMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<GenerationTargetMetaDto>
-    suspend fun get(id: String): GenerationTargetMetaDto
-    suspend fun update(id: String, request: UpdateGenerationTargetMetaRequest): GenerationTargetMetaDto
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
-    suspend fun validate(id: String): List<ValidationIssueDto>
+interface LlvmSnapshotService {
+    suspend fun exportModule(moduleId: String): LlvmSnapshotDto
+    suspend fun importSnapshot(snapshot: LlvmSnapshotDto): LlvmSnapshotImportResultDto
+}
+
+interface LlvmLlExportService {
+    suspend fun exportModule(moduleId: String, outputPath: String? = null): LlvmLlExportDto
+}
+
+interface LlvmCompileProfileService {
+    suspend fun create(request: CreateLlvmCompileProfileRequest): LlvmCompileProfileDto
+    suspend fun list(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmCompileProfileDto>
+    suspend fun get(id: String): LlvmCompileProfileDto
+    suspend fun update(id: String, request: UpdateLlvmCompileProfileRequest): LlvmCompileProfileDto
+    suspend fun deleteCheck(id: String): LlvmDeleteCheckResultDto
+    suspend fun validate(id: String): List<LlvmValidationIssueDto>
     suspend fun delete(id: String)
 }
 
-interface EtlWrapperMetaService {
-    suspend fun create(request: CreateEtlWrapperMetaRequest): EtlWrapperMetaDto
-    suspend fun list(search: MetadataSearchRequest = MetadataSearchRequest(nodeTypes = emptySet())): List<EtlWrapperMetaDto>
-    suspend fun get(id: String): EtlWrapperMetaDto
-    suspend fun update(id: String, request: UpdateEtlWrapperMetaRequest): EtlWrapperMetaDto
-    suspend fun deleteCheck(id: String): DeleteCheckResultDto
-    suspend fun validate(id: String): List<ValidationIssueDto>
+interface LlvmCompileJobService {
+    suspend fun create(request: CreateLlvmCompileJobRequest): LlvmCompileJobDto
+    suspend fun list(search: LlvmSearchRequest = LlvmSearchRequest()): List<LlvmCompileJobDto>
+    suspend fun get(id: String): LlvmCompileJobDto
+    suspend fun execute(id: String): LlvmCompileExecutionResultDto
     suspend fun delete(id: String)
+    suspend fun listArtifacts(jobId: String): List<LlvmCompileArtifactDto>
 }

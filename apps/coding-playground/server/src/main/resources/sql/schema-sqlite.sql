@@ -1,185 +1,447 @@
-CREATE TABLE IF NOT EXISTS project_meta (
+CREATE TABLE IF NOT EXISTS llvm_module (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL UNIQUE,
+    source_filename TEXT NOT NULL,
+    target_triple TEXT NOT NULL,
+    data_layout TEXT NOT NULL,
+    module_asm TEXT,
+    module_flags_json TEXT,
     description TEXT,
-    tags_json TEXT,
-    order_index INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS bounded_context_meta (
+CREATE TABLE IF NOT EXISTS llvm_type (
     id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL,
+    module_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    code TEXT NOT NULL,
-    description TEXT,
-    tags_json TEXT,
-    order_index INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(project_id, code),
-    FOREIGN KEY(project_id) REFERENCES project_meta(id) ON DELETE RESTRICT
-);
-
-CREATE TABLE IF NOT EXISTS entity_meta (
-    id TEXT PRIMARY KEY,
-    context_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    code TEXT NOT NULL,
-    table_name TEXT NOT NULL,
-    description TEXT,
-    aggregate_root INTEGER NOT NULL DEFAULT 1,
-    tags_json TEXT,
-    order_index INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(context_id, code),
-    FOREIGN KEY(context_id) REFERENCES bounded_context_meta(id) ON DELETE RESTRICT
-);
-
-CREATE TABLE IF NOT EXISTS field_meta (
-    id TEXT PRIMARY KEY,
-    entity_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    code TEXT NOT NULL,
-    type TEXT NOT NULL,
-    nullable INTEGER NOT NULL DEFAULT 0,
-    list INTEGER NOT NULL DEFAULT 0,
-    id_field INTEGER NOT NULL DEFAULT 0,
-    key_field INTEGER NOT NULL DEFAULT 0,
-    unique_flag INTEGER NOT NULL DEFAULT 0,
-    searchable INTEGER NOT NULL DEFAULT 0,
-    default_value TEXT,
-    description TEXT,
-    order_index INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(entity_id, code),
-    FOREIGN KEY(entity_id) REFERENCES entity_meta(id) ON DELETE RESTRICT
-);
-
-CREATE TABLE IF NOT EXISTS relation_meta (
-    id TEXT PRIMARY KEY,
-    context_id TEXT NOT NULL,
-    source_entity_id TEXT NOT NULL,
-    target_entity_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    code TEXT NOT NULL,
+    symbol TEXT NOT NULL,
     kind TEXT NOT NULL,
-    nullable INTEGER NOT NULL DEFAULT 0,
-    owner INTEGER NOT NULL DEFAULT 1,
-    mapped_by TEXT,
-    source_field_name TEXT,
-    target_field_name TEXT,
-    description TEXT,
+    primitive_width INTEGER,
+    packed INTEGER NOT NULL DEFAULT 0,
+    opaque INTEGER NOT NULL DEFAULT 0,
+    address_space INTEGER,
+    array_length INTEGER,
+    scalable INTEGER NOT NULL DEFAULT 0,
+    variadic INTEGER NOT NULL DEFAULT 0,
+    definition_text TEXT,
+    element_type_ref_id TEXT,
+    return_type_ref_id TEXT,
     order_index INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    UNIQUE(context_id, code),
-    FOREIGN KEY(context_id) REFERENCES bounded_context_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(source_entity_id) REFERENCES entity_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(target_entity_id) REFERENCES entity_meta(id) ON DELETE RESTRICT
+    UNIQUE(module_id, symbol),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(element_type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT,
+    FOREIGN KEY(return_type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS dto_meta (
+CREATE TABLE IF NOT EXISTS llvm_type_member (
     id TEXT PRIMARY KEY,
-    context_id TEXT NOT NULL,
-    entity_id TEXT,
+    type_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    code TEXT NOT NULL,
+    member_type_text TEXT NOT NULL,
+    member_type_ref_id TEXT,
+    metadata_json TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(type_id, order_index),
+    FOREIGN KEY(type_id) REFERENCES llvm_type(id) ON DELETE RESTRICT,
+    FOREIGN KEY(member_type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_comdat (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    selection_kind TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, name),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_attribute_group (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    target_kind TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, name),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_attribute_entry (
+    id TEXT PRIMARY KEY,
+    attribute_group_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(attribute_group_id, order_index),
+    FOREIGN KEY(attribute_group_id) REFERENCES llvm_attribute_group(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_constant (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
     kind TEXT NOT NULL,
-    description TEXT,
-    tags_json TEXT,
+    type_text TEXT NOT NULL,
+    type_ref_id TEXT,
+    literal_text TEXT,
+    expression_text TEXT,
     order_index INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    UNIQUE(context_id, code),
-    FOREIGN KEY(context_id) REFERENCES bounded_context_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(entity_id) REFERENCES entity_meta(id) ON DELETE RESTRICT
+    UNIQUE(module_id, name),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS dto_field_meta (
+CREATE TABLE IF NOT EXISTS llvm_constant_item (
     id TEXT PRIMARY KEY,
-    dto_id TEXT NOT NULL,
-    entity_field_id TEXT,
-    name TEXT NOT NULL,
-    code TEXT NOT NULL,
-    type TEXT NOT NULL,
-    nullable INTEGER NOT NULL DEFAULT 0,
-    list INTEGER NOT NULL DEFAULT 0,
-    source_path TEXT,
-    description TEXT,
+    constant_id TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    value_constant_id TEXT,
+    value_type_ref_id TEXT,
     order_index INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    UNIQUE(dto_id, code),
-    FOREIGN KEY(dto_id) REFERENCES dto_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(entity_field_id) REFERENCES field_meta(id) ON DELETE RESTRICT
+    UNIQUE(constant_id, order_index),
+    FOREIGN KEY(constant_id) REFERENCES llvm_constant(id) ON DELETE RESTRICT,
+    FOREIGN KEY(value_constant_id) REFERENCES llvm_constant(id) ON DELETE RESTRICT,
+    FOREIGN KEY(value_type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS etl_wrapper_meta (
+CREATE TABLE IF NOT EXISTS llvm_inline_asm (
     id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL,
+    module_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    key TEXT NOT NULL,
-    description TEXT,
-    script_body TEXT NOT NULL,
-    enabled INTEGER NOT NULL DEFAULT 1,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(project_id, key),
-    FOREIGN KEY(project_id) REFERENCES project_meta(id) ON DELETE RESTRICT
-);
-
-CREATE TABLE IF NOT EXISTS template_meta (
-    id TEXT PRIMARY KEY,
-    context_id TEXT NOT NULL,
-    etl_wrapper_id TEXT,
-    name TEXT NOT NULL,
-    key TEXT NOT NULL,
-    description TEXT,
-    output_kind TEXT NOT NULL,
-    body TEXT NOT NULL,
-    relative_output_path TEXT NOT NULL,
-    file_name_template TEXT NOT NULL,
-    tags_json TEXT,
+    asm_text TEXT NOT NULL,
+    constraints TEXT NOT NULL,
+    side_effects INTEGER NOT NULL DEFAULT 0,
+    align_stack INTEGER NOT NULL DEFAULT 0,
+    dialect TEXT NOT NULL DEFAULT 'att',
     order_index INTEGER NOT NULL DEFAULT 0,
-    enabled INTEGER NOT NULL DEFAULT 1,
-    managed_by_generator INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    UNIQUE(context_id, key),
-    FOREIGN KEY(context_id) REFERENCES bounded_context_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(etl_wrapper_id) REFERENCES etl_wrapper_meta(id) ON DELETE RESTRICT
+    UNIQUE(module_id, name),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS generation_target_meta (
+CREATE TABLE IF NOT EXISTS llvm_global_variable (
     id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL,
-    context_id TEXT NOT NULL,
+    module_id TEXT NOT NULL,
     name TEXT NOT NULL,
-    key TEXT NOT NULL,
-    description TEXT,
-    output_root TEXT NOT NULL,
-    package_name TEXT NOT NULL,
-    scaffold_preset TEXT NOT NULL,
-    variables_json TEXT,
-    enable_etl INTEGER NOT NULL DEFAULT 0,
-    auto_integrate_composite_build INTEGER NOT NULL DEFAULT 1,
-    managed_marker TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    type_text TEXT NOT NULL,
+    type_ref_id TEXT,
+    linkage TEXT NOT NULL,
+    visibility TEXT NOT NULL,
+    constant INTEGER NOT NULL DEFAULT 0,
+    thread_local INTEGER NOT NULL DEFAULT 0,
+    externally_initialized INTEGER NOT NULL DEFAULT 0,
+    initializer_text TEXT,
+    initializer_constant_id TEXT,
+    section_name TEXT,
+    comdat_id TEXT,
+    alignment INTEGER,
+    address_space INTEGER,
+    attribute_group_ids_json TEXT,
+    metadata_json TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
-    UNIQUE(project_id, key),
-    FOREIGN KEY(project_id) REFERENCES project_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(context_id) REFERENCES bounded_context_meta(id) ON DELETE RESTRICT
+    UNIQUE(module_id, symbol),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT,
+    FOREIGN KEY(initializer_constant_id) REFERENCES llvm_constant(id) ON DELETE RESTRICT,
+    FOREIGN KEY(comdat_id) REFERENCES llvm_comdat(id) ON DELETE RESTRICT
 );
 
-CREATE TABLE IF NOT EXISTS generation_target_template (
-    generation_target_id TEXT NOT NULL,
-    template_id TEXT NOT NULL,
-    PRIMARY KEY(generation_target_id, template_id),
-    FOREIGN KEY(generation_target_id) REFERENCES generation_target_meta(id) ON DELETE RESTRICT,
-    FOREIGN KEY(template_id) REFERENCES template_meta(id) ON DELETE RESTRICT
+CREATE TABLE IF NOT EXISTS llvm_function (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    return_type_text TEXT NOT NULL,
+    return_type_ref_id TEXT,
+    linkage TEXT NOT NULL,
+    visibility TEXT NOT NULL,
+    calling_convention TEXT NOT NULL,
+    variadic INTEGER NOT NULL DEFAULT 0,
+    declaration_only INTEGER NOT NULL DEFAULT 0,
+    gc_name TEXT,
+    personality_text TEXT,
+    comdat_id TEXT,
+    section_name TEXT,
+    attribute_group_ids_json TEXT,
+    metadata_json TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, symbol),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(return_type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT,
+    FOREIGN KEY(comdat_id) REFERENCES llvm_comdat(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_alias (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    aliasee_text TEXT NOT NULL,
+    aliasee_global_id TEXT,
+    linkage TEXT NOT NULL,
+    visibility TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, symbol),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(aliasee_global_id) REFERENCES llvm_global_variable(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_ifunc (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    resolver_function_id TEXT,
+    resolver_text TEXT NOT NULL,
+    linkage TEXT NOT NULL,
+    visibility TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, symbol),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(resolver_function_id) REFERENCES llvm_function(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_function_param (
+    id TEXT PRIMARY KEY,
+    function_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type_text TEXT NOT NULL,
+    type_ref_id TEXT,
+    attributes_json TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(function_id, order_index),
+    FOREIGN KEY(function_id) REFERENCES llvm_function(id) ON DELETE RESTRICT,
+    FOREIGN KEY(type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_basic_block (
+    id TEXT PRIMARY KEY,
+    function_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    label TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(function_id, label),
+    FOREIGN KEY(function_id) REFERENCES llvm_function(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_instruction (
+    id TEXT PRIMARY KEY,
+    block_id TEXT NOT NULL,
+    opcode TEXT NOT NULL,
+    result_symbol TEXT,
+    type_text TEXT,
+    type_ref_id TEXT,
+    text_suffix TEXT,
+    flags_json TEXT,
+    terminator INTEGER NOT NULL DEFAULT 0,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(block_id, order_index),
+    FOREIGN KEY(block_id) REFERENCES llvm_basic_block(id) ON DELETE RESTRICT,
+    FOREIGN KEY(type_ref_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_operand (
+    id TEXT PRIMARY KEY,
+    instruction_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    text TEXT NOT NULL,
+    referenced_instruction_id TEXT,
+    referenced_function_id TEXT,
+    referenced_param_id TEXT,
+    referenced_global_id TEXT,
+    referenced_constant_id TEXT,
+    referenced_block_id TEXT,
+    referenced_metadata_node_id TEXT,
+    referenced_type_id TEXT,
+    referenced_inline_asm_id TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(instruction_id, order_index),
+    FOREIGN KEY(instruction_id) REFERENCES llvm_instruction(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_instruction_id) REFERENCES llvm_instruction(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_function_id) REFERENCES llvm_function(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_param_id) REFERENCES llvm_function_param(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_global_id) REFERENCES llvm_global_variable(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_constant_id) REFERENCES llvm_constant(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_block_id) REFERENCES llvm_basic_block(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_metadata_node_id) REFERENCES llvm_metadata_node(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_type_id) REFERENCES llvm_type(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_inline_asm_id) REFERENCES llvm_inline_asm(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_phi_incoming (
+    id TEXT PRIMARY KEY,
+    instruction_id TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    value_operand_id TEXT,
+    incoming_block_id TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(instruction_id, order_index),
+    FOREIGN KEY(instruction_id) REFERENCES llvm_instruction(id) ON DELETE RESTRICT,
+    FOREIGN KEY(value_operand_id) REFERENCES llvm_operand(id) ON DELETE RESTRICT,
+    FOREIGN KEY(incoming_block_id) REFERENCES llvm_basic_block(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_instruction_clause (
+    id TEXT PRIMARY KEY,
+    instruction_id TEXT NOT NULL,
+    clause_kind TEXT NOT NULL,
+    clause_text TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(instruction_id, order_index),
+    FOREIGN KEY(instruction_id) REFERENCES llvm_instruction(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_operand_bundle (
+    id TEXT PRIMARY KEY,
+    instruction_id TEXT NOT NULL,
+    tag TEXT NOT NULL,
+    values_json TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(instruction_id, order_index),
+    FOREIGN KEY(instruction_id) REFERENCES llvm_instruction(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_named_metadata (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, name),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_metadata_node (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT,
+    kind TEXT NOT NULL,
+    is_distinct INTEGER NOT NULL DEFAULT 0,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_metadata_field (
+    id TEXT PRIMARY KEY,
+    metadata_node_id TEXT,
+    named_metadata_id TEXT,
+    value_kind TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    referenced_node_id TEXT,
+    referenced_constant_id TEXT,
+    referenced_type_id TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(metadata_node_id) REFERENCES llvm_metadata_node(id) ON DELETE RESTRICT,
+    FOREIGN KEY(named_metadata_id) REFERENCES llvm_named_metadata(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_node_id) REFERENCES llvm_metadata_node(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_constant_id) REFERENCES llvm_constant(id) ON DELETE RESTRICT,
+    FOREIGN KEY(referenced_type_id) REFERENCES llvm_type(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_metadata_attachment (
+    id TEXT PRIMARY KEY,
+    metadata_node_id TEXT NOT NULL,
+    target_kind TEXT NOT NULL,
+    function_id TEXT,
+    global_variable_id TEXT,
+    instruction_id TEXT,
+    key TEXT NOT NULL,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(metadata_node_id) REFERENCES llvm_metadata_node(id) ON DELETE RESTRICT,
+    FOREIGN KEY(function_id) REFERENCES llvm_function(id) ON DELETE RESTRICT,
+    FOREIGN KEY(global_variable_id) REFERENCES llvm_global_variable(id) ON DELETE RESTRICT,
+    FOREIGN KEY(instruction_id) REFERENCES llvm_instruction(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_compile_profile (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    target_platform TEXT NOT NULL,
+    output_directory TEXT NOT NULL,
+    opt_path TEXT,
+    opt_args_json TEXT,
+    llc_path TEXT,
+    llc_args_json TEXT,
+    clang_path TEXT,
+    clang_args_json TEXT,
+    environment_json TEXT,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(module_id, name),
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_compile_job (
+    id TEXT PRIMARY KEY,
+    module_id TEXT NOT NULL,
+    profile_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    output_directory TEXT NOT NULL,
+    export_path TEXT,
+    stdout_text TEXT,
+    stderr_text TEXT,
+    exit_code INTEGER,
+    finished_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY(module_id) REFERENCES llvm_module(id) ON DELETE RESTRICT,
+    FOREIGN KEY(profile_id) REFERENCES llvm_compile_profile(id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS llvm_compile_artifact (
+    id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(job_id) REFERENCES llvm_compile_job(id) ON DELETE RESTRICT
 );

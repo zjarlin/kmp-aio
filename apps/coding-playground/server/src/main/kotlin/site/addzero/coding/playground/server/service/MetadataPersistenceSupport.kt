@@ -1,33 +1,11 @@
 package site.addzero.coding.playground.server.service
 
-import kotlinx.serialization.json.Json
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
 import site.addzero.coding.playground.server.config.PlaygroundJdbcTransactionContext
 import site.addzero.coding.playground.server.domain.PlaygroundNotFoundException
-import site.addzero.coding.playground.server.domain.PlaygroundValidationException
-import site.addzero.coding.playground.server.entity.BoundedContextMeta
-import site.addzero.coding.playground.server.entity.DtoFieldMeta
-import site.addzero.coding.playground.server.entity.DtoMeta
-import site.addzero.coding.playground.server.entity.EntityMeta
-import site.addzero.coding.playground.server.entity.EtlWrapperMeta
-import site.addzero.coding.playground.server.entity.FieldMeta
-import site.addzero.coding.playground.server.entity.GenerationTargetMeta
-import site.addzero.coding.playground.server.entity.ProjectMeta
-import site.addzero.coding.playground.server.entity.RelationMeta
-import site.addzero.coding.playground.server.entity.TemplateMeta
-import site.addzero.coding.playground.server.entity.by
-import site.addzero.coding.playground.server.entity.decodeStringList
-import site.addzero.coding.playground.server.entity.encodeStringList
-import site.addzero.coding.playground.server.entity.encodeStringMap
-import site.addzero.coding.playground.server.entity.toDto
-import site.addzero.coding.playground.server.generation.BuiltinTemplateCatalog
-import site.addzero.coding.playground.shared.dto.ContextAggregateDto
-import site.addzero.coding.playground.shared.dto.CreateTemplateMetaRequest
-import site.addzero.coding.playground.shared.dto.DeleteCheckResultDto
-import site.addzero.coding.playground.shared.dto.MetadataSearchRequest
-import site.addzero.coding.playground.shared.dto.ProjectAggregateDto
+import site.addzero.coding.playground.server.entity.*
 import java.sql.Connection
 import java.time.LocalDateTime
 import java.util.UUID
@@ -37,551 +15,284 @@ import javax.sql.DataSource
 class MetadataPersistenceSupport(
     val sqlClient: KSqlClient,
     private val dataSource: DataSource,
-    val json: Json,
-    private val builtinTemplateCatalog: BuiltinTemplateCatalog,
 ) {
     fun newId(): String = UUID.randomUUID().toString()
 
     fun now(): LocalDateTime = LocalDateTime.now()
 
-    fun projectRef(id: String): ProjectMeta = new(ProjectMeta::class).by { this.id = id }
-    fun contextRef(id: String): BoundedContextMeta = new(BoundedContextMeta::class).by { this.id = id }
-    fun entityRef(id: String): EntityMeta = new(EntityMeta::class).by { this.id = id }
-    fun fieldRef(id: String): FieldMeta = new(FieldMeta::class).by { this.id = id }
-    fun dtoRef(id: String): DtoMeta = new(DtoMeta::class).by { this.id = id }
-    fun etlWrapperRef(id: String): EtlWrapperMeta = new(EtlWrapperMeta::class).by { this.id = id }
+    fun moduleRef(id: String): LlvmModule = new(LlvmModule::class).by { this.id = id }
+    fun typeRef(id: String): LlvmType = new(LlvmType::class).by { this.id = id }
+    fun comdatRef(id: String): LlvmComdat = new(LlvmComdat::class).by { this.id = id }
+    fun attributeGroupRef(id: String): LlvmAttributeGroup = new(LlvmAttributeGroup::class).by { this.id = id }
+    fun constantRef(id: String): LlvmConstant = new(LlvmConstant::class).by { this.id = id }
+    fun inlineAsmRef(id: String): LlvmInlineAsm = new(LlvmInlineAsm::class).by { this.id = id }
+    fun globalRef(id: String): LlvmGlobalVariable = new(LlvmGlobalVariable::class).by { this.id = id }
+    fun functionRef(id: String): LlvmFunction = new(LlvmFunction::class).by { this.id = id }
+    fun paramRef(id: String): LlvmFunctionParam = new(LlvmFunctionParam::class).by { this.id = id }
+    fun blockRef(id: String): LlvmBasicBlock = new(LlvmBasicBlock::class).by { this.id = id }
+    fun instructionRef(id: String): LlvmInstruction = new(LlvmInstruction::class).by { this.id = id }
+    fun operandRef(id: String): LlvmOperand = new(LlvmOperand::class).by { this.id = id }
+    fun metadataNodeRef(id: String): LlvmMetadataNode = new(LlvmMetadataNode::class).by { this.id = id }
+    fun namedMetadataRef(id: String): LlvmNamedMetadata = new(LlvmNamedMetadata::class).by { this.id = id }
+    fun compileProfileRef(id: String): LlvmCompileProfile = new(LlvmCompileProfile::class).by { this.id = id }
+    fun compileJobRef(id: String): LlvmCompileJob = new(LlvmCompileJob::class).by { this.id = id }
 
-    fun <T> inTransaction(block: () -> T): T {
-        return PlaygroundJdbcTransactionContext.withTransaction(dataSource, block)
-    }
+    fun <T> inTransaction(block: () -> T): T = PlaygroundJdbcTransactionContext.withTransaction(dataSource, block)
 
     fun <T> withJdbcConnection(block: (Connection) -> T): T {
         val current = PlaygroundJdbcTransactionContext.connectionOrNull()
-        if (current != null) {
-            return block(current)
-        }
-        return dataSource.connection.use(block)
-    }
-
-    fun projectOrThrow(id: String): ProjectMeta {
-        return sqlClient.findById(ProjectMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Project '$id' not found")
-    }
-
-    fun contextOrThrow(id: String): BoundedContextMeta {
-        return sqlClient.findById(BoundedContextMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Context '$id' not found")
-    }
-
-    fun entityOrThrow(id: String): EntityMeta {
-        return sqlClient.findById(EntityMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Entity '$id' not found")
-    }
-
-    fun fieldOrThrow(id: String): FieldMeta {
-        return sqlClient.findById(FieldMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Field '$id' not found")
-    }
-
-    fun relationOrThrow(id: String): RelationMeta {
-        return sqlClient.findById(RelationMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Relation '$id' not found")
-    }
-
-    fun dtoOrThrow(id: String): DtoMeta {
-        return sqlClient.findById(DtoMeta::class, id)
-            ?: throw PlaygroundNotFoundException("DTO '$id' not found")
-    }
-
-    fun dtoFieldOrThrow(id: String): DtoFieldMeta {
-        return sqlClient.findById(DtoFieldMeta::class, id)
-            ?: throw PlaygroundNotFoundException("DTO field '$id' not found")
-    }
-
-    fun templateOrThrow(id: String): TemplateMeta {
-        return sqlClient.findById(TemplateMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Template '$id' not found")
-    }
-
-    fun targetOrThrow(id: String): GenerationTargetMeta {
-        return sqlClient.findById(GenerationTargetMeta::class, id)
-            ?: throw PlaygroundNotFoundException("Generation target '$id' not found")
-    }
-
-    fun etlWrapperOrThrow(id: String): EtlWrapperMeta {
-        return sqlClient.findById(EtlWrapperMeta::class, id)
-            ?: throw PlaygroundNotFoundException("ETL wrapper '$id' not found")
-    }
-
-    fun listProjects(): List<ProjectMeta> {
-        return sqlClient.createQuery(ProjectMeta::class) {
-            select(table)
-        }.execute().sortedBy { it.orderIndex }
-    }
-
-    fun listContexts(projectId: String? = null): List<BoundedContextMeta> {
-        val items = sqlClient.createQuery(BoundedContextMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { projectId == null || it.projectId == projectId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listEntities(contextId: String? = null): List<EntityMeta> {
-        val items = sqlClient.createQuery(EntityMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { contextId == null || it.contextId == contextId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listFields(entityId: String? = null): List<FieldMeta> {
-        val items = sqlClient.createQuery(FieldMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { entityId == null || it.entityId == entityId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listRelations(contextId: String? = null): List<RelationMeta> {
-        val items = sqlClient.createQuery(RelationMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { contextId == null || it.contextId == contextId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listDtos(contextId: String? = null): List<DtoMeta> {
-        val items = sqlClient.createQuery(DtoMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { contextId == null || it.contextId == contextId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listDtoFields(dtoId: String? = null): List<DtoFieldMeta> {
-        val items = sqlClient.createQuery(DtoFieldMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { dtoId == null || it.dtoId == dtoId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listTemplates(contextId: String? = null): List<TemplateMeta> {
-        val items = sqlClient.createQuery(TemplateMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { contextId == null || it.contextId == contextId }
-            .sortedBy { it.orderIndex }
-            .toList()
-    }
-
-    fun listTargets(projectId: String? = null, contextId: String? = null): List<GenerationTargetMeta> {
-        val items = sqlClient.createQuery(GenerationTargetMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { projectId == null || it.projectId == projectId }
-            .filter { contextId == null || it.contextId == contextId }
-            .sortedBy { it.name.lowercase() }
-            .toList()
-    }
-
-    fun listEtlWrappers(projectId: String? = null): List<EtlWrapperMeta> {
-        val items = sqlClient.createQuery(EtlWrapperMeta::class) {
-            select(table)
-        }.execute()
-        return items
-            .asSequence()
-            .filter { projectId == null || it.projectId == projectId }
-            .sortedBy { it.name.lowercase() }
-            .toList()
-    }
-
-    fun nextContextOrder(projectId: String): Int = listContexts(projectId).size
-    fun nextEntityOrder(contextId: String): Int = listEntities(contextId).size
-    fun nextFieldOrder(entityId: String): Int = listFields(entityId).size
-    fun nextRelationOrder(contextId: String): Int = listRelations(contextId).size
-    fun nextDtoOrder(contextId: String): Int = listDtos(contextId).size
-    fun nextDtoFieldOrder(dtoId: String): Int = listDtoFields(dtoId).size
-    fun nextTemplateOrder(contextId: String): Int = listTemplates(contextId).size
-
-    fun templateIdsForTarget(targetId: String): List<String> {
-        return withJdbcConnection { connection ->
-            connection.prepareStatement(
-                """
-                SELECT gtt.template_id
-                FROM generation_target_template gtt
-                JOIN template_meta tm ON tm.id = gtt.template_id
-                WHERE gtt.generation_target_id = ?
-                ORDER BY tm.order_index ASC, tm.name ASC
-                """.trimIndent(),
-            ).use { statement ->
-                statement.setString(1, targetId)
-                statement.executeQuery().use { resultSet ->
-                    buildList {
-                        while (resultSet.next()) {
-                            add(resultSet.getString(1))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fun syncTargetTemplates(targetId: String, templateIds: List<String>) {
-        inTransaction {
-            withJdbcConnection { connection ->
-                connection.prepareStatement(
-                    "DELETE FROM generation_target_template WHERE generation_target_id = ?",
-                ).use { statement ->
-                    statement.setString(1, targetId)
-                    statement.executeUpdate()
-                }
-                connection.prepareStatement(
-                    "INSERT INTO generation_target_template(generation_target_id, template_id) VALUES(?, ?)",
-                ).use { statement ->
-                    templateIds.distinct().forEach { templateId ->
-                        statement.setString(1, targetId)
-                        statement.setString(2, templateId)
-                        statement.addBatch()
-                    }
-                    statement.executeBatch()
-                }
-            }
-        }
-    }
-
-    fun deleteTargetTemplateLinksByTarget(targetId: String) {
-        executeUpdate("DELETE FROM generation_target_template WHERE generation_target_id = ?", targetId)
-    }
-
-    fun deleteTargetTemplateLinksByTemplate(templateId: String) {
-        executeUpdate("DELETE FROM generation_target_template WHERE template_id = ?", templateId)
-    }
-
-    fun countTargetTemplateReferences(templateId: String): Int {
-        return withJdbcConnection { connection ->
-            connection.prepareStatement(
-                "SELECT COUNT(*) FROM generation_target_template WHERE template_id = ?",
-            ).use { statement ->
-                statement.setString(1, templateId)
-                statement.executeQuery().use { resultSet ->
-                    if (resultSet.next()) resultSet.getInt(1) else 0
-                }
-            }
-        }
-    }
-
-    fun assertProjectSlugUnique(slug: String, currentId: String? = null) {
-        val conflicts = listProjects().filter { it.slug == slug && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Project slug '$slug' already exists")
-        }
-    }
-
-    fun assertContextCodeUnique(projectId: String, code: String, currentId: String? = null) {
-        val conflicts = listContexts(projectId).filter { it.code == code && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Context code '$code' already exists in project")
-        }
-    }
-
-    fun assertEntityCodeUnique(contextId: String, code: String, currentId: String? = null) {
-        val conflicts = listEntities(contextId).filter { it.code == code && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Entity code '$code' already exists in context")
-        }
-    }
-
-    fun assertFieldCodeUnique(entityId: String, code: String, currentId: String? = null) {
-        val conflicts = listFields(entityId).filter { it.code == code && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Field code '$code' already exists in entity")
-        }
-    }
-
-    fun assertRelationCodeUnique(contextId: String, code: String, currentId: String? = null) {
-        val conflicts = listRelations(contextId).filter { it.code == code && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Relation code '$code' already exists in context")
-        }
-    }
-
-    fun assertDtoCodeUnique(contextId: String, code: String, currentId: String? = null) {
-        val conflicts = listDtos(contextId).filter { it.code == code && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("DTO code '$code' already exists in context")
-        }
-    }
-
-    fun assertDtoFieldCodeUnique(dtoId: String, code: String, currentId: String? = null) {
-        val conflicts = listDtoFields(dtoId).filter { it.code == code && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("DTO field code '$code' already exists in DTO")
-        }
-    }
-
-    fun assertTemplateKeyUnique(contextId: String, key: String, currentId: String? = null) {
-        val conflicts = listTemplates(contextId).filter { it.key == key && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Template key '$key' already exists in context")
-        }
-    }
-
-    fun assertTargetKeyUnique(projectId: String, key: String, currentId: String? = null) {
-        val conflicts = listTargets(projectId = projectId).filter { it.key == key && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("Generation target key '$key' already exists in project")
-        }
-    }
-
-    fun assertEtlKeyUnique(projectId: String, key: String, currentId: String? = null) {
-        val conflicts = listEtlWrappers(projectId).filter { it.key == key && it.id != currentId }
-        if (conflicts.isNotEmpty()) {
-            throw PlaygroundValidationException("ETL wrapper key '$key' already exists in project")
-        }
-    }
-
-    fun validateName(value: String, label: String) {
-        if (value.isBlank()) {
-            throw PlaygroundValidationException("$label cannot be blank")
-        }
-    }
-
-    fun validateFieldType(value: String) {
-        val supported = site.addzero.coding.playground.shared.dto.FieldType.entries.map { it.name }.toSet()
-        if (value !in supported) {
-            throw PlaygroundValidationException("Unsupported field type '$value'")
-        }
-    }
-
-    fun validateDtoKind(value: String) {
-        val supported = site.addzero.coding.playground.shared.dto.DtoKind.entries.map { it.name }.toSet()
-        if (value !in supported) {
-            throw PlaygroundValidationException("Unsupported DTO kind '$value'")
-        }
-    }
-
-    fun validateRelationKind(value: String) {
-        val supported = site.addzero.coding.playground.shared.dto.RelationKind.entries.map { it.name }.toSet()
-        if (value !in supported) {
-            throw PlaygroundValidationException("Unsupported relation kind '$value'")
-        }
-    }
-
-    fun validateTemplateOutputKind(value: String) {
-        val supported = site.addzero.coding.playground.shared.dto.TemplateOutputKind.entries.map { it.name }.toSet()
-        if (value !in supported) {
-            throw PlaygroundValidationException("Unsupported template output kind '$value'")
-        }
-    }
-
-    fun validateScaffoldPreset(value: String) {
-        val supported = site.addzero.coding.playground.shared.dto.ScaffoldPreset.entries.map { it.name }.toSet()
-        if (value !in supported) {
-            throw PlaygroundValidationException("Unsupported scaffold preset '$value'")
-        }
-    }
-
-    fun ensureEntityDeleteAllowed(entityId: String): DeleteCheckResultDto {
-        val relationCount = listRelations().count { it.sourceEntityId == entityId || it.targetEntityId == entityId }
-        val dtoFieldCount = listDtoFields().count { it.entityFieldId != null && listFields(entityId).any { field -> field.id == it.entityFieldId } }
-        val reasons = buildList {
-            if (relationCount > 0) {
-                add("Entity is referenced by $relationCount relation(s)")
-            }
-            if (dtoFieldCount > 0) {
-                add("Entity fields are referenced by $dtoFieldCount DTO field(s)")
-            }
-        }
-        return DeleteCheckResultDto(
-            allowed = reasons.isEmpty(),
-            reasons = reasons,
-        )
-    }
-
-    fun ensureTemplateDeleteAllowed(templateId: String): DeleteCheckResultDto {
-        val count = countTargetTemplateReferences(templateId)
-        return if (count == 0) {
-            DeleteCheckResultDto(allowed = true)
+        return if (current != null) {
+            block(current)
         } else {
-            DeleteCheckResultDto(
-                allowed = false,
-                reasons = listOf("Template is still referenced by $count generation target(s)"),
-            )
+            dataSource.connection.use(block)
         }
     }
 
-    fun ensureProjectContextAlignment(projectId: String, contextId: String) {
-        val context = contextOrThrow(contextId)
-        if (context.projectId != projectId) {
-            throw PlaygroundValidationException("Context '$contextId' does not belong to project '$projectId'")
-        }
-    }
+    fun moduleOrThrow(id: String): LlvmModule =
+        sqlClient.findById(LlvmModule::class, id) ?: throw PlaygroundNotFoundException("LLVM module '$id' not found")
 
-    fun seedBuiltinTemplates(contextId: String) {
-        if (listTemplates(contextId).isNotEmpty()) {
-            return
-        }
-        inTransaction {
-            builtinTemplateCatalog.createRequests(contextId).forEachIndexed { index, request ->
-                val now = now()
-                val entity = new(TemplateMeta::class).by {
-                    id = newId()
-                    context = contextRef(request.contextId)
-                    etlWrapper = request.etlWrapperId?.let(::etlWrapperRef)
-                    name = request.name
-                    key = request.key
-                    description = request.description
-                    outputKind = request.outputKind.name
-                    body = request.body
-                    relativeOutputPath = request.relativeOutputPath
-                    fileNameTemplate = request.fileNameTemplate
-                    tagsJson = json.encodeStringList(request.tags)
-                    orderIndex = index
-                    enabled = request.enabled
-                    managedByGenerator = request.managedByGenerator
-                    createdAt = now
-                    updatedAt = now
+    fun typeOrThrow(id: String): LlvmType =
+        sqlClient.findById(LlvmType::class, id) ?: throw PlaygroundNotFoundException("LLVM type '$id' not found")
+
+    fun typeMemberOrThrow(id: String): LlvmTypeMember =
+        sqlClient.findById(LlvmTypeMember::class, id) ?: throw PlaygroundNotFoundException("LLVM type member '$id' not found")
+
+    fun comdatOrThrow(id: String): LlvmComdat =
+        sqlClient.findById(LlvmComdat::class, id) ?: throw PlaygroundNotFoundException("LLVM comdat '$id' not found")
+
+    fun attributeGroupOrThrow(id: String): LlvmAttributeGroup =
+        sqlClient.findById(LlvmAttributeGroup::class, id) ?: throw PlaygroundNotFoundException("LLVM attribute group '$id' not found")
+
+    fun attributeEntryOrThrow(id: String): LlvmAttributeEntry =
+        sqlClient.findById(LlvmAttributeEntry::class, id) ?: throw PlaygroundNotFoundException("LLVM attribute entry '$id' not found")
+
+    fun globalOrThrow(id: String): LlvmGlobalVariable =
+        sqlClient.findById(LlvmGlobalVariable::class, id) ?: throw PlaygroundNotFoundException("LLVM global '$id' not found")
+
+    fun aliasOrThrow(id: String): LlvmAlias =
+        sqlClient.findById(LlvmAlias::class, id) ?: throw PlaygroundNotFoundException("LLVM alias '$id' not found")
+
+    fun ifuncOrThrow(id: String): LlvmIfunc =
+        sqlClient.findById(LlvmIfunc::class, id) ?: throw PlaygroundNotFoundException("LLVM ifunc '$id' not found")
+
+    fun inlineAsmOrThrow(id: String): LlvmInlineAsm =
+        sqlClient.findById(LlvmInlineAsm::class, id) ?: throw PlaygroundNotFoundException("LLVM inline asm '$id' not found")
+
+    fun constantOrThrow(id: String): LlvmConstant =
+        sqlClient.findById(LlvmConstant::class, id) ?: throw PlaygroundNotFoundException("LLVM constant '$id' not found")
+
+    fun constantItemOrThrow(id: String): LlvmConstantItem =
+        sqlClient.findById(LlvmConstantItem::class, id) ?: throw PlaygroundNotFoundException("LLVM constant item '$id' not found")
+
+    fun functionOrThrow(id: String): LlvmFunction =
+        sqlClient.findById(LlvmFunction::class, id) ?: throw PlaygroundNotFoundException("LLVM function '$id' not found")
+
+    fun paramOrThrow(id: String): LlvmFunctionParam =
+        sqlClient.findById(LlvmFunctionParam::class, id) ?: throw PlaygroundNotFoundException("LLVM function param '$id' not found")
+
+    fun blockOrThrow(id: String): LlvmBasicBlock =
+        sqlClient.findById(LlvmBasicBlock::class, id) ?: throw PlaygroundNotFoundException("LLVM basic block '$id' not found")
+
+    fun instructionOrThrow(id: String): LlvmInstruction =
+        sqlClient.findById(LlvmInstruction::class, id) ?: throw PlaygroundNotFoundException("LLVM instruction '$id' not found")
+
+    fun operandOrThrow(id: String): LlvmOperand =
+        sqlClient.findById(LlvmOperand::class, id) ?: throw PlaygroundNotFoundException("LLVM operand '$id' not found")
+
+    fun phiIncomingOrThrow(id: String): LlvmPhiIncoming =
+        sqlClient.findById(LlvmPhiIncoming::class, id) ?: throw PlaygroundNotFoundException("LLVM phi incoming '$id' not found")
+
+    fun clauseOrThrow(id: String): LlvmInstructionClause =
+        sqlClient.findById(LlvmInstructionClause::class, id) ?: throw PlaygroundNotFoundException("LLVM instruction clause '$id' not found")
+
+    fun bundleOrThrow(id: String): LlvmOperandBundle =
+        sqlClient.findById(LlvmOperandBundle::class, id) ?: throw PlaygroundNotFoundException("LLVM operand bundle '$id' not found")
+
+    fun namedMetadataOrThrow(id: String): LlvmNamedMetadata =
+        sqlClient.findById(LlvmNamedMetadata::class, id) ?: throw PlaygroundNotFoundException("LLVM named metadata '$id' not found")
+
+    fun metadataNodeOrThrow(id: String): LlvmMetadataNode =
+        sqlClient.findById(LlvmMetadataNode::class, id) ?: throw PlaygroundNotFoundException("LLVM metadata node '$id' not found")
+
+    fun metadataFieldOrThrow(id: String): LlvmMetadataField =
+        sqlClient.findById(LlvmMetadataField::class, id) ?: throw PlaygroundNotFoundException("LLVM metadata field '$id' not found")
+
+    fun metadataAttachmentOrThrow(id: String): LlvmMetadataAttachment =
+        sqlClient.findById(LlvmMetadataAttachment::class, id) ?: throw PlaygroundNotFoundException("LLVM metadata attachment '$id' not found")
+
+    fun compileProfileOrThrow(id: String): LlvmCompileProfile =
+        sqlClient.findById(LlvmCompileProfile::class, id) ?: throw PlaygroundNotFoundException("LLVM compile profile '$id' not found")
+
+    fun compileJobOrThrow(id: String): LlvmCompileJob =
+        sqlClient.findById(LlvmCompileJob::class, id) ?: throw PlaygroundNotFoundException("LLVM compile job '$id' not found")
+
+    fun compileArtifactOrThrow(id: String): LlvmCompileArtifact =
+        sqlClient.findById(LlvmCompileArtifact::class, id) ?: throw PlaygroundNotFoundException("LLVM compile artifact '$id' not found")
+
+    fun listModules(): List<LlvmModule> = sqlClient.createQuery(LlvmModule::class) { select(table) }
+        .execute()
+        .sortedBy { it.name.lowercase() }
+
+    fun listTypes(moduleId: String? = null): List<LlvmType> = sqlClient.createQuery(LlvmType::class) { select(table) }
+        .execute()
+        .filter { moduleId == null || it.moduleId == moduleId }
+        .sortedBy { it.orderIndex }
+
+    fun listTypeMembers(typeId: String? = null): List<LlvmTypeMember> =
+        sqlClient.createQuery(LlvmTypeMember::class) { select(table) }
+            .execute()
+            .filter { typeId == null || it.typeId == typeId }
+            .sortedBy { it.orderIndex }
+
+    fun listComdats(moduleId: String? = null): List<LlvmComdat> = sqlClient.createQuery(LlvmComdat::class) { select(table) }
+        .execute()
+        .filter { moduleId == null || it.moduleId == moduleId }
+        .sortedBy { it.orderIndex }
+
+    fun listAttributeGroups(moduleId: String? = null): List<LlvmAttributeGroup> =
+        sqlClient.createQuery(LlvmAttributeGroup::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listAttributeEntries(groupId: String? = null): List<LlvmAttributeEntry> =
+        sqlClient.createQuery(LlvmAttributeEntry::class) { select(table) }
+            .execute()
+            .filter { groupId == null || it.attributeGroupId == groupId }
+            .sortedBy { it.orderIndex }
+
+    fun listGlobals(moduleId: String? = null): List<LlvmGlobalVariable> =
+        sqlClient.createQuery(LlvmGlobalVariable::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listAliases(moduleId: String? = null): List<LlvmAlias> = sqlClient.createQuery(LlvmAlias::class) { select(table) }
+        .execute()
+        .filter { moduleId == null || it.moduleId == moduleId }
+        .sortedBy { it.orderIndex }
+
+    fun listIfuncs(moduleId: String? = null): List<LlvmIfunc> = sqlClient.createQuery(LlvmIfunc::class) { select(table) }
+        .execute()
+        .filter { moduleId == null || it.moduleId == moduleId }
+        .sortedBy { it.orderIndex }
+
+    fun listInlineAsms(moduleId: String? = null): List<LlvmInlineAsm> =
+        sqlClient.createQuery(LlvmInlineAsm::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listConstants(moduleId: String? = null): List<LlvmConstant> =
+        sqlClient.createQuery(LlvmConstant::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listConstantItems(constantId: String? = null): List<LlvmConstantItem> =
+        sqlClient.createQuery(LlvmConstantItem::class) { select(table) }
+            .execute()
+            .filter { constantId == null || it.constantId == constantId }
+            .sortedBy { it.orderIndex }
+
+    fun listFunctions(moduleId: String? = null): List<LlvmFunction> =
+        sqlClient.createQuery(LlvmFunction::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listParams(functionId: String? = null): List<LlvmFunctionParam> =
+        sqlClient.createQuery(LlvmFunctionParam::class) { select(table) }
+            .execute()
+            .filter { functionId == null || it.functionId == functionId }
+            .sortedBy { it.orderIndex }
+
+    fun listBlocks(functionId: String? = null): List<LlvmBasicBlock> =
+        sqlClient.createQuery(LlvmBasicBlock::class) { select(table) }
+            .execute()
+            .filter { functionId == null || it.functionId == functionId }
+            .sortedBy { it.orderIndex }
+
+    fun listInstructions(blockId: String? = null): List<LlvmInstruction> =
+        sqlClient.createQuery(LlvmInstruction::class) { select(table) }
+            .execute()
+            .filter { blockId == null || it.blockId == blockId }
+            .sortedBy { it.orderIndex }
+
+    fun listOperands(instructionId: String? = null): List<LlvmOperand> =
+        sqlClient.createQuery(LlvmOperand::class) { select(table) }
+            .execute()
+            .filter { instructionId == null || it.instructionId == instructionId }
+            .sortedBy { it.orderIndex }
+
+    fun listPhiIncoming(instructionId: String? = null): List<LlvmPhiIncoming> =
+        sqlClient.createQuery(LlvmPhiIncoming::class) { select(table) }
+            .execute()
+            .filter { instructionId == null || it.instructionId == instructionId }
+            .sortedBy { it.orderIndex }
+
+    fun listClauses(instructionId: String? = null): List<LlvmInstructionClause> =
+        sqlClient.createQuery(LlvmInstructionClause::class) { select(table) }
+            .execute()
+            .filter { instructionId == null || it.instructionId == instructionId }
+            .sortedBy { it.orderIndex }
+
+    fun listBundles(instructionId: String? = null): List<LlvmOperandBundle> =
+        sqlClient.createQuery(LlvmOperandBundle::class) { select(table) }
+            .execute()
+            .filter { instructionId == null || it.instructionId == instructionId }
+            .sortedBy { it.orderIndex }
+
+    fun listNamedMetadata(moduleId: String? = null): List<LlvmNamedMetadata> =
+        sqlClient.createQuery(LlvmNamedMetadata::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listMetadataNodes(moduleId: String? = null): List<LlvmMetadataNode> =
+        sqlClient.createQuery(LlvmMetadataNode::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
+
+    fun listMetadataFields(metadataNodeId: String? = null, namedMetadataId: String? = null): List<LlvmMetadataField> =
+        sqlClient.createQuery(LlvmMetadataField::class) { select(table) }
+            .execute()
+            .filter { metadataNodeId == null || it.metadataNodeId == metadataNodeId }
+            .filter { namedMetadataId == null || it.namedMetadataId == namedMetadataId }
+            .sortedBy { it.orderIndex }
+
+    fun listMetadataAttachments(moduleId: String? = null): List<LlvmMetadataAttachment> =
+        sqlClient.createQuery(LlvmMetadataAttachment::class) { select(table) }
+            .execute()
+            .filter { attachment ->
+                if (moduleId == null) {
+                    true
+                } else {
+                    val functionModule = attachment.functionId?.let(::functionOrThrow)?.moduleId
+                    val globalModule = attachment.globalVariableId?.let(::globalOrThrow)?.moduleId
+                    val instructionModule = attachment.instructionId?.let(::instructionOrThrow)?.blockId?.let(::blockOrThrow)?.functionId?.let(::functionOrThrow)?.moduleId
+                    moduleId == functionModule || moduleId == globalModule || moduleId == instructionModule
                 }
-                sqlClient.save(entity)
             }
-        }
-    }
+            .sortedBy { it.orderIndex }
 
-    fun buildContextAggregate(contextId: String): ContextAggregateDto {
-        val context = contextOrThrow(contextId)
-        val entities = listEntities(contextId).map { it.toDto(json) }
-        val fields = entities.flatMap { entity -> listFields(entity.id).map { it.toDto() } }
-        val relations = listRelations(contextId).map { it.toDto() }
-        val dtos = listDtos(contextId).map { it.toDto(json) }
-        val dtoFields = dtos.flatMap { dto -> listDtoFields(dto.id).map { it.toDto() } }
-        val templates = listTemplates(contextId).map { it.toDto(json) }
-        val targets = listTargets(contextId = contextId).map { it.toDto(json, templateIdsForTarget(it.id)) }
-        return ContextAggregateDto(
-            context = context.toDto(json),
-            entities = entities,
-            fields = fields,
-            relations = relations,
-            dtos = dtos,
-            dtoFields = dtoFields,
-            templates = templates,
-            generationTargets = targets,
-        )
-    }
+    fun listCompileProfiles(moduleId: String? = null): List<LlvmCompileProfile> =
+        sqlClient.createQuery(LlvmCompileProfile::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedBy { it.orderIndex }
 
-    fun buildProjectAggregate(projectId: String): ProjectAggregateDto {
-        val project = projectOrThrow(projectId)
-        val contexts = listContexts(projectId).map { buildContextAggregate(it.id) }
-        val etlWrappers = listEtlWrappers(projectId).map { it.toDto() }
-        return ProjectAggregateDto(
-            project = project.toDto(json),
-            contexts = contexts,
-            etlWrappers = etlWrappers,
-        )
-    }
+    fun listCompileJobs(moduleId: String? = null): List<LlvmCompileJob> =
+        sqlClient.createQuery(LlvmCompileJob::class) { select(table) }
+            .execute()
+            .filter { moduleId == null || it.moduleId == moduleId }
+            .sortedByDescending { it.createdAt }
 
-    fun matchesSearch(search: MetadataSearchRequest, title: String, tags: List<String>, projectId: String? = null, contextId: String? = null): Boolean {
-        val queryMatches = search.query.isNullOrBlank() || title.contains(search.query!!, ignoreCase = true)
-        val tagMatches = search.tag.isNullOrBlank() || tags.any { it.equals(search.tag, ignoreCase = true) }
-        val projectMatches = search.projectId == null || projectId == search.projectId
-        val contextMatches = search.contextId == null || contextId == search.contextId
-        return queryMatches && tagMatches && projectMatches && contextMatches
-    }
+    fun listCompileArtifacts(jobId: String? = null): List<LlvmCompileArtifact> =
+        sqlClient.createQuery(LlvmCompileArtifact::class) { select(table) }
+            .execute()
+            .filter { jobId == null || it.jobId == jobId }
 
-    fun deleteField(id: String) {
-        val references = listDtoFields().count { it.entityFieldId == id }
-        if (references > 0) {
-            throw PlaygroundValidationException("Field '$id' is still referenced by $references DTO field(s)")
-        }
-        sqlClient.deleteById(FieldMeta::class, id)
-    }
-
-    fun deleteDtoField(id: String) {
-        sqlClient.deleteById(DtoFieldMeta::class, id)
-    }
-
-    fun deleteDto(id: String) {
-        listDtoFields(id).forEach { sqlClient.deleteById(DtoFieldMeta::class, it.id) }
-        sqlClient.deleteById(DtoMeta::class, id)
-    }
-
-    fun deleteEntity(id: String) {
-        listFields(id).forEach { deleteField(it.id) }
-        sqlClient.deleteById(EntityMeta::class, id)
-    }
-
-    fun deleteContextCascade(id: String) {
-        listTargets(contextId = id).forEach {
-            deleteTargetTemplateLinksByTarget(it.id)
-            sqlClient.deleteById(GenerationTargetMeta::class, it.id)
-        }
-        listTemplates(id).forEach {
-            deleteTargetTemplateLinksByTemplate(it.id)
-            sqlClient.deleteById(TemplateMeta::class, it.id)
-        }
-        listDtos(id).forEach { deleteDto(it.id) }
-        listRelations(id).forEach { sqlClient.deleteById(RelationMeta::class, it.id) }
-        listEntities(id).forEach { deleteEntity(it.id) }
-        sqlClient.deleteById(BoundedContextMeta::class, id)
-    }
-
-    fun deleteProjectCascade(id: String) {
-        listContexts(id).forEach { deleteContextCascade(it.id) }
-        listEtlWrappers(id).forEach { sqlClient.deleteById(EtlWrapperMeta::class, it.id) }
-        sqlClient.deleteById(ProjectMeta::class, id)
-    }
-
-    fun countCascadeSummaryForProject(id: String): List<String> {
-        val contextCount = listContexts(id).size
-        val entityCount = listContexts(id).sumOf { listEntities(it.id).size }
-        val dtoCount = listContexts(id).sumOf { listDtos(it.id).size }
-        val templateCount = listContexts(id).sumOf { listTemplates(it.id).size }
-        return listOf(
-            "Deleting this project will cascade to $contextCount context(s)",
-            "Deleting this project will cascade to $entityCount entity metadata record(s)",
-            "Deleting this project will cascade to $dtoCount DTO metadata record(s)",
-            "Deleting this project will cascade to $templateCount template record(s)",
-        )
-    }
-
-    fun countCascadeSummaryForContext(id: String): List<String> {
-        return listOf(
-            "Deleting this context will cascade to ${listEntities(id).size} entity metadata record(s)",
-            "Deleting this context will cascade to ${listDtos(id).size} DTO metadata record(s)",
-            "Deleting this context will cascade to ${listTemplates(id).size} template record(s)",
-            "Deleting this context will cascade to ${listTargets(contextId = id).size} generation target(s)",
-        )
-    }
-
-    private fun executeUpdate(sql: String, value: String) {
-        withJdbcConnection { connection ->
-            connection.prepareStatement(sql).use { statement ->
-                statement.setString(1, value)
-                statement.executeUpdate()
-            }
-        }
-    }
+    fun nextOrder(existing: List<*>): Int = existing.size
 }

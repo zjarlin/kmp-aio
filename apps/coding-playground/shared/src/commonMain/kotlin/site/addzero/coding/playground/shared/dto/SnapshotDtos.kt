@@ -3,23 +3,39 @@ package site.addzero.coding.playground.shared.dto
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class MetadataSnapshotDto(
+data class LlvmSnapshotDto(
     val version: Int = 1,
-    val exportedAt: String,
-    val projects: List<ProjectMetaDto> = emptyList(),
-    val contexts: List<BoundedContextMetaDto> = emptyList(),
-    val entities: List<EntityMetaDto> = emptyList(),
-    val fields: List<FieldMetaDto> = emptyList(),
-    val relations: List<RelationMetaDto> = emptyList(),
-    val dtos: List<DtoMetaDto> = emptyList(),
-    val dtoFields: List<DtoFieldMetaDto> = emptyList(),
-    val templates: List<TemplateMetaDto> = emptyList(),
-    val generationTargets: List<GenerationTargetMetaDto> = emptyList(),
-    val etlWrappers: List<EtlWrapperMetaDto> = emptyList(),
+    val modules: List<LlvmModuleDto> = emptyList(),
+    val types: List<LlvmTypeDto> = emptyList(),
+    val typeMembers: List<LlvmTypeMemberDto> = emptyList(),
+    val globals: List<LlvmGlobalVariableDto> = emptyList(),
+    val aliases: List<LlvmAliasDto> = emptyList(),
+    val ifuncs: List<LlvmIfuncDto> = emptyList(),
+    val comdats: List<LlvmComdatDto> = emptyList(),
+    val attributeGroups: List<LlvmAttributeGroupDto> = emptyList(),
+    val attributeEntries: List<LlvmAttributeEntryDto> = emptyList(),
+    val constants: List<LlvmConstantDto> = emptyList(),
+    val constantItems: List<LlvmConstantItemDto> = emptyList(),
+    val inlineAsms: List<LlvmInlineAsmDto> = emptyList(),
+    val functions: List<LlvmFunctionDto> = emptyList(),
+    val params: List<LlvmFunctionParamDto> = emptyList(),
+    val blocks: List<LlvmBasicBlockDto> = emptyList(),
+    val instructions: List<LlvmInstructionDto> = emptyList(),
+    val operands: List<LlvmOperandDto> = emptyList(),
+    val phiIncomings: List<LlvmPhiIncomingDto> = emptyList(),
+    val instructionClauses: List<LlvmInstructionClauseDto> = emptyList(),
+    val operandBundles: List<LlvmOperandBundleDto> = emptyList(),
+    val namedMetadata: List<LlvmNamedMetadataDto> = emptyList(),
+    val metadataNodes: List<LlvmMetadataNodeDto> = emptyList(),
+    val metadataFields: List<LlvmMetadataFieldDto> = emptyList(),
+    val metadataAttachments: List<LlvmMetadataAttachmentDto> = emptyList(),
+    val compileProfiles: List<LlvmCompileProfileDto> = emptyList(),
+    val compileJobs: List<LlvmCompileJobDto> = emptyList(),
+    val compileArtifacts: List<LlvmCompileArtifactDto> = emptyList(),
 )
 
 @Serializable
-data class MetadataImportResultDto(
-    val createdIds: List<String> = emptyList(),
-    val updatedIds: List<String> = emptyList(),
+data class LlvmSnapshotImportResultDto(
+    val importedModules: Int,
+    val importedRecords: Int,
 )

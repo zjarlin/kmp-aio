@@ -17,166 +17,200 @@ enum class PlaygroundUiLanguage {
 
 @Single
 class PlaygroundWorkbenchState(
-    private val projectService: ProjectMetaService,
-    private val contextService: ContextMetaService,
-    private val entityService: EntityMetaService,
-    private val dtoService: DtoMetaService,
-    private val templateService: TemplateMetaService,
-    private val targetService: GenerationTargetMetaService,
-    private val etlWrapperMetaService: EtlWrapperMetaService,
-    private val metadataSnapshotService: MetadataSnapshotService,
-    private val generationPlanner: GenerationPlanner,
-    private val pathVariableResolver: PathVariableResolver,
+    private val moduleService: LlvmModuleService,
+    private val typeService: LlvmTypeService,
+    private val globalValueService: LlvmGlobalValueService,
+    private val functionService: LlvmFunctionService,
+    private val metadataService: LlvmMetadataService,
+    private val attributeService: LlvmAttributeService,
+    private val validationService: LlvmValidationService,
+    private val snapshotService: LlvmSnapshotService,
+    private val exportService: LlvmLlExportService,
+    private val compileProfileService: LlvmCompileProfileService,
+    private val compileJobService: LlvmCompileJobService,
 ) {
     private val prefs = Preferences.userNodeForPackage(PlaygroundWorkbenchState::class.java)
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
 
-    var projects by mutableStateOf<List<ProjectMetaDto>>(emptyList())
+    var modules by mutableStateOf<List<LlvmModuleDto>>(emptyList())
         private set
-    var contexts by mutableStateOf<List<BoundedContextMetaDto>>(emptyList())
+    var types by mutableStateOf<List<LlvmTypeDto>>(emptyList())
         private set
-    var entities by mutableStateOf<List<EntityMetaDto>>(emptyList())
+    var typeMembers by mutableStateOf<List<LlvmTypeMemberDto>>(emptyList())
         private set
-    var fields by mutableStateOf<List<FieldMetaDto>>(emptyList())
+    var globals by mutableStateOf<List<LlvmGlobalVariableDto>>(emptyList())
         private set
-    var relations by mutableStateOf<List<RelationMetaDto>>(emptyList())
+    var constants by mutableStateOf<List<LlvmConstantDto>>(emptyList())
         private set
-    var dtos by mutableStateOf<List<DtoMetaDto>>(emptyList())
+    var functions by mutableStateOf<List<LlvmFunctionDto>>(emptyList())
         private set
-    var dtoFields by mutableStateOf<List<DtoFieldMetaDto>>(emptyList())
+    var params by mutableStateOf<List<LlvmFunctionParamDto>>(emptyList())
         private set
-    var templates by mutableStateOf<List<TemplateMetaDto>>(emptyList())
+    var blocks by mutableStateOf<List<LlvmBasicBlockDto>>(emptyList())
         private set
-    var targets by mutableStateOf<List<GenerationTargetMetaDto>>(emptyList())
+    var instructions by mutableStateOf<List<LlvmInstructionDto>>(emptyList())
         private set
-    var etlWrappers by mutableStateOf<List<EtlWrapperMetaDto>>(emptyList())
+    var operands by mutableStateOf<List<LlvmOperandDto>>(emptyList())
+        private set
+    var namedMetadata by mutableStateOf<List<LlvmNamedMetadataDto>>(emptyList())
+        private set
+    var metadataNodes by mutableStateOf<List<LlvmMetadataNodeDto>>(emptyList())
+        private set
+    var metadataFields by mutableStateOf<List<LlvmMetadataFieldDto>>(emptyList())
+        private set
+    var metadataAttachments by mutableStateOf<List<LlvmMetadataAttachmentDto>>(emptyList())
+        private set
+    var attributeGroups by mutableStateOf<List<LlvmAttributeGroupDto>>(emptyList())
+        private set
+    var attributeEntries by mutableStateOf<List<LlvmAttributeEntryDto>>(emptyList())
+        private set
+    var compileProfiles by mutableStateOf<List<LlvmCompileProfileDto>>(emptyList())
+        private set
+    var compileJobs by mutableStateOf<List<LlvmCompileJobDto>>(emptyList())
+        private set
+    var compileArtifacts by mutableStateOf<List<LlvmCompileArtifactDto>>(emptyList())
         private set
 
-    var selectedProjectId by mutableStateOf<String?>(null)
+    var selectedModuleId by mutableStateOf<String?>(null)
         private set
-    var selectedContextId by mutableStateOf<String?>(null)
+    var selectedTypeId by mutableStateOf<String?>(null)
         private set
-    var selectedEntityId by mutableStateOf<String?>(null)
+    var selectedFunctionId by mutableStateOf<String?>(null)
         private set
-    var selectedDtoId by mutableStateOf<String?>(null)
+    var selectedBlockId by mutableStateOf<String?>(null)
         private set
-    var selectedTemplateId by mutableStateOf<String?>(null)
+    var selectedInstructionId by mutableStateOf<String?>(null)
         private set
-    var selectedTargetId by mutableStateOf<String?>(null)
+    var selectedMetadataNodeId by mutableStateOf<String?>(null)
         private set
-    var selectedEtlWrapperId by mutableStateOf<String?>(null)
+    var selectedNamedMetadataId by mutableStateOf<String?>(null)
+        private set
+    var selectedProfileId by mutableStateOf<String?>(null)
+        private set
+    var selectedJobId by mutableStateOf<String?>(null)
         private set
 
     var uiLanguage by mutableStateOf(loadLanguage())
         private set
-    var explorerQuery by mutableStateOf("")
-    var statusMessage by mutableStateOf("准备就绪")
+    var searchQuery by mutableStateOf("")
+    var statusMessage by mutableStateOf("LLVM IR 工作台已就绪")
         private set
-    var lastDeleteCheck by mutableStateOf<DeleteCheckResultDto?>(null)
+    var validationIssues by mutableStateOf<List<LlvmValidationIssueDto>>(emptyList())
         private set
-    var lastValidationIssues by mutableStateOf<List<ValidationIssueDto>>(emptyList())
-        private set
-    var lastGenerationPlan by mutableStateOf<GenerationPlanDto?>(null)
-        private set
-    var lastGeneration by mutableStateOf<GenerationResultDto?>(null)
-        private set
-    var lastSnapshotJson by mutableStateOf("")
+    var exportPreviewText by mutableStateOf("")
         private set
     var snapshotEditorText by mutableStateOf("")
-    var outputRootPreview by mutableStateOf("")
+    var lastDeleteCheck by mutableStateOf<LlvmDeleteCheckResultDto?>(null)
+        private set
+    var lastCompileResult by mutableStateOf<LlvmCompileExecutionResultDto?>(null)
         private set
 
     suspend fun refreshAll() {
-        projects = projectService.list()
-        if (selectedProjectId !in projects.map { it.id }) {
-            selectedProjectId = projects.firstOrNull()?.id
+        modules = moduleService.list(LlvmSearchRequest(query = searchQuery.ifBlank { null }))
+        if (selectedModuleId !in modules.map { it.id }) {
+            selectedModuleId = modules.firstOrNull()?.id
         }
-        refreshProjectScope()
+        refreshModuleScope()
     }
 
-    suspend fun refreshProjectScope() {
-        val projectId = selectedProjectId
-        contexts = if (projectId == null) emptyList() else contextService.list(MetadataSearchRequest(projectId = projectId))
-        if (selectedContextId !in contexts.map { it.id }) {
-            selectedContextId = contexts.firstOrNull()?.id
-        }
-        etlWrappers = if (projectId == null) {
-            emptyList()
-        } else {
-            etlWrapperMetaService.list(MetadataSearchRequest(projectId = projectId))
-        }
-        if (selectedEtlWrapperId !in etlWrappers.map { it.id }) {
-            selectedEtlWrapperId = etlWrappers.firstOrNull()?.id
-        }
-        refreshContextScope()
-    }
-
-    suspend fun refreshContextScope() {
-        val contextId = selectedContextId
-        if (contextId == null) {
-            entities = emptyList()
-            fields = emptyList()
-            relations = emptyList()
-            dtos = emptyList()
-            dtoFields = emptyList()
-            templates = emptyList()
-            targets = emptyList()
+    suspend fun refreshModuleScope() {
+        val moduleId = selectedModuleId
+        if (moduleId == null) {
+            types = emptyList()
+            typeMembers = emptyList()
+            globals = emptyList()
+            constants = emptyList()
+            functions = emptyList()
+            params = emptyList()
+            blocks = emptyList()
+            instructions = emptyList()
+            operands = emptyList()
+            namedMetadata = emptyList()
+            metadataNodes = emptyList()
+            metadataFields = emptyList()
+            metadataAttachments = emptyList()
+            attributeGroups = emptyList()
+            attributeEntries = emptyList()
+            compileProfiles = emptyList()
+            compileJobs = emptyList()
+            compileArtifacts = emptyList()
             return
         }
-        val aggregate = contextService.aggregate(contextId)
-        entities = aggregate.entities
-        fields = aggregate.fields
-        relations = aggregate.relations
-        dtos = aggregate.dtos
-        dtoFields = aggregate.dtoFields
-        templates = aggregate.templates
-        targets = aggregate.generationTargets
-        if (selectedEntityId !in entities.map { it.id }) {
-            selectedEntityId = entities.firstOrNull()?.id
-        }
-        if (selectedDtoId !in dtos.map { it.id }) {
-            selectedDtoId = dtos.firstOrNull()?.id
-        }
-        if (selectedTemplateId !in templates.map { it.id }) {
-            selectedTemplateId = templates.firstOrNull()?.id
-        }
-        if (selectedTargetId !in targets.map { it.id }) {
-            selectedTargetId = targets.firstOrNull()?.id
-        }
+        val aggregate = moduleService.aggregate(moduleId)
+        types = aggregate.types
+        typeMembers = aggregate.typeMembers
+        globals = aggregate.globals
+        constants = aggregate.constants
+        functions = aggregate.functions
+        params = aggregate.params
+        blocks = aggregate.blocks
+        instructions = aggregate.instructions
+        operands = aggregate.operands
+        namedMetadata = aggregate.namedMetadata
+        metadataNodes = aggregate.metadataNodes
+        metadataFields = aggregate.metadataFields
+        metadataAttachments = aggregate.metadataAttachments
+        attributeGroups = aggregate.attributeGroups
+        attributeEntries = aggregate.attributeEntries
+        compileProfiles = aggregate.compileProfiles
+        compileJobs = aggregate.compileJobs
+        compileArtifacts = aggregate.compileArtifacts
+        if (selectedTypeId !in types.map { it.id }) selectedTypeId = types.firstOrNull()?.id
+        if (selectedFunctionId !in functions.map { it.id }) selectedFunctionId = functions.firstOrNull()?.id
+        if (selectedBlockId !in blocks.map { it.id }) selectedBlockId = blocks.firstOrNull { it.functionId == selectedFunctionId }?.id
+        if (selectedInstructionId !in instructions.map { it.id }) selectedInstructionId = instructions.firstOrNull { it.blockId == selectedBlockId }?.id
+        if (selectedMetadataNodeId !in metadataNodes.map { it.id }) selectedMetadataNodeId = metadataNodes.firstOrNull()?.id
+        if (selectedNamedMetadataId !in namedMetadata.map { it.id }) selectedNamedMetadataId = namedMetadata.firstOrNull()?.id
+        if (selectedProfileId !in compileProfiles.map { it.id }) selectedProfileId = compileProfiles.firstOrNull()?.id
+        if (selectedJobId !in compileJobs.map { it.id }) selectedJobId = compileJobs.firstOrNull()?.id
     }
 
-    fun selectProject(id: String?) {
-        selectedProjectId = id
+    fun selectModule(id: String?) {
+        selectedModuleId = id
         clearDiagnostics()
     }
 
-    fun selectContext(id: String?) {
-        selectedContextId = id
+    fun selectType(id: String?) {
+        selectedTypeId = id
         clearDiagnostics()
     }
 
-    fun selectEntity(id: String?) {
-        selectedEntityId = id
+    fun selectFunction(id: String?) {
+        selectedFunctionId = id
+        selectedBlockId = blocks.firstOrNull { it.functionId == id }?.id
+        selectedInstructionId = instructions.firstOrNull { it.blockId == selectedBlockId }?.id
         clearDiagnostics()
     }
 
-    fun selectDto(id: String?) {
-        selectedDtoId = id
+    fun selectBlock(id: String?) {
+        selectedBlockId = id
+        selectedInstructionId = instructions.firstOrNull { it.blockId == id }?.id
         clearDiagnostics()
     }
 
-    fun selectTemplate(id: String?) {
-        selectedTemplateId = id
+    fun selectInstruction(id: String?) {
+        selectedInstructionId = id
         clearDiagnostics()
     }
 
-    fun selectTarget(id: String?) {
-        selectedTargetId = id
+    fun selectMetadataNode(id: String?) {
+        selectedMetadataNodeId = id
         clearDiagnostics()
     }
 
-    fun selectEtlWrapper(id: String?) {
-        selectedEtlWrapperId = id
+    fun selectNamedMetadata(id: String?) {
+        selectedNamedMetadataId = id
+        clearDiagnostics()
+    }
+
+    fun selectProfile(id: String?) {
+        selectedProfileId = id
+        clearDiagnostics()
+    }
+
+    fun selectJob(id: String?) {
+        selectedJobId = id
+        compileArtifacts = if (id == null) emptyList() else compileArtifacts.filter { it.jobId == id }
         clearDiagnostics()
     }
 
@@ -188,551 +222,337 @@ class PlaygroundWorkbenchState(
         prefs.put("language", uiLanguage.name)
     }
 
-    suspend fun saveProject(
-        selectedId: String?,
-        name: String,
-        slug: String,
-        description: String,
-    ) {
-        if (selectedId == null) {
-            val created = projectService.create(CreateProjectMetaRequest(name = name, slug = slug, description = description.ifBlank { null }))
-            selectedProjectId = created.id
-            statusMessage = "项目已创建"
+    suspend fun saveModule(selectedId: String?, request: CreateLlvmModuleRequest) {
+        val result = if (selectedId == null) {
+            moduleService.create(request)
         } else {
-            val updated = projectService.update(selectedId, UpdateProjectMetaRequest(name = name, slug = slug, description = description.ifBlank { null }))
-            selectedProjectId = updated.id
-            statusMessage = "项目已更新"
+            moduleService.update(
+                selectedId,
+                UpdateLlvmModuleRequest(
+                    name = request.name,
+                    sourceFilename = request.sourceFilename,
+                    targetTriple = request.targetTriple,
+                    dataLayout = request.dataLayout,
+                    moduleAsm = request.moduleAsm,
+                    moduleFlags = request.moduleFlags,
+                    description = request.description,
+                ),
+            )
         }
+        selectedModuleId = result.id
+        statusMessage = "模块已保存"
         refreshAll()
     }
 
-    suspend fun removeProject(id: String) {
-        projectService.delete(id)
-        statusMessage = "项目已删除"
-        refreshAll()
-    }
-
-    suspend fun saveContext(
-        selectedId: String?,
-        name: String,
-        code: String,
-        description: String,
-    ) {
-        val projectId = selectedProjectId ?: return
-        if (selectedId == null) {
-            val created = contextService.create(CreateBoundedContextMetaRequest(projectId, name, code, description.ifBlank { null }))
-            selectedContextId = created.id
-            statusMessage = "上下文已创建"
-        } else {
-            val updated = contextService.update(selectedId, UpdateBoundedContextMetaRequest(name, code, description.ifBlank { null }))
-            selectedContextId = updated.id
-            statusMessage = "上下文已更新"
+    suspend fun removeSelectedModule() {
+        selectedModuleId?.let {
+            moduleService.delete(it)
+            statusMessage = "模块已删除"
+            refreshAll()
         }
-        refreshProjectScope()
     }
 
-    suspend fun removeContext(id: String) {
-        contextService.delete(id)
-        statusMessage = "上下文已删除"
-        refreshProjectScope()
-    }
-
-    suspend fun saveEntity(
-        selectedId: String?,
-        name: String,
-        code: String,
-        tableName: String,
-        description: String,
-    ) {
-        val contextId = selectedContextId ?: return
-        if (selectedId == null) {
-            val created = entityService.create(CreateEntityMetaRequest(contextId, name, code, tableName, description.ifBlank { null }))
-            selectedEntityId = created.id
-            statusMessage = "实体已创建"
+    suspend fun saveType(selectedId: String?, request: CreateLlvmTypeRequest) {
+        val moduleId = selectedModuleId ?: return
+        val created = if (selectedId == null) {
+            typeService.create(request.copy(moduleId = moduleId))
         } else {
-            val updated = entityService.update(selectedId, UpdateEntityMetaRequest(name, code, tableName, description.ifBlank { null }))
-            selectedEntityId = updated.id
-            statusMessage = "实体已更新"
-        }
-        refreshContextScope()
-    }
-
-    suspend fun removeEntity(id: String) {
-        entityService.delete(id)
-        statusMessage = "实体已删除"
-        refreshContextScope()
-    }
-
-    suspend fun saveField(
-        selectedId: String?,
-        entityId: String,
-        name: String,
-        code: String,
-        type: FieldType,
-        nullable: Boolean,
-        idField: Boolean,
-        keyField: Boolean,
-        searchable: Boolean,
-    ) {
-        if (selectedId == null) {
-            entityService.createField(
-                CreateFieldMetaRequest(
-                    entityId = entityId,
-                    name = name,
-                    code = code,
-                    type = type,
-                    nullable = nullable,
-                    idField = idField,
-                    keyField = keyField,
-                    searchable = searchable,
-                ),
-            )
-            statusMessage = "字段已创建"
-        } else {
-            entityService.updateField(
+            typeService.update(
                 selectedId,
-                UpdateFieldMetaRequest(
-                    name = name,
-                    code = code,
-                    type = type,
-                    nullable = nullable,
-                    idField = idField,
-                    keyField = keyField,
-                    searchable = searchable,
+                UpdateLlvmTypeRequest(
+                    name = request.name,
+                    symbol = request.symbol,
+                    kind = request.kind,
+                    primitiveWidth = request.primitiveWidth,
+                    packed = request.packed,
+                    opaque = request.opaque,
+                    addressSpace = request.addressSpace,
+                    arrayLength = request.arrayLength,
+                    scalable = request.scalable,
+                    variadic = request.variadic,
+                    definitionText = request.definitionText,
+                    elementTypeRefId = request.elementTypeRefId,
+                    returnTypeRefId = request.returnTypeRefId,
                 ),
             )
-            statusMessage = "字段已更新"
         }
-        refreshContextScope()
+        selectedTypeId = created.id
+        statusMessage = "类型已保存"
+        refreshModuleScope()
     }
 
-    suspend fun removeField(id: String) {
-        entityService.deleteField(id)
-        statusMessage = "字段已删除"
-        refreshContextScope()
-    }
-
-    suspend fun moveField(id: String, delta: Int) {
-        val entityId = fields.firstOrNull { it.id == id }?.entityId ?: return
-        val orderedIds = fields
-            .filter { it.entityId == entityId }
-            .map { it.id }
-            .toMutableList()
-        moveId(orderedIds, id, delta)
-        entityService.reorderFields(entityId, ReorderRequestDto(orderedIds))
-        refreshContextScope()
-    }
-
-    suspend fun saveRelation(
-        selectedId: String?,
-        sourceEntityId: String,
-        targetEntityId: String,
-        name: String,
-        code: String,
-        kind: RelationKind,
-    ) {
-        val contextId = selectedContextId ?: return
-        if (selectedId == null) {
-            entityService.createRelation(CreateRelationMetaRequest(contextId, sourceEntityId, targetEntityId, name, code, kind))
-            statusMessage = "关系已创建"
-        } else {
-            entityService.updateRelation(selectedId, UpdateRelationMetaRequest(name, code, kind))
-            statusMessage = "关系已更新"
+    suspend fun removeSelectedType() {
+        selectedTypeId?.let {
+            typeService.delete(it)
+            statusMessage = "类型已删除"
+            refreshModuleScope()
         }
-        refreshContextScope()
     }
 
-    suspend fun removeRelation(id: String) {
-        entityService.deleteRelation(id)
-        statusMessage = "关系已删除"
-        refreshContextScope()
-    }
-
-    suspend fun saveDto(
-        selectedId: String?,
-        entityId: String?,
-        name: String,
-        code: String,
-        kind: DtoKind,
-        description: String,
-    ) {
-        val contextId = selectedContextId ?: return
+    suspend fun saveGlobal(selectedId: String?, request: CreateLlvmGlobalVariableRequest) {
+        val moduleId = selectedModuleId ?: return
         if (selectedId == null) {
-            val created = dtoService.create(CreateDtoMetaRequest(contextId, entityId, name, code, kind, description.ifBlank { null }))
-            selectedDtoId = created.id
-            statusMessage = "DTO 已创建"
+            globalValueService.createGlobal(request.copy(moduleId = moduleId))
         } else {
-            val updated = dtoService.update(selectedId, UpdateDtoMetaRequest(entityId, name, code, kind, description.ifBlank { null }))
-            selectedDtoId = updated.id
-            statusMessage = "DTO 已更新"
-        }
-        refreshContextScope()
-    }
-
-    suspend fun removeDto(id: String) {
-        dtoService.delete(id)
-        statusMessage = "DTO 已删除"
-        refreshContextScope()
-    }
-
-    suspend fun saveDtoField(
-        selectedId: String?,
-        dtoId: String,
-        entityFieldId: String?,
-        name: String,
-        code: String,
-        type: FieldType,
-        nullable: Boolean,
-    ) {
-        if (selectedId == null) {
-            dtoService.createField(CreateDtoFieldMetaRequest(dtoId, entityFieldId, name, code, type, nullable = nullable))
-            statusMessage = "DTO 字段已创建"
-        } else {
-            dtoService.updateField(selectedId, UpdateDtoFieldMetaRequest(entityFieldId, name, code, type, nullable = nullable))
-            statusMessage = "DTO 字段已更新"
-        }
-        refreshContextScope()
-    }
-
-    suspend fun removeDtoField(id: String) {
-        dtoService.deleteField(id)
-        statusMessage = "DTO 字段已删除"
-        refreshContextScope()
-    }
-
-    suspend fun moveDtoField(id: String, delta: Int) {
-        val dtoId = dtoFields.firstOrNull { it.id == id }?.dtoId ?: return
-        val orderedIds = dtoFields
-            .filter { it.dtoId == dtoId }
-            .map { it.id }
-            .toMutableList()
-        moveId(orderedIds, id, delta)
-        dtoService.reorderFields(dtoId, ReorderRequestDto(orderedIds))
-        refreshContextScope()
-    }
-
-    suspend fun saveTemplate(
-        selectedId: String?,
-        name: String,
-        key: String,
-        outputKind: TemplateOutputKind,
-        relativeOutputPath: String,
-        fileNameTemplate: String,
-        body: String,
-        etlWrapperId: String?,
-        enabled: Boolean,
-    ) {
-        val contextId = selectedContextId ?: return
-        if (selectedId == null) {
-            val created = templateService.create(
-                CreateTemplateMetaRequest(
-                    contextId = contextId,
-                    etlWrapperId = etlWrapperId,
-                    name = name,
-                    key = key,
-                    outputKind = outputKind,
-                    body = body,
-                    relativeOutputPath = relativeOutputPath,
-                    fileNameTemplate = fileNameTemplate,
-                    enabled = enabled,
-                ),
-            )
-            selectedTemplateId = created.id
-            statusMessage = "模板已创建"
-        } else {
-            val existing = templates.first { it.id == selectedId }
-            val updated = templateService.update(
+            globalValueService.updateGlobal(
                 selectedId,
-                UpdateTemplateMetaRequest(
-                    etlWrapperId = etlWrapperId,
-                    name = name,
-                    key = key,
-                    outputKind = outputKind,
-                    body = body,
-                    relativeOutputPath = relativeOutputPath,
-                    fileNameTemplate = fileNameTemplate,
-                    tags = existing.tags,
-                    enabled = enabled,
-                    managedByGenerator = existing.managedByGenerator,
+                UpdateLlvmGlobalVariableRequest(
+                    name = request.name,
+                    symbol = request.symbol,
+                    typeText = request.typeText,
+                    typeRefId = request.typeRefId,
+                    linkage = request.linkage,
+                    visibility = request.visibility,
+                    constant = request.constant,
+                    threadLocal = request.threadLocal,
+                    externallyInitialized = request.externallyInitialized,
+                    initializerText = request.initializerText,
+                    initializerConstantId = request.initializerConstantId,
+                    sectionName = request.sectionName,
+                    comdatId = request.comdatId,
+                    alignment = request.alignment,
+                    addressSpace = request.addressSpace,
+                    attributeGroupIds = request.attributeGroupIds,
+                    metadata = request.metadata,
                 ),
             )
-            selectedTemplateId = updated.id
-            statusMessage = "模板已更新"
         }
-        refreshContextScope()
+        statusMessage = "全局变量已保存"
+        refreshModuleScope()
     }
 
-    suspend fun removeTemplate(id: String) {
-        templateService.delete(id)
-        statusMessage = "模板已删除"
-        refreshContextScope()
+    suspend fun removeGlobal(id: String) {
+        globalValueService.deleteGlobal(id)
+        statusMessage = "全局变量已删除"
+        refreshModuleScope()
     }
 
-    suspend fun moveTemplate(id: String, delta: Int) {
-        val orderedIds = templates.map { it.id }.toMutableList()
-        moveId(orderedIds, id, delta)
-        val contextId = selectedContextId ?: return
-        templateService.reorder(contextId, ReorderRequestDto(orderedIds))
-        refreshContextScope()
-    }
-
-    suspend fun saveTarget(
-        selectedId: String?,
-        name: String,
-        key: String,
-        outputRoot: String,
-        packageName: String,
-        scaffoldPreset: ScaffoldPreset,
-        templateIds: List<String>,
-        variablesText: String,
-        enableEtl: Boolean,
-        autoIntegrateCompositeBuild: Boolean,
-        managedMarker: String,
-    ) {
-        val contextId = selectedContextId ?: return
-        val projectId = selectedProjectId ?: return
-        val variables = parseVariablesText(variablesText)
-        if (selectedId == null) {
-            val created = targetService.create(
-                CreateGenerationTargetMetaRequest(
-                    projectId = projectId,
-                    contextId = contextId,
-                    name = name,
-                    key = key,
-                    outputRoot = outputRoot,
-                    packageName = packageName,
-                    scaffoldPreset = scaffoldPreset,
-                    templateIds = templateIds,
-                    variables = variables,
-                    enableEtl = enableEtl,
-                    autoIntegrateCompositeBuild = autoIntegrateCompositeBuild,
-                    managedMarker = managedMarker,
-                ),
-            )
-            selectedTargetId = created.id
-            statusMessage = "生成目标已创建"
+    suspend fun saveFunction(selectedId: String?, request: CreateLlvmFunctionRequest) {
+        val moduleId = selectedModuleId ?: return
+        val result = if (selectedId == null) {
+            functionService.create(request.copy(moduleId = moduleId))
         } else {
-            val updated = targetService.update(
+            functionService.update(
                 selectedId,
-                UpdateGenerationTargetMetaRequest(
-                    name = name,
-                    key = key,
-                    outputRoot = outputRoot,
-                    packageName = packageName,
-                    scaffoldPreset = scaffoldPreset,
-                    templateIds = templateIds,
-                    variables = variables,
-                    enableEtl = enableEtl,
-                    autoIntegrateCompositeBuild = autoIntegrateCompositeBuild,
-                    managedMarker = managedMarker,
+                UpdateLlvmFunctionRequest(
+                    name = request.name,
+                    symbol = request.symbol,
+                    returnTypeText = request.returnTypeText,
+                    returnTypeRefId = request.returnTypeRefId,
+                    linkage = request.linkage,
+                    visibility = request.visibility,
+                    callingConvention = request.callingConvention,
+                    variadic = request.variadic,
+                    declarationOnly = request.declarationOnly,
+                    gcName = request.gcName,
+                    personalityText = request.personalityText,
+                    comdatId = request.comdatId,
+                    sectionName = request.sectionName,
+                    attributeGroupIds = request.attributeGroupIds,
+                    metadata = request.metadata,
                 ),
             )
-            selectedTargetId = updated.id
-            statusMessage = "生成目标已更新"
         }
-        refreshContextScope()
+        selectedFunctionId = result.id
+        statusMessage = "函数已保存"
+        refreshModuleScope()
     }
 
-    suspend fun removeTarget(id: String) {
-        targetService.delete(id)
-        statusMessage = "生成目标已删除"
-        refreshContextScope()
+    suspend fun removeSelectedFunction() {
+        selectedFunctionId?.let {
+            functionService.delete(it)
+            statusMessage = "函数已删除"
+            refreshModuleScope()
+        }
     }
 
-    suspend fun saveEtlWrapper(
-        selectedId: String?,
-        name: String,
-        key: String,
-        scriptBody: String,
-        enabled: Boolean,
-    ) {
-        val projectId = selectedProjectId ?: return
-        if (selectedId == null) {
-            val created = etlWrapperMetaService.create(
-                CreateEtlWrapperMetaRequest(
-                    projectId = projectId,
-                    name = name,
-                    key = key,
-                    scriptBody = scriptBody,
-                    enabled = enabled,
-                ),
-            )
-            selectedEtlWrapperId = created.id
-            statusMessage = "ETL 包裹器已创建"
+    suspend fun saveBlock(selectedId: String?, name: String, label: String) {
+        val functionId = selectedFunctionId ?: return
+        val result = if (selectedId == null) {
+            functionService.createBlock(CreateLlvmBasicBlockRequest(functionId = functionId, name = name, label = label))
         } else {
-            val updated = etlWrapperMetaService.update(
+            functionService.updateBlock(selectedId, UpdateLlvmBasicBlockRequest(name = name, label = label))
+        }
+        selectedBlockId = result.id
+        statusMessage = "基本块已保存"
+        refreshModuleScope()
+    }
+
+    suspend fun removeSelectedBlock() {
+        selectedBlockId?.let {
+            functionService.deleteBlock(it)
+            statusMessage = "基本块已删除"
+            refreshModuleScope()
+        }
+    }
+
+    suspend fun saveInstruction(selectedId: String?, request: CreateLlvmInstructionRequest) {
+        val blockId = selectedBlockId ?: return
+        val result = if (selectedId == null) {
+            functionService.createInstruction(request.copy(blockId = blockId))
+        } else {
+            functionService.updateInstruction(
                 selectedId,
-                UpdateEtlWrapperMetaRequest(
-                    name = name,
-                    key = key,
-                    scriptBody = scriptBody,
-                    enabled = enabled,
+                UpdateLlvmInstructionRequest(
+                    opcode = request.opcode,
+                    resultSymbol = request.resultSymbol,
+                    typeText = request.typeText,
+                    typeRefId = request.typeRefId,
+                    textSuffix = request.textSuffix,
+                    flags = request.flags,
+                    terminator = request.terminator,
                 ),
             )
-            selectedEtlWrapperId = updated.id
-            statusMessage = "ETL 包裹器已更新"
         }
-        refreshProjectScope()
+        selectedInstructionId = result.id
+        statusMessage = "指令已保存"
+        refreshModuleScope()
     }
 
-    suspend fun removeEtlWrapper(id: String) {
-        etlWrapperMetaService.delete(id)
-        statusMessage = "ETL 包裹器已删除"
-        refreshProjectScope()
+    suspend fun removeSelectedInstruction() {
+        selectedInstructionId?.let {
+            functionService.deleteInstruction(it)
+            statusMessage = "指令已删除"
+            refreshModuleScope()
+        }
     }
 
-    suspend fun planSelectedTarget() {
-        val targetId = selectedTargetId ?: return
-        val contextId = selectedContextId ?: return
-        lastGenerationPlan = generationPlanner.plan(GenerationRequestDto(targetId = targetId, contextId = contextId, previewOnly = true))
-        statusMessage = "生成计划已刷新"
+    suspend fun saveOperand(selectedId: String?, request: CreateLlvmOperandRequest) {
+        val instructionId = selectedInstructionId ?: return
+        if (selectedId == null) {
+            functionService.createOperand(request.copy(instructionId = instructionId))
+        } else {
+            functionService.updateOperand(
+                selectedId,
+                UpdateLlvmOperandRequest(
+                    kind = request.kind,
+                    text = request.text,
+                    referencedInstructionId = request.referencedInstructionId,
+                    referencedFunctionId = request.referencedFunctionId,
+                    referencedParamId = request.referencedParamId,
+                    referencedGlobalId = request.referencedGlobalId,
+                    referencedConstantId = request.referencedConstantId,
+                    referencedBlockId = request.referencedBlockId,
+                    referencedMetadataNodeId = request.referencedMetadataNodeId,
+                    referencedTypeId = request.referencedTypeId,
+                    referencedInlineAsmId = request.referencedInlineAsmId,
+                ),
+            )
+        }
+        statusMessage = "操作数已保存"
+        refreshModuleScope()
     }
 
-    suspend fun generateSelectedTarget() {
-        val targetId = selectedTargetId ?: return
-        val contextId = selectedContextId ?: return
-        lastGeneration = generationPlanner.generate(GenerationRequestDto(targetId = targetId, contextId = contextId))
-        lastGenerationPlan = lastGeneration?.plan
-        statusMessage = "代码已生成，共 ${lastGeneration?.files?.size ?: 0} 个文件"
+    suspend fun saveMetadataNode(selectedId: String?, request: CreateLlvmMetadataNodeRequest) {
+        val moduleId = selectedModuleId ?: return
+        val result = if (selectedId == null) {
+            metadataService.createNode(request.copy(moduleId = moduleId))
+        } else {
+            metadataService.updateNode(selectedId, UpdateLlvmMetadataNodeRequest(request.name, request.kind, request.distinct))
+        }
+        selectedMetadataNodeId = result.id
+        statusMessage = "Metadata 节点已保存"
+        refreshModuleScope()
     }
 
-    suspend fun exportSelectedProjectSnapshot() {
-        val projectId = selectedProjectId ?: return
-        val snapshot = metadataSnapshotService.exportProject(projectId)
-        lastSnapshotJson = json.encodeToString(snapshot)
-        snapshotEditorText = lastSnapshotJson
+    suspend fun removeSelectedMetadataNode() {
+        selectedMetadataNodeId?.let {
+            metadataService.deleteNode(it)
+            statusMessage = "Metadata 节点已删除"
+            refreshModuleScope()
+        }
+    }
+
+    suspend fun saveCompileProfile(selectedId: String?, request: CreateLlvmCompileProfileRequest) {
+        val moduleId = selectedModuleId ?: return
+        val result = if (selectedId == null) {
+            compileProfileService.create(request.copy(moduleId = moduleId))
+        } else {
+            compileProfileService.update(
+                selectedId,
+                UpdateLlvmCompileProfileRequest(
+                    name = request.name,
+                    targetPlatform = request.targetPlatform,
+                    outputDirectory = request.outputDirectory,
+                    optPath = request.optPath,
+                    optArgs = request.optArgs,
+                    llcPath = request.llcPath,
+                    llcArgs = request.llcArgs,
+                    clangPath = request.clangPath,
+                    clangArgs = request.clangArgs,
+                    environment = request.environment,
+                ),
+            )
+        }
+        selectedProfileId = result.id
+        statusMessage = "编译配置已保存"
+        refreshModuleScope()
+    }
+
+    suspend fun removeSelectedProfile() {
+        selectedProfileId?.let {
+            compileProfileService.delete(it)
+            statusMessage = "编译配置已删除"
+            refreshModuleScope()
+        }
+    }
+
+    suspend fun exportSelectedModule(outputPath: String? = null) {
+        val moduleId = selectedModuleId ?: return
+        val exported = exportService.exportModule(moduleId, outputPath)
+        exportPreviewText = exported.content
+        statusMessage = "LLVM .ll 已导出预览"
+    }
+
+    suspend fun validateSelectedModule() {
+        val moduleId = selectedModuleId ?: return
+        validationIssues = validationService.validateModule(moduleId)
+        statusMessage = if (validationIssues.isEmpty()) "校验通过" else "校验完成，共 ${validationIssues.size} 条问题"
+    }
+
+    suspend fun exportSnapshot() {
+        val moduleId = selectedModuleId ?: return
+        snapshotEditorText = json.encodeToString(snapshotService.exportModule(moduleId))
         statusMessage = "快照已导出"
     }
 
-    suspend fun importSnapshotFromEditor() {
-        val snapshot = json.decodeFromString<MetadataSnapshotDto>(snapshotEditorText)
-        metadataSnapshotService.importSnapshot(snapshot)
+    suspend fun importSnapshot() {
+        val snapshot = json.decodeFromString<LlvmSnapshotDto>(snapshotEditorText)
+        snapshotService.importSnapshot(snapshot)
         statusMessage = "快照已导入"
         refreshAll()
     }
 
-    suspend fun previewProjectDelete(id: String? = selectedProjectId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = projectService.deleteCheck(resolvedId)
+    suspend fun createAndRunCompileJob() {
+        val moduleId = selectedModuleId ?: return
+        val profileId = selectedProfileId ?: return
+        val job = compileJobService.create(CreateLlvmCompileJobRequest(moduleId = moduleId, profileId = profileId, runNow = false))
+        lastCompileResult = compileJobService.execute(job.id)
+        statusMessage = "编译任务已执行"
+        refreshModuleScope()
     }
 
-    suspend fun previewContextDelete(id: String? = selectedContextId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = contextService.deleteCheck(resolvedId)
-    }
-
-    suspend fun previewEntityDelete(id: String? = selectedEntityId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = entityService.deleteCheck(resolvedId)
-    }
-
-    suspend fun previewDtoDelete(id: String? = selectedDtoId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = dtoService.deleteCheck(resolvedId)
-    }
-
-    suspend fun previewTemplateDelete(id: String? = selectedTemplateId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = templateService.deleteCheck(resolvedId)
-    }
-
-    suspend fun previewTargetDelete(id: String? = selectedTargetId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = targetService.deleteCheck(resolvedId)
-    }
-
-    suspend fun previewEtlDelete(id: String? = selectedEtlWrapperId) {
-        val resolvedId = id ?: return
-        lastDeleteCheck = etlWrapperMetaService.deleteCheck(resolvedId)
-    }
-
-    suspend fun validateSelectedTemplate(id: String? = selectedTemplateId) {
-        val resolvedId = id ?: return
-        lastValidationIssues = templateService.validate(resolvedId)
-    }
-
-    suspend fun validateSelectedTarget(id: String? = selectedTargetId) {
-        val resolvedId = id ?: return
-        lastValidationIssues = targetService.validate(resolvedId)
-    }
-
-    suspend fun validateSelectedEtl(id: String? = selectedEtlWrapperId) {
-        val resolvedId = id ?: return
-        lastValidationIssues = etlWrapperMetaService.validate(resolvedId)
-    }
-
-    fun previewOutputRoot(rawPath: String, variablesText: String): String {
-        outputRootPreview = runCatching {
-            pathVariableResolver.resolve(rawPath, parseVariablesText(variablesText))
-        }.getOrElse { throwable ->
-            throwable.message ?: "路径解析失败"
+    suspend fun refreshDeleteCheck(kind: String, id: String) {
+        lastDeleteCheck = when (kind) {
+            "module" -> moduleService.deleteCheck(id)
+            "type" -> typeService.deleteCheck(id)
+            "function" -> functionService.deleteCheck(id)
+            "global" -> globalValueService.deleteGlobalCheck(id)
+            "constant" -> globalValueService.deleteConstantCheck(id)
+            "metadata-node" -> metadataService.deleteNodeCheck(id)
+            "named-metadata" -> metadataService.deleteNamedCheck(id)
+            "compile-profile" -> compileProfileService.deleteCheck(id)
+            else -> null
         }
-        return outputRootPreview
     }
 
-    fun clearDiagnostics() {
+    private fun clearDiagnostics() {
+        validationIssues = emptyList()
         lastDeleteCheck = null
-        lastValidationIssues = emptyList()
-    }
-
-    fun parseVariablesText(raw: String): Map<String, String> {
-        return raw.lineSequence()
-            .map(String::trim)
-            .filter(String::isNotBlank)
-            .associate { line ->
-                val splitIndex = line.indexOf('=')
-                if (splitIndex <= 0) {
-                    line to ""
-                } else {
-                    line.substring(0, splitIndex).trim() to line.substring(splitIndex + 1).trim()
-                }
-            }
-    }
-
-    fun formatVariablesText(variables: Map<String, String>): String {
-        return variables.entries.joinToString("\n") { "${it.key}=${it.value}" }
-    }
-
-    fun fieldsForSelectedEntity(): List<FieldMetaDto> = fields.filter { it.entityId == selectedEntityId }
-
-    fun relationsForSelectedEntity(): List<RelationMetaDto> = relations.filter { it.sourceEntityId == selectedEntityId }
-
-    fun dtoFieldsForSelectedDto(): List<DtoFieldMetaDto> = dtoFields.filter { it.dtoId == selectedDtoId }
-
-    fun filteredProjects(): List<ProjectMetaDto> = projects.filter { matchesExplorer(it.name) }
-
-    fun filteredContexts(): List<BoundedContextMetaDto> = contexts.filter { matchesExplorer(it.name) }
-
-    fun filteredEntities(): List<EntityMetaDto> = entities.filter { matchesExplorer(it.name) }
-
-    fun filteredDtos(): List<DtoMetaDto> = dtos.filter { matchesExplorer(it.name) }
-
-    fun filteredTemplates(): List<TemplateMetaDto> = templates.filter { matchesExplorer(it.name) }
-
-    fun filteredTargets(): List<GenerationTargetMetaDto> = targets.filter { matchesExplorer(it.name) }
-
-    fun filteredEtlWrappers(): List<EtlWrapperMetaDto> = etlWrappers.filter { matchesExplorer(it.name) }
-
-    private fun matchesExplorer(name: String): Boolean {
-        return explorerQuery.isBlank() || name.contains(explorerQuery, ignoreCase = true)
-    }
-
-    private fun moveId(ids: MutableList<String>, id: String, delta: Int) {
-        val currentIndex = ids.indexOf(id)
-        if (currentIndex < 0) {
-            return
-        }
-        val targetIndex = (currentIndex + delta).coerceIn(0, ids.lastIndex)
-        if (currentIndex == targetIndex) {
-            return
-        }
-        ids.removeAt(currentIndex)
-        ids.add(targetIndex, id)
     }
 
     private fun loadLanguage(): PlaygroundUiLanguage {
-        return runCatching {
-            PlaygroundUiLanguage.valueOf(prefs.get("language", PlaygroundUiLanguage.ZH_CN.name))
-        }.getOrDefault(PlaygroundUiLanguage.ZH_CN)
+        return runCatching { PlaygroundUiLanguage.valueOf(prefs.get("language", PlaygroundUiLanguage.ZH_CN.name)) }
+            .getOrDefault(PlaygroundUiLanguage.ZH_CN)
     }
 }

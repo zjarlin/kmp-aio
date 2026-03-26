@@ -1,6 +1,6 @@
 # app-sidebar
 
-低心智负担的 Compose Multiplatform 应用侧边栏组件库，默认内建树结构、搜索、插槽和暗色专业风格。
+低心智负担的 Compose Multiplatform 应用侧边栏组件库，默认内建树结构、搜索、插槽和暗色专业风格。侧边栏 API 直接接业务节点，不再要求额外定义 `SidebarItem` 包装实体。
 
 - Maven coordinate: `site.addzero:app-sidebar`
 - Local module path: `lib/compose/app-sidebar`
@@ -9,8 +9,9 @@
 
 - 树形导航
 - 内建搜索过滤
-- 自动排序
+- 保留输入顺序
 - 头部 / 底部插槽
+- 行级 `leading` / `label` / `trailing` 插槽
 - 默认暗色专业风格
 - `commonMain` 可复用
 
@@ -18,6 +19,7 @@
 
 ```kotlin
 val sidebarState = rememberAppSidebarState(initialSelectedId = "dashboard")
+val sections: List<ProjectSection> = loadProjectSections()
 
 WorkbenchScaffold(
     defaultSidebarRatio = 0.22f,
@@ -28,20 +30,13 @@ WorkbenchScaffold(
         AppSidebar(
             title = "Workbench",
             supportText = "一个拿来就能用的通用应用侧栏。",
-            items = listOf(
-                AppSidebarItem(
-                    id = "dashboard",
-                    title = "仪表盘",
-                    icon = Icons.Rounded.SpaceDashboard,
-                    order = 0,
-                ),
-                AppSidebarItem(
-                    id = "settings",
-                    title = "设置",
-                    icon = Icons.Rounded.Settings,
-                    order = 100,
-                ),
-            ),
+            items = sections,
+            itemId = ProjectSection::id,
+            label = ProjectSection::name,
+            icon = ProjectSection::icon,
+            badge = ProjectSection::badge,
+            keywords = ProjectSection::keywords,
+            children = ProjectSection::children,
             state = sidebarState,
         )
     },
@@ -60,6 +55,8 @@ WorkbenchScaffold(
 ## Admin Usage
 
 ```kotlin
+val adminNodes: List<AdminNode> = loadAdminTree()
+
 AdminWorkbenchScaffold(
     breadcrumb = listOf("系统管理", "用户中心"),
     pageTitle = "成员管理",
@@ -68,8 +65,11 @@ AdminWorkbenchScaffold(
         AppSidebar(
             title = "Admin",
             supportText = "后台工作台",
-            items = adminItems,
-            state = sidebarState,
+            items = adminNodes,
+            itemId = AdminNode::id,
+            label = AdminNode::title,
+            icon = AdminNode::icon,
+            children = AdminNode::children,
         )
     },
     pageActions = {
@@ -110,3 +110,4 @@ AdminWorkbenchScaffold(
 - `rememberAppSidebarState` / `rememberWorkbenchScaffoldState` 都基于 Compose `rememberSaveable`
 - 左侧栏默认支持拖拽调宽，同时保留默认比例
 - 如果业务需要受控选中态，直接读写 `AppSidebarState.selectedId`
+- 工作台如果已经使用 `Screen` / `ScreenNode`，优先直接接 [`ScreenSidebar`](/Users/zjarlin/IdeaProjects/kmp-aio/lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebarAdapter.kt)

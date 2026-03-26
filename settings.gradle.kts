@@ -5,7 +5,7 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
-    id("site.addzero.gradle.plugin.repo-buddy") version "2025.11.30"
+    id("site.addzero.gradle.plugin.repo-buddy") version "+"
 }
 
 val localBuildLogicDir = file("checkouts/build-logic")

@@ -9,15 +9,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -34,35 +36,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
-import androidx.compose.material.icons.rounded.ExpandMore
-
-data class LiquidGlassSidebarItem(
-    val id: String,
-    val title: String,
-    val subtitle: String? = null,
-    val icon: ImageVector? = null,
-    val children: List<LiquidGlassSidebarItem> = emptyList(),
-    val initiallyExpanded: Boolean = true,
-    val selectable: Boolean = true,
-)
-
-private val LiquidGlassSidebarItem.isBranch: Boolean
-    get() = children.isNotEmpty()
 
 @Composable
-fun LiquidGlassSidebarMenu(
+fun <T> LiquidGlassSidebarMenu(
     title: String,
-    items: List<LiquidGlassSidebarItem>,
+    items: List<T>,
     selectedId: String,
+    itemId: (T) -> String,
+    label: (T) -> String,
     modifier: Modifier = Modifier,
     description: String? = "Apple 风格更强调漂浮、单色图标、激活项高亮而不是满屏色块。",
     spec: LiquidGlassSpec = LiquidGlassDefaults.sidebar,
     itemSpec: LiquidGlassSpec = LiquidGlassDefaults.sidebarItem,
     selectedItemSpec: LiquidGlassSpec = LiquidGlassDefaults.sidebarItemSelected,
     colors: LiquidGlassContentColors = LiquidGlassContentColors(),
-    onSelect: (String) -> Unit,
+    subtitle: (T) -> String? = { null },
+    icon: (T) -> ImageVector? = { null },
+    children: (T) -> List<T> = { emptyList() },
+    initiallyExpanded: (T) -> Boolean = { true },
+    selectable: (T) -> Boolean = { item -> children(item).isEmpty() },
+    leadingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
+    contentSlot: (@Composable ColumnScope.(T, Boolean, Boolean) -> Unit)? = null,
+    onSelect: (T) -> Unit,
 ) {
     LiquidGlassCard(
         modifier = modifier,
@@ -71,7 +66,12 @@ fun LiquidGlassSidebarMenu(
     ) {
         val expandedState = remember(items) {
             mutableStateMapOf<String, Boolean>().apply {
-                items.registerInitialExpandedState(this)
+                items.registerInitialExpandedState(
+                    expandedState = this,
+                    itemId = itemId,
+                    children = children,
+                    initiallyExpanded = initiallyExpanded,
+                )
             }
         }
 
@@ -102,6 +102,15 @@ fun LiquidGlassSidebarMenu(
                     level = 0,
                     selectedId = selectedId,
                     expandedState = expandedState,
+                    itemId = itemId,
+                    label = label,
+                    subtitle = subtitle,
+                    icon = icon,
+                    children = children,
+                    initiallyExpanded = initiallyExpanded,
+                    selectable = selectable,
+                    leadingSlot = leadingSlot,
+                    contentSlot = contentSlot,
                     itemSpec = itemSpec,
                     selectedItemSpec = selectedItemSpec,
                     colors = colors,
@@ -113,19 +122,37 @@ fun LiquidGlassSidebarMenu(
 }
 
 @Composable
-private fun ColumnScope.TreeSidebarItem(
-    item: LiquidGlassSidebarItem,
+private fun <T> ColumnScope.TreeSidebarItem(
+    item: T,
     level: Int,
     selectedId: String,
     expandedState: MutableMap<String, Boolean>,
+    itemId: (T) -> String,
+    label: (T) -> String,
+    subtitle: (T) -> String?,
+    icon: (T) -> ImageVector?,
+    children: (T) -> List<T>,
+    initiallyExpanded: (T) -> Boolean,
+    selectable: (T) -> Boolean,
+    leadingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
+    contentSlot: (@Composable ColumnScope.(T, Boolean, Boolean) -> Unit)?,
     itemSpec: LiquidGlassSpec,
     selectedItemSpec: LiquidGlassSpec,
     colors: LiquidGlassContentColors,
-    onSelect: (String) -> Unit,
+    onSelect: (T) -> Unit,
 ) {
-    val selected = item.selectable && item.id == selectedId
-    val descendantSelected = item.children.any { it.containsSelection(selectedId) }
-    val expanded = expandedState[item.id] ?: item.initiallyExpanded
+    val id = itemId(item)
+    val childItems = children(item)
+    val isBranch = childItems.isNotEmpty()
+    val selected = selectable(item) && id == selectedId
+    val descendantSelected = childItems.any { child ->
+        child.containsSelection(
+            selectedId = selectedId,
+            itemId = itemId,
+            children = children,
+        )
+    }
+    val expanded = expandedState[id] ?: initiallyExpanded(item)
     val spec = when {
         selected -> selectedItemSpec
         descendantSelected -> itemSpec.copy(
@@ -146,10 +173,10 @@ private fun ColumnScope.TreeSidebarItem(
                 interactionSource = null,
                 indication = null,
                 onClick = {
-                    if (item.selectable) {
-                        onSelect(item.id)
-                    } else if (item.isBranch) {
-                        expandedState[item.id] = !expanded
+                    if (selectable(item)) {
+                        onSelect(item)
+                    } else if (isBranch) {
+                        expandedState[id] = !expanded
                     }
                 },
             ),
@@ -172,56 +199,95 @@ private fun ColumnScope.TreeSidebarItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             BranchToggle(
-                isBranch = item.isBranch,
+                isBranch = isBranch,
                 expanded = expanded,
                 colors = colors,
                 onToggle = {
-                    expandedState[item.id] = !expanded
+                    expandedState[id] = !expanded
                 },
             )
-            SidebarLeadingIcon(
-                icon = item.icon,
-                colors = colors,
-            )
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-            ) {
-                Text(
-                    text = item.title,
-                    color = colors.textPrimary,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = when {
-                        selected -> FontWeight.Bold
-                        descendantSelected -> FontWeight.SemiBold
-                        else -> FontWeight.Medium
-                    },
+            if (leadingSlot == null) {
+                SidebarLeadingIcon(
+                    icon = icon(item),
+                    colors = colors,
                 )
-                if (item.subtitle != null) {
-                    Text(
-                        text = item.subtitle,
-                        color = when {
-                            selected || descendantSelected -> colors.textSecondary
-                            else -> colors.textMuted
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+            } else {
+                leadingSlot(item, selected, descendantSelected)
+            }
+            if (contentSlot == null) {
+                DefaultSidebarContent(
+                    title = label(item),
+                    subtitle = subtitle(item),
+                    selected = selected,
+                    descendantSelected = descendantSelected,
+                    colors = colors,
+                )
+            } else {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    contentSlot(item, selected, descendantSelected)
                 }
             }
         }
     }
 
-    if (item.isBranch && expanded) {
-        item.children.forEach { child ->
+    if (isBranch && expanded) {
+        childItems.forEach { child ->
             TreeSidebarItem(
                 item = child,
                 level = level + 1,
                 selectedId = selectedId,
                 expandedState = expandedState,
+                itemId = itemId,
+                label = label,
+                subtitle = subtitle,
+                icon = icon,
+                children = children,
+                initiallyExpanded = initiallyExpanded,
+                selectable = selectable,
+                leadingSlot = leadingSlot,
+                contentSlot = contentSlot,
                 itemSpec = itemSpec,
                 selectedItemSpec = selectedItemSpec,
                 colors = colors,
                 onSelect = onSelect,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.DefaultSidebarContent(
+    title: String,
+    subtitle: String?,
+    selected: Boolean,
+    descendantSelected: Boolean,
+    colors: LiquidGlassContentColors,
+) {
+    Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = title,
+            color = colors.textPrimary,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = when {
+                selected -> FontWeight.Bold
+                descendantSelected -> FontWeight.SemiBold
+                else -> FontWeight.Medium
+            },
+        )
+        if (subtitle != null) {
+            Text(
+                text = subtitle,
+                color = when {
+                    selected || descendantSelected -> colors.textSecondary
+                    else -> colors.textMuted
+                },
+                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
@@ -290,24 +356,41 @@ private fun Modifier.sidebarTreeItemPadding(
     bottom = 14.dp,
 )
 
-private fun List<LiquidGlassSidebarItem>.registerInitialExpandedState(
+private fun <T> List<T>.registerInitialExpandedState(
     expandedState: MutableMap<String, Boolean>,
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
+    initiallyExpanded: (T) -> Boolean,
 ) {
     forEach { item ->
-        if (item.isBranch) {
-            expandedState[item.id] = item.initiallyExpanded
-            item.children.registerInitialExpandedState(expandedState)
+        val childItems = children(item)
+        if (childItems.isNotEmpty()) {
+            expandedState[itemId(item)] = initiallyExpanded(item)
+            childItems.registerInitialExpandedState(
+                expandedState = expandedState,
+                itemId = itemId,
+                children = children,
+                initiallyExpanded = initiallyExpanded,
+            )
         }
     }
 }
 
-private fun LiquidGlassSidebarItem.containsSelection(
+private fun <T> T.containsSelection(
     selectedId: String,
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
 ): Boolean {
-    if (id == selectedId) {
+    if (itemId(this) == selectedId) {
         return true
     }
-    return children.any { it.containsSelection(selectedId) }
+    return children(this).any { child ->
+        child.containsSelection(
+            selectedId = selectedId,
+            itemId = itemId,
+            children = children,
+        )
+    }
 }
 
 /** 激活项左上角高光：只在内部聚光，不形成整块选中面板。 */

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -51,15 +52,23 @@ enum class AppSidebarStyle {
 }
 
 @Composable
-fun AppSidebar(
+fun <T> AppSidebar(
     title: String,
-    items: List<AppSidebarItem>,
+    items: List<T>,
+    itemId: (T) -> String,
+    label: (T) -> String,
     modifier: Modifier = Modifier,
     state: AppSidebarState = rememberAppSidebarState(),
     style: AppSidebarStyle = AppSidebarStyle.Default,
     supportText: String? = null,
     searchEnabled: Boolean = true,
     searchPlaceholder: String = "搜索菜单",
+    icon: (T) -> ImageVector? = { null },
+    badge: (T) -> String? = { null },
+    keywords: (T) -> List<String> = { emptyList() },
+    children: (T) -> List<T> = { emptyList() },
+    initiallyExpanded: (T) -> Boolean = { true },
+    selectable: (T) -> Boolean = { item -> children(item).isEmpty() },
     headerSlot: @Composable ColumnScope.() -> Unit = {},
     footerSlot: @Composable ColumnScope.() -> Unit = {},
     emptySlot: @Composable ColumnScope.(String) -> Unit = { query ->
@@ -67,20 +76,32 @@ fun AppSidebar(
             query = query,
         )
     },
-    onItemClick: (AppSidebarItem) -> Unit = {},
+    leadingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
+    labelSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
+    trailingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)? = null,
+    onItemClick: (T) -> Unit = {},
 ) {
-    val sortedItems = remember(items) {
-        items.sortSidebarItems()
-    }
     val tokens = remember(style) {
         style.resolveTokens()
     }
-    val visibleItems = remember(sortedItems, state.searchQuery) {
-        sortedItems.filterSidebarItems(state.searchQuery)
+    val visibleItems = remember(items, state.searchQuery) {
+        items.filterSidebarItems(
+            query = state.searchQuery,
+            itemId = itemId,
+            label = label,
+            keywords = keywords,
+            children = children,
+        )
     }
 
-    LaunchedEffect(sortedItems) {
-        state.ensureInitialized(sortedItems)
+    LaunchedEffect(items) {
+        state.ensureInitialized(
+            items = items,
+            itemId = itemId,
+            children = children,
+            initiallyExpanded = initiallyExpanded,
+            selectable = selectable,
+        )
     }
 
     Box(
@@ -125,11 +146,21 @@ fun AppSidebar(
                     ) {
                         visibleItems.forEach { item ->
                             SidebarTreeItem(
-                                item = item,
+                                node = item,
                                 level = 0,
                                 state = state,
                                 tokens = tokens,
                                 searchActive = state.searchQuery.isNotBlank(),
+                                itemId = itemId,
+                                label = label,
+                                icon = icon,
+                                badge = badge,
+                                children = children,
+                                initiallyExpanded = initiallyExpanded,
+                                selectable = selectable,
+                                leadingSlot = leadingSlot,
+                                labelSlot = labelSlot,
+                                trailingSlot = trailingSlot,
                                 onItemClick = onItemClick,
                             )
                         }
@@ -230,22 +261,40 @@ private fun SidebarSearchField(
 }
 
 @Composable
-private fun ColumnScope.SidebarTreeItem(
-    item: AppSidebarItem,
+private fun <T> ColumnScope.SidebarTreeItem(
+    node: AppSidebarVisibleNode<T>,
     level: Int,
     state: AppSidebarState,
     tokens: SidebarStyleTokens,
     searchActive: Boolean,
-    onItemClick: (AppSidebarItem) -> Unit,
+    itemId: (T) -> String,
+    label: (T) -> String,
+    icon: (T) -> ImageVector?,
+    badge: (T) -> String?,
+    children: (T) -> List<T>,
+    initiallyExpanded: (T) -> Boolean,
+    selectable: (T) -> Boolean,
+    leadingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
+    labelSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
+    trailingSlot: (@Composable RowScope.(T, Boolean, Boolean) -> Unit)?,
+    onItemClick: (T) -> Unit,
 ) {
-    val selected = item.id == state.selectedId
-    val descendantSelected = item.children.any { child ->
-        child.containsSelection(state.selectedId)
+    val item = node.item
+    val id = itemId(item)
+    val childItems = children(item)
+    val isBranch = childItems.isNotEmpty()
+    val selected = id == state.selectedId
+    val descendantSelected = childItems.any { child ->
+        child.containsSelection(
+            selectedId = state.selectedId,
+            itemId = itemId,
+            children = children,
+        )
     }
     val expanded = if (searchActive) {
         true
     } else {
-        state.expandedItems[item.id] ?: item.initiallyExpanded
+        state.expandedItems[id] ?: initiallyExpanded(item)
     }
 
     Box(
@@ -257,12 +306,18 @@ private fun ColumnScope.SidebarTreeItem(
             )
             .clickable(
                 onClick = {
-                    if (item.isBranch) {
-                        state.toggleExpanded(item.id)
+                    if (isBranch) {
+                        state.toggleExpanded(id)
                     } else {
-                        state.select(item)
-                        item.onClick?.invoke()
-                        onItemClick(item)
+                        state.select(
+                            item = item,
+                            itemId = itemId,
+                            children = children,
+                            selectable = selectable,
+                        )
+                        if (selectable(item)) {
+                            onItemClick(item)
+                        }
                     }
                 },
             ),
@@ -273,43 +328,78 @@ private fun ColumnScope.SidebarTreeItem(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SidebarBranchToggle(
-                isBranch = item.isBranch,
+                isBranch = isBranch,
                 expanded = expanded,
                 tokens = tokens,
                 onToggle = {
-                    state.toggleExpanded(item.id)
+                    state.toggleExpanded(id)
                 },
             )
-            SidebarIcon(
-                icon = item.icon,
-                tokens = tokens,
-            )
-            Text(
-                text = item.title,
-                color = tokens.textPrimary,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                modifier = Modifier.weight(1f),
-            )
-            SidebarBadge(
-                badge = item.badge,
-                tokens = tokens,
-            )
+            if (leadingSlot == null) {
+                SidebarIcon(
+                    icon = icon(item),
+                    tokens = tokens,
+                )
+            } else {
+                leadingSlot(item, selected, descendantSelected)
+            }
+            if (labelSlot == null) {
+                DefaultSidebarLabel(
+                    text = label(item),
+                    selected = selected,
+                    tokens = tokens,
+                )
+            } else {
+                labelSlot(item, selected, descendantSelected)
+            }
+            if (trailingSlot == null) {
+                SidebarBadge(
+                    badge = badge(item),
+                    tokens = tokens,
+                )
+            } else {
+                trailingSlot(item, selected, descendantSelected)
+            }
         }
     }
 
-    if (item.isBranch && expanded) {
-        item.children.forEach { child ->
+    if (isBranch && expanded) {
+        node.children.forEach { child ->
             SidebarTreeItem(
-                item = child,
+                node = child,
                 level = level + 1,
                 state = state,
                 tokens = tokens,
                 searchActive = searchActive,
+                itemId = itemId,
+                label = label,
+                icon = icon,
+                badge = badge,
+                children = children,
+                initiallyExpanded = initiallyExpanded,
+                selectable = selectable,
+                leadingSlot = leadingSlot,
+                labelSlot = labelSlot,
+                trailingSlot = trailingSlot,
                 onItemClick = onItemClick,
             )
         }
     }
+}
+
+@Composable
+private fun RowScope.DefaultSidebarLabel(
+    text: String,
+    selected: Boolean,
+    tokens: SidebarStyleTokens,
+) {
+    Text(
+        text = text,
+        color = tokens.textPrimary,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+        modifier = Modifier.weight(1f),
+    )
 }
 
 @Composable

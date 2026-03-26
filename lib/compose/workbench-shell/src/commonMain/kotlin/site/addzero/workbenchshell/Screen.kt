@@ -18,6 +18,8 @@ interface Screen {
         get() = true
     val keywords: List<String>
         get() = emptyList()
+    val badge: String?
+        get() = null
     val content: (@Composable () -> Unit)?
         get() = null
 }

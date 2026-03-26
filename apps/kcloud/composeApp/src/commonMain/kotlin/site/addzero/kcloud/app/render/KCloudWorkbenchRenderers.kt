@@ -19,7 +19,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -28,9 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import site.addzero.kcloud.app.KCloudShellState
 import org.koin.core.annotation.Single
-import site.addzero.appsidebar.AppSidebar
 import site.addzero.appsidebar.AppSidebarStyle
-import site.addzero.appsidebar.rememberAppSidebarState
 import site.addzero.kcloud.app.render.contentFrame
 import site.addzero.kcloud.app.render.sceneTabContent
 import site.addzero.kcloud.app.render.sceneTabFrame
@@ -40,7 +37,7 @@ import site.addzero.kcloud.app.render.visibleLeafCount
 import site.addzero.kcloud.app.render.visibleLeafCountInSubtree
 import site.addzero.workbenchshell.ScreenCatalog
 import site.addzero.workbenchshell.ScreenNode
-import site.addzero.workbenchshell.toAppSidebarItems
+import site.addzero.workbenchshell.ScreenSidebar
 import site.addzero.workbenchshell.spi.content.WorkbenchContentRenderer
 import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
 import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
@@ -62,37 +59,20 @@ class KCloudSidebarRenderer(
         val selectedSceneNode = remember(screenCatalog, selectedSceneId) {
             screenCatalog.findNode(selectedSceneId)
         }
-        val sidebarItems = remember(selectedSceneNode, screenCatalog.defaultExpandedIds) {
-            selectedSceneNode
-                ?.children
-                .orEmpty()
-                .toAppSidebarItems(expandedIds = screenCatalog.defaultExpandedIds)
-        }
-        val sidebarState = rememberAppSidebarState(
-            initialSelectedId = selectedNode?.id,
-        )
         val scenePageCount = remember(selectedSceneNode) {
             selectedSceneNode.visibleLeafCount()
         }
 
-        LaunchedEffect(selectedNode?.id, sidebarItems) {
-            sidebarState.updateSelectedId(selectedNode?.id)
-            sidebarState.revealSelection(
-                items = sidebarItems,
-                selectedId = selectedNode?.id,
-            )
-        }
-
-        AppSidebar(
+        ScreenSidebar(
             title = selectedSceneNode?.name ?: "KCloud",
-            supportText = "场景化模块工作台",
-            items = sidebarItems,
-            state = sidebarState,
-            style = AppSidebarStyle.FlushWorkbench,
-            modifier = modifier.sidebarFrame(),
-            onItemClick = { item ->
-                shellState.selectScreen(item.id)
+            items = selectedSceneNode?.children.orEmpty(),
+            selectedId = selectedNode?.id,
+            onLeafClick = { node ->
+                shellState.selectScreen(node.id)
             },
+            modifier = modifier.sidebarFrame(),
+            style = AppSidebarStyle.FlushWorkbench,
+            supportText = "场景化模块工作台",
             footerSlot = {
                 SidebarSummaryCard(
                     pageCount = scenePageCount,

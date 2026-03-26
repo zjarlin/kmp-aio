@@ -2,1687 +2,746 @@ package site.addzero.coding.playground.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import site.addzero.coding.playground.PlaygroundUiLanguage
 import site.addzero.coding.playground.PlaygroundWorkbenchState
-import site.addzero.coding.playground.shared.dto.BoundedContextMetaDto
-import site.addzero.coding.playground.shared.dto.DeleteCheckResultDto
-import site.addzero.coding.playground.shared.dto.DtoFieldMetaDto
-import site.addzero.coding.playground.shared.dto.DtoKind
-import site.addzero.coding.playground.shared.dto.DtoMetaDto
-import site.addzero.coding.playground.shared.dto.EntityMetaDto
-import site.addzero.coding.playground.shared.dto.EtlWrapperMetaDto
-import site.addzero.coding.playground.shared.dto.FieldMetaDto
-import site.addzero.coding.playground.shared.dto.FieldType
-import site.addzero.coding.playground.shared.dto.GenerationTargetMetaDto
-import site.addzero.coding.playground.shared.dto.ProjectMetaDto
-import site.addzero.coding.playground.shared.dto.RelationKind
-import site.addzero.coding.playground.shared.dto.RelationMetaDto
-import site.addzero.coding.playground.shared.dto.ScaffoldPreset
-import site.addzero.coding.playground.shared.dto.TemplateMetaDto
-import site.addzero.coding.playground.shared.dto.TemplateOutputKind
-
-private enum class WorkbenchTab {
-    PROJECTS,
-    CONTEXTS,
-    ENTITIES,
-    DTOS,
-    TEMPLATES,
-    TARGETS,
-    ETL,
-    SNAPSHOT,
-}
+import site.addzero.coding.playground.shared.dto.*
 
 @Composable
 fun PlaygroundApp(state: PlaygroundWorkbenchState) {
-    var activeTab by remember { mutableStateOf(WorkbenchTab.PROJECTS) }
-    PlaygroundTheme {
-        Column(
+    val scope = rememberCoroutineScope()
+    val tabs = listOf("module", "types", "globals", "functions", "metadata", "compile", "snapshot", "preview")
+    var selectedTab by remember { mutableStateOf("module") }
+
+    MaterialTheme(
+        colorScheme = lightColorScheme(
+            primary = Color(0xFF345778),
+            secondary = Color(0xFF5B7289),
+            surface = Color(0xFFF4F6F8),
+            background = Color(0xFFECEFF3),
+        ),
+    ) {
+        Row(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background),
+                .background(MaterialTheme.colorScheme.background)
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            WorkbenchHeader(
+            LeftExplorer(
                 state = state,
-                onRefresh = { scopeState ->
-                    scopeState.launch { state.refreshAll() }
+                onRefresh = { scope.launch { state.refreshAll() } },
+                onNewModule = {
+                    scope.launch {
+                        state.saveModule(
+                            selectedId = null,
+                            request = CreateLlvmModuleRequest(
+                                name = "sample-module",
+                                sourceFilename = "sample.ll",
+                                targetTriple = "x86_64-unknown-linux-gnu",
+                                dataLayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
+                                description = "New LLVM IR module",
+                            ),
+                        )
+                    }
                 },
+                modifier = Modifier.width(260.dp).fillMaxHeight(),
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
+            Column(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                ExplorerPane(
-                    state = state,
-                    modifier = Modifier
-                        .width(340.dp)
-                        .fillMaxHeight(),
-                    onSelectTab = { activeTab = it },
-                )
-                VerticalLine()
-                EditorPane(
-                    state = state,
-                    activeTab = activeTab,
-                    onTabChange = { activeTab = it },
-                    modifier = Modifier.weight(1f),
-                )
+                WorkbenchHeader(state = state, onToggleLanguage = state::toggleLanguage)
+                TabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
+                    tabs.forEachIndexed { index, tab ->
+                        Tab(
+                            selected = tabs[index] == selectedTab,
+                            onClick = { selectedTab = tab },
+                            text = {
+                                Text(
+                                    when (tab) {
+                                        "module" -> tr(state, "模块", "Module")
+                                        "types" -> tr(state, "类型", "Types")
+                                        "globals" -> tr(state, "全局", "Globals")
+                                        "functions" -> tr(state, "函数", "Functions")
+                                        "metadata" -> tr(state, "Metadata", "Metadata")
+                                        "compile" -> tr(state, "编译", "Compile")
+                                        "snapshot" -> tr(state, "快照", "Snapshot")
+                                        else -> tr(state, "预览", "Preview")
+                                    },
+                                )
+                            },
+                        )
+                    }
+                }
+                when (selectedTab) {
+                    "module" -> ModuleTab(state, scope)
+                    "types" -> TypeTab(state, scope)
+                    "globals" -> GlobalTab(state, scope)
+                    "functions" -> FunctionTab(state, scope)
+                    "metadata" -> MetadataTab(state, scope)
+                    "compile" -> CompileTab(state, scope)
+                    "snapshot" -> SnapshotTab(state, scope)
+                    else -> PreviewTab(state, scope)
+                }
             }
-            DiagnosticsPanel(state = state)
-            StatusBar(state = state)
         }
+    }
+}
+
+@Composable
+private fun LeftExplorer(
+    state: PlaygroundWorkbenchState,
+    onRefresh: () -> Unit,
+    onNewModule: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.background(MaterialTheme.colorScheme.surface).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(tr(state, "LLVM IR 工作台", "LLVM IR Workbench"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        OutlinedTextField(
+            value = state.searchQuery,
+            onValueChange = { state.searchQuery = it },
+            label = { Text(tr(state, "全文检索", "Search")) },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onRefresh) { Text(tr(state, "刷新", "Refresh")) }
+            OutlinedButton(onClick = onNewModule) { Text(tr(state, "新模块", "New")) }
+        }
+        Divider()
+        Text(tr(state, "模块树", "Module Tree"), fontWeight = FontWeight.SemiBold)
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
+            items(state.modules) { module ->
+                val selected = module.id == state.selectedModuleId
+                Surface(
+                    color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent,
+                    tonalElevation = if (selected) 2.dp else 0.dp,
+                    modifier = Modifier.fillMaxWidth().clickable { state.selectModule(module.id) },
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(module.name, fontWeight = FontWeight.SemiBold)
+                        Text(module.targetTriple, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                    }
+                }
+            }
+        }
+        Divider()
+        Text(state.statusMessage, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
     }
 }
 
 @Composable
 private fun WorkbenchHeader(
     state: PlaygroundWorkbenchState,
-    onRefresh: (kotlinx.coroutines.CoroutineScope) -> Unit,
+    onToggleLanguage: () -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = tr(state, "Coding Playground 工作台", "Coding Playground Workbench"),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Text(
-                text = tr(
-                    state,
-                    "元数据设计台、管理后台与 CRUD 骨架生成器",
-                    "Metadata studio, admin console and CRUD skeleton generator",
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        OutlinedButton(onClick = { onRefresh(scope) }) {
-            Text(tr(state, "刷新", "Refresh"))
-        }
-        OutlinedButton(onClick = { state.toggleLanguage() }) {
-            Text(if (state.uiLanguage == PlaygroundUiLanguage.ZH_CN) "EN" else "中文")
-        }
-    }
-}
-
-@Composable
-private fun ExplorerPane(
-    state: PlaygroundWorkbenchState,
-    modifier: Modifier = Modifier,
-    onSelectTab: (WorkbenchTab) -> Unit,
-) {
-    val scope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
-    Column(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        OutlinedTextField(
-            value = state.explorerQuery,
-            onValueChange = { state.explorerQuery = it },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(tr(state, "搜索树节点", "Search")) },
-            singleLine = true,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(
-                selected = state.selectedProjectId != null,
-                onClick = {
-                    onSelectTab(WorkbenchTab.PROJECTS)
-                    state.clearDiagnostics()
-                },
-                label = { Text(tr(state, "项目", "Projects")) },
-            )
-            FilterChip(
-                selected = state.selectedContextId != null,
-                onClick = {
-                    onSelectTab(WorkbenchTab.CONTEXTS)
-                    state.clearDiagnostics()
-                },
-                label = { Text(tr(state, "上下文", "Contexts")) },
-            )
-        }
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            ExplorerSectionTitle(tr(state, "项目树", "Workspace Tree"))
-            state.filteredProjects().forEach { project ->
-                ExplorerRow(
-                    title = project.name,
-                    subtitle = project.slug,
-                    selected = state.selectedProjectId == project.id,
-                    indent = 0,
-                    onClick = {
-                        onSelectTab(WorkbenchTab.PROJECTS)
-                        scope.launch {
-                            state.selectProject(project.id)
-                            state.refreshProjectScope()
-                        }
-                    },
-                )
-            }
-
-            if (state.selectedProjectId != null) {
-                Spacer(Modifier.height(6.dp))
-                ExplorerSectionTitle(tr(state, "上下文", "Contexts"))
-                state.filteredContexts().forEach { context ->
-                    ExplorerRow(
-                        title = context.name,
-                        subtitle = context.code,
-                        selected = state.selectedContextId == context.id,
-                        indent = 1,
-                        onClick = {
-                            onSelectTab(WorkbenchTab.CONTEXTS)
-                            scope.launch {
-                                state.selectContext(context.id)
-                                state.refreshContextScope()
-                            }
-                        },
-                    )
-                }
-
-                if (state.selectedContextId != null) {
-                    ExplorerSectionTitle(tr(state, "实体", "Entities"))
-                    state.filteredEntities().forEach { entity ->
-                        ExplorerRow(
-                            title = entity.name,
-                            subtitle = entity.code,
-                            selected = state.selectedEntityId == entity.id,
-                            indent = 2,
-                            onClick = {
-                                onSelectTab(WorkbenchTab.ENTITIES)
-                                state.selectEntity(entity.id)
-                            },
-                        )
-                    }
-                    ExplorerSectionTitle(tr(state, "DTO", "DTOs"))
-                    state.filteredDtos().forEach { dto ->
-                        ExplorerRow(
-                            title = dto.name,
-                            subtitle = dto.code,
-                            selected = state.selectedDtoId == dto.id,
-                            indent = 2,
-                            onClick = {
-                                onSelectTab(WorkbenchTab.DTOS)
-                                state.selectDto(dto.id)
-                            },
-                        )
-                    }
-                    ExplorerSectionTitle(tr(state, "模板", "Templates"))
-                    state.filteredTemplates().forEach { template ->
-                        ExplorerRow(
-                            title = template.name,
-                            subtitle = template.key,
-                            selected = state.selectedTemplateId == template.id,
-                            indent = 2,
-                            onClick = {
-                                onSelectTab(WorkbenchTab.TEMPLATES)
-                                state.selectTemplate(template.id)
-                            },
-                        )
-                    }
-                    ExplorerSectionTitle(tr(state, "生成目标", "Targets"))
-                    state.filteredTargets().forEach { target ->
-                        ExplorerRow(
-                            title = target.name,
-                            subtitle = target.key,
-                            selected = state.selectedTargetId == target.id,
-                            indent = 2,
-                            onClick = {
-                                onSelectTab(WorkbenchTab.TARGETS)
-                                state.selectTarget(target.id)
-                            },
-                        )
-                    }
-                }
-
-                ExplorerSectionTitle(tr(state, "ETL 包裹器", "ETL Wrappers"))
-                state.filteredEtlWrappers().forEach { wrapper ->
-                    ExplorerRow(
-                        title = wrapper.name,
-                        subtitle = wrapper.key,
-                        selected = state.selectedEtlWrapperId == wrapper.id,
-                        indent = 1,
-                        onClick = {
-                            onSelectTab(WorkbenchTab.ETL)
-                            state.selectEtlWrapper(wrapper.id)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExplorerSectionTitle(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 4.dp),
-    )
-}
-
-@Composable
-private fun ExplorerRow(
-    title: String,
-    subtitle: String?,
-    selected: Boolean,
-    indent: Int,
-    onClick: () -> Unit,
-) {
-    val background = if (selected) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-    } else {
-        Color.Transparent
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(background, shape = MaterialTheme.shapes.small)
-            .clickable(onClick = onClick)
-            .padding(start = (indent * 16).dp + 10.dp, top = 8.dp, end = 10.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(7.dp)
-                .background(
-                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
-                    shape = MaterialTheme.shapes.small,
-                ),
-        )
-        Spacer(Modifier.width(10.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            if (!subtitle.isNullOrBlank()) {
-                Text(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EditorPane(
-    state: PlaygroundWorkbenchState,
-    activeTab: WorkbenchTab,
-    onTabChange: (WorkbenchTab) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        ScrollableTabRow(selectedTabIndex = activeTab.ordinal) {
-            WorkbenchTab.entries.forEach { tab ->
-                Tab(
-                    selected = tab == activeTab,
-                    onClick = { onTabChange(tab) },
-                    text = {
-                        Text(
-                            when (tab) {
-                                WorkbenchTab.PROJECTS -> tr(state, "项目", "Projects")
-                                WorkbenchTab.CONTEXTS -> tr(state, "上下文", "Contexts")
-                                WorkbenchTab.ENTITIES -> tr(state, "实体", "Entities")
-                                WorkbenchTab.DTOS -> tr(state, "DTO", "DTOs")
-                                WorkbenchTab.TEMPLATES -> tr(state, "模板", "Templates")
-                                WorkbenchTab.TARGETS -> tr(state, "目标", "Targets")
-                                WorkbenchTab.ETL -> tr(state, "ETL", "ETL")
-                                WorkbenchTab.SNAPSHOT -> tr(state, "快照", "Snapshot")
-                            },
-                        )
-                    },
-                )
-            }
-        }
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            when (activeTab) {
-                WorkbenchTab.PROJECTS -> ProjectEditor(state)
-                WorkbenchTab.CONTEXTS -> ContextEditor(state)
-                WorkbenchTab.ENTITIES -> EntityEditor(state)
-                WorkbenchTab.DTOS -> DtoEditor(state)
-                WorkbenchTab.TEMPLATES -> TemplateEditor(state)
-                WorkbenchTab.TARGETS -> TargetEditor(state)
-                WorkbenchTab.ETL -> EtlEditor(state)
-                WorkbenchTab.SNAPSHOT -> SnapshotEditor(state)
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProjectEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val project = state.projects.firstOrNull { it.id == state.selectedProjectId }
-    var name by remember(project?.id) { mutableStateOf(project?.name.orEmpty()) }
-    var slug by remember(project?.id) { mutableStateOf(project?.slug.orEmpty()) }
-    var description by remember(project?.id) { mutableStateOf(project?.description.orEmpty()) }
-    var showDeleteDialog by remember(project?.id) { mutableStateOf(false) }
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "项目详情", "Project Details"),
-            subtitle = tr(state, "平台元数据的根聚合。", "Root aggregate for playground metadata."),
-        ) {
-            LabeledTextField(tr(state, "项目名称", "Name"), name) { name = it }
-            LabeledTextField(tr(state, "项目标识", "Slug"), slug) { slug = it }
-            LabeledTextField(
-                label = tr(state, "说明", "Description"),
-                value = description,
-                onValueChange = { description = it },
-                minLines = 3,
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存项目", "Save Project"),
-                onPrimary = {
-                    scope.launch { state.saveProject(project?.id, name, slug, description) }
-                },
-                secondaryLabel = tr(state, "新建项目", "New Project"),
-                onSecondary = {
-                    state.selectProject(null)
-                    scope.launch { state.refreshProjectScope() }
-                    name = ""
-                    slug = ""
-                    description = ""
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (project != null) {
-                    {
-                        scope.launch {
-                            state.previewProjectDelete(project.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-        }
-        SummaryCard(
-            title = tr(state, "当前项目摘要", "Current Project"),
-            rows = listOf(
-                tr(state, "项目", "Project") to (project?.name ?: tr(state, "未选择", "Not selected")),
-                tr(state, "上下文数量", "Contexts") to state.contexts.size.toString(),
-                tr(state, "ETL 数量", "ETL wrappers") to state.etlWrappers.size.toString(),
-            ),
-        )
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除项目", "Delete Project"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (project != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeProject(project.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun ContextEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val context = state.contexts.firstOrNull { it.id == state.selectedContextId }
-    var name by remember(context?.id) { mutableStateOf(context?.name.orEmpty()) }
-    var code by remember(context?.id) { mutableStateOf(context?.code.orEmpty()) }
-    var description by remember(context?.id) { mutableStateOf(context?.description.orEmpty()) }
-    var showDeleteDialog by remember(context?.id) { mutableStateOf(false) }
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "上下文详情", "Context Details"),
-            subtitle = tr(state, "一个上下文会显式级联其下实体、DTO、模板与目标。", "Deleting a context cascades its entities, DTOs, templates and targets."),
-        ) {
-            LabeledTextField(tr(state, "上下文名称", "Name"), name) { name = it }
-            LabeledTextField(tr(state, "上下文代码", "Code"), code) { code = it }
-            LabeledTextField(
-                label = tr(state, "说明", "Description"),
-                value = description,
-                onValueChange = { description = it },
-                minLines = 3,
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存上下文", "Save Context"),
-                onPrimary = {
-                    scope.launch { state.saveContext(context?.id, name, code, description) }
-                },
-                secondaryLabel = tr(state, "新建上下文", "New Context"),
-                onSecondary = {
-                    state.selectContext(null)
-                    scope.launch { state.refreshContextScope() }
-                    name = ""
-                    code = ""
-                    description = ""
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (context != null) {
-                    {
-                        scope.launch {
-                            state.previewContextDelete(context.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-        }
-        SummaryCard(
-            title = tr(state, "上下文聚合摘要", "Aggregate Summary"),
-            rows = listOf(
-                tr(state, "实体", "Entities") to state.entities.size.toString(),
-                tr(state, "DTO", "DTOs") to state.dtos.size.toString(),
-                tr(state, "模板", "Templates") to state.templates.size.toString(),
-                tr(state, "目标", "Targets") to state.targets.size.toString(),
-            ),
-        )
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除上下文", "Delete Context"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (context != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeContext(context.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun EntityEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val entity = state.entities.firstOrNull { it.id == state.selectedEntityId }
-    val entityFields = state.fieldsForSelectedEntity()
-    val entityRelations = state.relationsForSelectedEntity()
-    var name by remember(entity?.id) { mutableStateOf(entity?.name.orEmpty()) }
-    var code by remember(entity?.id) { mutableStateOf(entity?.code.orEmpty()) }
-    var tableName by remember(entity?.id) { mutableStateOf(entity?.tableName.orEmpty()) }
-    var description by remember(entity?.id) { mutableStateOf(entity?.description.orEmpty()) }
-    var showDeleteDialog by remember(entity?.id) { mutableStateOf(false) }
-
-    var editingFieldId by remember(entity?.id, entityFields.map { it.id }.joinToString()) {
-        mutableStateOf(entityFields.firstOrNull()?.id)
-    }
-    val editingField = entityFields.firstOrNull { it.id == editingFieldId }
-    var fieldName by remember(editingField?.id) { mutableStateOf(editingField?.name.orEmpty()) }
-    var fieldCode by remember(editingField?.id) { mutableStateOf(editingField?.code.orEmpty()) }
-    var fieldType by remember(editingField?.id) { mutableStateOf(editingField?.type ?: FieldType.STRING) }
-    var fieldNullable by remember(editingField?.id) { mutableStateOf(editingField?.nullable ?: false) }
-    var fieldIdField by remember(editingField?.id) { mutableStateOf(editingField?.idField ?: false) }
-    var fieldKeyField by remember(editingField?.id) { mutableStateOf(editingField?.keyField ?: false) }
-    var fieldSearchable by remember(editingField?.id) { mutableStateOf(editingField?.searchable ?: false) }
-
-    var editingRelationId by remember(entity?.id, entityRelations.map { it.id }.joinToString()) {
-        mutableStateOf(entityRelations.firstOrNull()?.id)
-    }
-    val editingRelation = entityRelations.firstOrNull { it.id == editingRelationId }
-    var relationName by remember(editingRelation?.id) { mutableStateOf(editingRelation?.name.orEmpty()) }
-    var relationCode by remember(editingRelation?.id) { mutableStateOf(editingRelation?.code.orEmpty()) }
-    var relationKind by remember(editingRelation?.id) { mutableStateOf(editingRelation?.kind ?: RelationKind.MANY_TO_ONE) }
-    var relationTargetId by remember(editingRelation?.id, entity?.id) {
-        mutableStateOf(editingRelation?.targetEntityId ?: state.entities.firstOrNull { it.id != entity?.id }?.id.orEmpty())
-    }
-
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "实体详情", "Entity Details"),
-            subtitle = tr(state, "字段支持排序，删除前会校验 relation 与 dto-field 引用。", "Fields are reorderable and entity delete is guarded by relation and dto-field references."),
-        ) {
-            LabeledTextField(tr(state, "实体名称", "Name"), name) { name = it }
-            LabeledTextField(tr(state, "实体代码", "Code"), code) { code = it }
-            LabeledTextField(tr(state, "表名", "Table Name"), tableName) { tableName = it }
-            LabeledTextField(
-                label = tr(state, "说明", "Description"),
-                value = description,
-                onValueChange = { description = it },
-                minLines = 3,
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存实体", "Save Entity"),
-                onPrimary = {
-                    scope.launch { state.saveEntity(entity?.id, name, code, tableName, description) }
-                },
-                secondaryLabel = tr(state, "新建实体", "New Entity"),
-                onSecondary = {
-                    state.selectEntity(null)
-                    name = ""
-                    code = ""
-                    tableName = ""
-                    description = ""
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (entity != null) {
-                    {
-                        scope.launch {
-                            state.previewEntityDelete(entity.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-        }
-
-        EditorCard(
-            title = tr(state, "字段管理", "Fields"),
-            subtitle = tr(state, "支持创建、编辑、删除与排序。", "Create, edit, delete and reorder fields."),
-        ) {
-            ReorderList(
-                items = entityFields,
-                selectedId = editingFieldId,
-                getTitle = { it.name },
-                getSubtitle = { "${it.code} · ${it.type.name}" },
-                onSelect = { editingFieldId = it.id },
-                onMoveUp = { scope.launch { state.moveField(it.id, -1) } },
-                onMoveDown = { scope.launch { state.moveField(it.id, 1) } },
-            )
-            Spacer(Modifier.height(8.dp))
-            LabeledTextField(tr(state, "字段名称", "Field Name"), fieldName) { fieldName = it }
-            LabeledTextField(tr(state, "字段代码", "Field Code"), fieldCode) { fieldCode = it }
-            EnumSelector(
-                label = tr(state, "字段类型", "Field Type"),
-                selected = fieldType,
-                options = FieldType.entries.toList(),
-                labelOf = { it.name },
-                onSelect = { fieldType = it },
-            )
-            CheckboxLine(tr(state, "允许为空", "Nullable"), fieldNullable) { fieldNullable = it }
-            CheckboxLine(tr(state, "主键字段", "ID Field"), fieldIdField) { fieldIdField = it }
-            CheckboxLine(tr(state, "业务键", "Key Field"), fieldKeyField) { fieldKeyField = it }
-            CheckboxLine(tr(state, "参与搜索", "Searchable"), fieldSearchable) { fieldSearchable = it }
-            ButtonRow(
-                primaryLabel = tr(state, "保存字段", "Save Field"),
-                onPrimary = if (entity != null) {
-                    {
-                        scope.launch {
-                            state.saveField(
-                                selectedId = editingField?.id,
-                                entityId = entity.id,
-                                name = fieldName,
-                                code = fieldCode,
-                                type = fieldType,
-                                nullable = fieldNullable,
-                                idField = fieldIdField,
-                                keyField = fieldKeyField,
-                                searchable = fieldSearchable,
-                            )
-                        }
-                    }
-                } else {
-                    {}
-                },
-                secondaryLabel = tr(state, "新建字段", "New Field"),
-                onSecondary = {
-                    editingFieldId = null
-                    fieldName = ""
-                    fieldCode = ""
-                    fieldType = FieldType.STRING
-                    fieldNullable = false
-                    fieldIdField = false
-                    fieldKeyField = false
-                    fieldSearchable = false
-                },
-                tertiaryLabel = tr(state, "删除字段", "Delete Field"),
-                onTertiary = if (editingField != null) {
-                    { scope.launch { state.removeField(editingField.id) } }
-                } else {
-                    null
-                },
-            )
-        }
-
-        EditorCard(
-            title = tr(state, "关系管理", "Relations"),
-            subtitle = tr(state, "用于 ManyToOne / OneToMany 等建模。", "Use for ManyToOne / OneToMany relation modeling."),
-        ) {
-            SimpleSelectionList(
-                items = entityRelations,
-                selectedId = editingRelationId,
-                getTitle = { it.name },
-                getSubtitle = { "${it.code} · ${it.kind.name}" },
-                onSelect = { editingRelationId = it.id },
-            )
-            Spacer(Modifier.height(8.dp))
-            LabeledTextField(tr(state, "关系名称", "Relation Name"), relationName) { relationName = it }
-            LabeledTextField(tr(state, "关系代码", "Relation Code"), relationCode) { relationCode = it }
-            EnumSelector(
-                label = tr(state, "关系类型", "Relation Kind"),
-                selected = relationKind,
-                options = RelationKind.entries.toList(),
-                labelOf = { it.name },
-                onSelect = { relationKind = it },
-            )
-            StringSelector(
-                label = tr(state, "目标实体", "Target Entity"),
-                selectedId = relationTargetId,
-                options = state.entities.filter { it.id != entity?.id }.map { it.id to "${it.name} (${it.code})" },
-                onSelect = { relationTargetId = it.orEmpty() },
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存关系", "Save Relation"),
-                onPrimary = if (entity != null && relationTargetId.isNotBlank()) {
-                    {
-                        scope.launch {
-                            state.saveRelation(
-                                selectedId = editingRelation?.id,
-                                sourceEntityId = entity.id,
-                                targetEntityId = relationTargetId,
-                                name = relationName,
-                                code = relationCode,
-                                kind = relationKind,
-                            )
-                        }
-                    }
-                } else {
-                    {}
-                },
-                secondaryLabel = tr(state, "新建关系", "New Relation"),
-                onSecondary = {
-                    editingRelationId = null
-                    relationName = ""
-                    relationCode = ""
-                    relationKind = RelationKind.MANY_TO_ONE
-                    relationTargetId = state.entities.firstOrNull { it.id != entity?.id }?.id.orEmpty()
-                },
-                tertiaryLabel = tr(state, "删除关系", "Delete Relation"),
-                onTertiary = if (editingRelation != null) {
-                    { scope.launch { state.removeRelation(editingRelation.id) } }
-                } else {
-                    null
-                },
-            )
-        }
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除实体", "Delete Entity"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (entity != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeEntity(entity.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun DtoEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val dto = state.dtos.firstOrNull { it.id == state.selectedDtoId }
-    val dtoFields = state.dtoFieldsForSelectedDto()
-    var name by remember(dto?.id) { mutableStateOf(dto?.name.orEmpty()) }
-    var code by remember(dto?.id) { mutableStateOf(dto?.code.orEmpty()) }
-    var description by remember(dto?.id) { mutableStateOf(dto?.description.orEmpty()) }
-    var kind by remember(dto?.id) { mutableStateOf(dto?.kind ?: DtoKind.REQUEST) }
-    var sourceEntityId by remember(dto?.id) { mutableStateOf(dto?.entityId ?: state.selectedEntityId) }
-    var showDeleteDialog by remember(dto?.id) { mutableStateOf(false) }
-
-    var editingFieldId by remember(dto?.id, dtoFields.map { it.id }.joinToString()) {
-        mutableStateOf(dtoFields.firstOrNull()?.id)
-    }
-    val editingField = dtoFields.firstOrNull { it.id == editingFieldId }
-    var dtoFieldName by remember(editingField?.id) { mutableStateOf(editingField?.name.orEmpty()) }
-    var dtoFieldCode by remember(editingField?.id) { mutableStateOf(editingField?.code.orEmpty()) }
-    var dtoFieldType by remember(editingField?.id) { mutableStateOf(editingField?.type ?: FieldType.STRING) }
-    var dtoFieldNullable by remember(editingField?.id) { mutableStateOf(editingField?.nullable ?: false) }
-    var dtoFieldEntityFieldId by remember(editingField?.id, sourceEntityId) {
-        mutableStateOf(editingField?.entityFieldId ?: state.fields.firstOrNull { it.entityId == sourceEntityId }?.id)
-    }
-
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "DTO 详情", "DTO Details"),
-            subtitle = tr(state, "DTO 支持绑定业务实体，并维护独立字段列表。", "DTOs can bind to entities and maintain an independent field list."),
-        ) {
-            LabeledTextField(tr(state, "DTO 名称", "DTO Name"), name) { name = it }
-            LabeledTextField(tr(state, "DTO 代码", "DTO Code"), code) { code = it }
-            EnumSelector(
-                label = tr(state, "DTO 类型", "DTO Kind"),
-                selected = kind,
-                options = DtoKind.entries.toList(),
-                labelOf = { it.name },
-                onSelect = { kind = it },
-            )
-            StringSelector(
-                label = tr(state, "绑定实体", "Entity"),
-                selectedId = sourceEntityId,
-                options = state.entities.map { it.id to "${it.name} (${it.code})" },
-                onSelect = { sourceEntityId = it },
-            )
-            LabeledTextField(
-                label = tr(state, "说明", "Description"),
-                value = description,
-                onValueChange = { description = it },
-                minLines = 3,
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存 DTO", "Save DTO"),
-                onPrimary = {
-                    scope.launch { state.saveDto(dto?.id, sourceEntityId, name, code, kind, description) }
-                },
-                secondaryLabel = tr(state, "新建 DTO", "New DTO"),
-                onSecondary = {
-                    state.selectDto(null)
-                    name = ""
-                    code = ""
-                    description = ""
-                    kind = DtoKind.REQUEST
-                    sourceEntityId = state.selectedEntityId
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (dto != null) {
-                    {
-                        scope.launch {
-                            state.previewDtoDelete(dto.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-        }
-
-        EditorCard(
-            title = tr(state, "DTO 字段", "DTO Fields"),
-            subtitle = tr(state, "支持排序以及绑定实体字段。", "Reorderable and optionally linked to entity fields."),
-        ) {
-            ReorderList(
-                items = dtoFields,
-                selectedId = editingFieldId,
-                getTitle = { it.name },
-                getSubtitle = { "${it.code} · ${it.type.name}" },
-                onSelect = { editingFieldId = it.id },
-                onMoveUp = { scope.launch { state.moveDtoField(it.id, -1) } },
-                onMoveDown = { scope.launch { state.moveDtoField(it.id, 1) } },
-            )
-            Spacer(Modifier.height(8.dp))
-            LabeledTextField(tr(state, "字段名称", "Name"), dtoFieldName) { dtoFieldName = it }
-            LabeledTextField(tr(state, "字段代码", "Code"), dtoFieldCode) { dtoFieldCode = it }
-            EnumSelector(
-                label = tr(state, "字段类型", "Type"),
-                selected = dtoFieldType,
-                options = FieldType.entries.toList(),
-                labelOf = { it.name },
-                onSelect = { dtoFieldType = it },
-            )
-            StringSelector(
-                label = tr(state, "来源实体字段", "Entity Field"),
-                selectedId = dtoFieldEntityFieldId,
-                options = state.fields.filter { it.entityId == sourceEntityId }.map { it.id to "${it.name} (${it.code})" },
-                onSelect = { dtoFieldEntityFieldId = it },
-                allowEmpty = true,
-            )
-            CheckboxLine(tr(state, "允许为空", "Nullable"), dtoFieldNullable) { dtoFieldNullable = it }
-            ButtonRow(
-                primaryLabel = tr(state, "保存 DTO 字段", "Save DTO Field"),
-                onPrimary = if (dto != null) {
-                    {
-                        scope.launch {
-                            state.saveDtoField(
-                                selectedId = editingField?.id,
-                                dtoId = dto.id,
-                                entityFieldId = dtoFieldEntityFieldId,
-                                name = dtoFieldName,
-                                code = dtoFieldCode,
-                                type = dtoFieldType,
-                                nullable = dtoFieldNullable,
-                            )
-                        }
-                    }
-                } else {
-                    {}
-                },
-                secondaryLabel = tr(state, "新建 DTO 字段", "New DTO Field"),
-                onSecondary = {
-                    editingFieldId = null
-                    dtoFieldName = ""
-                    dtoFieldCode = ""
-                    dtoFieldType = FieldType.STRING
-                    dtoFieldNullable = false
-                    dtoFieldEntityFieldId = state.fields.firstOrNull { it.entityId == sourceEntityId }?.id
-                },
-                tertiaryLabel = tr(state, "删除 DTO 字段", "Delete DTO Field"),
-                onTertiary = if (editingField != null) {
-                    { scope.launch { state.removeDtoField(editingField.id) } }
-                } else {
-                    null
-                },
-            )
-        }
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除 DTO", "Delete DTO"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (dto != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeDto(dto.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun TemplateEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val template = state.templates.firstOrNull { it.id == state.selectedTemplateId }
-    var name by remember(template?.id) { mutableStateOf(template?.name.orEmpty()) }
-    var key by remember(template?.id) { mutableStateOf(template?.key.orEmpty()) }
-    var relativeOutputPath by remember(template?.id) { mutableStateOf(template?.relativeOutputPath.orEmpty()) }
-    var fileNameTemplate by remember(template?.id) { mutableStateOf(template?.fileNameTemplate.orEmpty()) }
-    var body by remember(template?.id) { mutableStateOf(template?.body.orEmpty()) }
-    var outputKind by remember(template?.id) { mutableStateOf(template?.outputKind ?: TemplateOutputKind.KOTLIN_SOURCE) }
-    var enabled by remember(template?.id) { mutableStateOf(template?.enabled ?: true) }
-    var etlWrapperId by remember(template?.id) { mutableStateOf(template?.etlWrapperId) }
-    var showDeleteDialog by remember(template?.id) { mutableStateOf(false) }
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "模板详情", "Template Details"),
-            subtitle = tr(state, "支持 ETL 绑定、校验与顺序调整。", "Supports ETL linkage, validation and ordering."),
-        ) {
-            ReorderList(
-                items = state.templates,
-                selectedId = template?.id,
-                getTitle = { it.name },
-                getSubtitle = { it.key },
-                onSelect = {
-                    state.selectTemplate(it.id)
-                },
-                onMoveUp = { scope.launch { state.moveTemplate(it.id, -1) } },
-                onMoveDown = { scope.launch { state.moveTemplate(it.id, 1) } },
-            )
-            Spacer(Modifier.height(8.dp))
-            LabeledTextField(tr(state, "模板名称", "Name"), name) { name = it }
-            LabeledTextField(tr(state, "模板键", "Key"), key) { key = it }
-            EnumSelector(
-                label = tr(state, "输出类型", "Output Kind"),
-                selected = outputKind,
-                options = TemplateOutputKind.entries.toList(),
-                labelOf = { it.name },
-                onSelect = { outputKind = it },
-            )
-            StringSelector(
-                label = tr(state, "ETL 包裹器", "ETL Wrapper"),
-                selectedId = etlWrapperId,
-                options = state.etlWrappers.map { it.id to "${it.name} (${it.key})" },
-                allowEmpty = true,
-                onSelect = { etlWrapperId = it },
-            )
-            CheckboxLine(tr(state, "启用模板", "Enabled"), enabled) { enabled = it }
-            LabeledTextField(tr(state, "相对输出路径", "Relative Output"), relativeOutputPath) { relativeOutputPath = it }
-            LabeledTextField(tr(state, "文件名模板", "File Name Template"), fileNameTemplate) { fileNameTemplate = it }
-            LabeledTextField(
-                label = tr(state, "模板正文", "Template Body"),
-                value = body,
-                onValueChange = { body = it },
-                minLines = 8,
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存模板", "Save Template"),
-                onPrimary = {
-                    scope.launch {
-                        state.saveTemplate(
-                            selectedId = template?.id,
-                            name = name,
-                            key = key,
-                            outputKind = outputKind,
-                            relativeOutputPath = relativeOutputPath,
-                            fileNameTemplate = fileNameTemplate,
-                            body = body,
-                            etlWrapperId = etlWrapperId,
-                            enabled = enabled,
-                        )
-                    }
-                },
-                secondaryLabel = tr(state, "校验模板", "Validate"),
-                onSecondary = {
-                    if (template != null) {
-                        scope.launch { state.validateSelectedTemplate(template.id) }
-                    }
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (template != null) {
-                    {
-                        scope.launch {
-                            state.previewTemplateDelete(template.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-            OutlinedButton(
-                onClick = {
-                    state.selectTemplate(null)
-                    name = ""
-                    key = ""
-                    relativeOutputPath = ""
-                    fileNameTemplate = ""
-                    body = ""
-                    outputKind = TemplateOutputKind.KOTLIN_SOURCE
-                    enabled = true
-                    etlWrapperId = null
-                },
-            ) {
-                Text(tr(state, "新建模板", "New Template"))
-            }
-        }
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除模板", "Delete Template"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (template != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeTemplate(template.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun TargetEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val target = state.targets.firstOrNull { it.id == state.selectedTargetId }
-    var name by remember(target?.id) { mutableStateOf(target?.name.orEmpty()) }
-    var key by remember(target?.id) { mutableStateOf(target?.key.orEmpty()) }
-    var outputRoot by remember(target?.id) { mutableStateOf(target?.outputRoot.orEmpty()) }
-    var packageName by remember(target?.id) { mutableStateOf(target?.packageName.orEmpty()) }
-    var scaffoldPreset by remember(target?.id) { mutableStateOf(target?.scaffoldPreset ?: ScaffoldPreset.KCLOUD_STYLE) }
-    var variablesText by remember(target?.id) { mutableStateOf(state.formatVariablesText(target?.variables ?: emptyMap())) }
-    var enableEtl by remember(target?.id) { mutableStateOf(target?.enableEtl ?: false) }
-    var autoIntegrate by remember(target?.id) { mutableStateOf(target?.autoIntegrateCompositeBuild ?: true) }
-    var managedMarker by remember(target?.id) { mutableStateOf(target?.managedMarker ?: "CODING_PLAYGROUND") }
-    var selectedTemplateIds by remember(target?.id, state.templates.map { it.id }.joinToString()) {
-        mutableStateOf(target?.templateIds?.toSet() ?: state.templates.filter { it.enabled }.map { it.id }.toSet())
-    }
-    var showDeleteDialog by remember(target?.id) { mutableStateOf(false) }
-
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "生成目标", "Generation Target"),
-            subtitle = tr(state, "支持路径变量、模板选择、计划预览、执行生成与 composite build 自动接入。", "Supports path variables, template selection, planning, generation and composite build integration."),
-        ) {
-            LabeledTextField(tr(state, "目标名称", "Name"), name) { name = it }
-            LabeledTextField(tr(state, "目标键", "Key"), key) { key = it }
-            LabeledTextField(tr(state, "输出根目录", "Output Root"), outputRoot) { outputRoot = it }
-            LabeledTextField(tr(state, "包名", "Package Name"), packageName) { packageName = it }
-            EnumSelector(
-                label = tr(state, "脚手架预设", "Scaffold Preset"),
-                selected = scaffoldPreset,
-                options = ScaffoldPreset.entries.toList(),
-                labelOf = { it.name },
-                onSelect = { scaffoldPreset = it },
-            )
-            CheckboxLine(tr(state, "启用 ETL", "Enable ETL"), enableEtl) { enableEtl = it }
-            CheckboxLine(tr(state, "自动接入 composite build", "Auto integrate composite build"), autoIntegrate) { autoIntegrate = it }
-            LabeledTextField(tr(state, "受管 marker", "Managed Marker"), managedMarker) { managedMarker = it }
-            LabeledTextField(
-                label = tr(state, "路径变量", "Variables"),
-                value = variablesText,
-                onValueChange = { variablesText = it },
-                minLines = 5,
-            )
-            SummaryCard(
-                title = tr(state, "输出路径预览", "Resolved Output Root"),
-                rows = listOf(
-                    tr(state, "解析结果", "Resolved") to (
-                        state.outputRootPreview.ifBlank { tr(state, "点击下方按钮执行预览", "Click preview below") }
-                    ),
-                ),
-            )
-            OutlinedButton(onClick = { state.previewOutputRoot(outputRoot, variablesText) }) {
-                Text(tr(state, "预览输出路径", "Preview Output"))
-            }
-            Text(
-                text = tr(state, "启用模板", "Enabled Templates"),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            state.templates.forEach { template ->
-                CheckboxLine(
-                    title = "${template.name} (${template.key})",
-                    checked = template.id in selectedTemplateIds,
-                    onCheckedChange = { checked ->
-                        selectedTemplateIds = if (checked) {
-                            selectedTemplateIds + template.id
-                        } else {
-                            selectedTemplateIds - template.id
-                        }
-                    },
-                )
-            }
-            ButtonRow(
-                primaryLabel = tr(state, "保存目标", "Save Target"),
-                onPrimary = {
-                    scope.launch {
-                        state.saveTarget(
-                            selectedId = target?.id,
-                            name = name,
-                            key = key,
-                            outputRoot = outputRoot,
-                            packageName = packageName,
-                            scaffoldPreset = scaffoldPreset,
-                            templateIds = selectedTemplateIds.toList(),
-                            variablesText = variablesText,
-                            enableEtl = enableEtl,
-                            autoIntegrateCompositeBuild = autoIntegrate,
-                            managedMarker = managedMarker,
-                        )
-                    }
-                },
-                secondaryLabel = tr(state, "校验目标", "Validate"),
-                onSecondary = {
-                    if (target != null) {
-                        scope.launch { state.validateSelectedTarget(target.id) }
-                    }
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (target != null) {
-                    {
-                        scope.launch {
-                            state.previewTargetDelete(target.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = {
-                        state.selectTarget(null)
-                        name = ""
-                        key = ""
-                        outputRoot = ""
-                        packageName = ""
-                        scaffoldPreset = ScaffoldPreset.KCLOUD_STYLE
-                        variablesText = ""
-                        enableEtl = false
-                        autoIntegrate = true
-                        managedMarker = "CODING_PLAYGROUND"
-                        selectedTemplateIds = state.templates.filter { it.enabled }.map { it.id }.toSet()
-                    },
-                ) {
-                    Text(tr(state, "新建目标", "New Target"))
-                }
-                Button(onClick = { scope.launch { state.planSelectedTarget() } }) {
-                    Text(tr(state, "生成计划预览", "Plan"))
-                }
-                Button(onClick = { scope.launch { state.generateSelectedTarget() } }) {
-                    Text(tr(state, "执行生成", "Generate"))
-                }
-            }
-        }
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除目标", "Delete Target"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (target != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeTarget(target.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun EtlEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    val wrapper = state.etlWrappers.firstOrNull { it.id == state.selectedEtlWrapperId }
-    var name by remember(wrapper?.id) { mutableStateOf(wrapper?.name.orEmpty()) }
-    var key by remember(wrapper?.id) { mutableStateOf(wrapper?.key.orEmpty()) }
-    var scriptBody by remember(wrapper?.id) { mutableStateOf(wrapper?.scriptBody ?: "return content") }
-    var enabled by remember(wrapper?.id) { mutableStateOf(wrapper?.enabled ?: true) }
-    var showDeleteDialog by remember(wrapper?.id) { mutableStateOf(false) }
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "ETL 包裹器", "ETL Wrapper"),
-            subtitle = tr(state, "脚本绑定变量固定为 content / template / target / variables，返回值必须是 String。", "Script bindings are content / template / target / variables and must return String."),
-        ) {
-            LabeledTextField(tr(state, "名称", "Name"), name) { name = it }
-            LabeledTextField(tr(state, "键", "Key"), key) { key = it }
-            CheckboxLine(tr(state, "启用", "Enabled"), enabled) { enabled = it }
-            LabeledTextField(
-                label = tr(state, "脚本正文", "Script Body"),
-                value = scriptBody,
-                onValueChange = { scriptBody = it },
-                minLines = 10,
-            )
-            ButtonRow(
-                primaryLabel = tr(state, "保存 ETL", "Save ETL"),
-                onPrimary = {
-                    scope.launch { state.saveEtlWrapper(wrapper?.id, name, key, scriptBody, enabled) }
-                },
-                secondaryLabel = tr(state, "校验 ETL", "Validate"),
-                onSecondary = {
-                    if (wrapper != null) {
-                        scope.launch { state.validateSelectedEtl(wrapper.id) }
-                    }
-                },
-                tertiaryLabel = tr(state, "删除预检", "Delete Check"),
-                onTertiary = if (wrapper != null) {
-                    {
-                        scope.launch {
-                            state.previewEtlDelete(wrapper.id)
-                            showDeleteDialog = true
-                        }
-                    }
-                } else {
-                    null
-                },
-            )
-            OutlinedButton(
-                onClick = {
-                    state.selectEtlWrapper(null)
-                    name = ""
-                    key = ""
-                    scriptBody = "return content"
-                    enabled = true
-                },
-            ) {
-                Text(tr(state, "新建 ETL", "New ETL"))
-            }
-        }
-    }
-    DeleteCheckDialog(
-        visible = showDeleteDialog,
-        title = tr(state, "删除 ETL", "Delete ETL"),
-        check = state.lastDeleteCheck,
-        onDismiss = { showDeleteDialog = false },
-        onConfirm = if (wrapper != null && state.lastDeleteCheck?.allowed == true) {
-            {
-                showDeleteDialog = false
-                scope.launch { state.removeEtlWrapper(wrapper.id) }
-            }
-        } else {
-            null
-        },
-    )
-}
-
-@Composable
-private fun SnapshotEditor(state: PlaygroundWorkbenchState) {
-    val scope = rememberCoroutineScope()
-    EditorScrollContainer {
-        EditorCard(
-            title = tr(state, "快照导入 / 导出", "Snapshot Import / Export"),
-            subtitle = tr(state, "versioned JSON DTO 继续作为快照格式。", "Versioned JSON DTO remains the snapshot format."),
-        ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { scope.launch { state.exportSelectedProjectSnapshot() } }) {
-                    Text(tr(state, "导出当前项目", "Export"))
-                }
-                Button(onClick = { scope.launch { state.importSnapshotFromEditor() } }) {
-                    Text(tr(state, "从编辑器导入", "Import"))
-                }
-            }
-            LabeledTextField(
-                label = tr(state, "快照 JSON", "Snapshot JSON"),
-                value = state.snapshotEditorText,
-                onValueChange = { state.snapshotEditorText = it },
-                minLines = 18,
-            )
-        }
-    }
-}
-
-@Composable
-private fun DiagnosticsPanel(state: PlaygroundWorkbenchState) {
-    val scrollState = rememberScrollState()
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(240.dp)
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-                .verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = tr(state, "诊断与生成输出", "Diagnostics & Generation"),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = state.statusMessage,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            if (state.outputRootPreview.isNotBlank()) {
-                Text(
-                    text = "${tr(state, "路径预览", "Output")}: ${state.outputRootPreview}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            state.lastDeleteCheck?.let { check ->
-                DiagnosticSection(
-                    title = tr(state, "删除预检", "Delete Check"),
-                    lines = listOf(
-                        "${tr(state, "允许删除", "Allowed")}: ${if (check.allowed) tr(state, "是", "Yes") else tr(state, "否", "No")}",
-                    ) + check.reasons,
-                )
-            }
-            if (state.lastValidationIssues.isNotEmpty()) {
-                DiagnosticSection(
-                    title = tr(state, "校验结果", "Validation"),
-                    lines = state.lastValidationIssues.map { "${it.field}: ${it.message}" },
-                )
-            }
-            state.lastGenerationPlan?.let { plan ->
-                DiagnosticSection(
-                    title = tr(state, "生成计划", "Generation Plan"),
-                    lines = listOf(
-                        "${tr(state, "脚手架模式", "Scaffold Mode")}: ${plan.scaffoldMode.name}",
-                        "${tr(state, "计划文件数", "Files")}: ${plan.files.size}",
-                    ) + plan.files.take(24).map { "${it.templateKey} -> ${it.relativePath}/${it.fileName}" },
-                )
-            }
-            state.lastGeneration?.let { result ->
-                DiagnosticSection(
-                    title = tr(state, "生成结果", "Generation Result"),
-                    lines = listOf(
-                        "${tr(state, "写盘文件数", "Generated Files")}: ${result.files.size}",
-                        "${tr(state, "接入动作", "Integrations")}: ${result.integrations.size}",
-                    ) + result.files.take(24).map { "${it.templateKey} -> ${it.relativePath}" },
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatusBar(state: PlaygroundWorkbenchState) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = state.statusMessage,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                text = if (state.uiLanguage == PlaygroundUiLanguage.ZH_CN) "ZH-CN" else "EN-US",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Column {
+                Text(
+                    state.modules.firstOrNull { it.id == state.selectedModuleId }?.name ?: tr(state, "未选择模块", "No Module Selected"),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    tr(state, "SQLite + Jimmer + Compose Desktop", "SQLite + Jimmer + Compose Desktop"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+            TextButton(onClick = onToggleLanguage) {
+                Text(if (state.uiLanguage == PlaygroundUiLanguage.ZH_CN) "EN" else "中文")
+            }
         }
     }
 }
 
 @Composable
-private fun EditorScrollContainer(content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-        content = content,
+private fun ModuleTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    val selected = state.modules.firstOrNull { it.id == state.selectedModuleId }
+    var name by remember(selected?.id) { mutableStateOf(selected?.name.orEmpty()) }
+    var sourceFilename by remember(selected?.id) { mutableStateOf(selected?.sourceFilename ?: "sample.ll") }
+    var targetTriple by remember(selected?.id) { mutableStateOf(selected?.targetTriple ?: "x86_64-unknown-linux-gnu") }
+    var dataLayout by remember(selected?.id) { mutableStateOf(selected?.dataLayout ?: "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128") }
+    var moduleAsm by remember(selected?.id) { mutableStateOf(selected?.moduleAsm.orEmpty()) }
+    var description by remember(selected?.id) { mutableStateOf(selected?.description.orEmpty()) }
+    var moduleFlags by remember(selected?.id) { mutableStateOf(selected?.moduleFlags?.entries?.joinToString("\n") { "${it.key}=${it.value}" }.orEmpty()) }
+
+    EditorSurface {
+        FormSection(title = tr(state, "模块信息", "Module")) {
+            LabeledField(tr(state, "名称", "Name")) {
+                OutlinedTextField(name, { name = it }, modifier = Modifier.fillMaxWidth())
+            }
+            LabeledField(tr(state, "源文件名", "Source Filename")) {
+                OutlinedTextField(sourceFilename, { sourceFilename = it }, modifier = Modifier.fillMaxWidth())
+            }
+            LabeledField(tr(state, "Target Triple", "Target Triple")) {
+                OutlinedTextField(targetTriple, { targetTriple = it }, modifier = Modifier.fillMaxWidth())
+            }
+            LabeledField(tr(state, "Data Layout", "Data Layout")) {
+                OutlinedTextField(dataLayout, { dataLayout = it }, modifier = Modifier.fillMaxWidth())
+            }
+            LabeledField(tr(state, "Module ASM", "Module ASM")) {
+                OutlinedTextField(moduleAsm, { moduleAsm = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+            }
+            LabeledField(tr(state, "描述", "Description")) {
+                OutlinedTextField(description, { description = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+            }
+            LabeledField(tr(state, "Module Flags (key=value)", "Module Flags")) {
+                OutlinedTextField(moduleFlags, { moduleFlags = it }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+            }
+            ActionRow(
+                onPrimary = {
+                    scope.launch {
+                        state.saveModule(
+                            selected?.id,
+                            CreateLlvmModuleRequest(
+                                name = name,
+                                sourceFilename = sourceFilename,
+                                targetTriple = targetTriple,
+                                dataLayout = dataLayout,
+                                moduleAsm = moduleAsm.ifBlank { null },
+                                moduleFlags = parseMapText(moduleFlags),
+                                description = description.ifBlank { null },
+                            ),
+                        )
+                    }
+                },
+                onSecondary = { scope.launch { state.validateSelectedModule() } },
+                primaryLabel = tr(state, "保存模块", "Save Module"),
+                secondaryLabel = tr(state, "校验模块", "Validate"),
+            )
+            if (selected != null) {
+                OutlinedButton(onClick = { scope.launch { state.removeSelectedModule() } }) {
+                    Text(tr(state, "删除模块", "Delete Module"))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypeTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    val selected = state.types.firstOrNull { it.id == state.selectedTypeId }
+    val members = state.typeMembers.filter { it.typeId == selected?.id }
+    var name by remember(selected?.id) { mutableStateOf(selected?.name ?: "i32") }
+    var symbol by remember(selected?.id) { mutableStateOf(selected?.symbol ?: "MyType") }
+    var kind by remember(selected?.id) { mutableStateOf(selected?.kind ?: LlvmTypeKind.INTEGER) }
+    var primitiveWidth by remember(selected?.id) { mutableStateOf(selected?.primitiveWidth?.toString().orEmpty()) }
+    var definitionText by remember(selected?.id) { mutableStateOf(selected?.definitionText.orEmpty()) }
+
+    SplitEditor(
+        left = {
+            ExplorerList(
+                title = tr(state, "类型列表", "Type List"),
+                items = state.types,
+                selectedId = state.selectedTypeId,
+                itemTitle = { it.symbol },
+                itemSubtitle = { it.kind.name },
+                onSelect = state::selectType,
+            )
+        },
+        right = {
+            FormSection(title = tr(state, "类型编辑", "Type Editor")) {
+                LabeledField(tr(state, "名称", "Name")) { OutlinedTextField(name, { name = it }, modifier = Modifier.fillMaxWidth()) }
+                LabeledField(tr(state, "符号", "Symbol")) { OutlinedTextField(symbol, { symbol = it }, modifier = Modifier.fillMaxWidth()) }
+                LabeledField(tr(state, "类型种类", "Type Kind")) {
+                    EnumSelector(kind, LlvmTypeKind.entries, onSelected = { kind = it })
+                }
+                LabeledField(tr(state, "位宽 / 长度", "Width / Length")) {
+                    OutlinedTextField(primitiveWidth, { primitiveWidth = it }, modifier = Modifier.fillMaxWidth())
+                }
+                LabeledField(tr(state, "定义文本", "Definition Text")) {
+                    OutlinedTextField(definitionText, { definitionText = it }, modifier = Modifier.fillMaxWidth(), minLines = 3)
+                }
+                ActionRow(
+                    onPrimary = {
+                        scope.launch {
+                            state.saveType(
+                                selected?.id,
+                                CreateLlvmTypeRequest(
+                                    moduleId = state.selectedModuleId ?: return@launch,
+                                    name = name,
+                                    symbol = symbol,
+                                    kind = kind,
+                                    primitiveWidth = primitiveWidth.toIntOrNull(),
+                                    arrayLength = primitiveWidth.toIntOrNull(),
+                                    definitionText = definitionText.ifBlank { null },
+                                ),
+                            )
+                        }
+                    },
+                    onSecondary = { scope.launch { state.removeSelectedType() } },
+                    primaryLabel = tr(state, "保存类型", "Save Type"),
+                    secondaryLabel = tr(state, "删除类型", "Delete Type"),
+                )
+                Text(tr(state, "成员", "Members"), fontWeight = FontWeight.SemiBold)
+                members.forEach {
+                    Text("${it.orderIndex}. ${it.name}: ${it.memberTypeText}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
     )
 }
 
 @Composable
-private fun EditorCard(
-    title: String,
-    subtitle: String,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            content = {
-                Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                content()
+private fun GlobalTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    val selected = remember(state.globals) { state.globals.firstOrNull() }
+    var name by remember(selected?.id) { mutableStateOf(selected?.name ?: "globalValue") }
+    var symbol by remember(selected?.id) { mutableStateOf(selected?.symbol ?: "gValue") }
+    var typeText by remember(selected?.id) { mutableStateOf(selected?.typeText ?: "i32") }
+    var initializer by remember(selected?.id) { mutableStateOf(selected?.initializerText ?: "0") }
+    var constant by remember(selected?.id) { mutableStateOf(selected?.constant ?: false) }
+
+    SplitEditor(
+        left = {
+            ExplorerList(
+                title = tr(state, "全局列表", "Globals"),
+                items = state.globals,
+                selectedId = selected?.id,
+                itemTitle = { it.symbol },
+                itemSubtitle = { it.typeText },
+                onSelect = {},
+            )
+        },
+        right = {
+            FormSection(title = tr(state, "全局变量", "Global Variable")) {
+                LabeledField(tr(state, "名称", "Name")) { OutlinedTextField(name, { name = it }, modifier = Modifier.fillMaxWidth()) }
+                LabeledField(tr(state, "符号", "Symbol")) { OutlinedTextField(symbol, { symbol = it }, modifier = Modifier.fillMaxWidth()) }
+                LabeledField(tr(state, "类型", "Type")) { OutlinedTextField(typeText, { typeText = it }, modifier = Modifier.fillMaxWidth()) }
+                LabeledField(tr(state, "初始化", "Initializer")) { OutlinedTextField(initializer, { initializer = it }, modifier = Modifier.fillMaxWidth()) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = constant, onCheckedChange = { constant = it })
+                    Text(tr(state, "常量", "Constant"))
+                }
+                Button(onClick = {
+                    scope.launch {
+                        state.saveGlobal(
+                            selected?.id,
+                            CreateLlvmGlobalVariableRequest(
+                                moduleId = state.selectedModuleId ?: return@launch,
+                                name = name,
+                                symbol = symbol,
+                                typeText = typeText,
+                                initializerText = initializer,
+                                constant = constant,
+                            ),
+                        )
+                    }
+                }) { Text(tr(state, "保存全局", "Save Global")) }
+            }
+        },
+    )
+}
+
+@Composable
+private fun FunctionTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    val selected = state.functions.firstOrNull { it.id == state.selectedFunctionId }
+    val selectedBlock = state.blocks.firstOrNull { it.id == state.selectedBlockId }
+    val selectedInstruction = state.instructions.firstOrNull { it.id == state.selectedInstructionId }
+    var functionName by remember(selected?.id) { mutableStateOf(selected?.name ?: "main") }
+    var functionSymbol by remember(selected?.id) { mutableStateOf(selected?.symbol ?: "main") }
+    var returnType by remember(selected?.id) { mutableStateOf(selected?.returnTypeText ?: "i32") }
+    var declarationOnly by remember(selected?.id) { mutableStateOf(selected?.declarationOnly ?: false) }
+    var blockName by remember(selectedBlock?.id) { mutableStateOf(selectedBlock?.name ?: "entry") }
+    var blockLabel by remember(selectedBlock?.id) { mutableStateOf(selectedBlock?.label ?: "entry") }
+    var opcode by remember(selectedInstruction?.id) { mutableStateOf(selectedInstruction?.opcode ?: LlvmInstructionOpcode.RET) }
+    var resultSymbol by remember(selectedInstruction?.id) { mutableStateOf(selectedInstruction?.resultSymbol.orEmpty()) }
+    var instructionType by remember(selectedInstruction?.id) { mutableStateOf(selectedInstruction?.typeText ?: "i32") }
+    var suffix by remember(selectedInstruction?.id) { mutableStateOf(selectedInstruction?.textSuffix.orEmpty()) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SplitEditor(
+            left = {
+                ExplorerList(
+                    title = tr(state, "函数列表", "Functions"),
+                    items = state.functions,
+                    selectedId = state.selectedFunctionId,
+                    itemTitle = { it.symbol },
+                    itemSubtitle = { it.returnTypeText },
+                    onSelect = state::selectFunction,
+                )
+            },
+            right = {
+                FormSection(title = tr(state, "函数编辑", "Function Editor")) {
+                    LabeledField(tr(state, "名称", "Name")) { OutlinedTextField(functionName, { functionName = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "符号", "Symbol")) { OutlinedTextField(functionSymbol, { functionSymbol = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "返回类型", "Return Type")) { OutlinedTextField(returnType, { returnType = it }, modifier = Modifier.fillMaxWidth()) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = declarationOnly, onCheckedChange = { declarationOnly = it })
+                        Text(tr(state, "仅声明", "Declaration Only"))
+                    }
+                    ActionRow(
+                        onPrimary = {
+                            scope.launch {
+                                state.saveFunction(
+                                    selected?.id,
+                                    CreateLlvmFunctionRequest(
+                                        moduleId = state.selectedModuleId ?: return@launch,
+                                        name = functionName,
+                                        symbol = functionSymbol,
+                                        returnTypeText = returnType,
+                                        declarationOnly = declarationOnly,
+                                    ),
+                                )
+                            }
+                        },
+                        onSecondary = { scope.launch { state.removeSelectedFunction() } },
+                        primaryLabel = tr(state, "保存函数", "Save Function"),
+                        secondaryLabel = tr(state, "删除函数", "Delete Function"),
+                    )
+                }
+            },
+        )
+        SplitEditor(
+            left = {
+                ExplorerList(
+                    title = tr(state, "基本块", "Basic Blocks"),
+                    items = state.blocks.filter { it.functionId == state.selectedFunctionId },
+                    selectedId = state.selectedBlockId,
+                    itemTitle = { it.label },
+                    itemSubtitle = { it.name },
+                    onSelect = state::selectBlock,
+                )
+            },
+            right = {
+                FormSection(title = tr(state, "Block / Instruction", "Block / Instruction")) {
+                    LabeledField(tr(state, "Block 名称", "Block Name")) { OutlinedTextField(blockName, { blockName = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "Block 标签", "Block Label")) { OutlinedTextField(blockLabel, { blockLabel = it }, modifier = Modifier.fillMaxWidth()) }
+                    ActionRow(
+                        onPrimary = { scope.launch { state.saveBlock(selectedBlock?.id, blockName, blockLabel) } },
+                        onSecondary = { scope.launch { state.removeSelectedBlock() } },
+                        primaryLabel = tr(state, "保存 Block", "Save Block"),
+                        secondaryLabel = tr(state, "删除 Block", "Delete Block"),
+                    )
+                    Divider()
+                    Text(tr(state, "指令", "Instructions"), fontWeight = FontWeight.SemiBold)
+                    ExplorerList(
+                        title = "",
+                        items = state.instructions.filter { it.blockId == state.selectedBlockId },
+                        selectedId = state.selectedInstructionId,
+                        itemTitle = { it.opcode.name },
+                        itemSubtitle = { it.resultSymbol ?: it.textSuffix ?: "" },
+                        onSelect = state::selectInstruction,
+                    )
+                    LabeledField(tr(state, "Opcode", "Opcode")) { EnumSelector(opcode, LlvmInstructionOpcode.entries, onSelected = { opcode = it }) }
+                    LabeledField(tr(state, "结果符号", "Result Symbol")) { OutlinedTextField(resultSymbol, { resultSymbol = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "类型", "Type")) { OutlinedTextField(instructionType, { instructionType = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "后缀 / 细节", "Suffix / Detail")) { OutlinedTextField(suffix, { suffix = it }, modifier = Modifier.fillMaxWidth(), minLines = 2) }
+                    ActionRow(
+                        onPrimary = {
+                            scope.launch {
+                                state.saveInstruction(
+                                    selectedInstruction?.id,
+                                    CreateLlvmInstructionRequest(
+                                        blockId = state.selectedBlockId ?: return@launch,
+                                        opcode = opcode,
+                                        resultSymbol = resultSymbol.ifBlank { null },
+                                        typeText = instructionType.ifBlank { null },
+                                        textSuffix = suffix.ifBlank { null },
+                                        terminator = opcode in listOf(LlvmInstructionOpcode.RET, LlvmInstructionOpcode.BR, LlvmInstructionOpcode.SWITCH, LlvmInstructionOpcode.UNREACHABLE),
+                                    ),
+                                )
+                            }
+                        },
+                        onSecondary = { scope.launch { state.removeSelectedInstruction() } },
+                        primaryLabel = tr(state, "保存指令", "Save Instruction"),
+                        secondaryLabel = tr(state, "删除指令", "Delete Instruction"),
+                    )
+                }
             },
         )
     }
 }
 
 @Composable
-private fun SummaryCard(title: String, rows: List<Pair<String, String>>) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-            rows.forEach { (label, value) ->
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(value, style = MaterialTheme.typography.bodySmall)
+private fun MetadataTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    val selected = state.metadataNodes.firstOrNull { it.id == state.selectedMetadataNodeId }
+    var name by remember(selected?.id) { mutableStateOf(selected?.name ?: "") }
+    var kind by remember(selected?.id) { mutableStateOf(selected?.kind ?: LlvmMetadataKind.GENERIC) }
+    var distinct by remember(selected?.id) { mutableStateOf(selected?.distinct ?: false) }
+
+    SplitEditor(
+        left = {
+            ExplorerList(
+                title = tr(state, "Metadata 节点", "Metadata Nodes"),
+                items = state.metadataNodes,
+                selectedId = state.selectedMetadataNodeId,
+                itemTitle = { it.name ?: "!anon" },
+                itemSubtitle = { it.kind.name },
+                onSelect = state::selectMetadataNode,
+            )
+        },
+        right = {
+            FormSection(title = tr(state, "Metadata 编辑", "Metadata Editor")) {
+                LabeledField(tr(state, "名称", "Name")) { OutlinedTextField(name, { name = it }, modifier = Modifier.fillMaxWidth()) }
+                LabeledField(tr(state, "种类", "Kind")) { EnumSelector(kind, LlvmMetadataKind.entries, onSelected = { kind = it }) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = distinct, onCheckedChange = { distinct = it })
+                    Text("distinct")
                 }
+                ActionRow(
+                    onPrimary = {
+                        scope.launch {
+                            state.saveMetadataNode(
+                                selected?.id,
+                                CreateLlvmMetadataNodeRequest(
+                                    moduleId = state.selectedModuleId ?: return@launch,
+                                    name = name.ifBlank { null },
+                                    kind = kind,
+                                    distinct = distinct,
+                                ),
+                            )
+                        }
+                    },
+                    onSecondary = { scope.launch { state.removeSelectedMetadataNode() } },
+                    primaryLabel = tr(state, "保存 Metadata", "Save Metadata"),
+                    secondaryLabel = tr(state, "删除 Metadata", "Delete Metadata"),
+                )
+                Divider()
+                Text(tr(state, "已命名 Metadata", "Named Metadata"), fontWeight = FontWeight.SemiBold)
+                state.namedMetadata.forEach {
+                    Text("!${it.name}", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun CompileTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    val selected = state.compileProfiles.firstOrNull { it.id == state.selectedProfileId }
+    var name by remember(selected?.id) { mutableStateOf(selected?.name ?: "local") }
+    var targetPlatform by remember(selected?.id) { mutableStateOf(selected?.targetPlatform ?: "host") }
+    var outputDir by remember(selected?.id) { mutableStateOf(selected?.outputDirectory ?: "/tmp/llvm-ir-out") }
+    var optPath by remember(selected?.id) { mutableStateOf(selected?.optPath.orEmpty()) }
+    var llcPath by remember(selected?.id) { mutableStateOf(selected?.llcPath.orEmpty()) }
+    var clangPath by remember(selected?.id) { mutableStateOf(selected?.clangPath.orEmpty()) }
+
+    Column(
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SplitEditor(
+            left = {
+                ExplorerList(
+                    title = tr(state, "编译配置", "Compile Profiles"),
+                    items = state.compileProfiles,
+                    selectedId = state.selectedProfileId,
+                    itemTitle = { it.name },
+                    itemSubtitle = { it.targetPlatform },
+                    onSelect = state::selectProfile,
+                )
+            },
+            right = {
+                FormSection(title = tr(state, "编译配置编辑", "Compile Profile Editor")) {
+                    LabeledField(tr(state, "名称", "Name")) { OutlinedTextField(name, { name = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "目标平台", "Target Platform")) { OutlinedTextField(targetPlatform, { targetPlatform = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField(tr(state, "输出目录", "Output Directory")) { OutlinedTextField(outputDir, { outputDir = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField("opt") { OutlinedTextField(optPath, { optPath = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField("llc") { OutlinedTextField(llcPath, { llcPath = it }, modifier = Modifier.fillMaxWidth()) }
+                    LabeledField("clang") { OutlinedTextField(clangPath, { clangPath = it }, modifier = Modifier.fillMaxWidth()) }
+                    ActionRow(
+                        onPrimary = {
+                            scope.launch {
+                                state.saveCompileProfile(
+                                    selected?.id,
+                                    CreateLlvmCompileProfileRequest(
+                                        moduleId = state.selectedModuleId ?: return@launch,
+                                        name = name,
+                                        targetPlatform = targetPlatform,
+                                        outputDirectory = outputDir,
+                                        optPath = optPath.ifBlank { null },
+                                        llcPath = llcPath.ifBlank { null },
+                                        clangPath = clangPath.ifBlank { null },
+                                    ),
+                                )
+                            }
+                        },
+                        onSecondary = { scope.launch { state.removeSelectedProfile() } },
+                        primaryLabel = tr(state, "保存配置", "Save Profile"),
+                        secondaryLabel = tr(state, "删除配置", "Delete Profile"),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = { scope.launch { state.exportSelectedModule() } }) { Text(tr(state, "导出 .ll", "Export .ll")) }
+                        FilledTonalButton(onClick = { scope.launch { state.createAndRunCompileJob() } }) { Text(tr(state, "执行编译", "Run")) }
+                    }
+                }
+            },
+        )
+        FormSection(title = tr(state, "编译任务", "Compile Jobs")) {
+            state.compileJobs.forEach { job ->
+                Text("${job.status.name}  ${job.id}", style = MaterialTheme.typography.bodySmall)
+            }
+            state.lastCompileResult?.let { result ->
+                Divider()
+                Text(tr(state, "最近编译结果", "Latest Compile Result"), fontWeight = FontWeight.SemiBold)
+                Text(result.job.status.name, fontWeight = FontWeight.Bold)
+                Text(result.steps.joinToString("\n\n") { step ->
+                    buildString {
+                        append(step.command.joinToString(" "))
+                        append("\nexit=${step.exitCode}")
+                        if (step.stdoutText.isNotBlank()) append("\nstdout:\n${step.stdoutText}")
+                        if (step.stderrText.isNotBlank()) append("\nstderr:\n${step.stderrText}")
+                    }
+                })
             }
         }
     }
 }
 
 @Composable
-private fun LabeledTextField(
-    label: String,
-    value: String,
-    minLines: Int = 1,
-    onValueChange: (String) -> Unit,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(label) },
-        minLines = minLines,
-        singleLine = minLines == 1,
-    )
+private fun SnapshotTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    EditorSurface {
+        FormSection(title = tr(state, "快照", "Snapshot")) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { scope.launch { state.exportSnapshot() } }) { Text(tr(state, "导出快照", "Export Snapshot")) }
+                FilledTonalButton(onClick = { scope.launch { state.importSnapshot() } }) { Text(tr(state, "导入快照", "Import Snapshot")) }
+            }
+            OutlinedTextField(
+                value = state.snapshotEditorText,
+                onValueChange = { state.snapshotEditorText = it },
+                modifier = Modifier.fillMaxWidth().height(480.dp),
+                minLines = 20,
+            )
+        }
+    }
 }
 
 @Composable
-private fun ButtonRow(
-    primaryLabel: String,
+private fun PreviewTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        FormSection(title = tr(state, "校验结果", "Validation")) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { scope.launch { state.validateSelectedModule() } }) { Text(tr(state, "重新校验", "Revalidate")) }
+                FilledTonalButton(onClick = { scope.launch { state.exportSelectedModule() } }) { Text(tr(state, "刷新预览", "Refresh Preview")) }
+            }
+            if (state.validationIssues.isEmpty()) {
+                Text(tr(state, "暂无问题", "No issues"))
+            } else {
+                state.validationIssues.forEach {
+                    Text("[${it.severity}] ${it.location} - ${it.message}")
+                }
+            }
+        }
+        FormSection(title = tr(state, ".ll 预览", ".ll Preview"), modifier = Modifier.weight(1f)) {
+            OutlinedTextField(
+                value = state.exportPreviewText,
+                onValueChange = {},
+                modifier = Modifier.fillMaxSize(),
+                minLines = 24,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditorSurface(content: @Composable ColumnScope.() -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
+}
+
+@Composable
+private fun SplitEditor(
+    left: @Composable BoxScope.() -> Unit,
+    right: @Composable BoxScope.() -> Unit,
+) {
+    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.width(280.dp).fillMaxHeight()) {
+            Box(modifier = Modifier.fillMaxSize().padding(12.dp), content = left)
+        }
+        Surface(color = MaterialTheme.colorScheme.surface, modifier = Modifier.weight(1f).fillMaxHeight()) {
+            Box(modifier = Modifier.fillMaxSize().padding(12.dp), content = right)
+        }
+    }
+}
+
+@Composable
+private fun FormSection(
+    title: String,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        content()
+    }
+}
+
+@Composable
+private fun LabeledField(label: String, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium)
+        content()
+    }
+}
+
+@Composable
+private fun ActionRow(
     onPrimary: () -> Unit,
-    secondaryLabel: String,
     onSecondary: () -> Unit,
-    tertiaryLabel: String? = null,
-    onTertiary: (() -> Unit)? = null,
+    primaryLabel: String,
+    secondaryLabel: String,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Button(onClick = onPrimary) {
-            Text(primaryLabel)
-        }
-        OutlinedButton(onClick = onSecondary) {
-            Text(secondaryLabel)
-        }
-        if (tertiaryLabel != null && onTertiary != null) {
-            OutlinedButton(onClick = onTertiary) {
-                Text(tertiaryLabel)
-            }
-        }
+        Button(onClick = onPrimary) { Text(primaryLabel) }
+        OutlinedButton(onClick = onSecondary) { Text(secondaryLabel) }
     }
 }
 
 @Composable
-private fun CheckboxLine(
+private fun <T> ExplorerList(
     title: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(title, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun <T> ReorderList(
     items: List<T>,
     selectedId: String?,
-    getTitle: (T) -> String,
-    getSubtitle: (T) -> String,
-    onSelect: (T) -> Unit,
-    onMoveUp: (T) -> Unit,
-    onMoveDown: (T) -> Unit,
-) where T : Any {
-    if (items.isEmpty()) {
-        Text("暂无数据", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items.forEachIndexed { index, item ->
-            val selected = selectedId == itemId(item)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
-                        shape = MaterialTheme.shapes.small,
-                    )
-                    .clickable { onSelect(item) }
-                    .padding(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(getTitle(item), style = MaterialTheme.typography.bodyMedium)
-                    Text(getSubtitle(item), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    OutlinedButton(onClick = { onMoveUp(item) }, enabled = index > 0) {
-                        Text("↑")
-                    }
-                    OutlinedButton(onClick = { onMoveDown(item) }, enabled = index < items.lastIndex) {
-                        Text("↓")
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun <T> SimpleSelectionList(
-    items: List<T>,
-    selectedId: String?,
-    getTitle: (T) -> String,
-    getSubtitle: (T) -> String,
-    onSelect: (T) -> Unit,
-) where T : Any {
-    if (items.isEmpty()) {
-        Text("暂无数据", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        items.forEach { item ->
-            val selected = selectedId == itemId(item)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent,
-                        shape = MaterialTheme.shapes.small,
-                    )
-                    .clickable { onSelect(item) }
-                    .padding(8.dp),
-            ) {
-                Column {
-                    Text(getTitle(item), style = MaterialTheme.typography.bodyMedium)
-                    Text(getSubtitle(item), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun <T> EnumSelector(
-    label: String,
-    selected: T,
-    options: List<T>,
-    labelOf: (T) -> String,
-    onSelect: (T) -> Unit,
-) {
-    var expanded by remember(label, selected) { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Box {
-            OutlinedButton(onClick = { expanded = true }) {
-                Text(labelOf(selected))
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { option ->
-                    DropdownMenuItem(
-                        text = { Text(labelOf(option)) },
-                        onClick = {
-                            expanded = false
-                            onSelect(option)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun StringSelector(
-    label: String,
-    selectedId: String?,
-    options: List<Pair<String, String>>,
+    itemTitle: (T) -> String,
+    itemSubtitle: (T) -> String,
     onSelect: (String?) -> Unit,
-    allowEmpty: Boolean = false,
-) {
-    var expanded by remember(label, selectedId, options) { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second ?: if (allowEmpty) "未绑定" else "请选择"
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        Box {
-            OutlinedButton(onClick = { expanded = true }) {
-                Text(selectedLabel)
-            }
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                if (allowEmpty) {
-                    DropdownMenuItem(
-                        text = { Text("未绑定") },
-                        onClick = {
-                            expanded = false
-                            onSelect(null)
-                        },
-                    )
-                }
-                options.forEach { (id, value) ->
-                    DropdownMenuItem(
-                        text = { Text(value) },
-                        onClick = {
-                            expanded = false
-                            onSelect(id)
-                        },
-                    )
+) where T : Any {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (title.isNotBlank()) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(items) { item ->
+                val id = item::class.members.firstOrNull { it.name == "id" }?.call(item) as? String
+                Surface(
+                    tonalElevation = if (id == selectedId) 2.dp else 0.dp,
+                    color = if (id == selectedId) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
+                    modifier = Modifier.fillMaxWidth().clickable { onSelect(id) },
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(itemTitle(item), fontWeight = FontWeight.SemiBold)
+                        val subtitle = itemSubtitle(item)
+                        if (subtitle.isNotBlank()) {
+                            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+                        }
+                    }
                 }
             }
         }
@@ -1690,95 +749,49 @@ private fun StringSelector(
 }
 
 @Composable
-private fun DeleteCheckDialog(
-    visible: Boolean,
-    title: String,
-    check: DeleteCheckResultDto?,
-    onDismiss: () -> Unit,
-    onConfirm: (() -> Unit)?,
+@OptIn(ExperimentalMaterial3Api::class)
+private fun <T : Enum<T>> EnumSelector(
+    selected: T,
+    entries: List<T>,
+    onSelected: (T) -> Unit,
 ) {
-    if (!visible) {
-        return
-    }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(if (check?.allowed == true) "删除许可已通过，可以继续。" else "删除前置校验未通过或尚未完成。")
-                check?.reasons?.forEach { reason ->
-                    Text("• $reason", style = MaterialTheme.typography.bodySmall)
-                }
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
+        OutlinedTextField(
+            value = selected.name,
+            onValueChange = {},
+            readOnly = true,
+            modifier = Modifier.menuAnchor().fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            entries.forEach { entry ->
+                DropdownMenuItem(
+                    text = { Text(entry.name) },
+                    onClick = {
+                        expanded = false
+                        onSelected(entry)
+                    },
+                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm ?: onDismiss, enabled = onConfirm != null) {
-                Text(if (onConfirm != null) "确认删除" else "关闭")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("取消")
-            }
-        },
-    )
-}
-
-@Composable
-private fun DiagnosticSection(title: String, lines: List<String>) {
-    if (lines.isEmpty()) {
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-        lines.forEach { line ->
-            Text(line, style = MaterialTheme.typography.bodySmall)
         }
     }
 }
 
-@Composable
-private fun VerticalLine() {
-    Divider(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(1.dp),
-        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
-    )
-}
-
-@Composable
-private fun PlaygroundTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF355E88),
-            onPrimary = Color.White,
-            secondary = Color(0xFF4F6E86),
-            background = Color(0xFFF5F7FA),
-            surface = Color(0xFFFDFEFF),
-            surfaceVariant = Color(0xFFE7EDF3),
-            outline = Color(0xFF9AA8B7),
-        ),
-        content = content,
-    )
+private fun parseMapText(text: String): Map<String, String> {
+    return text.lineSequence()
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .mapNotNull { line ->
+            val index = line.indexOf('=')
+            if (index <= 0) {
+                null
+            } else {
+                line.substring(0, index).trim() to line.substring(index + 1).trim()
+            }
+        }
+        .toMap()
 }
 
 private fun tr(state: PlaygroundWorkbenchState, zh: String, en: String): String {
     return if (state.uiLanguage == PlaygroundUiLanguage.ZH_CN) zh else en
-}
-
-private fun itemId(item: Any): String {
-    return when (item) {
-        is ProjectMetaDto -> item.id
-        is BoundedContextMetaDto -> item.id
-        is EntityMetaDto -> item.id
-        is FieldMetaDto -> item.id
-        is RelationMetaDto -> item.id
-        is DtoMetaDto -> item.id
-        is DtoFieldMetaDto -> item.id
-        is TemplateMetaDto -> item.id
-        is GenerationTargetMetaDto -> item.id
-        is EtlWrapperMetaDto -> item.id
-        else -> error("Unsupported item type: ${item::class}")
-    }
 }

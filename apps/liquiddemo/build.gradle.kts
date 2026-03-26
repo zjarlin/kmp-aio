@@ -10,6 +10,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":lib:compose:app-sidebar"))
+            implementation(project(":lib:compose:workbench-shell"))
         }
     }
 }

@@ -1,7 +1,6 @@
 package site.addzero.appsidebar
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -10,26 +9,6 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
-
-@Immutable
-data class AppSidebarItem(
-    val id: String,
-    val title: String,
-    val icon: ImageVector? = null,
-    val order: Int = 0,
-    val badge: String? = null,
-    val keywords: List<String> = emptyList(),
-    val children: List<AppSidebarItem> = emptyList(),
-    val initiallyExpanded: Boolean = true,
-    val onClick: (() -> Unit)? = null,
-)
-
-internal val AppSidebarItem.isBranch: Boolean
-    get() = children.isNotEmpty()
-
-private val AppSidebarItem.isLeaf: Boolean
-    get() = children.isEmpty()
 
 @Stable
 class AppSidebarState internal constructor(
@@ -47,12 +26,6 @@ class AppSidebarState internal constructor(
         selectedId = id
     }
 
-    fun select(item: AppSidebarItem) {
-        if (item.isLeaf) {
-            selectedId = item.id
-        }
-    }
-
     fun updateSearchQuery(query: String) {
         searchQuery = query
     }
@@ -65,33 +38,89 @@ class AppSidebarState internal constructor(
         expandedItems[id] = !(expandedItems[id] ?: true)
     }
 
-    fun resetExpandedState(items: List<AppSidebarItem>) {
-        expandedItems.clear()
-        registerInitialExpandedState(items)
+    fun <T> select(
+        item: T,
+        itemId: (T) -> String,
+        children: (T) -> List<T>,
+        selectable: (T) -> Boolean = { node -> children(node).isEmpty() },
+    ) {
+        if (selectable(item)) {
+            selectedId = itemId(item)
+        }
     }
 
-    fun revealSelection(
-        items: List<AppSidebarItem>,
+    fun <T> resetExpandedState(
+        items: List<T>,
+        itemId: (T) -> String,
+        children: (T) -> List<T>,
+        initiallyExpanded: (T) -> Boolean = { true },
+    ) {
+        expandedItems.clear()
+        registerInitialExpandedState(
+            items = items,
+            itemId = itemId,
+            children = children,
+            initiallyExpanded = initiallyExpanded,
+        )
+    }
+
+    fun <T> revealSelection(
+        items: List<T>,
+        itemId: (T) -> String,
+        children: (T) -> List<T>,
         selectedId: String? = this.selectedId,
     ) {
-        items.findAncestorIds(selectedId).forEach { ancestorId ->
+        items.findAncestorIds(
+            selectedId = selectedId,
+            itemId = itemId,
+            children = children,
+        ).forEach { ancestorId ->
             expandedItems[ancestorId] = true
         }
     }
 
-    internal fun ensureInitialized(items: List<AppSidebarItem>) {
-        registerInitialExpandedState(items)
+    internal fun <T> ensureInitialized(
+        items: List<T>,
+        itemId: (T) -> String,
+        children: (T) -> List<T>,
+        initiallyExpanded: (T) -> Boolean = { true },
+        selectable: (T) -> Boolean = { node -> children(node).isEmpty() },
+    ) {
+        registerInitialExpandedState(
+            items = items,
+            itemId = itemId,
+            children = children,
+            initiallyExpanded = initiallyExpanded,
+        )
         if (selectedId == null) {
-            selectedId = items.firstLeafIdOrNull()
+            selectedId = items.firstSelectableIdOrNull(
+                itemId = itemId,
+                children = children,
+                selectable = selectable,
+            )
         }
     }
 
-    private fun registerInitialExpandedState(items: List<AppSidebarItem>) {
+    private fun <T> registerInitialExpandedState(
+        items: List<T>,
+        itemId: (T) -> String,
+        children: (T) -> List<T>,
+        initiallyExpanded: (T) -> Boolean,
+    ) {
         items.forEach { item ->
-            if (item.isBranch && item.id !in expandedItems) {
-                expandedItems[item.id] = item.initiallyExpanded
+            val childItems = children(item)
+            if (childItems.isNotEmpty()) {
+                val id = itemId(item)
+                if (id !in expandedItems) {
+                    expandedItems[id] = initiallyExpanded(item)
+                }
+                registerInitialExpandedState(
+                    items = childItems,
+                    itemId = itemId,
+                    children = children,
+                    initiallyExpanded = initiallyExpanded,
+                )
             }
-            registerInitialExpandedState(item.children)
         }
     }
 
@@ -135,117 +164,177 @@ fun rememberAppSidebarState(
     AppSidebarState(initialSelectedId = initialSelectedId)
 }
 
-internal fun List<AppSidebarItem>.sortSidebarItems(): List<AppSidebarItem> {
-    return sortedBy { it.order }.map { item ->
-        item.copy(children = item.children.sortSidebarItems())
-    }
-}
-
-internal fun List<AppSidebarItem>.filterSidebarItems(
+internal fun <T> List<T>.filterSidebarItems(
     query: String,
-): List<AppSidebarItem> {
+    itemId: (T) -> String,
+    label: (T) -> String,
+    keywords: (T) -> List<String>,
+    children: (T) -> List<T>,
+): List<AppSidebarVisibleNode<T>> {
     val normalizedQuery = query.trim()
     if (normalizedQuery.isBlank()) {
-        return this
+        return map { item ->
+            item.toVisibleSidebarNode(children = children)
+        }
     }
 
     return mapNotNull { item ->
-        item.filterSidebarItem(normalizedQuery)
+        item.filterSidebarItem(
+            query = normalizedQuery,
+            itemId = itemId,
+            label = label,
+            keywords = keywords,
+            children = children,
+        )
     }
 }
 
-private fun AppSidebarItem.filterSidebarItem(
+private fun <T> T.filterSidebarItem(
     query: String,
-): AppSidebarItem? {
-    val childMatches = children.mapNotNull { child ->
-        child.filterSidebarItem(query)
-    }.sortSidebarItems()
+    itemId: (T) -> String,
+    label: (T) -> String,
+    keywords: (T) -> List<String>,
+    children: (T) -> List<T>,
+): AppSidebarVisibleNode<T>? {
+    val childMatches = children(this).mapNotNull { child ->
+        child.filterSidebarItem(
+            query = query,
+            itemId = itemId,
+            label = label,
+            keywords = keywords,
+            children = children,
+        )
+    }
 
-    val selfMatches = title.contains(query, ignoreCase = true) ||
-        keywords.any { keyword -> keyword.contains(query, ignoreCase = true) }
+    val selfMatches = label(this).contains(query, ignoreCase = true) ||
+        keywords(this).any { keyword -> keyword.contains(query, ignoreCase = true) } ||
+        itemId(this).contains(query, ignoreCase = true)
 
     if (!selfMatches && childMatches.isEmpty()) {
         return null
     }
 
-    val visibleChildren = if (selfMatches && children.isNotEmpty()) {
-        children.sortSidebarItems()
+    val visibleChildren = if (selfMatches && children(this).isNotEmpty()) {
+        children(this).map { child -> child.toVisibleSidebarNode(children = children) }
     } else {
         childMatches
     }
 
-    return copy(children = visibleChildren)
+    return AppSidebarVisibleNode(
+        item = this,
+        children = visibleChildren,
+    )
 }
 
-fun List<AppSidebarItem>.findItemById(
-    id: String?,
-): AppSidebarItem? {
-    if (id == null) {
-        return null
-    }
-    return asSequence()
-        .mapNotNull { item -> item.findItemById(id) }
-        .firstOrNull()
+private fun <T> T.toVisibleSidebarNode(
+    children: (T) -> List<T>,
+): AppSidebarVisibleNode<T> {
+    return AppSidebarVisibleNode(
+        item = this,
+        children = children(this).map { child ->
+            child.toVisibleSidebarNode(children = children)
+        },
+    )
 }
 
-private fun AppSidebarItem.findItemById(
-    id: String,
-): AppSidebarItem? {
-    if (this.id == id) {
-        return this
-    }
-    return children.asSequence()
-        .mapNotNull { child -> child.findItemById(id) }
-        .firstOrNull()
-}
-
-private fun List<AppSidebarItem>.findAncestorIds(
+private fun <T> List<T>.findAncestorIds(
     selectedId: String?,
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
 ): List<String> {
     if (selectedId == null) {
         return emptyList()
     }
     return asSequence()
-        .mapNotNull { item -> item.findAncestorIds(selectedId, emptyList()) }
+        .mapNotNull { item ->
+            item.findAncestorIds(
+                selectedId = selectedId,
+                itemId = itemId,
+                children = children,
+                ancestors = emptyList(),
+            )
+        }
         .firstOrNull()
         .orEmpty()
 }
 
-private fun AppSidebarItem.findAncestorIds(
+private fun <T> T.findAncestorIds(
     selectedId: String,
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
     ancestors: List<String>,
 ): List<String>? {
-    if (id == selectedId) {
+    if (itemId(this) == selectedId) {
         return ancestors
     }
-    return children.asSequence()
-        .mapNotNull { child -> child.findAncestorIds(selectedId, ancestors + id) }
+    return children(this).asSequence()
+        .mapNotNull { child ->
+            child.findAncestorIds(
+                selectedId = selectedId,
+                itemId = itemId,
+                children = children,
+                ancestors = ancestors + itemId(this),
+            )
+        }
         .firstOrNull()
 }
 
-internal fun List<AppSidebarItem>.firstLeafIdOrNull(): String? {
+private fun <T> List<T>.firstSelectableIdOrNull(
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
+    selectable: (T) -> Boolean,
+): String? {
     return asSequence()
-        .mapNotNull { item -> item.firstLeafIdOrNull() }
+        .mapNotNull { item ->
+            item.firstSelectableIdOrNull(
+                itemId = itemId,
+                children = children,
+                selectable = selectable,
+            )
+        }
         .firstOrNull()
 }
 
-private fun AppSidebarItem.firstLeafIdOrNull(): String? {
-    if (isLeaf) {
-        return id
+private fun <T> T.firstSelectableIdOrNull(
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
+    selectable: (T) -> Boolean,
+): String? {
+    if (selectable(this)) {
+        return itemId(this)
     }
-    return children.asSequence()
-        .mapNotNull { child -> child.firstLeafIdOrNull() }
+    return children(this).asSequence()
+        .mapNotNull { child ->
+            child.firstSelectableIdOrNull(
+                itemId = itemId,
+                children = children,
+                selectable = selectable,
+            )
+        }
         .firstOrNull()
 }
 
-internal fun AppSidebarItem.containsSelection(
+internal fun <T> T.containsSelection(
     selectedId: String?,
+    itemId: (T) -> String,
+    children: (T) -> List<T>,
 ): Boolean {
     if (selectedId == null) {
         return false
     }
-    if (id == selectedId) {
+    if (itemId(this) == selectedId) {
         return true
     }
-    return children.any { child -> child.containsSelection(selectedId) }
+    return children(this).any { child ->
+        child.containsSelection(
+            selectedId = selectedId,
+            itemId = itemId,
+            children = children,
+        )
+    }
 }
+
+internal data class AppSidebarVisibleNode<T>(
+    val item: T,
+    val children: List<AppSidebarVisibleNode<T>> = emptyList(),
+)
