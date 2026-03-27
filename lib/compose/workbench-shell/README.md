@@ -26,6 +26,7 @@ ScreenSidebar(
     onLeafClick = { node ->
         navigateTo(node.id)
     },
+    subtitle = "统一工作台导航",
 )
 ```
 
@@ -36,5 +37,6 @@ ScreenSidebar(
 - `content != null` 表示叶子页面
 - `ScreenTree` 只负责树构建、校验和索引；`findLeaf`、`findNode`、`breadcrumbNamesFor` 这类读取能力通过扩展函数提供
 - 树节点按同父节点下的 `sort`，再按 `name` 兜底排序
-- 默认直接传 `ScreenNode` 给 `ScreenSidebar` / `AppSidebar`，不要再做额外 `SidebarItem` 包装层
-- 这个模块会 `api` 导出 `app-sidebar`
+- 默认直接传 `ScreenNode` 给 `ScreenSidebar`，不要再做额外 `SidebarItem` 包装层
+- `ScreenSidebar` 内部直接复用 `compose-native-component-tree` 和 `compose-native-component-searchbar`
+- 这个模块仍会 `api` 导出 `app-sidebar`，因为 `WorkbenchScaffold` 等工作台壳层还在这里统一对外暴露

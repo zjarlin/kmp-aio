@@ -6,25 +6,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import site.addzero.kcloud.feature.ShellThemeMode
-import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.kcloud.ui.theme.KCloudTheme
 import org.koin.compose.koinInject
+import site.addzero.kcloud.viewmodel.ThemeViewModel
 import site.addzero.workbenchshell.RenderWorkbenchScaffold
 
 @Composable
 fun MainWindow(
-    shellSettingsService: ShellSettingsService = koinInject(),
+    themeViewModel: ThemeViewModel,
 ) {
-    val themeMode by shellSettingsService.themeMode.collectAsState()
-
-    KCloudTheme(
-        darkTheme = when (themeMode) {
-            ShellThemeMode.LIGHT -> false
-            ShellThemeMode.DARK -> true
-            ShellThemeMode.SYSTEM -> androidx.compose.foundation.isSystemInDarkTheme()
-        },
-    ) {
+//    val themeMode by shellSettingsService.themeMode.collectAsState()
+    KCloudTheme {
         RenderWorkbenchScaffold(
             modifier = Modifier.fillMaxSize(),
             contentHeaderScrollable = false,

@@ -19,7 +19,6 @@ val libs = versionCatalogs.named("libs")
 
 kotlin {
     dependencies {
-        implementation(project(":lib:compose:app-sidebar"))
         implementation(project(":lib:compose:workbench-shell"))
     }
 
@@ -32,4 +31,3 @@ kotlin {
 //        }
 //    }
 }
-

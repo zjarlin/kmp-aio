@@ -13,9 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import org.koin.core.annotation.Single
-import site.addzero.appsidebar.AppSidebarConfig
-import site.addzero.appsidebar.AppSidebarSlots
-import site.addzero.appsidebar.AppSidebarStyle
 import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.workbenchshell.ScreenSidebar
 import site.addzero.workbenchshell.ScreenTree
@@ -50,17 +47,12 @@ class KCloudSidebarRenderer(
                 shellState.selectScreen(node.id)
             },
             modifier = modifier.fillMaxSize(),
-            config = AppSidebarConfig(
-                style = AppSidebarStyle.FlushWorkbench,
-                supportText = "场景化模块工作台",
-            ),
-            slots = AppSidebarSlots(
-                footer = {
-                    SidebarSummaryCard(
-                        pageCount = scenePageCount,
-                    )
-                },
-            ),
+            subtitle = "场景化模块工作台",
+            footer = {
+                SidebarSummaryCard(
+                    pageCount = scenePageCount,
+                )
+            },
         )
     }
 }

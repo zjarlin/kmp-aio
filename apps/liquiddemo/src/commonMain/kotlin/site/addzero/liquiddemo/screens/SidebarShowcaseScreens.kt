@@ -206,7 +206,7 @@ class ProjectAssetsScreen : Screen by ShowcaseScreen(
         title = "资产与交付物总库",
         summary = "适合展示文件、设计稿、合同附件这种层级明显的目录。",
         metrics = listOf("素材包" to "42", "待替换" to "5", "最新版本" to "v18"),
-        highlights = listOf("叶子节点渲染内容，父节点只做容器。", "选中态和展开态都交给通用 sidebar state 管理。", "搜索命中时树会自动展开到对应叶子。"),
+        highlights = listOf("叶子节点渲染内容，父节点只做容器。", "选中态和展开态都交给通用树状态管理。", "搜索命中时树会自动展开到对应叶子。"),
         primaryActionLabel = "上传素材",
         secondaryActionLabel = "对比版本",
     ),
@@ -713,10 +713,6 @@ class ProjectShowcaseSlot : SidebarShowcaseSlot {
         ),
         pagePrimaryActionLabel = "同步看板",
         pageSecondaryActionLabel = "查看日报",
-        badges = mapOf(
-            ProjectIds.overview to "LIVE",
-            ProjectIds.assets to "12",
-        ),
     )
 
     override val details = mapOf(
@@ -776,9 +772,6 @@ class MusicShowcaseSlot : SidebarShowcaseSlot {
         ),
         pagePrimaryActionLabel = "开始生成",
         pageSecondaryActionLabel = "打开曲库",
-        badges = mapOf(
-            MusicIds.generate to "NEW",
-        ),
     )
 
     override val details = mapOf(

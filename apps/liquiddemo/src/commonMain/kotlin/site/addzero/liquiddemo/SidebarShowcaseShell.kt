@@ -1,26 +1,17 @@
 package site.addzero.liquiddemo
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,23 +27,25 @@ fun RenderSidebarShowcaseShell(
     modifier: Modifier = Modifier,
     state: SidebarShowcaseState = koinInject(),
 ) {
+    val isAdminShell = state.currentShell == site.addzero.appsidebar.AppSidebarScaffoldShell.AdminWorkbench
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = SidebarShowcaseTokens.background,
+        color = if (isAdminShell) {
+            SidebarShowcaseTokens.adminBackground
+        } else {
+            SidebarShowcaseTokens.background
+        },
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            SidebarShowcaseBackdrop()
+            if (!isAdminShell) {
+                SidebarShowcaseBackdrop()
+            }
 
             Column(
                 modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                SidebarShowcaseSceneSwitcher(
-                    state = state,
-                )
-
                 Box(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 ) {
@@ -61,69 +54,6 @@ fun RenderSidebarShowcaseShell(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SidebarShowcaseSceneSwitcher(
-    state: SidebarShowcaseState,
-) {
-    Surface(
-        color = SidebarShowcaseTokens.panelBackground,
-        shape = RoundedCornerShape(26.dp),
-        tonalElevation = 0.dp,
-        shadowElevation = 0.dp,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Text(
-                    text = "Sidebar / Workbench Showcase",
-                    style = MaterialTheme.typography.titleLarge,
-                    color = SidebarShowcaseTokens.textPrimary,
-                )
-                Text(
-                    text = "场景树来自 Koin 注入的 Screen 集合；App 层只负责启动 Koin 和挂一个宿主。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SidebarShowcaseTokens.textMuted,
-                )
-            }
-
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                state.scenes.forEach { scene ->
-                    val selected = scene.id == state.selectedSceneId
-                    if (selected) {
-                        Button(
-                            onClick = { state.selectScene(scene.id) },
-                            shape = CircleShape,
-                        ) {
-                            Text(scene.name)
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = { state.selectScene(scene.id) },
-                            shape = CircleShape,
-                        ) {
-                            Text(scene.name)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = state.activeSlot.config.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SidebarShowcaseTokens.textFaint,
-                )
             }
         }
     }
@@ -178,8 +108,5 @@ private fun BoxScope.SidebarShowcaseBackdrop() {
 
 private object SidebarShowcaseTokens {
     val background = Color(0xFF060B14)
-    val panelBackground = Color(0xA0141D2D)
-    val textPrimary = Color(0xFFE8EEF8)
-    val textMuted = Color(0xFF9EB0C7)
-    val textFaint = Color(0xFF7C8DA4)
+    val adminBackground = Color(0xFFF2F5F9)
 }

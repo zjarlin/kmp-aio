@@ -1,21 +1,11 @@
 package site.addzero.liquiddemo
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import kotlinx.serialization.Serializable
 import site.addzero.appsidebar.AppSidebarScaffoldShell
 import site.addzero.workbenchshell.ScreenNode
@@ -34,7 +24,6 @@ data class SidebarShowcaseSceneConfig(
     val userLabel: String = "demo@addzero.site",
     val notificationCount: Int = 0,
     val isDarkTheme: Boolean = true,
-    val badges: Map<String, String> = emptyMap(),
 )
 
 @Serializable
@@ -100,19 +89,6 @@ interface SidebarShowcaseSlot {
     }
 
     @Composable
-    fun RowScope.SidebarTrailing(
-        node: ScreenNode,
-        selected: Boolean,
-        descendantSelected: Boolean,
-    ) {
-        val badge = config.badges[node.id] ?: return
-        SidebarShowcaseBadge(
-            badge = badge,
-            emphasized = selected || descendantSelected,
-        )
-    }
-
-    @Composable
     fun ColumnScope.Detail(
         node: ScreenNode,
     ) {
@@ -135,28 +111,4 @@ class DefaultSidebarShowcaseSlot(
         subtitle = "$sceneName 场景",
     )
     override val details: Map<String, SidebarShowcaseDetailConfig> = emptyMap()
-}
-
-@Composable
-private fun RowScope.SidebarShowcaseBadge(
-    badge: String,
-    emphasized: Boolean,
-) {
-    Box(
-        modifier = Modifier.background(
-            color = if (emphasized) {
-                Color(0xFF3A7BFF).copy(alpha = 0.28f)
-            } else {
-                Color.White.copy(alpha = 0.08f)
-            },
-            shape = CircleShape,
-        ).padding(horizontal = 8.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = badge,
-            color = Color.White.copy(alpha = 0.96f),
-            style = MaterialTheme.typography.labelSmall,
-        )
-    }
 }

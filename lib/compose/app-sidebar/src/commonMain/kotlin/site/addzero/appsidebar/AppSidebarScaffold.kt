@@ -30,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
@@ -160,6 +161,13 @@ fun WorkbenchScaffold(
     outerPadding: PaddingValues = PaddingValues(0.dp),
     contentPadding: PaddingValues = PaddingValues(0.dp),
     detailPadding: PaddingValues = PaddingValues(0.dp),
+    sidebarContainerModifier: Modifier = Modifier,
+    mainContainerModifier: Modifier = Modifier,
+    headerContainerModifier: Modifier = Modifier,
+    detailContainerModifier: Modifier = Modifier,
+    dividerColor: Color = WorkbenchTokens.dividerColor,
+    thumbColor: Color = WorkbenchTokens.thumbColor,
+    thumbBorderColor: Color = WorkbenchTokens.thumbBorder,
 ) {
     ResizableSidebarShell(
         modifier = modifier,
@@ -168,21 +176,33 @@ fun WorkbenchScaffold(
         minSidebarWidth = minSidebarWidth,
         maxSidebarWidth = maxSidebarWidth,
         outerPadding = outerPadding,
+        sidebarContainerModifier = sidebarContainerModifier,
+        mainContainerModifier = mainContainerModifier,
+        dividerColor = dividerColor,
+        thumbColor = thumbColor,
+        thumbBorderColor = thumbBorderColor,
         body = { layoutClass ->
             MainWorkbenchPanel(
                 modifier = Modifier.weight(1f),
                 contentHeader = contentHeader,
                 contentHeaderScrollable = contentHeaderScrollable,
                 contentPadding = contentPadding,
+                headerContainerModifier = headerContainerModifier,
+                dividerColor = dividerColor,
                 content = content,
             )
 
             if (detail != null && layoutClass == WorkbenchLayoutClass.Expanded) {
                 Box(
-                    modifier = Modifier.workbenchDivider(),
+                    modifier = Modifier.workbenchDivider(
+                        color = dividerColor,
+                    ),
                 )
                 Box(
-                    modifier = Modifier.width(detailWidth).fillMaxHeight().padding(detailPadding),
+                    modifier = Modifier.width(detailWidth)
+                        .fillMaxHeight()
+                        .then(detailContainerModifier)
+                        .padding(detailPadding),
                     content = detail,
                 )
             }
@@ -199,6 +219,11 @@ private fun ResizableSidebarShell(
     minSidebarWidth: Dp,
     maxSidebarWidth: Dp,
     outerPadding: PaddingValues,
+    sidebarContainerModifier: Modifier,
+    mainContainerModifier: Modifier,
+    dividerColor: Color,
+    thumbColor: Color,
+    thumbBorderColor: Color,
 ) {
     var containerWidthPx by remember { mutableFloatStateOf(0f) }
     val density = androidx.compose.ui.platform.LocalDensity.current
@@ -238,11 +263,15 @@ private fun ResizableSidebarShell(
             modifier = Modifier.fillMaxSize(),
         ) {
             Box(
-                modifier = Modifier.width(sidebarWidth).fillMaxHeight(),
+                modifier = Modifier.width(sidebarWidth)
+                    .fillMaxHeight()
+                    .then(sidebarContainerModifier),
                 content = sidebar,
             )
             Row(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.weight(1f)
+                    .fillMaxHeight()
+                    .then(mainContainerModifier),
                 content = {
                     body(layoutClass)
                 },
@@ -256,6 +285,9 @@ private fun ResizableSidebarShell(
                     handleHotZoneWidthPx = handleHotZoneWidthPx,
                     handleHotZoneWidth = handleHotZoneWidth,
                 ),
+                dividerColor = dividerColor,
+                thumbColor = thumbColor,
+                thumbBorderColor = thumbBorderColor,
                 onDrag = { deltaPx ->
                     state.dragSidebarBy(
                         deltaPx = deltaPx,
@@ -275,6 +307,8 @@ private fun MainWorkbenchPanel(
     contentHeader: (@Composable RowScope.() -> Unit)?,
     contentHeaderScrollable: Boolean,
     contentPadding: PaddingValues,
+    headerContainerModifier: Modifier,
+    dividerColor: Color,
     content: @Composable BoxScope.() -> Unit,
 ) {
     Column(
@@ -289,13 +323,16 @@ private fun MainWorkbenchPanel(
             Row(
                 modifier = Modifier.fillMaxWidth()
                     .then(headerOverflowModifier)
+                    .then(headerContainerModifier)
                     .workbenchHeaderFrame(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 content = contentHeader,
             )
             Box(
-                modifier = Modifier.workbenchHorizontalDivider(),
+                modifier = Modifier.workbenchHorizontalDivider(
+                    color = dividerColor,
+                ),
             )
         }
 
@@ -309,6 +346,9 @@ private fun MainWorkbenchPanel(
 @Composable
 private fun SidebarResizeHandle(
     modifier: Modifier,
+    dividerColor: Color,
+    thumbColor: Color,
+    thumbBorderColor: Color,
     onDrag: (Float) -> Unit,
 ) {
     Box(
@@ -316,10 +356,15 @@ private fun SidebarResizeHandle(
         contentAlignment = Alignment.Center,
     ) {
         Box(
-            modifier = Modifier.dragHandleRail(),
+            modifier = Modifier.dragHandleRail(
+                color = dividerColor,
+            ),
         ) {
             Box(
-                modifier = Modifier.align(Alignment.Center).dragHandleThumb(),
+                modifier = Modifier.align(Alignment.Center).dragHandleThumb(
+                    color = thumbColor,
+                    borderColor = thumbBorderColor,
+                ),
             )
         }
     }
@@ -354,19 +399,24 @@ private fun Modifier.sidebarHandleOverlay(
 }
 
 /** 拖拽分隔轨道：只保留一条极轻的界线，避免出现肉眼可见的大缝隙。 */
-private fun Modifier.dragHandleRail(): Modifier {
+private fun Modifier.dragHandleRail(
+    color: Color,
+): Modifier {
     return width(1.dp)
         .fillMaxHeight()
         .padding(vertical = 10.dp)
-        .background(WorkbenchTokens.dividerColor, CircleShape)
+        .background(color, CircleShape)
 }
 
 /** 拖拽手柄：中间一段胶囊高亮，提示这里支持拖拽调宽。 */
-private fun Modifier.dragHandleThumb(): Modifier {
+private fun Modifier.dragHandleThumb(
+    color: Color,
+    borderColor: Color,
+): Modifier {
     return width(6.dp)
         .fillMaxHeight(0.08f)
-        .background(WorkbenchTokens.thumbColor, CircleShape)
-        .border(1.dp, WorkbenchTokens.thumbBorder, CircleShape)
+        .background(color, CircleShape)
+        .border(1.dp, borderColor, CircleShape)
 }
 
 /** 工作台主区域顶栏：默认就是紧凑工具栏，不额外制造卡片缝隙。 */
@@ -375,17 +425,21 @@ private fun Modifier.workbenchHeaderFrame(): Modifier {
 }
 
 /** 纵向分隔线：给主内容和右侧详情栏一个轻微边界。 */
-private fun Modifier.workbenchDivider(): Modifier {
+private fun Modifier.workbenchDivider(
+    color: Color,
+): Modifier {
     return width(1.dp)
         .fillMaxHeight()
-        .background(WorkbenchTokens.dividerColor)
+        .background(color)
 }
 
 /** 顶栏下分隔线：让 header 和正文在无缝布局里也有清晰层级。 */
-private fun Modifier.workbenchHorizontalDivider(): Modifier {
+private fun Modifier.workbenchHorizontalDivider(
+    color: Color,
+): Modifier {
     return fillMaxWidth()
         .height(1.dp)
-        .background(WorkbenchTokens.dividerColor)
+        .background(color)
 }
 
 private object WorkbenchTokens {

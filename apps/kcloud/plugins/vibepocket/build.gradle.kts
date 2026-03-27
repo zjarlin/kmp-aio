@@ -14,7 +14,6 @@ dependencies {
 kotlin {
     dependencies {
         implementation(project(":lib:compose:media-playlist-player"))
-        implementation(project(":lib:compose:app-sidebar"))
         implementation(project(":lib:compose:workbench-shell"))
         implementation(projects.lib.compose.liquidGlass)
         implementation(project(":lib:api:api-music-spi"))
@@ -70,4 +69,3 @@ kotlin {
         }
     }
 }
-

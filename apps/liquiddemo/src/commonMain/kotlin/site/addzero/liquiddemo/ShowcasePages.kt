@@ -21,11 +21,51 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+
+internal enum class ShowcasePageTone {
+    Dark,
+    Light,
+}
+
+private data class ShowcasePagePalette(
+    val textPrimary: Color,
+    val textSecondary: Color,
+    val textMuted: Color,
+    val bulletColor: Color,
+    val sidebarBadgeBackground: Color,
+    val metricGradientTop: Color,
+    val metricGradientBottom: Color,
+    val metricBorder: Color,
+    val factBackground: Color,
+    val highlightBackground: Color,
+    val highlightBorder: Color,
+)
+
+private val LocalShowcasePagePalette = staticCompositionLocalOf {
+    ShowcasePagePalettes.dark
+}
+
+@Composable
+internal fun ProvideShowcasePageTone(
+    tone: ShowcasePageTone,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(
+        LocalShowcasePagePalette provides if (tone == ShowcasePageTone.Light) {
+            ShowcasePagePalettes.light
+        } else {
+            ShowcasePagePalettes.dark
+        },
+        content = content,
+    )
+}
 
 @Composable
 internal fun ShowcasePage(
@@ -37,6 +77,7 @@ internal fun ShowcasePage(
     primaryActionLabel: String,
     secondaryActionLabel: String,
 ) {
+    val palette = LocalShowcasePagePalette.current
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp),
@@ -47,18 +88,18 @@ internal fun ShowcasePage(
             Text(
                 text = eyebrow,
                 style = MaterialTheme.typography.labelLarge,
-                color = ShowcasePageTokens.textMuted,
+                color = palette.textMuted,
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.headlineMedium,
-                color = ShowcasePageTokens.textPrimary,
+                color = palette.textPrimary,
                 fontWeight = FontWeight.Black,
             )
             Text(
                 text = summary,
                 style = MaterialTheme.typography.bodyLarge,
-                color = ShowcasePageTokens.textSecondary,
+                color = palette.textSecondary,
             )
         }
 
@@ -98,6 +139,7 @@ internal fun ShowcaseInspector(
     facts: List<Pair<String, String>>,
     tasks: List<String>,
 ) {
+    val palette = LocalShowcasePagePalette.current
     Column(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -107,12 +149,12 @@ internal fun ShowcaseInspector(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
-                color = ShowcasePageTokens.textPrimary,
+                color = palette.textPrimary,
             )
             Text(
                 text = summary,
                 style = MaterialTheme.typography.bodyMedium,
-                color = ShowcasePageTokens.textSecondary,
+                color = palette.textSecondary,
             )
         }
 
@@ -138,15 +180,16 @@ internal fun ColumnScope.ShowcaseSidebarInfo(
     title: String,
     value: String,
 ) {
+    val palette = LocalShowcasePagePalette.current
     Box(
         modifier = Modifier.fillMaxWidth()
             .background(
-                color = ShowcasePageTokens.sidebarBadgeBackground,
+                color = palette.sidebarBadgeBackground,
                 shape = RoundedCornerShape(18.dp),
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.07f),
+                color = palette.metricBorder,
                 shape = RoundedCornerShape(18.dp),
             )
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -157,12 +200,12 @@ internal fun ColumnScope.ShowcaseSidebarInfo(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium,
-                color = ShowcasePageTokens.textMuted,
+                color = palette.textMuted,
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyMedium,
-                color = ShowcasePageTokens.textPrimary,
+                color = palette.textPrimary,
             )
         }
     }
@@ -173,20 +216,21 @@ private fun ShowcaseMetricCard(
     label: String,
     value: String,
 ) {
+    val palette = LocalShowcasePagePalette.current
     Box(
         modifier = Modifier.fillMaxWidth()
             .background(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0x88202B3E),
-                        Color(0x66111B2B),
+                        palette.metricGradientTop,
+                        palette.metricGradientBottom,
                     ),
                 ),
                 shape = RoundedCornerShape(22.dp),
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.06f),
+                color = palette.metricBorder,
                 shape = RoundedCornerShape(22.dp),
             )
             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -197,12 +241,12 @@ private fun ShowcaseMetricCard(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelLarge,
-                color = ShowcasePageTokens.textMuted,
+                color = palette.textMuted,
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
-                color = ShowcasePageTokens.textPrimary,
+                color = palette.textPrimary,
                 fontWeight = FontWeight.Bold,
             )
         }
@@ -214,10 +258,11 @@ private fun ShowcaseFactRow(
     label: String,
     value: String,
 ) {
+    val palette = LocalShowcasePagePalette.current
     Row(
         modifier = Modifier.fillMaxWidth()
             .background(
-                color = Color.White.copy(alpha = 0.03f),
+                color = palette.factBackground,
                 shape = RoundedCornerShape(16.dp),
             )
             .padding(horizontal = 12.dp, vertical = 10.dp),
@@ -226,12 +271,12 @@ private fun ShowcaseFactRow(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = ShowcasePageTokens.textMuted,
+            color = palette.textMuted,
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
-            color = ShowcasePageTokens.textPrimary,
+            color = palette.textPrimary,
         )
     }
 }
@@ -242,15 +287,16 @@ private fun ShowcaseHighlightsCard(
     lines: List<String>,
     modifier: Modifier = Modifier,
 ) {
+    val palette = LocalShowcasePagePalette.current
     Box(
         modifier = modifier.fillMaxWidth()
             .background(
-                color = Color.White.copy(alpha = 0.03f),
+                color = palette.highlightBackground,
                 shape = RoundedCornerShape(22.dp),
             )
             .border(
                 width = 1.dp,
-                color = Color.White.copy(alpha = 0.05f),
+                color = palette.highlightBorder,
                 shape = RoundedCornerShape(22.dp),
             )
             .padding(16.dp),
@@ -261,7 +307,7 @@ private fun ShowcaseHighlightsCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = ShowcasePageTokens.textPrimary,
+                color = palette.textPrimary,
             )
             lines.forEach { line ->
                 Row(
@@ -272,14 +318,14 @@ private fun ShowcaseHighlightsCard(
                             .width(6.dp)
                             .height(6.dp)
                             .background(
-                                color = ShowcasePageTokens.bulletColor,
+                                color = palette.bulletColor,
                                 shape = CircleShape,
                             )
                     )
                     Text(
                         text = line,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = ShowcasePageTokens.textSecondary,
+                        color = palette.textSecondary,
                     )
                 }
             }
@@ -287,10 +333,32 @@ private fun ShowcaseHighlightsCard(
     }
 }
 
-private object ShowcasePageTokens {
-    val textPrimary = Color(0xFFE8EEF8)
-    val textSecondary = Color(0xFFB6C6DA)
-    val textMuted = Color(0xFF8C9DB3)
-    val bulletColor = Color(0xFF8DC7FF)
-    val sidebarBadgeBackground = Color(0x33223753)
+private object ShowcasePagePalettes {
+    val dark = ShowcasePagePalette(
+        textPrimary = Color(0xFFE8EEF8),
+        textSecondary = Color(0xFFB6C6DA),
+        textMuted = Color(0xFF8C9DB3),
+        bulletColor = Color(0xFF8DC7FF),
+        sidebarBadgeBackground = Color(0x33223753),
+        metricGradientTop = Color(0x88202B3E),
+        metricGradientBottom = Color(0x66111B2B),
+        metricBorder = Color.White.copy(alpha = 0.06f),
+        factBackground = Color.White.copy(alpha = 0.03f),
+        highlightBackground = Color.White.copy(alpha = 0.03f),
+        highlightBorder = Color.White.copy(alpha = 0.05f),
+    )
+
+    val light = ShowcasePagePalette(
+        textPrimary = Color(0xFF1F2937),
+        textSecondary = Color(0xFF4B5563),
+        textMuted = Color(0xFF6B7280),
+        bulletColor = Color(0xFF2C8BF2),
+        sidebarBadgeBackground = Color(0xFFF8FAFC),
+        metricGradientTop = Color(0xFFFFFFFF),
+        metricGradientBottom = Color(0xFFF8FBFF),
+        metricBorder = Color(0xFFE5ECF3),
+        factBackground = Color(0xFFF8FAFC),
+        highlightBackground = Color(0xFFFFFFFF),
+        highlightBorder = Color(0xFFE5ECF3),
+    )
 }

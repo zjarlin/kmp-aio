@@ -1,5 +1,6 @@
 package site.addzero.appsidebar
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,14 +8,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,7 +42,10 @@ fun AdminWorkbenchScaffold(
     pageTitle: String,
     pageSubtitle: String? = null,
     pageActions: @Composable RowScope.() -> Unit = {},
+    titleContent: (@Composable ColumnScope.() -> Unit)? = null,
     detail: (@Composable BoxScope.() -> Unit)? = null,
+    brandLabel: String = "Addzero Admin",
+    welcomeLabel: String = "欢迎进入后台工作台",
     defaultSidebarRatio: Float = 0.22f,
     state: WorkbenchScaffoldState = rememberWorkbenchScaffoldState(defaultSidebarRatio),
     minSidebarWidth: androidx.compose.ui.unit.Dp = 248.dp,
@@ -43,6 +55,8 @@ fun AdminWorkbenchScaffold(
     contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp),
     detailPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp),
     onGlobalSearchClick: (() -> Unit)? = null,
+    githubLabel: String? = null,
+    onGithubClick: (() -> Unit)? = null,
     languageLabel: String? = null,
     onLanguageClick: (() -> Unit)? = null,
     isDarkTheme: Boolean? = null,
@@ -52,38 +66,58 @@ fun AdminWorkbenchScaffold(
     userLabel: String? = null,
     onUserClick: (() -> Unit)? = null,
 ) {
-    WorkbenchScaffold(
-        sidebar = sidebar,
-        content = content,
-        modifier = modifier,
-        detail = detail,
-        defaultSidebarRatio = defaultSidebarRatio,
-        state = state,
-        minSidebarWidth = minSidebarWidth,
-        maxSidebarWidth = maxSidebarWidth,
-        detailWidth = detailWidth,
-        outerPadding = outerPadding,
-        contentPadding = contentPadding,
-        detailPadding = detailPadding,
-        contentHeaderScrollable = false,
-        contentHeader = {
-            AdminWorkbenchHeader(
-                breadcrumb = breadcrumb,
-                pageTitle = pageTitle,
-                pageSubtitle = pageSubtitle,
-                pageActions = pageActions,
-                onGlobalSearchClick = onGlobalSearchClick,
-                languageLabel = languageLabel,
-                onLanguageClick = onLanguageClick,
-                isDarkTheme = isDarkTheme,
-                onThemeToggle = onThemeToggle,
-                notificationCount = notificationCount,
-                onNotificationsClick = onNotificationsClick,
-                userLabel = userLabel,
-                onUserClick = onUserClick,
-            )
-        },
-    )
+    Column(
+        modifier = modifier.fillMaxSize().background(AdminWorkbenchTokens.pageBackground),
+    ) {
+        AdminWorkbenchGlobalBar(
+            brandLabel = brandLabel,
+            welcomeLabel = welcomeLabel,
+            onGlobalSearchClick = onGlobalSearchClick,
+            githubLabel = githubLabel,
+            onGithubClick = onGithubClick,
+            languageLabel = languageLabel,
+            onLanguageClick = onLanguageClick,
+            isDarkTheme = isDarkTheme,
+            onThemeToggle = onThemeToggle,
+            notificationCount = notificationCount,
+            onNotificationsClick = onNotificationsClick,
+            userLabel = userLabel,
+            onUserClick = onUserClick,
+        )
+
+        WorkbenchScaffold(
+            sidebar = sidebar,
+            content = content,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            detail = detail,
+            defaultSidebarRatio = defaultSidebarRatio,
+            state = state,
+            minSidebarWidth = minSidebarWidth,
+            maxSidebarWidth = maxSidebarWidth,
+            detailWidth = detailWidth,
+            outerPadding = outerPadding,
+            contentPadding = contentPadding,
+            detailPadding = detailPadding,
+            contentHeaderScrollable = false,
+            sidebarContainerModifier = Modifier.fillMaxHeight()
+                .background(AdminWorkbenchTokens.sidebarBackground),
+            mainContainerModifier = Modifier.background(AdminWorkbenchTokens.pageBackground),
+            headerContainerModifier = Modifier.background(AdminWorkbenchTokens.headerBackground),
+            detailContainerModifier = Modifier.background(AdminWorkbenchTokens.detailBackground),
+            dividerColor = AdminWorkbenchTokens.dividerColor,
+            thumbColor = AdminWorkbenchTokens.resizeThumbColor,
+            thumbBorderColor = AdminWorkbenchTokens.resizeThumbBorder,
+            contentHeader = {
+                AdminWorkbenchContentHeader(
+                    breadcrumb = breadcrumb,
+                    pageTitle = pageTitle,
+                    pageSubtitle = pageSubtitle,
+                    pageActions = pageActions,
+                    titleContent = titleContent,
+                )
+            },
+        )
+    }
 }
 
 @Composable
@@ -113,6 +147,19 @@ fun WorkbenchLanguageButton(
 }
 
 @Composable
+fun WorkbenchGitHubButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    WorkbenchUtilityButton(
+        label = label,
+        modifier = modifier,
+        onClick = onClick,
+    )
+}
+
+@Composable
 fun WorkbenchThemeToggleButton(
     isDarkTheme: Boolean,
     onClick: () -> Unit,
@@ -125,6 +172,13 @@ fun WorkbenchThemeToggleButton(
         modifier = modifier,
         onClick = onClick,
         highlighted = true,
+        leading = {
+            Icon(
+                imageVector = if (isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                contentDescription = null,
+                tint = AdminWorkbenchTokens.textPrimary,
+            )
+        },
     )
 }
 
@@ -153,16 +207,21 @@ fun WorkbenchUserButton(
         label = label,
         modifier = modifier,
         onClick = onClick,
+        leading = {
+            WorkbenchUserAvatar(
+                initials = label.toAvatarInitials(),
+            )
+        },
     )
 }
 
 @Composable
-private fun RowScope.AdminWorkbenchHeader(
-    breadcrumb: List<String>,
-    pageTitle: String,
-    pageSubtitle: String?,
-    pageActions: @Composable RowScope.() -> Unit,
+private fun AdminWorkbenchGlobalBar(
+    brandLabel: String,
+    welcomeLabel: String,
     onGlobalSearchClick: (() -> Unit)?,
+    githubLabel: String?,
+    onGithubClick: (() -> Unit)?,
     languageLabel: String?,
     onLanguageClick: (() -> Unit)?,
     isDarkTheme: Boolean?,
@@ -173,25 +232,41 @@ private fun RowScope.AdminWorkbenchHeader(
     onUserClick: (() -> Unit)?,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxWidth()
+            .height(56.dp)
+            .background(AdminWorkbenchTokens.topBarBackground)
+            .padding(horizontal = 18.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        AdminWorkbenchTitleBlock(
-            breadcrumb = breadcrumb,
-            pageTitle = pageTitle,
-            pageSubtitle = pageSubtitle,
+        Row(
             modifier = Modifier.weight(1f),
-        )
-
-        Row(
-            modifier = Modifier.widthIn(max = 440.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically,
-            content = pageActions,
-        )
+        ) {
+            AdminWorkbenchBrand(
+                label = brandLabel,
+            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            )
+            {
+                Text(
+                    text = brandLabel,
+                    color = AdminWorkbenchTokens.topBarTextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    text = welcomeLabel,
+                    color = AdminWorkbenchTokens.topBarTextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
 
         Row(
+            modifier = Modifier.widthIn(max = 720.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -200,16 +275,22 @@ private fun RowScope.AdminWorkbenchHeader(
                     onClick = onGlobalSearchClick,
                 )
             }
-            if (!languageLabel.isNullOrBlank() && onLanguageClick != null) {
-                WorkbenchLanguageButton(
-                    label = languageLabel,
-                    onClick = onLanguageClick,
-                )
-            }
             if (isDarkTheme != null && onThemeToggle != null) {
                 WorkbenchThemeToggleButton(
                     isDarkTheme = isDarkTheme,
                     onClick = onThemeToggle,
+                )
+            }
+            if (!githubLabel.isNullOrBlank() && onGithubClick != null) {
+                WorkbenchGitHubButton(
+                    label = githubLabel,
+                    onClick = onGithubClick,
+                )
+            }
+            if (!languageLabel.isNullOrBlank() && onLanguageClick != null) {
+                WorkbenchLanguageButton(
+                    label = languageLabel,
+                    onClick = onLanguageClick,
                 )
             }
             if (notificationCount != null && onNotificationsClick != null) {
@@ -229,6 +310,67 @@ private fun RowScope.AdminWorkbenchHeader(
 }
 
 @Composable
+private fun AdminWorkbenchBrand(
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.size(28.dp)
+            .background(
+                color = Color.White.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(9.dp),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(
+            modifier = Modifier.size(18.dp),
+        ) {
+            drawCircle(
+                color = Color.White,
+                radius = size.minDimension * 0.20f,
+                center = center.copy(x = size.width * 0.36f),
+            )
+            drawCircle(
+                color = Color(0xFFFF6B6B),
+                radius = size.minDimension * 0.20f,
+                center = center.copy(x = size.width * 0.64f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun RowScope.AdminWorkbenchContentHeader(
+    breadcrumb: List<String>,
+    pageTitle: String,
+    pageSubtitle: String?,
+    pageActions: @Composable RowScope.() -> Unit,
+    titleContent: (@Composable ColumnScope.() -> Unit)?,
+) {
+    if (titleContent != null) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = titleContent,
+        )
+    } else {
+        AdminWorkbenchTitleBlock(
+            breadcrumb = breadcrumb,
+            pageTitle = pageTitle,
+            pageSubtitle = pageSubtitle,
+            modifier = Modifier.weight(1f),
+        )
+    }
+
+    Row(
+        modifier = Modifier.widthIn(max = 440.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = pageActions,
+    )
+}
+
+@Composable
 private fun AdminWorkbenchTitleBlock(
     breadcrumb: List<String>,
     pageTitle: String,
@@ -242,20 +384,20 @@ private fun AdminWorkbenchTitleBlock(
         if (breadcrumb.isNotEmpty()) {
             Text(
                 text = breadcrumb.joinToString(" / "),
-                color = AdminWorkbenchTokens.textMuted,
+                color = AdminWorkbenchTokens.headerTextMuted,
                 style = MaterialTheme.typography.labelLarge,
             )
         }
         Text(
             text = pageTitle,
-            color = AdminWorkbenchTokens.textPrimary,
+            color = AdminWorkbenchTokens.headerTextPrimary,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Black,
         )
         if (pageSubtitle != null) {
             Text(
                 text = pageSubtitle,
-                color = AdminWorkbenchTokens.textMuted,
+                color = AdminWorkbenchTokens.headerTextMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
@@ -269,6 +411,7 @@ private fun WorkbenchUtilityButton(
     modifier: Modifier = Modifier,
     badge: String? = null,
     highlighted: Boolean = false,
+    leading: (@Composable () -> Unit)? = null,
 ) {
     Row(
         modifier = modifier.utilityButtonFrame(
@@ -279,6 +422,7 @@ private fun WorkbenchUtilityButton(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        leading?.invoke()
         Text(
             text = label,
             color = AdminWorkbenchTokens.textPrimary,
@@ -298,6 +442,35 @@ private fun WorkbenchUtilityButton(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun WorkbenchUserAvatar(
+    initials: String,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier.size(24.dp).background(
+            color = AdminWorkbenchTokens.avatarBackground,
+            shape = CircleShape,
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(
+            modifier = Modifier.size(24.dp),
+        ) {
+            drawCircle(
+                color = AdminWorkbenchTokens.avatarHalo,
+                radius = size.minDimension / 2f,
+            )
+        }
+        Text(
+            text = initials,
+            color = AdminWorkbenchTokens.textPrimary,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -342,12 +515,40 @@ private fun Int.toNotificationBadge(): String? {
     }
 }
 
+private fun String.toAvatarInitials(): String {
+    val source = substringBefore("@")
+        .split('.', '-', '_', ' ')
+        .filter(String::isNotBlank)
+    if (source.isEmpty()) {
+        return "U"
+    }
+    val initials = source
+        .take(2)
+        .joinToString(separator = "") { token ->
+            token.first().uppercase()
+        }
+    return initials.ifBlank { "U" }
+}
+
 private object AdminWorkbenchTokens {
-    val buttonBackground = Color.White.copy(alpha = 0.05f)
-    val buttonBorder = Color.White.copy(alpha = 0.07f)
-    val highlightedBackground = Color(0xFF2D64E3).copy(alpha = 0.22f)
-    val highlightedBorder = Color(0xFF9ABEFF).copy(alpha = 0.22f)
-    val badgeBackground = Color.White.copy(alpha = 0.10f)
+    val topBarBackground = Color(0xFF2387E7)
+    val topBarTextPrimary = Color.White.copy(alpha = 0.98f)
+    val topBarTextSecondary = Color.White.copy(alpha = 0.84f)
+    val pageBackground = Color(0xFFF2F5F9)
+    val sidebarBackground = Color.White
+    val headerBackground = Color.White
+    val detailBackground = Color.White
+    val dividerColor = Color(0xFFE4EAF2)
+    val resizeThumbColor = Color(0xFF7EB9F5)
+    val resizeThumbBorder = Color(0xFFB7D9FB)
+    val buttonBackground = Color.White.copy(alpha = 0.12f)
+    val buttonBorder = Color.White.copy(alpha = 0.18f)
+    val highlightedBackground = Color.White.copy(alpha = 0.18f)
+    val highlightedBorder = Color.White.copy(alpha = 0.26f)
+    val badgeBackground = Color(0xFFFF5A5F)
+    val avatarBackground = Color.White.copy(alpha = 0.20f)
+    val avatarHalo = Color.White.copy(alpha = 0.18f)
     val textPrimary = Color.White.copy(alpha = 0.96f)
-    val textMuted = Color.White.copy(alpha = 0.62f)
+    val headerTextPrimary = Color(0xFF1F2A37)
+    val headerTextMuted = Color(0xFF6B7280)
 }

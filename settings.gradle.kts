@@ -16,6 +16,14 @@ require(localBuildLogicDir.isDirectory) {
 includeBuild(localBuildLogicDir)
 
 dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        mavenCentral()
+        google()
+        gradlePluginPortal()
+        maven(url = "https://repo.spring.io/milestone/")
+    }
+
     versionCatalogs {
         create("libs") {
             from(files("checkouts/build-logic/gradle/libs.versions.toml"))

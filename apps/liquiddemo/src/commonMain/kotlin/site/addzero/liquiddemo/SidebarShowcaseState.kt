@@ -7,6 +7,9 @@ import org.koin.core.annotation.Single
 import site.addzero.appsidebar.AppSidebarScaffoldShell
 import site.addzero.workbenchshell.ScreenNode
 import site.addzero.workbenchshell.ScreenTree
+import site.addzero.workbenchshell.breadcrumbNamesFor
+import site.addzero.workbenchshell.findLeaf
+import site.addzero.workbenchshell.visibleLeafNodesUnder
 
 @Single
 class SidebarShowcaseState(
@@ -33,6 +36,15 @@ class SidebarShowcaseState(
     var selectedScreenId by mutableStateOf(initialLeafIdFor(scenes.first().id))
         private set
 
+    var detailVisible by mutableStateOf(true)
+        private set
+
+    var isDarkTheme by mutableStateOf(sceneSlots.firstOrNull()?.config?.isDarkTheme ?: true)
+        private set
+
+    var isChinese by mutableStateOf(true)
+        private set
+
     val activeSceneNode: ScreenNode
         get() = sceneById[selectedSceneId] ?: scenes.first()
 
@@ -55,6 +67,12 @@ class SidebarShowcaseState(
     val breadcrumb: List<String>
         get() = screenTree.breadcrumbNamesFor(activeLeafNode.id)
 
+    val languageToggleLabel: String
+        get() = if (isChinese) "中文" else "EN"
+
+    val githubLabel: String
+        get() = "github.com/addzero"
+
     fun selectScene(sceneId: String) {
         val scene = sceneById[sceneId] ?: return
         selectedSceneId = scene.id
@@ -65,6 +83,33 @@ class SidebarShowcaseState(
         val leaf = screenTree.findLeaf(screenId) ?: return
         selectedScreenId = leaf.id
         selectedSceneId = leaf.ancestorIds.firstOrNull() ?: leaf.id
+    }
+
+    fun toggleDetailVisibility() {
+        detailVisible = !detailVisible
+        println("detailVisible=$detailVisible")
+    }
+
+    fun toggleTheme() {
+        isDarkTheme = !isDarkTheme
+        println("theme=${if (isDarkTheme) "dark" else "light"}")
+    }
+
+    fun toggleLanguage() {
+        isChinese = !isChinese
+        println("language=${if (isChinese) "zh-CN" else "en-US"}")
+    }
+
+    fun openGithub() {
+        println("github=https://$githubLabel")
+    }
+
+    fun openNotifications() {
+        println("notifications=${activeSlot.config.notificationCount}")
+    }
+
+    fun openUserProfile() {
+        println("user=${activeSlot.config.userLabel}")
     }
 
     private fun initialLeafIdFor(sceneId: String): String {
