@@ -16,6 +16,7 @@ val tree = ScreenTree(
 )
 
 val defaultLeafId = tree.defaultLeafId
+val currentLeaf = tree.findLeaf(defaultLeafId)
 val selectedId = defaultLeafId
 
 ScreenSidebar(
@@ -33,6 +34,7 @@ ScreenSidebar(
 - `id` / `pid` 当前使用显式 `String`
 - `content == null` 表示父节点容器
 - `content != null` 表示叶子页面
+- `ScreenTree` 只负责树构建、校验和索引；`findLeaf`、`findNode`、`breadcrumbNamesFor` 这类读取能力通过扩展函数提供
 - 树节点按同父节点下的 `sort`，再按 `name` 兜底排序
 - 默认直接传 `ScreenNode` 给 `ScreenSidebar` / `AppSidebar`，不要再做额外 `SidebarItem` 包装层
 - 这个模块会 `api` 导出 `app-sidebar`

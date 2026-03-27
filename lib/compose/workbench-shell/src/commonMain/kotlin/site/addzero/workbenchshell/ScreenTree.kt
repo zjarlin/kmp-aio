@@ -24,10 +24,10 @@ class ScreenTree(
         .orEmpty()
         .map { screen: Screen -> buildNode(screen, emptyList()) }
 
-    private val allNodes: List<ScreenNode> = buildList {
+    internal val allNodes: List<ScreenNode> = buildList {
         roots.forEach { node -> addSubtree(node) }
     }
-    private val nodesById: Map<String, ScreenNode> = allNodes.associateBy { node: ScreenNode -> node.id }
+    internal val nodesById: Map<String, ScreenNode> = allNodes.associateBy { node: ScreenNode -> node.id }
 
     val visibleLeafNodes: List<ScreenNode> = buildList {
         roots.forEach { node -> collectVisibleLeaves(node) }
@@ -39,46 +39,6 @@ class ScreenTree(
         .filter { node: ScreenNode -> node.children.isNotEmpty() && node.visible }
         .map { node: ScreenNode -> node.id }
         .toSet()
-
-    fun normalizeScreenId(screenId: String): String {
-        val normalized = screenId.trim()
-        return when {
-            normalized.isBlank() -> defaultLeafId
-            normalized in nodesById -> normalized
-            else -> defaultLeafId
-        }
-    }
-
-    fun findNode(screenId: String): ScreenNode? {
-        return nodesById[normalizeScreenId(screenId)]
-    }
-
-    fun findLeaf(screenId: String): ScreenNode? {
-        val normalized = normalizeScreenId(screenId)
-        val node = nodesById[normalized]
-        return when {
-            node?.isLeaf == true -> node
-            else -> visibleLeafNodes.firstOrNull()
-        }
-    }
-
-    fun ancestorIdsFor(screenId: String): List<String> {
-        return findNode(screenId)?.ancestorIds.orEmpty()
-    }
-
-    fun breadcrumbNamesFor(screenId: String): List<String> {
-        val node = findNode(screenId) ?: return emptyList()
-        return node.ancestorIds.mapNotNull { ancestorId ->
-            nodesById[ancestorId]?.name
-        }
-    }
-
-    fun visibleLeafNodesUnder(screenId: String): List<ScreenNode> {
-        val node = nodesById[normalizeScreenId(screenId)] ?: return emptyList()
-        return buildList {
-            collectVisibleLeaves(node)
-        }
-    }
 
     private fun validateDuplicateIds() {
         val duplicateIds = screens
@@ -162,7 +122,7 @@ class ScreenTree(
         node.children.forEach { child -> addSubtree(child) }
     }
 
-    private fun MutableList<ScreenNode>.collectVisibleLeaves(
+    internal fun MutableList<ScreenNode>.collectVisibleLeaves(
         node: ScreenNode,
     ) {
         if (!node.visible) {
