@@ -65,7 +65,7 @@ fun PlaygroundApp(state: PlaygroundWorkbenchState) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 WorkbenchHeader(state = state, onToggleLanguage = state::toggleLanguage)
-                TabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
+                PrimaryTabRow(selectedTabIndex = tabs.indexOf(selectedTab)) {
                     tabs.forEachIndexed { index, tab ->
                         Tab(
                             selected = tabs[index] == selectedTab,
@@ -125,7 +125,7 @@ private fun LeftExplorer(
             Button(onClick = onRefresh) { Text(tr(state, "刷新", "Refresh")) }
             OutlinedButton(onClick = onNewModule) { Text(tr(state, "新模块", "New")) }
         }
-        Divider()
+        HorizontalDivider()
         Text(tr(state, "模块树", "Module Tree"), fontWeight = FontWeight.SemiBold)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.weight(1f)) {
             items(state.modules) { module ->
@@ -142,7 +142,7 @@ private fun LeftExplorer(
                 }
             }
         }
-        Divider()
+        HorizontalDivider()
         Text(state.statusMessage, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
     }
 }
@@ -257,6 +257,7 @@ private fun TypeTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
                 title = tr(state, "类型列表", "Type List"),
                 items = state.types,
                 selectedId = state.selectedTypeId,
+                itemId = { it.id },
                 itemTitle = { it.symbol },
                 itemSubtitle = { it.kind.name },
                 onSelect = state::selectType,
@@ -320,6 +321,7 @@ private fun GlobalTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
                 title = tr(state, "全局列表", "Globals"),
                 items = state.globals,
                 selectedId = selected?.id,
+                itemId = { it.id },
                 itemTitle = { it.symbol },
                 itemSubtitle = { it.typeText },
                 onSelect = {},
@@ -381,6 +383,7 @@ private fun FunctionTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) 
                     title = tr(state, "函数列表", "Functions"),
                     items = state.functions,
                     selectedId = state.selectedFunctionId,
+                    itemId = { it.id },
                     itemTitle = { it.symbol },
                     itemSubtitle = { it.returnTypeText },
                     onSelect = state::selectFunction,
@@ -423,6 +426,7 @@ private fun FunctionTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) 
                     title = tr(state, "基本块", "Basic Blocks"),
                     items = state.blocks.filter { it.functionId == state.selectedFunctionId },
                     selectedId = state.selectedBlockId,
+                    itemId = { it.id },
                     itemTitle = { it.label },
                     itemSubtitle = { it.name },
                     onSelect = state::selectBlock,
@@ -438,12 +442,13 @@ private fun FunctionTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) 
                         primaryLabel = tr(state, "保存 Block", "Save Block"),
                         secondaryLabel = tr(state, "删除 Block", "Delete Block"),
                     )
-                    Divider()
+                    HorizontalDivider()
                     Text(tr(state, "指令", "Instructions"), fontWeight = FontWeight.SemiBold)
                     ExplorerList(
                         title = "",
                         items = state.instructions.filter { it.blockId == state.selectedBlockId },
                         selectedId = state.selectedInstructionId,
+                        itemId = { it.id },
                         itemTitle = { it.opcode.name },
                         itemSubtitle = { it.resultSymbol ?: it.textSuffix ?: "" },
                         onSelect = state::selectInstruction,
@@ -491,6 +496,7 @@ private fun MetadataTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) 
                 title = tr(state, "Metadata 节点", "Metadata Nodes"),
                 items = state.metadataNodes,
                 selectedId = state.selectedMetadataNodeId,
+                itemId = { it.id },
                 itemTitle = { it.name ?: "!anon" },
                 itemSubtitle = { it.kind.name },
                 onSelect = state::selectMetadataNode,
@@ -522,7 +528,7 @@ private fun MetadataTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) 
                     primaryLabel = tr(state, "保存 Metadata", "Save Metadata"),
                     secondaryLabel = tr(state, "删除 Metadata", "Delete Metadata"),
                 )
-                Divider()
+                HorizontalDivider()
                 Text(tr(state, "已命名 Metadata", "Named Metadata"), fontWeight = FontWeight.SemiBold)
                 state.namedMetadata.forEach {
                     Text("!${it.name}", style = MaterialTheme.typography.bodySmall)
@@ -552,6 +558,7 @@ private fun CompileTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
                     title = tr(state, "编译配置", "Compile Profiles"),
                     items = state.compileProfiles,
                     selectedId = state.selectedProfileId,
+                    itemId = { it.id },
                     itemTitle = { it.name },
                     itemSubtitle = { it.targetPlatform },
                     onSelect = state::selectProfile,
@@ -598,7 +605,7 @@ private fun CompileTab(state: PlaygroundWorkbenchState, scope: CoroutineScope) {
                 Text("${job.status.name}  ${job.id}", style = MaterialTheme.typography.bodySmall)
             }
             state.lastCompileResult?.let { result ->
-                Divider()
+                HorizontalDivider()
                 Text(tr(state, "最近编译结果", "Latest Compile Result"), fontWeight = FontWeight.SemiBold)
                 Text(result.job.status.name, fontWeight = FontWeight.Bold)
                 Text(result.steps.joinToString("\n\n") { step ->
@@ -719,6 +726,7 @@ private fun <T> ExplorerList(
     title: String,
     items: List<T>,
     selectedId: String?,
+    itemId: (T) -> String,
     itemTitle: (T) -> String,
     itemSubtitle: (T) -> String,
     onSelect: (String?) -> Unit,
@@ -729,7 +737,7 @@ private fun <T> ExplorerList(
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(items) { item ->
-                val id = item::class.members.firstOrNull { it.name == "id" }?.call(item) as? String
+                val id = itemId(item)
                 Surface(
                     tonalElevation = if (id == selectedId) 2.dp else 0.dp,
                     color = if (id == selectedId) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent,
@@ -761,7 +769,7 @@ private fun <T : Enum<T>> EnumSelector(
             value = selected.name,
             onValueChange = {},
             readOnly = true,
-            modifier = Modifier.menuAnchor().fillMaxWidth(),
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             entries.forEach { entry ->
