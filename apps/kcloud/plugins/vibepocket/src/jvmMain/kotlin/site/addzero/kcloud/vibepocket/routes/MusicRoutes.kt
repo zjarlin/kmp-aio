@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
-import site.addzero.vibepocket.api.music.MusicLyric
-import site.addzero.vibepocket.api.music.MusicResolvedAsset
-import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.kcloud.api.music.MusicLyric
+import site.addzero.kcloud.api.music.MusicResolvedAsset
+import site.addzero.kcloud.api.music.MusicTrack
 import site.addzero.vibepocket.service.MusicCatalogService
 import site.addzero.vibepocket.service.UploadCoverSourcePreparationService
 import site.addzero.vibepocket.music.UploadCoverSourcePrepareRequest

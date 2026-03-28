@@ -3,556 +3,719 @@ package site.addzero.coding.playground
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.koin.core.annotation.Single
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.*
-import java.util.prefs.Preferences
-
-enum class PlaygroundUiLanguage {
-    ZH_CN,
-    EN_US,
-}
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.security.MessageDigest
+import kotlin.io.path.readText
 
 @Single
 class PlaygroundWorkbenchState(
-    private val moduleService: LlvmModuleService,
-    private val typeService: LlvmTypeService,
-    private val globalValueService: LlvmGlobalValueService,
-    private val functionService: LlvmFunctionService,
-    private val metadataService: LlvmMetadataService,
-    private val attributeService: LlvmAttributeService,
-    private val validationService: LlvmValidationService,
-    private val snapshotService: LlvmSnapshotService,
-    private val exportService: LlvmLlExportService,
-    private val compileProfileService: LlvmCompileProfileService,
-    private val compileJobService: LlvmCompileJobService,
+    private val projectService: CodegenProjectService,
+    private val targetService: GenerationTargetService,
+    private val fileService: SourceFileService,
+    private val declarationService: DeclarationService,
+    private val renderService: CodeRenderService,
+    private val artifactService: ManagedArtifactService,
+    private val syncService: SyncService,
+    private val kspIndexService: KspIndexService,
 ) {
-    private val prefs = Preferences.userNodeForPackage(PlaygroundWorkbenchState::class.java)
-    private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
+    private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var autoSyncJob: Job? = null
+    private var externalPollJob: Job? = null
+    private var trackedOutputPath: String? = null
+    private var trackedDiskHash: String? = null
+    private var lastManagedWriteHash: String? = null
+    private var dirtyFileId: String? = null
 
-    var modules by mutableStateOf<List<LlvmModuleDto>>(emptyList())
+    var projects by mutableStateOf<List<CodegenProjectDto>>(emptyList())
         private set
-    var types by mutableStateOf<List<LlvmTypeDto>>(emptyList())
+    var targets by mutableStateOf<List<GenerationTargetDto>>(emptyList())
         private set
-    var typeMembers by mutableStateOf<List<LlvmTypeMemberDto>>(emptyList())
+    var files by mutableStateOf<List<SourceFileMetaDto>>(emptyList())
         private set
-    var globals by mutableStateOf<List<LlvmGlobalVariableDto>>(emptyList())
+    var declarations by mutableStateOf<List<DeclarationMetaDto>>(emptyList())
         private set
-    var constants by mutableStateOf<List<LlvmConstantDto>>(emptyList())
+    var selectedProjectId by mutableStateOf<String?>(null)
         private set
-    var functions by mutableStateOf<List<LlvmFunctionDto>>(emptyList())
+    var selectedTargetId by mutableStateOf<String?>(null)
         private set
-    var params by mutableStateOf<List<LlvmFunctionParamDto>>(emptyList())
+    var selectedFileId by mutableStateOf<String?>(null)
         private set
-    var blocks by mutableStateOf<List<LlvmBasicBlockDto>>(emptyList())
+    var selectedDeclarationId by mutableStateOf<String?>(null)
         private set
-    var instructions by mutableStateOf<List<LlvmInstructionDto>>(emptyList())
+    var projectAggregate by mutableStateOf<CodegenProjectAggregateDto?>(null)
         private set
-    var operands by mutableStateOf<List<LlvmOperandDto>>(emptyList())
+    var fileAggregate by mutableStateOf<SourceFileAggregateDto?>(null)
         private set
-    var namedMetadata by mutableStateOf<List<LlvmNamedMetadataDto>>(emptyList())
+    var targetPathPreview by mutableStateOf<PathPreviewDto?>(null)
         private set
-    var metadataNodes by mutableStateOf<List<LlvmMetadataNodeDto>>(emptyList())
+    var sourcePreview by mutableStateOf<CodeRenderPreviewDto?>(null)
         private set
-    var metadataFields by mutableStateOf<List<LlvmMetadataFieldDto>>(emptyList())
+    var kspPreview by mutableStateOf<KspIndexPreviewDto?>(null)
         private set
-    var metadataAttachments by mutableStateOf<List<LlvmMetadataAttachmentDto>>(emptyList())
+    var artifacts by mutableStateOf<List<ManagedArtifactMetaDto>>(emptyList())
         private set
-    var attributeGroups by mutableStateOf<List<LlvmAttributeGroupDto>>(emptyList())
+    var conflicts by mutableStateOf<List<SyncConflictMetaDto>>(emptyList())
         private set
-    var attributeEntries by mutableStateOf<List<LlvmAttributeEntryDto>>(emptyList())
-        private set
-    var compileProfiles by mutableStateOf<List<LlvmCompileProfileDto>>(emptyList())
-        private set
-    var compileJobs by mutableStateOf<List<LlvmCompileJobDto>>(emptyList())
-        private set
-    var compileArtifacts by mutableStateOf<List<LlvmCompileArtifactDto>>(emptyList())
-        private set
-
-    var selectedModuleId by mutableStateOf<String?>(null)
-        private set
-    var selectedTypeId by mutableStateOf<String?>(null)
-        private set
-    var selectedFunctionId by mutableStateOf<String?>(null)
-        private set
-    var selectedBlockId by mutableStateOf<String?>(null)
-        private set
-    var selectedInstructionId by mutableStateOf<String?>(null)
-        private set
-    var selectedMetadataNodeId by mutableStateOf<String?>(null)
-        private set
-    var selectedNamedMetadataId by mutableStateOf<String?>(null)
-        private set
-    var selectedProfileId by mutableStateOf<String?>(null)
-        private set
-    var selectedJobId by mutableStateOf<String?>(null)
-        private set
-
-    var uiLanguage by mutableStateOf(loadLanguage())
+    var validationIssues by mutableStateOf<List<ValidationIssueDto>>(emptyList())
         private set
     var searchQuery by mutableStateOf("")
-    var statusMessage by mutableStateOf("LLVM IR 工作台已就绪")
+    var statusMessage by mutableStateOf("Kotlin 声明式代码生成台已就绪")
         private set
-    var validationIssues by mutableStateOf<List<LlvmValidationIssueDto>>(emptyList())
+    var statusIsError by mutableStateOf(false)
         private set
-    var exportPreviewText by mutableStateOf("")
+    var autoPreviewEnabled by mutableStateOf(true)
         private set
-    var snapshotEditorText by mutableStateOf("")
-    var lastDeleteCheck by mutableStateOf<LlvmDeleteCheckResultDto?>(null)
+    var autoWriteEnabled by mutableStateOf(true)
         private set
-    var lastCompileResult by mutableStateOf<LlvmCompileExecutionResultDto?>(null)
+    var autoImportExternalEnabled by mutableStateOf(true)
         private set
+    var autoSyncInProgress by mutableStateOf(false)
+        private set
+
+    fun startBackgroundSync() {
+        ensureExternalPolling()
+    }
+
+    fun stopBackgroundSync() {
+        autoSyncJob?.cancel()
+        externalPollJob?.cancel()
+        backgroundScope.cancel()
+    }
+
+    fun updateAutoSyncSettings(
+        autoPreviewEnabled: Boolean = this.autoPreviewEnabled,
+        autoWriteEnabled: Boolean = this.autoWriteEnabled,
+        autoImportExternalEnabled: Boolean = this.autoImportExternalEnabled,
+    ) {
+        this.autoPreviewEnabled = autoPreviewEnabled
+        this.autoWriteEnabled = autoWriteEnabled
+        this.autoImportExternalEnabled = autoImportExternalEnabled
+        if (!autoPreviewEnabled && !autoWriteEnabled) {
+            autoSyncJob?.cancel()
+        } else if (dirtyFileId != null) {
+            scheduleAutoSync()
+        }
+        ensureExternalPolling()
+    }
 
     suspend fun refreshAll() {
-        modules = moduleService.list(LlvmSearchRequest(query = searchQuery.ifBlank { null }))
-        if (selectedModuleId !in modules.map { it.id }) {
-            selectedModuleId = modules.firstOrNull()?.id
+        projects = projectService.list(CodegenSearchRequest(query = searchQuery.ifBlank { null }))
+        if (selectedProjectId !in projects.map { it.id }) {
+            selectedProjectId = projects.firstOrNull()?.id
         }
-        refreshModuleScope()
+        refreshProjectScope()
     }
 
-    suspend fun refreshModuleScope() {
-        val moduleId = selectedModuleId
-        if (moduleId == null) {
-            types = emptyList()
-            typeMembers = emptyList()
-            globals = emptyList()
-            constants = emptyList()
-            functions = emptyList()
-            params = emptyList()
-            blocks = emptyList()
-            instructions = emptyList()
-            operands = emptyList()
-            namedMetadata = emptyList()
-            metadataNodes = emptyList()
-            metadataFields = emptyList()
-            metadataAttachments = emptyList()
-            attributeGroups = emptyList()
-            attributeEntries = emptyList()
-            compileProfiles = emptyList()
-            compileJobs = emptyList()
-            compileArtifacts = emptyList()
+    suspend fun refreshProjectScope() {
+        val projectId = selectedProjectId
+        if (projectId == null) {
+            projectAggregate = null
+            targets = emptyList()
+            files = emptyList()
+            declarations = emptyList()
+            selectedTargetId = null
+            selectedFileId = null
+            selectedDeclarationId = null
+            clearDetails()
             return
         }
-        val aggregate = moduleService.aggregate(moduleId)
-        types = aggregate.types
-        typeMembers = aggregate.typeMembers
-        globals = aggregate.globals
-        constants = aggregate.constants
-        functions = aggregate.functions
-        params = aggregate.params
-        blocks = aggregate.blocks
-        instructions = aggregate.instructions
-        operands = aggregate.operands
-        namedMetadata = aggregate.namedMetadata
-        metadataNodes = aggregate.metadataNodes
-        metadataFields = aggregate.metadataFields
-        metadataAttachments = aggregate.metadataAttachments
-        attributeGroups = aggregate.attributeGroups
-        attributeEntries = aggregate.attributeEntries
-        compileProfiles = aggregate.compileProfiles
-        compileJobs = aggregate.compileJobs
-        compileArtifacts = aggregate.compileArtifacts
-        if (selectedTypeId !in types.map { it.id }) selectedTypeId = types.firstOrNull()?.id
-        if (selectedFunctionId !in functions.map { it.id }) selectedFunctionId = functions.firstOrNull()?.id
-        if (selectedBlockId !in blocks.map { it.id }) selectedBlockId = blocks.firstOrNull { it.functionId == selectedFunctionId }?.id
-        if (selectedInstructionId !in instructions.map { it.id }) selectedInstructionId = instructions.firstOrNull { it.blockId == selectedBlockId }?.id
-        if (selectedMetadataNodeId !in metadataNodes.map { it.id }) selectedMetadataNodeId = metadataNodes.firstOrNull()?.id
-        if (selectedNamedMetadataId !in namedMetadata.map { it.id }) selectedNamedMetadataId = namedMetadata.firstOrNull()?.id
-        if (selectedProfileId !in compileProfiles.map { it.id }) selectedProfileId = compileProfiles.firstOrNull()?.id
-        if (selectedJobId !in compileJobs.map { it.id }) selectedJobId = compileJobs.firstOrNull()?.id
-    }
-
-    fun selectModule(id: String?) {
-        selectedModuleId = id
-        clearDiagnostics()
-    }
-
-    fun selectType(id: String?) {
-        selectedTypeId = id
-        clearDiagnostics()
-    }
-
-    fun selectFunction(id: String?) {
-        selectedFunctionId = id
-        selectedBlockId = blocks.firstOrNull { it.functionId == id }?.id
-        selectedInstructionId = instructions.firstOrNull { it.blockId == selectedBlockId }?.id
-        clearDiagnostics()
-    }
-
-    fun selectBlock(id: String?) {
-        selectedBlockId = id
-        selectedInstructionId = instructions.firstOrNull { it.blockId == id }?.id
-        clearDiagnostics()
-    }
-
-    fun selectInstruction(id: String?) {
-        selectedInstructionId = id
-        clearDiagnostics()
-    }
-
-    fun selectMetadataNode(id: String?) {
-        selectedMetadataNodeId = id
-        clearDiagnostics()
-    }
-
-    fun selectNamedMetadata(id: String?) {
-        selectedNamedMetadataId = id
-        clearDiagnostics()
-    }
-
-    fun selectProfile(id: String?) {
-        selectedProfileId = id
-        clearDiagnostics()
-    }
-
-    fun selectJob(id: String?) {
-        selectedJobId = id
-        compileArtifacts = if (id == null) emptyList() else compileArtifacts.filter { it.jobId == id }
-        clearDiagnostics()
-    }
-
-    fun toggleLanguage() {
-        uiLanguage = when (uiLanguage) {
-            PlaygroundUiLanguage.ZH_CN -> PlaygroundUiLanguage.EN_US
-            PlaygroundUiLanguage.EN_US -> PlaygroundUiLanguage.ZH_CN
+        val aggregate = projectService.aggregate(projectId)
+        projectAggregate = aggregate
+        targets = aggregate.targets
+        if (selectedTargetId !in targets.map { it.id }) {
+            selectedTargetId = targets.firstOrNull()?.id
         }
-        prefs.put("language", uiLanguage.name)
+        files = aggregate.files.filter { it.targetId == selectedTargetId }
+        if (selectedFileId !in files.map { it.id }) {
+            selectedFileId = files.firstOrNull()?.id
+        }
+        declarations = aggregate.declarations.filter { it.fileId == selectedFileId }
+        if (selectedDeclarationId !in declarations.map { it.id }) {
+            selectedDeclarationId = declarations.firstOrNull()?.id
+        }
+        refreshFileScope()
     }
 
-    suspend fun saveModule(selectedId: String?, request: CreateLlvmModuleRequest) {
-        val result = if (selectedId == null) {
-            moduleService.create(request)
+    suspend fun refreshFileScope() {
+        val fileId = selectedFileId
+        if (fileId == null) {
+            fileAggregate = null
+            targetPathPreview = selectedTargetId?.let { runCatching { targetService.previewPath(it) }.getOrNull() }
+            sourcePreview = null
+            artifacts = emptyList()
+            conflicts = emptyList()
+            kspPreview = null
+            validationIssues = emptyList()
+            clearTrackedFileState()
+            return
+        }
+        fileAggregate = fileService.aggregate(fileId)
+        declarations = fileAggregate?.declarations.orEmpty()
+        if (selectedDeclarationId !in declarations.map { it.id }) {
+            selectedDeclarationId = declarations.firstOrNull()?.id
+        }
+        targetPathPreview = selectedTargetId?.let { runCatching { targetService.previewPath(it) }.getOrNull() }
+        sourcePreview = runCatching { renderService.previewFile(fileId) }.getOrNull()
+        artifacts = artifactService.list(CodegenSearchRequest(fileId = fileId))
+        conflicts = syncService.listConflicts(CodegenSearchRequest(fileId = fileId))
+        validationIssues = fileService.validate(fileId) + (selectedDeclarationId?.let { declarationService.validate(it) }.orEmpty())
+        selectedTargetId?.let { targetId ->
+            kspPreview = runCatching { kspIndexService.previewIndex(targetId) }.getOrNull()
+        }
+        syncTrackedFileState()
+    }
+
+    fun selectProject(id: String?) {
+        selectedProjectId = id
+        selectedTargetId = null
+        selectedFileId = null
+        selectedDeclarationId = null
+    }
+
+    fun selectTarget(id: String?) {
+        selectedTargetId = id
+        selectedFileId = null
+        selectedDeclarationId = null
+        files = projectAggregate?.files?.filter { it.targetId == id }.orEmpty()
+        selectedFileId = files.firstOrNull()?.id
+        declarations = projectAggregate?.declarations?.filter { it.fileId == selectedFileId }.orEmpty()
+        selectedDeclarationId = declarations.firstOrNull()?.id
+    }
+
+    fun selectFile(id: String?) {
+        selectedFileId = id
+        declarations = projectAggregate?.declarations?.filter { it.fileId == id }.orEmpty()
+        selectedDeclarationId = declarations.firstOrNull()?.id
+    }
+
+    fun selectDeclaration(id: String?) {
+        selectedDeclarationId = id
+    }
+
+    suspend fun saveProject(selectedId: String?, request: CreateCodegenProjectRequest) {
+        val saved = if (selectedId == null) {
+            projectService.create(request)
         } else {
-            moduleService.update(
-                selectedId,
-                UpdateLlvmModuleRequest(
-                    name = request.name,
-                    sourceFilename = request.sourceFilename,
-                    targetTriple = request.targetTriple,
-                    dataLayout = request.dataLayout,
-                    moduleAsm = request.moduleAsm,
-                    moduleFlags = request.moduleFlags,
-                    description = request.description,
-                ),
-            )
+            projectService.update(selectedId, UpdateCodegenProjectRequest(request.name, request.description))
         }
-        selectedModuleId = result.id
-        statusMessage = "模块已保存"
+        selectedProjectId = saved.id
+        updateStatus("项目已保存")
         refreshAll()
     }
 
-    suspend fun removeSelectedModule() {
-        selectedModuleId?.let {
-            moduleService.delete(it)
-            statusMessage = "模块已删除"
+    suspend fun saveTarget(selectedId: String?, request: CreateGenerationTargetRequest) {
+        val saved = if (selectedId == null) {
+            targetService.create(request)
+        } else {
+            targetService.update(
+                selectedId,
+                UpdateGenerationTargetRequest(
+                    name = request.name,
+                    rootDir = request.rootDir,
+                    sourceSet = request.sourceSet,
+                    basePackage = request.basePackage,
+                    indexPackage = request.indexPackage,
+                    kspEnabled = request.kspEnabled,
+                    variables = request.variables,
+                ),
+            )
+        }
+        selectedTargetId = saved.id
+        updateStatus("生成目标已保存")
+        refreshProjectScope()
+        markMetadataChanged()
+    }
+
+    suspend fun saveFile(selectedId: String?, request: CreateSourceFileRequest) {
+        val saved = if (selectedId == null) {
+            fileService.create(request)
+        } else {
+            fileService.update(
+                selectedId,
+                UpdateSourceFileRequest(
+                    packageName = request.packageName,
+                    fileName = request.fileName,
+                    docComment = request.docComment,
+                ),
+            )
+        }
+        selectedFileId = saved.id
+        updateStatus("Kotlin 文件已保存")
+        refreshProjectScope()
+        markMetadataChanged()
+    }
+
+    suspend fun saveDeclaration(selectedId: String?, request: CreateDeclarationRequest) {
+        val saved = if (selectedId == null) {
+            declarationService.create(request)
+        } else {
+            declarationService.update(
+                selectedId,
+                UpdateDeclarationRequest(
+                    name = request.name,
+                    visibility = request.visibility,
+                    modifiers = request.modifiers,
+                    superTypes = request.superTypes,
+                    docComment = request.docComment,
+                ),
+            )
+        }
+        selectedDeclarationId = saved.id
+        updateStatus("声明已保存")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun createPreset(kind: DeclarationKind, declarationName: String, packageName: String) {
+        val targetId = selectedTargetId ?: return
+        val aggregate = fileService.createPreset(
+            CreateDeclarationPresetRequest(
+                targetId = targetId,
+                packageName = packageName,
+                declarationName = declarationName,
+                kind = kind,
+            ),
+        )
+        selectedFileId = aggregate.file.id
+        selectedDeclarationId = aggregate.declarations.firstOrNull()?.id
+        updateStatus("已创建 ${declarationName} 预设")
+        refreshProjectScope()
+        markMetadataChanged()
+    }
+
+    suspend fun addImport(importPath: String, alias: String?) {
+        val fileId = selectedFileId ?: return
+        fileService.createImport(CreateImportRequest(fileId, importPath, alias))
+        updateStatus("导包已添加")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun deleteImport(id: String) {
+        fileService.deleteImport(id)
+        updateStatus("导包已删除")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun addConstructorParam(name: String, type: String, mutable: Boolean, defaultValue: String?) {
+        val declarationId = selectedDeclarationId ?: return
+        declarationService.createConstructorParam(
+            CreateConstructorParamRequest(
+                declarationId = declarationId,
+                name = name,
+                type = type,
+                mutable = mutable,
+                defaultValue = defaultValue,
+            ),
+        )
+        updateStatus("构造参数已添加")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun deleteConstructorParam(id: String) {
+        declarationService.deleteConstructorParam(id)
+        updateStatus("构造参数已删除")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun addProperty(name: String, type: String, mutable: Boolean, initializer: String?) {
+        val declarationId = selectedDeclarationId ?: return
+        declarationService.createProperty(
+            CreatePropertyRequest(
+                declarationId = declarationId,
+                name = name,
+                type = type,
+                mutable = mutable,
+                initializer = initializer,
+            ),
+        )
+        updateStatus("属性已添加")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun deleteProperty(id: String) {
+        declarationService.deleteProperty(id)
+        updateStatus("属性已删除")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun addEnumEntry(name: String) {
+        val declarationId = selectedDeclarationId ?: return
+        declarationService.createEnumEntry(CreateEnumEntryRequest(declarationId, name))
+        updateStatus("枚举项已添加")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun deleteEnumEntry(id: String) {
+        declarationService.deleteEnumEntry(id)
+        updateStatus("枚举项已删除")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun addFunction(name: String, returnType: String, parametersText: String) {
+        val declarationId = selectedDeclarationId ?: return
+        declarationService.createFunctionStub(
+            CreateFunctionStubRequest(
+                declarationId = declarationId,
+                name = name,
+                returnType = returnType,
+                parameters = parseFunctionParameters(parametersText),
+                bodyMode = FunctionBodyMode.TEMPLATE,
+            ),
+        )
+        updateStatus("函数桩已添加")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun deleteFunction(id: String) {
+        declarationService.deleteFunctionStub(id)
+        updateStatus("函数桩已删除")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun addDeclarationAnnotation(annotationClassName: String, argsText: String) {
+        val declarationId = selectedDeclarationId ?: return
+        val usage = declarationService.createAnnotationUsage(
+            CreateAnnotationUsageRequest(
+                ownerType = AnnotationOwnerType.DECLARATION,
+                ownerId = declarationId,
+                annotationClassName = annotationClassName,
+            ),
+        )
+        parseAnnotationArguments(argsText).forEach { argument ->
+            declarationService.createAnnotationArgument(
+                CreateAnnotationArgumentRequest(
+                    annotationUsageId = usage.id,
+                    name = argument.first,
+                    value = argument.second,
+                ),
+            )
+        }
+        updateStatus("声明注解已添加")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun deleteAnnotationUsage(id: String) {
+        declarationService.deleteAnnotationUsage(id)
+        updateStatus("声明注解已删除")
+        refreshFileScope()
+        markMetadataChanged()
+    }
+
+    suspend fun exportSelectedFile() {
+        autoSyncJob?.cancel()
+        val fileId = selectedFileId ?: return
+        exportFileInternal(fileId = fileId, autoTriggered = false)
+    }
+
+    suspend fun importSelectedFile() {
+        autoSyncJob?.cancel()
+        importSelectedFileInternal(autoTriggered = false)
+    }
+
+    suspend fun refreshPreview() {
+        val fileId = selectedFileId ?: return
+        sourcePreview = renderService.previewFile(fileId)
+        selectedTargetId?.let { targetId ->
+            kspPreview = kspIndexService.previewIndex(targetId)
+        }
+        artifacts = artifactService.list(CodegenSearchRequest(fileId = fileId))
+        conflicts = syncService.listConflicts(CodegenSearchRequest(fileId = fileId))
+    }
+
+    suspend fun resolveConflict(conflictId: String, resolution: SyncConflictResolution) {
+        syncService.resolveConflict(conflictId, ResolveSyncConflictRequest(resolution))
+        updateStatus("冲突已处理")
+        refreshFileScope()
+        dirtyFileId = null
+    }
+
+    suspend fun deleteSelectedProject() {
+        selectedProjectId?.let {
+            projectService.delete(it)
+            updateStatus("项目已删除")
             refreshAll()
         }
     }
 
-    suspend fun saveType(selectedId: String?, request: CreateLlvmTypeRequest) {
-        val moduleId = selectedModuleId ?: return
-        val created = if (selectedId == null) {
-            typeService.create(request.copy(moduleId = moduleId))
-        } else {
-            typeService.update(
-                selectedId,
-                UpdateLlvmTypeRequest(
-                    name = request.name,
-                    symbol = request.symbol,
-                    kind = request.kind,
-                    primitiveWidth = request.primitiveWidth,
-                    packed = request.packed,
-                    opaque = request.opaque,
-                    addressSpace = request.addressSpace,
-                    arrayLength = request.arrayLength,
-                    scalable = request.scalable,
-                    variadic = request.variadic,
-                    definitionText = request.definitionText,
-                    elementTypeRefId = request.elementTypeRefId,
-                    returnTypeRefId = request.returnTypeRefId,
-                ),
-            )
-        }
-        selectedTypeId = created.id
-        statusMessage = "类型已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun removeSelectedType() {
-        selectedTypeId?.let {
-            typeService.delete(it)
-            statusMessage = "类型已删除"
-            refreshModuleScope()
+    suspend fun deleteSelectedTarget() {
+        selectedTargetId?.let {
+            targetService.delete(it)
+            updateStatus("生成目标已删除")
+            refreshProjectScope()
         }
     }
 
-    suspend fun saveGlobal(selectedId: String?, request: CreateLlvmGlobalVariableRequest) {
-        val moduleId = selectedModuleId ?: return
-        if (selectedId == null) {
-            globalValueService.createGlobal(request.copy(moduleId = moduleId))
-        } else {
-            globalValueService.updateGlobal(
-                selectedId,
-                UpdateLlvmGlobalVariableRequest(
-                    name = request.name,
-                    symbol = request.symbol,
-                    typeText = request.typeText,
-                    typeRefId = request.typeRefId,
-                    linkage = request.linkage,
-                    visibility = request.visibility,
-                    constant = request.constant,
-                    threadLocal = request.threadLocal,
-                    externallyInitialized = request.externallyInitialized,
-                    initializerText = request.initializerText,
-                    initializerConstantId = request.initializerConstantId,
-                    sectionName = request.sectionName,
-                    comdatId = request.comdatId,
-                    alignment = request.alignment,
-                    addressSpace = request.addressSpace,
-                    attributeGroupIds = request.attributeGroupIds,
-                    metadata = request.metadata,
-                ),
-            )
-        }
-        statusMessage = "全局变量已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun removeGlobal(id: String) {
-        globalValueService.deleteGlobal(id)
-        statusMessage = "全局变量已删除"
-        refreshModuleScope()
-    }
-
-    suspend fun saveFunction(selectedId: String?, request: CreateLlvmFunctionRequest) {
-        val moduleId = selectedModuleId ?: return
-        val result = if (selectedId == null) {
-            functionService.create(request.copy(moduleId = moduleId))
-        } else {
-            functionService.update(
-                selectedId,
-                UpdateLlvmFunctionRequest(
-                    name = request.name,
-                    symbol = request.symbol,
-                    returnTypeText = request.returnTypeText,
-                    returnTypeRefId = request.returnTypeRefId,
-                    linkage = request.linkage,
-                    visibility = request.visibility,
-                    callingConvention = request.callingConvention,
-                    variadic = request.variadic,
-                    declarationOnly = request.declarationOnly,
-                    gcName = request.gcName,
-                    personalityText = request.personalityText,
-                    comdatId = request.comdatId,
-                    sectionName = request.sectionName,
-                    attributeGroupIds = request.attributeGroupIds,
-                    metadata = request.metadata,
-                ),
-            )
-        }
-        selectedFunctionId = result.id
-        statusMessage = "函数已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun removeSelectedFunction() {
-        selectedFunctionId?.let {
-            functionService.delete(it)
-            statusMessage = "函数已删除"
-            refreshModuleScope()
+    suspend fun deleteSelectedFile() {
+        selectedFileId?.let {
+            fileService.delete(it)
+            updateStatus("文件已删除")
+            refreshProjectScope()
         }
     }
 
-    suspend fun saveBlock(selectedId: String?, name: String, label: String) {
-        val functionId = selectedFunctionId ?: return
-        val result = if (selectedId == null) {
-            functionService.createBlock(CreateLlvmBasicBlockRequest(functionId = functionId, name = name, label = label))
-        } else {
-            functionService.updateBlock(selectedId, UpdateLlvmBasicBlockRequest(name = name, label = label))
-        }
-        selectedBlockId = result.id
-        statusMessage = "基本块已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun removeSelectedBlock() {
-        selectedBlockId?.let {
-            functionService.deleteBlock(it)
-            statusMessage = "基本块已删除"
-            refreshModuleScope()
+    suspend fun deleteSelectedDeclaration() {
+        selectedDeclarationId?.let {
+            declarationService.delete(it)
+            updateStatus("声明已删除")
+            refreshFileScope()
+            markMetadataChanged()
         }
     }
 
-    suspend fun saveInstruction(selectedId: String?, request: CreateLlvmInstructionRequest) {
-        val blockId = selectedBlockId ?: return
-        val result = if (selectedId == null) {
-            functionService.createInstruction(request.copy(blockId = blockId))
-        } else {
-            functionService.updateInstruction(
-                selectedId,
-                UpdateLlvmInstructionRequest(
-                    opcode = request.opcode,
-                    resultSymbol = request.resultSymbol,
-                    typeText = request.typeText,
-                    typeRefId = request.typeRefId,
-                    textSuffix = request.textSuffix,
-                    flags = request.flags,
-                    terminator = request.terminator,
-                ),
-            )
-        }
-        selectedInstructionId = result.id
-        statusMessage = "指令已保存"
-        refreshModuleScope()
+    fun reportError(throwable: Throwable) {
+        val message = throwable.message?.takeIf { it.isNotBlank() } ?: throwable::class.simpleName ?: "未知错误"
+        updateStatus("操作失败：$message", isError = true)
     }
 
-    suspend fun removeSelectedInstruction() {
-        selectedInstructionId?.let {
-            functionService.deleteInstruction(it)
-            statusMessage = "指令已删除"
-            refreshModuleScope()
+    fun createDefaultProjectName(): String {
+        val usedNames = projects.map { it.name.lowercase() }.toSet()
+        val baseName = "未命名项目"
+        if (baseName.lowercase() !in usedNames) {
+            return baseName
+        }
+        var index = 2
+        while (true) {
+            val candidate = "$baseName $index"
+            if (candidate.lowercase() !in usedNames) {
+                return candidate
+            }
+            index += 1
         }
     }
 
-    suspend fun saveOperand(selectedId: String?, request: CreateLlvmOperandRequest) {
-        val instructionId = selectedInstructionId ?: return
-        if (selectedId == null) {
-            functionService.createOperand(request.copy(instructionId = instructionId))
-        } else {
-            functionService.updateOperand(
-                selectedId,
-                UpdateLlvmOperandRequest(
-                    kind = request.kind,
-                    text = request.text,
-                    referencedInstructionId = request.referencedInstructionId,
-                    referencedFunctionId = request.referencedFunctionId,
-                    referencedParamId = request.referencedParamId,
-                    referencedGlobalId = request.referencedGlobalId,
-                    referencedConstantId = request.referencedConstantId,
-                    referencedBlockId = request.referencedBlockId,
-                    referencedMetadataNodeId = request.referencedMetadataNodeId,
-                    referencedTypeId = request.referencedTypeId,
-                    referencedInlineAsmId = request.referencedInlineAsmId,
-                ),
-            )
-        }
-        statusMessage = "操作数已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun saveMetadataNode(selectedId: String?, request: CreateLlvmMetadataNodeRequest) {
-        val moduleId = selectedModuleId ?: return
-        val result = if (selectedId == null) {
-            metadataService.createNode(request.copy(moduleId = moduleId))
-        } else {
-            metadataService.updateNode(selectedId, UpdateLlvmMetadataNodeRequest(request.name, request.kind, request.distinct))
-        }
-        selectedMetadataNodeId = result.id
-        statusMessage = "Metadata 节点已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun removeSelectedMetadataNode() {
-        selectedMetadataNodeId?.let {
-            metadataService.deleteNode(it)
-            statusMessage = "Metadata 节点已删除"
-            refreshModuleScope()
+    suspend fun awaitAutoSyncSettled(timeoutMillis: Long = 6_000L) {
+        val deadline = System.currentTimeMillis() + timeoutMillis
+        while (System.currentTimeMillis() < deadline) {
+            val autoSyncActive = autoSyncJob?.isActive == true
+            if (!autoSyncInProgress && !autoSyncActive) {
+                return
+            }
+            delay(50)
         }
     }
 
-    suspend fun saveCompileProfile(selectedId: String?, request: CreateLlvmCompileProfileRequest) {
-        val moduleId = selectedModuleId ?: return
-        val result = if (selectedId == null) {
-            compileProfileService.create(request.copy(moduleId = moduleId))
-        } else {
-            compileProfileService.update(
-                selectedId,
-                UpdateLlvmCompileProfileRequest(
-                    name = request.name,
-                    targetPlatform = request.targetPlatform,
-                    outputDirectory = request.outputDirectory,
-                    optPath = request.optPath,
-                    optArgs = request.optArgs,
-                    llcPath = request.llcPath,
-                    llcArgs = request.llcArgs,
-                    clangPath = request.clangPath,
-                    clangArgs = request.clangArgs,
-                    environment = request.environment,
-                ),
-            )
-        }
-        selectedProfileId = result.id
-        statusMessage = "编译配置已保存"
-        refreshModuleScope()
-    }
-
-    suspend fun removeSelectedProfile() {
-        selectedProfileId?.let {
-            compileProfileService.delete(it)
-            statusMessage = "编译配置已删除"
-            refreshModuleScope()
-        }
-    }
-
-    suspend fun exportSelectedModule(outputPath: String? = null) {
-        val moduleId = selectedModuleId ?: return
-        val exported = exportService.exportModule(moduleId, outputPath)
-        exportPreviewText = exported.content
-        statusMessage = "LLVM .ll 已导出预览"
-    }
-
-    suspend fun validateSelectedModule() {
-        val moduleId = selectedModuleId ?: return
-        validationIssues = validationService.validateModule(moduleId)
-        statusMessage = if (validationIssues.isEmpty()) "校验通过" else "校验完成，共 ${validationIssues.size} 条问题"
-    }
-
-    suspend fun exportSnapshot() {
-        val moduleId = selectedModuleId ?: return
-        snapshotEditorText = json.encodeToString(snapshotService.exportModule(moduleId))
-        statusMessage = "快照已导出"
-    }
-
-    suspend fun importSnapshot() {
-        val snapshot = json.decodeFromString<LlvmSnapshotDto>(snapshotEditorText)
-        snapshotService.importSnapshot(snapshot)
-        statusMessage = "快照已导入"
-        refreshAll()
-    }
-
-    suspend fun createAndRunCompileJob() {
-        val moduleId = selectedModuleId ?: return
-        val profileId = selectedProfileId ?: return
-        val job = compileJobService.create(CreateLlvmCompileJobRequest(moduleId = moduleId, profileId = profileId, runNow = false))
-        lastCompileResult = compileJobService.execute(job.id)
-        statusMessage = "编译任务已执行"
-        refreshModuleScope()
-    }
-
-    suspend fun refreshDeleteCheck(kind: String, id: String) {
-        lastDeleteCheck = when (kind) {
-            "module" -> moduleService.deleteCheck(id)
-            "type" -> typeService.deleteCheck(id)
-            "function" -> functionService.deleteCheck(id)
-            "global" -> globalValueService.deleteGlobalCheck(id)
-            "constant" -> globalValueService.deleteConstantCheck(id)
-            "metadata-node" -> metadataService.deleteNodeCheck(id)
-            "named-metadata" -> metadataService.deleteNamedCheck(id)
-            "compile-profile" -> compileProfileService.deleteCheck(id)
-            else -> null
-        }
-    }
-
-    private fun clearDiagnostics() {
+    private fun clearDetails() {
+        fileAggregate = null
+        targetPathPreview = null
+        sourcePreview = null
+        kspPreview = null
+        artifacts = emptyList()
+        conflicts = emptyList()
         validationIssues = emptyList()
-        lastDeleteCheck = null
+        clearTrackedFileState()
     }
 
-    private fun loadLanguage(): PlaygroundUiLanguage {
-        return runCatching { PlaygroundUiLanguage.valueOf(prefs.get("language", PlaygroundUiLanguage.ZH_CN.name)) }
-            .getOrDefault(PlaygroundUiLanguage.ZH_CN)
+    private fun parseFunctionParameters(text: String): List<FunctionParameterDto> {
+        return text.lineSequence()
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .map { line ->
+                val name = line.substringBefore(":").trim()
+                val typeAndDefault = line.substringAfter(":", "").trim()
+                val type = typeAndDefault.substringBefore("=").trim()
+                val defaultValue = typeAndDefault.substringAfter("=", "").takeIf { typeAndDefault.contains("=") }?.trim()
+                FunctionParameterDto(
+                    name = name,
+                    type = type,
+                    nullable = type.endsWith("?"),
+                    defaultValue = defaultValue,
+                )
+            }
+            .toList()
+    }
+
+    private fun parseAnnotationArguments(text: String): List<Pair<String?, String>> {
+        return text.split(',')
+            .map(String::trim)
+            .filter(String::isNotBlank)
+            .map { token ->
+                if (token.contains("=")) {
+                    token.substringBefore("=").trim() to token.substringAfter("=").trim()
+                } else {
+                    null to token
+                }
+            }
+    }
+
+    private fun markMetadataChanged() {
+        dirtyFileId = selectedFileId
+        if (dirtyFileId != null) {
+            scheduleAutoSync()
+        }
+    }
+
+    private fun scheduleAutoSync() {
+        if (!autoPreviewEnabled && !autoWriteEnabled) {
+            return
+        }
+        autoSyncJob?.cancel()
+        autoSyncJob = backgroundScope.launch {
+            delay(1_200)
+            runCatching { runAutoSyncNow() }
+                .onFailure(::reportError)
+        }
+    }
+
+    private fun ensureExternalPolling() {
+        if (externalPollJob?.isActive == true) {
+            return
+        }
+        externalPollJob = backgroundScope.launch {
+            while (isActive) {
+                delay(2_000)
+                runCatching { pollExternalFileChanges() }
+                    .onFailure(::reportError)
+            }
+        }
+    }
+
+    private suspend fun runAutoSyncNow() {
+        val fileId = dirtyFileId ?: return
+        if (selectedFileId == null && !autoWriteEnabled) {
+            return
+        }
+        autoSyncInProgress = true
+        try {
+            if (autoPreviewEnabled && selectedFileId == fileId) {
+                refreshPreview()
+            }
+            if (autoWriteEnabled && dirtyFileId == fileId) {
+                exportFileInternal(fileId = fileId, autoTriggered = true)
+            }
+        } finally {
+            autoSyncInProgress = false
+        }
+    }
+
+    private suspend fun pollExternalFileChanges() {
+        if (!autoImportExternalEnabled || autoSyncInProgress || dirtyFileId != null) {
+            return
+        }
+        val outputPath = trackedOutputPath ?: sourcePreview?.outputPath ?: return
+        val currentDiskHash = readFileHashOrNull(outputPath) ?: return
+        if (trackedOutputPath != outputPath) {
+            trackedOutputPath = outputPath
+            trackedDiskHash = currentDiskHash
+            return
+        }
+        if (currentDiskHash == trackedDiskHash || currentDiskHash == lastManagedWriteHash) {
+            trackedDiskHash = currentDiskHash
+            return
+        }
+        trackedDiskHash = currentDiskHash
+        importSelectedFileInternal(autoTriggered = true)
+    }
+
+    private suspend fun exportFileInternal(fileId: String, autoTriggered: Boolean) {
+        val result = syncService.export(SyncExportRequest(fileId = fileId))
+        val hasConflicts = result.conflicts.isNotEmpty()
+        if (selectedFileId == fileId) {
+            refreshFileScope()
+        }
+        if (!hasConflicts && dirtyFileId == fileId) {
+            dirtyFileId = null
+        }
+        val preview = if (selectedFileId == fileId) {
+            sourcePreview
+        } else {
+            result.previews.firstOrNull()
+        }
+        if (selectedFileId == fileId) {
+            preview?.let {
+                trackedOutputPath = it.outputPath
+                val contentHash = it.content.sha256()
+                trackedDiskHash = contentHash
+                lastManagedWriteHash = contentHash
+            }
+        }
+        val fileName = preview?.file?.fileName ?: files.firstOrNull { it.id == fileId }?.fileName.orEmpty()
+        updateStatus(
+            message = when {
+                autoTriggered && !hasConflicts -> "已自动写盘 $fileName".trim()
+                autoTriggered -> result.messages.joinToString("；").ifBlank { "自动写盘时出现冲突" }
+                else -> result.messages.joinToString("；").ifBlank { "源码已写盘" }
+            },
+            isError = hasConflicts,
+        )
+    }
+
+    private suspend fun importSelectedFileInternal(autoTriggered: Boolean) {
+        val fileId = selectedFileId ?: return
+        val result = syncService.importSource(SyncImportRequest(fileId = fileId))
+        refreshProjectScope()
+        val hasConflicts = result.conflicts.isNotEmpty()
+        if (!hasConflicts) {
+            dirtyFileId = null
+        }
+        trackedOutputPath = sourcePreview?.outputPath
+        trackedDiskHash = trackedOutputPath?.let(::readFileHashOrNull)
+        updateStatus(
+            message = when {
+                autoTriggered && !hasConflicts -> "已自动导回外部改动"
+                autoTriggered -> result.messages.joinToString("；").ifBlank { "自动导回时出现冲突" }
+                else -> result.messages.joinToString("；").ifBlank { "源码已导回" }
+            },
+            isError = hasConflicts,
+        )
+    }
+
+    private fun syncTrackedFileState() {
+        val outputPath = sourcePreview?.outputPath
+        if (outputPath == null) {
+            clearTrackedFileState()
+            return
+        }
+        if (trackedOutputPath != outputPath) {
+            trackedOutputPath = outputPath
+            trackedDiskHash = readFileHashOrNull(outputPath)
+        }
+    }
+
+    private fun clearTrackedFileState() {
+        trackedOutputPath = null
+        trackedDiskHash = null
+        lastManagedWriteHash = null
+        dirtyFileId = null
+    }
+
+    private fun readFileHashOrNull(pathText: String): String? {
+        val path = Paths.get(pathText)
+        if (!Files.exists(path)) {
+            return null
+        }
+        return runCatching { path.readText().sha256() }.getOrNull()
+    }
+
+    private fun updateStatus(message: String, isError: Boolean = false) {
+        statusMessage = message
+        statusIsError = isError
+    }
+
+    private fun String.sha256(): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray())
+        return digest.joinToString("") { "%02x".format(it) }
     }
 }

@@ -1,96 +1,66 @@
 package site.addzero.kcloud.plugins.mcuconsole
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.call
-import io.ktor.server.request.uri
-import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
+import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
-import io.ktor.server.routing.route
-import java.io.File
-import java.time.Instant
+import site.addzero.kcloud.plugins.mcuconsole.routes.closeMcuSession
+import site.addzero.kcloud.plugins.mcuconsole.routes.executeMcuScript
+import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuFlashStatus
+import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuScriptStatus
+import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuSession
+import site.addzero.kcloud.plugins.mcuconsole.routes.listMcuPorts
+import site.addzero.kcloud.plugins.mcuconsole.routes.openMcuSession
+import site.addzero.kcloud.plugins.mcuconsole.routes.readMcuEvents
+import site.addzero.kcloud.plugins.mcuconsole.routes.readMcuRecentLines
+import site.addzero.kcloud.plugins.mcuconsole.routes.resetMcuSession
+import site.addzero.kcloud.plugins.mcuconsole.routes.startMcuFlash
+import site.addzero.kcloud.plugins.mcuconsole.routes.stopMcuScript
+import site.addzero.kcloud.plugins.mcuconsole.routes.updateMcuSignals
+import site.addzero.springktor.runtime.optionalRequestParam
+import site.addzero.springktor.runtime.requireRequestBody
 
+/**
+ * 统一挂载 mcu-console 插件的后端路由。
+ */
 fun Route.mcuConsoleRoutes() {
-    route("/api/mcu") {
-        get("/actions") {
-            call.respond(
-                McuConsoleActionsResponse(
-                    items = mcuConsoleActionCatalog(),
-                ),
-            )
-        }
-        get("/ports") {
-            call.respond(
-                McuConsolePortsResponse(
-                    items = scanLocalPorts(),
-                ),
-            )
-        }
-        post("/actions/{action}") {
-            val action = call.parameters["action"].orEmpty()
-            val accepted = mcuConsoleActionCatalog().any { item -> item.id == action }
-            val target = call.request.queryParameters["target"]
-                ?: call.request.uri
-            val status = if (accepted) HttpStatusCode.OK else HttpStatusCode.NotFound
-            call.respond(
-                status = status,
-                message = McuConsoleActionResponse(
-                    action = action,
-                    accepted = accepted,
-                    target = target,
-                    timestamp = Instant.now().toString(),
-                ),
-            )
-        }
+    get("/api/mcu/ports") {
+        call.respond(listMcuPorts())
     }
-}
-
-private fun mcuConsoleActionCatalog(): List<McuConsoleActionMeta> {
-    return listOf(
-        McuConsoleActionMeta(id = "scan", group = "control"),
-        McuConsoleActionMeta(id = "sync", group = "control"),
-        McuConsoleActionMeta(id = "start", group = "control"),
-        McuConsoleActionMeta(id = "stop", group = "control"),
-        McuConsoleActionMeta(id = "power", group = "control"),
-        McuConsoleActionMeta(id = "reset", group = "control"),
-        McuConsoleActionMeta(id = "flash", group = "flash"),
-        McuConsoleActionMeta(id = "upload", group = "flash"),
-        McuConsoleActionMeta(id = "download", group = "flash"),
-        McuConsoleActionMeta(id = "debug", group = "debug"),
-        McuConsoleActionMeta(id = "config", group = "debug"),
-        McuConsoleActionMeta(id = "tune", group = "debug"),
-    )
-}
-
-private fun scanLocalPorts(): List<McuConsolePort> {
-    val devDir = File("/dev")
-    if (!devDir.exists()) {
-        return emptyList()
+    get("/api/mcu/session") {
+        call.respond(getMcuSession())
     }
-    val toList = devDir.listFiles()
-        .orEmpty()
-        .asSequence()
-        .filter { file ->
-            file.name.startsWith("cu.")
-                    || file.name.startsWith("tty.")
-                    || file.name.startsWith("ttyUSB")
-                    || file.name.startsWith("ttyACM")
-        }
-        .sortedBy { file -> file.name }
-        .map { file ->
-            val kind = when {
-                file.name.startsWith("cu.") -> "cu"
-                file.name.startsWith("ttyUSB") -> "ttyUSB"
-                file.name.startsWith("ttyACM") -> "ttyACM"
-                else -> "tty"
-            }
-            McuConsolePort(
-                name = file.name,
-                path = file.absolutePath,
-                kind = kind,
-            )
-        }
-        .toList()
-    return toList
+    post("/api/mcu/session/open") {
+        call.respond(openMcuSession(call.requireRequestBody()))
+    }
+    post("/api/mcu/session/close") {
+        call.respond(closeMcuSession())
+    }
+    post("/api/mcu/session/reset") {
+        call.respond(resetMcuSession(call.requireRequestBody()))
+    }
+    post("/api/mcu/session/signals") {
+        call.respond(updateMcuSignals(call.requireRequestBody()))
+    }
+    post("/api/mcu/session/lines") {
+        call.respond(readMcuRecentLines(call.requireRequestBody()))
+    }
+    get("/api/mcu/events") {
+        call.respond(readMcuEvents(call.optionalRequestParam("afterSeq")))
+    }
+    post("/api/mcu/script/execute") {
+        call.respond(executeMcuScript(call.requireRequestBody()))
+    }
+    post("/api/mcu/script/stop") {
+        call.respond(stopMcuScript(call.requireRequestBody()))
+    }
+    get("/api/mcu/script/status") {
+        call.respond(getMcuScriptStatus())
+    }
+    post("/api/mcu/flash/start") {
+        call.respond(startMcuFlash(call.requireRequestBody()))
+    }
+    get("/api/mcu/flash/status") {
+        call.respond(getMcuFlashStatus())
+    }
 }

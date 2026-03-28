@@ -28,9 +28,7 @@ fun App() {
         MaterialTheme(
             colorScheme = LiquiddemoDarkColorScheme,
         ) {
-            RenderSidebarShowcaseShell(
-                modifier = Modifier.fillMaxSize(),
-            )
+            RenderSidebarShowcaseShell(modifier = Modifier.fillMaxSize())
         }
     }
 }

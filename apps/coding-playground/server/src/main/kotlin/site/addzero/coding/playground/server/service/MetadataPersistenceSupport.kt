@@ -6,7 +6,8 @@ import org.koin.core.annotation.Single
 import site.addzero.coding.playground.server.config.PlaygroundJdbcTransactionContext
 import site.addzero.coding.playground.server.domain.PlaygroundNotFoundException
 import site.addzero.coding.playground.server.entity.*
-import java.sql.Connection
+import site.addzero.coding.playground.shared.dto.CodegenProjectAggregateDto
+import site.addzero.coding.playground.shared.dto.SourceFileAggregateDto
 import java.time.LocalDateTime
 import java.util.UUID
 import javax.sql.DataSource
@@ -20,279 +21,233 @@ class MetadataPersistenceSupport(
 
     fun now(): LocalDateTime = LocalDateTime.now()
 
-    fun moduleRef(id: String): LlvmModule = new(LlvmModule::class).by { this.id = id }
-    fun typeRef(id: String): LlvmType = new(LlvmType::class).by { this.id = id }
-    fun comdatRef(id: String): LlvmComdat = new(LlvmComdat::class).by { this.id = id }
-    fun attributeGroupRef(id: String): LlvmAttributeGroup = new(LlvmAttributeGroup::class).by { this.id = id }
-    fun constantRef(id: String): LlvmConstant = new(LlvmConstant::class).by { this.id = id }
-    fun inlineAsmRef(id: String): LlvmInlineAsm = new(LlvmInlineAsm::class).by { this.id = id }
-    fun globalRef(id: String): LlvmGlobalVariable = new(LlvmGlobalVariable::class).by { this.id = id }
-    fun functionRef(id: String): LlvmFunction = new(LlvmFunction::class).by { this.id = id }
-    fun paramRef(id: String): LlvmFunctionParam = new(LlvmFunctionParam::class).by { this.id = id }
-    fun blockRef(id: String): LlvmBasicBlock = new(LlvmBasicBlock::class).by { this.id = id }
-    fun instructionRef(id: String): LlvmInstruction = new(LlvmInstruction::class).by { this.id = id }
-    fun operandRef(id: String): LlvmOperand = new(LlvmOperand::class).by { this.id = id }
-    fun metadataNodeRef(id: String): LlvmMetadataNode = new(LlvmMetadataNode::class).by { this.id = id }
-    fun namedMetadataRef(id: String): LlvmNamedMetadata = new(LlvmNamedMetadata::class).by { this.id = id }
-    fun compileProfileRef(id: String): LlvmCompileProfile = new(LlvmCompileProfile::class).by { this.id = id }
-    fun compileJobRef(id: String): LlvmCompileJob = new(LlvmCompileJob::class).by { this.id = id }
+    fun projectRef(id: String): CodegenProject = new(CodegenProject::class).by { this.id = id }
+    fun targetRef(id: String): GenerationTarget = new(GenerationTarget::class).by { this.id = id }
+    fun fileRef(id: String): SourceFileMeta = new(SourceFileMeta::class).by { this.id = id }
+    fun declarationRef(id: String): DeclarationMeta = new(DeclarationMeta::class).by { this.id = id }
+    fun annotationUsageRef(id: String): AnnotationUsageMeta = new(AnnotationUsageMeta::class).by { this.id = id }
+    fun artifactRef(id: String): ManagedArtifactMeta = new(ManagedArtifactMeta::class).by { this.id = id }
 
     fun <T> inTransaction(block: () -> T): T = PlaygroundJdbcTransactionContext.withTransaction(dataSource, block)
 
-    fun <T> withJdbcConnection(block: (Connection) -> T): T {
-        val current = PlaygroundJdbcTransactionContext.connectionOrNull()
-        return if (current != null) {
-            block(current)
-        } else {
-            dataSource.connection.use(block)
-        }
-    }
+    fun projectOrThrow(id: String): CodegenProject =
+        sqlClient.findById(CodegenProject::class, id) ?: throw PlaygroundNotFoundException("项目不存在: $id")
 
-    fun moduleOrThrow(id: String): LlvmModule =
-        sqlClient.findById(LlvmModule::class, id) ?: throw PlaygroundNotFoundException("LLVM module '$id' not found")
+    fun targetOrThrow(id: String): GenerationTarget =
+        sqlClient.findById(GenerationTarget::class, id) ?: throw PlaygroundNotFoundException("生成目标不存在: $id")
 
-    fun typeOrThrow(id: String): LlvmType =
-        sqlClient.findById(LlvmType::class, id) ?: throw PlaygroundNotFoundException("LLVM type '$id' not found")
+    fun fileOrThrow(id: String): SourceFileMeta =
+        sqlClient.findById(SourceFileMeta::class, id) ?: throw PlaygroundNotFoundException("Kotlin 文件不存在: $id")
 
-    fun typeMemberOrThrow(id: String): LlvmTypeMember =
-        sqlClient.findById(LlvmTypeMember::class, id) ?: throw PlaygroundNotFoundException("LLVM type member '$id' not found")
+    fun declarationOrThrow(id: String): DeclarationMeta =
+        sqlClient.findById(DeclarationMeta::class, id) ?: throw PlaygroundNotFoundException("声明不存在: $id")
 
-    fun comdatOrThrow(id: String): LlvmComdat =
-        sqlClient.findById(LlvmComdat::class, id) ?: throw PlaygroundNotFoundException("LLVM comdat '$id' not found")
+    fun constructorParamOrThrow(id: String): ConstructorParamMeta =
+        sqlClient.findById(ConstructorParamMeta::class, id) ?: throw PlaygroundNotFoundException("构造参数不存在: $id")
 
-    fun attributeGroupOrThrow(id: String): LlvmAttributeGroup =
-        sqlClient.findById(LlvmAttributeGroup::class, id) ?: throw PlaygroundNotFoundException("LLVM attribute group '$id' not found")
+    fun propertyOrThrow(id: String): PropertyMeta =
+        sqlClient.findById(PropertyMeta::class, id) ?: throw PlaygroundNotFoundException("属性不存在: $id")
 
-    fun attributeEntryOrThrow(id: String): LlvmAttributeEntry =
-        sqlClient.findById(LlvmAttributeEntry::class, id) ?: throw PlaygroundNotFoundException("LLVM attribute entry '$id' not found")
+    fun enumEntryOrThrow(id: String): EnumEntryMeta =
+        sqlClient.findById(EnumEntryMeta::class, id) ?: throw PlaygroundNotFoundException("枚举项不存在: $id")
 
-    fun globalOrThrow(id: String): LlvmGlobalVariable =
-        sqlClient.findById(LlvmGlobalVariable::class, id) ?: throw PlaygroundNotFoundException("LLVM global '$id' not found")
+    fun annotationUsageOrThrow(id: String): AnnotationUsageMeta =
+        sqlClient.findById(AnnotationUsageMeta::class, id) ?: throw PlaygroundNotFoundException("注解使用不存在: $id")
 
-    fun aliasOrThrow(id: String): LlvmAlias =
-        sqlClient.findById(LlvmAlias::class, id) ?: throw PlaygroundNotFoundException("LLVM alias '$id' not found")
+    fun annotationArgumentOrThrow(id: String): AnnotationArgumentMeta =
+        sqlClient.findById(AnnotationArgumentMeta::class, id) ?: throw PlaygroundNotFoundException("注解参数不存在: $id")
 
-    fun ifuncOrThrow(id: String): LlvmIfunc =
-        sqlClient.findById(LlvmIfunc::class, id) ?: throw PlaygroundNotFoundException("LLVM ifunc '$id' not found")
+    fun importOrThrow(id: String): ImportMeta =
+        sqlClient.findById(ImportMeta::class, id) ?: throw PlaygroundNotFoundException("导包不存在: $id")
 
-    fun inlineAsmOrThrow(id: String): LlvmInlineAsm =
-        sqlClient.findById(LlvmInlineAsm::class, id) ?: throw PlaygroundNotFoundException("LLVM inline asm '$id' not found")
+    fun functionStubOrThrow(id: String): FunctionStubMeta =
+        sqlClient.findById(FunctionStubMeta::class, id) ?: throw PlaygroundNotFoundException("函数桩不存在: $id")
 
-    fun constantOrThrow(id: String): LlvmConstant =
-        sqlClient.findById(LlvmConstant::class, id) ?: throw PlaygroundNotFoundException("LLVM constant '$id' not found")
+    fun artifactOrThrow(id: String): ManagedArtifactMeta =
+        sqlClient.findById(ManagedArtifactMeta::class, id) ?: throw PlaygroundNotFoundException("托管产物不存在: $id")
 
-    fun constantItemOrThrow(id: String): LlvmConstantItem =
-        sqlClient.findById(LlvmConstantItem::class, id) ?: throw PlaygroundNotFoundException("LLVM constant item '$id' not found")
+    fun conflictOrThrow(id: String): SyncConflictMeta =
+        sqlClient.findById(SyncConflictMeta::class, id) ?: throw PlaygroundNotFoundException("同步冲突不存在: $id")
 
-    fun functionOrThrow(id: String): LlvmFunction =
-        sqlClient.findById(LlvmFunction::class, id) ?: throw PlaygroundNotFoundException("LLVM function '$id' not found")
-
-    fun paramOrThrow(id: String): LlvmFunctionParam =
-        sqlClient.findById(LlvmFunctionParam::class, id) ?: throw PlaygroundNotFoundException("LLVM function param '$id' not found")
-
-    fun blockOrThrow(id: String): LlvmBasicBlock =
-        sqlClient.findById(LlvmBasicBlock::class, id) ?: throw PlaygroundNotFoundException("LLVM basic block '$id' not found")
-
-    fun instructionOrThrow(id: String): LlvmInstruction =
-        sqlClient.findById(LlvmInstruction::class, id) ?: throw PlaygroundNotFoundException("LLVM instruction '$id' not found")
-
-    fun operandOrThrow(id: String): LlvmOperand =
-        sqlClient.findById(LlvmOperand::class, id) ?: throw PlaygroundNotFoundException("LLVM operand '$id' not found")
-
-    fun phiIncomingOrThrow(id: String): LlvmPhiIncoming =
-        sqlClient.findById(LlvmPhiIncoming::class, id) ?: throw PlaygroundNotFoundException("LLVM phi incoming '$id' not found")
-
-    fun clauseOrThrow(id: String): LlvmInstructionClause =
-        sqlClient.findById(LlvmInstructionClause::class, id) ?: throw PlaygroundNotFoundException("LLVM instruction clause '$id' not found")
-
-    fun bundleOrThrow(id: String): LlvmOperandBundle =
-        sqlClient.findById(LlvmOperandBundle::class, id) ?: throw PlaygroundNotFoundException("LLVM operand bundle '$id' not found")
-
-    fun namedMetadataOrThrow(id: String): LlvmNamedMetadata =
-        sqlClient.findById(LlvmNamedMetadata::class, id) ?: throw PlaygroundNotFoundException("LLVM named metadata '$id' not found")
-
-    fun metadataNodeOrThrow(id: String): LlvmMetadataNode =
-        sqlClient.findById(LlvmMetadataNode::class, id) ?: throw PlaygroundNotFoundException("LLVM metadata node '$id' not found")
-
-    fun metadataFieldOrThrow(id: String): LlvmMetadataField =
-        sqlClient.findById(LlvmMetadataField::class, id) ?: throw PlaygroundNotFoundException("LLVM metadata field '$id' not found")
-
-    fun metadataAttachmentOrThrow(id: String): LlvmMetadataAttachment =
-        sqlClient.findById(LlvmMetadataAttachment::class, id) ?: throw PlaygroundNotFoundException("LLVM metadata attachment '$id' not found")
-
-    fun compileProfileOrThrow(id: String): LlvmCompileProfile =
-        sqlClient.findById(LlvmCompileProfile::class, id) ?: throw PlaygroundNotFoundException("LLVM compile profile '$id' not found")
-
-    fun compileJobOrThrow(id: String): LlvmCompileJob =
-        sqlClient.findById(LlvmCompileJob::class, id) ?: throw PlaygroundNotFoundException("LLVM compile job '$id' not found")
-
-    fun compileArtifactOrThrow(id: String): LlvmCompileArtifact =
-        sqlClient.findById(LlvmCompileArtifact::class, id) ?: throw PlaygroundNotFoundException("LLVM compile artifact '$id' not found")
-
-    fun listModules(): List<LlvmModule> = sqlClient.createQuery(LlvmModule::class) { select(table) }
+    fun listProjects(): List<CodegenProject> = sqlClient.createQuery(CodegenProject::class) { select(table) }
         .execute()
         .sortedBy { it.name.lowercase() }
 
-    fun listTypes(moduleId: String? = null): List<LlvmType> = sqlClient.createQuery(LlvmType::class) { select(table) }
+    fun listTargets(projectId: String? = null): List<GenerationTarget> = sqlClient.createQuery(GenerationTarget::class) { select(table) }
         .execute()
-        .filter { moduleId == null || it.moduleId == moduleId }
+        .filter { projectId == null || it.projectId == projectId }
+        .sortedBy { it.name.lowercase() }
+
+    fun listFiles(targetId: String? = null): List<SourceFileMeta> = sqlClient.createQuery(SourceFileMeta::class) { select(table) }
+        .execute()
+        .filter { targetId == null || it.targetId == targetId }
         .sortedBy { it.orderIndex }
 
-    fun listTypeMembers(typeId: String? = null): List<LlvmTypeMember> =
-        sqlClient.createQuery(LlvmTypeMember::class) { select(table) }
-            .execute()
-            .filter { typeId == null || it.typeId == typeId }
-            .sortedBy { it.orderIndex }
-
-    fun listComdats(moduleId: String? = null): List<LlvmComdat> = sqlClient.createQuery(LlvmComdat::class) { select(table) }
+    fun listDeclarations(fileId: String? = null): List<DeclarationMeta> = sqlClient.createQuery(DeclarationMeta::class) { select(table) }
         .execute()
-        .filter { moduleId == null || it.moduleId == moduleId }
+        .filter { fileId == null || it.fileId == fileId }
         .sortedBy { it.orderIndex }
 
-    fun listAttributeGroups(moduleId: String? = null): List<LlvmAttributeGroup> =
-        sqlClient.createQuery(LlvmAttributeGroup::class) { select(table) }
+    fun listConstructorParams(declarationId: String? = null): List<ConstructorParamMeta> =
+        sqlClient.createQuery(ConstructorParamMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
+            .filter { declarationId == null || it.declarationId == declarationId }
             .sortedBy { it.orderIndex }
 
-    fun listAttributeEntries(groupId: String? = null): List<LlvmAttributeEntry> =
-        sqlClient.createQuery(LlvmAttributeEntry::class) { select(table) }
+    fun listProperties(declarationId: String? = null): List<PropertyMeta> =
+        sqlClient.createQuery(PropertyMeta::class) { select(table) }
             .execute()
-            .filter { groupId == null || it.attributeGroupId == groupId }
+            .filter { declarationId == null || it.declarationId == declarationId }
             .sortedBy { it.orderIndex }
 
-    fun listGlobals(moduleId: String? = null): List<LlvmGlobalVariable> =
-        sqlClient.createQuery(LlvmGlobalVariable::class) { select(table) }
+    fun listEnumEntries(declarationId: String? = null): List<EnumEntryMeta> =
+        sqlClient.createQuery(EnumEntryMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
+            .filter { declarationId == null || it.declarationId == declarationId }
             .sortedBy { it.orderIndex }
 
-    fun listAliases(moduleId: String? = null): List<LlvmAlias> = sqlClient.createQuery(LlvmAlias::class) { select(table) }
+    fun listAnnotations(ownerId: String? = null): List<AnnotationUsageMeta> =
+        sqlClient.createQuery(AnnotationUsageMeta::class) { select(table) }
+            .execute()
+            .filter { ownerId == null || it.ownerId == ownerId }
+            .sortedBy { it.orderIndex }
+
+    fun listAnnotationArguments(annotationUsageId: String? = null): List<AnnotationArgumentMeta> =
+        sqlClient.createQuery(AnnotationArgumentMeta::class) { select(table) }
+            .execute()
+            .filter { annotationUsageId == null || it.annotationUsageId == annotationUsageId }
+            .sortedBy { it.orderIndex }
+
+    fun listImports(fileId: String? = null): List<ImportMeta> = sqlClient.createQuery(ImportMeta::class) { select(table) }
         .execute()
-        .filter { moduleId == null || it.moduleId == moduleId }
+        .filter { fileId == null || it.fileId == fileId }
         .sortedBy { it.orderIndex }
 
-    fun listIfuncs(moduleId: String? = null): List<LlvmIfunc> = sqlClient.createQuery(LlvmIfunc::class) { select(table) }
-        .execute()
-        .filter { moduleId == null || it.moduleId == moduleId }
-        .sortedBy { it.orderIndex }
-
-    fun listInlineAsms(moduleId: String? = null): List<LlvmInlineAsm> =
-        sqlClient.createQuery(LlvmInlineAsm::class) { select(table) }
+    fun listFunctionStubs(declarationId: String? = null): List<FunctionStubMeta> =
+        sqlClient.createQuery(FunctionStubMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
+            .filter { declarationId == null || it.declarationId == declarationId }
             .sortedBy { it.orderIndex }
 
-    fun listConstants(moduleId: String? = null): List<LlvmConstant> =
-        sqlClient.createQuery(LlvmConstant::class) { select(table) }
+    fun listArtifacts(targetId: String? = null, fileId: String? = null): List<ManagedArtifactMeta> =
+        sqlClient.createQuery(ManagedArtifactMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
-            .sortedBy { it.orderIndex }
+            .filter { (targetId == null || it.targetId == targetId) && (fileId == null || it.fileId == fileId) }
+            .sortedByDescending { it.updatedAt }
 
-    fun listConstantItems(constantId: String? = null): List<LlvmConstantItem> =
-        sqlClient.createQuery(LlvmConstantItem::class) { select(table) }
+    fun listConflicts(targetId: String? = null, fileId: String? = null): List<SyncConflictMeta> =
+        sqlClient.createQuery(SyncConflictMeta::class) { select(table) }
             .execute()
-            .filter { constantId == null || it.constantId == constantId }
-            .sortedBy { it.orderIndex }
+            .filter { (targetId == null || it.targetId == targetId) && (fileId == null || it.fileId == fileId) }
+            .sortedByDescending { it.updatedAt }
 
-    fun listFunctions(moduleId: String? = null): List<LlvmFunction> =
-        sqlClient.createQuery(LlvmFunction::class) { select(table) }
+    fun buildProjectAggregate(projectId: String): CodegenProjectAggregateDto {
+        val project = projectOrThrow(projectId).toDto()
+        val targets = listTargets(projectId)
+        val targetIds = targets.map { it.id }.toSet()
+        val files = listFiles().filter { it.targetId in targetIds }
+        val fileIds = files.map { it.id }.toSet()
+        val declarations = listDeclarations().filter { it.fileId in fileIds }
+        val declarationIds = declarations.map { it.id }.toSet()
+        val annotationUsages = sqlClient.createQuery(AnnotationUsageMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
-            .sortedBy { it.orderIndex }
-
-    fun listParams(functionId: String? = null): List<LlvmFunctionParam> =
-        sqlClient.createQuery(LlvmFunctionParam::class) { select(table) }
-            .execute()
-            .filter { functionId == null || it.functionId == functionId }
-            .sortedBy { it.orderIndex }
-
-    fun listBlocks(functionId: String? = null): List<LlvmBasicBlock> =
-        sqlClient.createQuery(LlvmBasicBlock::class) { select(table) }
-            .execute()
-            .filter { functionId == null || it.functionId == functionId }
-            .sortedBy { it.orderIndex }
-
-    fun listInstructions(blockId: String? = null): List<LlvmInstruction> =
-        sqlClient.createQuery(LlvmInstruction::class) { select(table) }
-            .execute()
-            .filter { blockId == null || it.blockId == blockId }
-            .sortedBy { it.orderIndex }
-
-    fun listOperands(instructionId: String? = null): List<LlvmOperand> =
-        sqlClient.createQuery(LlvmOperand::class) { select(table) }
-            .execute()
-            .filter { instructionId == null || it.instructionId == instructionId }
-            .sortedBy { it.orderIndex }
-
-    fun listPhiIncoming(instructionId: String? = null): List<LlvmPhiIncoming> =
-        sqlClient.createQuery(LlvmPhiIncoming::class) { select(table) }
-            .execute()
-            .filter { instructionId == null || it.instructionId == instructionId }
-            .sortedBy { it.orderIndex }
-
-    fun listClauses(instructionId: String? = null): List<LlvmInstructionClause> =
-        sqlClient.createQuery(LlvmInstructionClause::class) { select(table) }
-            .execute()
-            .filter { instructionId == null || it.instructionId == instructionId }
-            .sortedBy { it.orderIndex }
-
-    fun listBundles(instructionId: String? = null): List<LlvmOperandBundle> =
-        sqlClient.createQuery(LlvmOperandBundle::class) { select(table) }
-            .execute()
-            .filter { instructionId == null || it.instructionId == instructionId }
-            .sortedBy { it.orderIndex }
-
-    fun listNamedMetadata(moduleId: String? = null): List<LlvmNamedMetadata> =
-        sqlClient.createQuery(LlvmNamedMetadata::class) { select(table) }
-            .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
-            .sortedBy { it.orderIndex }
-
-    fun listMetadataNodes(moduleId: String? = null): List<LlvmMetadataNode> =
-        sqlClient.createQuery(LlvmMetadataNode::class) { select(table) }
-            .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
-            .sortedBy { it.orderIndex }
-
-    fun listMetadataFields(metadataNodeId: String? = null, namedMetadataId: String? = null): List<LlvmMetadataField> =
-        sqlClient.createQuery(LlvmMetadataField::class) { select(table) }
-            .execute()
-            .filter { metadataNodeId == null || it.metadataNodeId == metadataNodeId }
-            .filter { namedMetadataId == null || it.namedMetadataId == namedMetadataId }
-            .sortedBy { it.orderIndex }
-
-    fun listMetadataAttachments(moduleId: String? = null): List<LlvmMetadataAttachment> =
-        sqlClient.createQuery(LlvmMetadataAttachment::class) { select(table) }
-            .execute()
-            .filter { attachment ->
-                if (moduleId == null) {
-                    true
-                } else {
-                    val functionModule = attachment.functionId?.let(::functionOrThrow)?.moduleId
-                    val globalModule = attachment.globalVariableId?.let(::globalOrThrow)?.moduleId
-                    val instructionModule = attachment.instructionId?.let(::instructionOrThrow)?.blockId?.let(::blockOrThrow)?.functionId?.let(::functionOrThrow)?.moduleId
-                    moduleId == functionModule || moduleId == globalModule || moduleId == instructionModule
-                }
+            .filter { usage ->
+                usage.ownerId in fileIds || usage.ownerId in declarationIds || usage.ownerId in listConstructorParams().map { it.id } ||
+                    usage.ownerId in listProperties().map { it.id } || usage.ownerId in listFunctionStubs().map { it.id }
             }
             .sortedBy { it.orderIndex }
+        val annotationIds = annotationUsages.map { it.id }.toSet()
+        return CodegenProjectAggregateDto(
+            project = project,
+            targets = targets.map { it.toDto() },
+            files = files.map { it.toDto() },
+            declarations = declarations.map { it.toDto() },
+            constructorParams = listConstructorParams().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            properties = listProperties().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            enumEntries = listEnumEntries().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            annotations = annotationUsages.map { it.toDto() },
+            annotationArguments = listAnnotationArguments().filter { it.annotationUsageId in annotationIds }.map { it.toDto() },
+            imports = listImports().filter { it.fileId in fileIds }.map { it.toDto() },
+            functionStubs = listFunctionStubs().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            artifacts = listArtifacts().filter { it.fileId in fileIds }.map { it.toDto() },
+            conflicts = listConflicts().filter { it.fileId in fileIds }.map { it.toDto() },
+        )
+    }
 
-    fun listCompileProfiles(moduleId: String? = null): List<LlvmCompileProfile> =
-        sqlClient.createQuery(LlvmCompileProfile::class) { select(table) }
+    fun buildFileAggregate(fileId: String): SourceFileAggregateDto {
+        val file = fileOrThrow(fileId)
+        val declarations = listDeclarations(fileId)
+        val declarationIds = declarations.map { it.id }.toSet()
+        val paramIds = listConstructorParams().filter { it.declarationId in declarationIds }.map { it.id }.toSet()
+        val propertyIds = listProperties().filter { it.declarationId in declarationIds }.map { it.id }.toSet()
+        val functionIds = listFunctionStubs().filter { it.declarationId in declarationIds }.map { it.id }.toSet()
+        val annotations = sqlClient.createQuery(AnnotationUsageMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
+            .filter { it.ownerId == fileId || it.ownerId in declarationIds || it.ownerId in paramIds || it.ownerId in propertyIds || it.ownerId in functionIds }
             .sortedBy { it.orderIndex }
+        val annotationIds = annotations.map { it.id }.toSet()
+        return SourceFileAggregateDto(
+            file = file.toDto(),
+            imports = listImports(fileId).map { it.toDto() },
+            declarations = declarations.map { it.toDto() },
+            constructorParams = listConstructorParams().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            properties = listProperties().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            enumEntries = listEnumEntries().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            annotations = annotations.map { it.toDto() },
+            annotationArguments = listAnnotationArguments().filter { it.annotationUsageId in annotationIds }.map { it.toDto() },
+            functionStubs = listFunctionStubs().filter { it.declarationId in declarationIds }.map { it.toDto() },
+            artifacts = listArtifacts(fileId = fileId).map { it.toDto() },
+            conflicts = listConflicts(fileId = fileId).map { it.toDto() },
+        )
+    }
 
-    fun listCompileJobs(moduleId: String? = null): List<LlvmCompileJob> =
-        sqlClient.createQuery(LlvmCompileJob::class) { select(table) }
+    fun deleteProjectCascade(projectId: String) {
+        listTargets(projectId).forEach { deleteTargetCascade(it.id) }
+        sqlClient.deleteById(CodegenProject::class, projectId)
+    }
+
+    fun deleteTargetCascade(targetId: String) {
+        listFiles(targetId).forEach { deleteFileCascade(it.id) }
+        listConflicts(targetId = targetId).forEach { deleteEntity<SyncConflictMeta>(it.id) }
+        listArtifacts(targetId = targetId).forEach { deleteEntity<ManagedArtifactMeta>(it.id) }
+        sqlClient.deleteById(GenerationTarget::class, targetId)
+    }
+
+    fun deleteFileCascade(fileId: String) {
+        listDeclarations(fileId).forEach { deleteDeclarationCascade(it.id) }
+        listImports(fileId).forEach { deleteEntity<ImportMeta>(it.id) }
+        listConflicts(fileId = fileId).forEach { deleteEntity<SyncConflictMeta>(it.id) }
+        listArtifacts(fileId = fileId).forEach { deleteEntity<ManagedArtifactMeta>(it.id) }
+        val annotationIds = listAnnotations(fileId).map { it.id }
+        deleteAnnotationUsageCascade(annotationIds)
+        sqlClient.deleteById(SourceFileMeta::class, fileId)
+    }
+
+    fun deleteDeclarationCascade(declarationId: String) {
+        val paramIds = listConstructorParams(declarationId).map { it.id }
+        val propertyIds = listProperties(declarationId).map { it.id }
+        val functionIds = listFunctionStubs(declarationId).map { it.id }
+        val annotationIds = sqlClient.createQuery(AnnotationUsageMeta::class) { select(table) }
             .execute()
-            .filter { moduleId == null || it.moduleId == moduleId }
-            .sortedByDescending { it.createdAt }
+            .filter { it.ownerId == declarationId || it.ownerId in paramIds || it.ownerId in propertyIds || it.ownerId in functionIds }
+            .map { it.id }
+        deleteAnnotationUsageCascade(annotationIds)
+        listFunctionStubs(declarationId).forEach { deleteEntity<FunctionStubMeta>(it.id) }
+        listEnumEntries(declarationId).forEach { deleteEntity<EnumEntryMeta>(it.id) }
+        listProperties(declarationId).forEach { deleteEntity<PropertyMeta>(it.id) }
+        listConstructorParams(declarationId).forEach { deleteEntity<ConstructorParamMeta>(it.id) }
+        sqlClient.deleteById(DeclarationMeta::class, declarationId)
+    }
 
-    fun listCompileArtifacts(jobId: String? = null): List<LlvmCompileArtifact> =
-        sqlClient.createQuery(LlvmCompileArtifact::class) { select(table) }
-            .execute()
-            .filter { jobId == null || it.jobId == jobId }
+    private fun deleteAnnotationUsageCascade(annotationIds: List<String>) {
+        if (annotationIds.isEmpty()) {
+            return
+        }
+        listAnnotationArguments().filter { it.annotationUsageId in annotationIds }.forEach { deleteEntity<AnnotationArgumentMeta>(it.id) }
+        annotationIds.forEach { deleteEntity<AnnotationUsageMeta>(it) }
+    }
 
-    fun nextOrder(existing: List<*>): Int = existing.size
+    private inline fun <reified E : Any> deleteEntity(id: String) {
+        sqlClient.deleteById(E::class, id)
+    }
 }

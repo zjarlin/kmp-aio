@@ -28,6 +28,11 @@ enum class AppSidebarScaffoldShell {
     AdminWorkbench,
 }
 
+/**
+ * @author zjarlin
+ * @date 2026/03/28
+ * @constructor 创建[AppSidebarScaffoldRenderer]
+ */
 interface AppSidebarScaffoldRenderer {
     val shell: AppSidebarScaffoldShell
 

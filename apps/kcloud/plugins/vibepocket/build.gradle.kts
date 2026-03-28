@@ -2,6 +2,7 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
+    id("site.addzero.buildlogic.kmp.kmp-filekit")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")

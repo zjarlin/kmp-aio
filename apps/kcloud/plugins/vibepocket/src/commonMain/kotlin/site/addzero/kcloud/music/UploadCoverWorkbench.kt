@@ -715,7 +715,7 @@ private fun buildLocalUploadSubtitle(expiresAt: String?): String {
     }
 }
 
-private fun site.addzero.vibepocket.api.music.MusicLyric.toPromptText(): String {
+private fun site.addzero.kcloud.api.music.MusicLyric.toPromptText(): String {
     val plainText = lrc.lineSequence()
         .map { line ->
             line.replace(Regex("^\\s*(\\[[^]]+])+"), "").trim()

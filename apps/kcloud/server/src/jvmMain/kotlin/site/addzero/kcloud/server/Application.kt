@@ -7,8 +7,10 @@ import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.routing.routing
+import org.koin.core.module.Module as KoinModule
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
+import site.addzero.vibepocket.routes.vibePocketRoutes
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
@@ -34,15 +36,21 @@ fun main(args: Array<String>) {
 /**
  * 由 application.conf 中 ktor.application.modules 指定调用。
  */
-fun Application.module() {
+fun Application.module(
+    overrideModules: List<KoinModule> = emptyList(),
+) {
     val config = embeddedApplicationConfigOverride ?: environment.config
     installKoin {
         withConfiguration<KCloudServerStarterKoinApplication>()
+        if (overrideModules.isNotEmpty()) {
+            modules(overrideModules)
+        }
         properties(mapOf("kcloud.applicationConfig" to config))
     }
     runStarters()
     routing {
         mcuConsoleRoutes()
+        vibePocketRoutes()
     }
 }
 

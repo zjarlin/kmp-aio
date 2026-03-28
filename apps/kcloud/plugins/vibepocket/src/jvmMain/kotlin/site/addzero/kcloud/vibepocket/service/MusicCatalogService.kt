@@ -5,9 +5,9 @@ import org.koin.core.annotation.Single
 import site.addzero.network.call.musiclib.MusicAPIFactory
 import site.addzero.network.call.musiclib.model.Song
 import site.addzero.starter.statuspages.BadGatewayHttpException
-import site.addzero.vibepocket.api.music.MusicLyric
-import site.addzero.vibepocket.api.music.MusicResolvedAsset
-import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.kcloud.api.music.MusicLyric
+import site.addzero.kcloud.api.music.MusicResolvedAsset
+import site.addzero.kcloud.api.music.MusicTrack
 
 interface MusicCatalogService {
     suspend fun search(

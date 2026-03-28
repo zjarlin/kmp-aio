@@ -25,9 +25,9 @@ import io.ktor.client.statement.readRawBytes
 import kotlinx.coroutines.launch
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.media.playlist.player.PlaylistAudioSource
-import site.addzero.vibepocket.api.music.MusicLyric
-import site.addzero.vibepocket.api.music.MusicResolvedAsset
-import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.kcloud.api.music.MusicLyric
+import site.addzero.kcloud.api.music.MusicResolvedAsset
+import site.addzero.kcloud.api.music.MusicTrack
 import site.addzero.vibepocket.ui.StudioEmptyState
 import site.addzero.vibepocket.ui.StudioPill
 import site.addzero.vibepocket.ui.StudioSectionCard

@@ -1,6 +1,8 @@
 package site.addzero.kcloud.app
 
-import org.koin.dsl.module
+import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.Module
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.app.render.KCloudContentRenderer
 import site.addzero.kcloud.app.render.KCloudHeaderRenderer
 import site.addzero.kcloud.app.render.KCloudSidebarRenderer
@@ -9,34 +11,60 @@ import site.addzero.workbenchshell.spi.content.WorkbenchContentRenderer
 import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
 import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
 
-val kCloudWorkbenchModule = module {
-    single {
-        KCloudRouteCatalog()
-    }
-    single<ShellSettingsService> {
-        DefaultShellSettingsService()
-    }
-    single {
-        KCloudShellState(
-            routeCatalog = get(),
+@Module
+@Configuration("vibepocket")
+class KCloudWorkbenchKoinModule {
+    @Single
+    fun provideRouteCatalog(): KCloudRouteCatalog {
+        return KCloudRouteCatalog(
+            sceneDefinitions = KCloudSceneRegistry.all,
         )
     }
-    single<WorkbenchSidebarRenderer> {
-        KCloudSidebarRenderer(
-            routeCatalog = get(),
-            shellState = get(),
+
+    @Single
+    fun provideShellSettingsService(): ShellSettingsService {
+        return DefaultShellSettingsService()
+    }
+
+    @Single
+    fun provideShellState(
+        routeCatalog: KCloudRouteCatalog,
+    ): KCloudShellState {
+        return KCloudShellState(
+            routeCatalog = routeCatalog,
         )
     }
-    single<WorkbenchHeaderRenderer> {
-        KCloudHeaderRenderer(
-            routeCatalog = get(),
-            shellState = get(),
+
+    @Single
+    fun provideSidebarRenderer(
+        routeCatalog: KCloudRouteCatalog,
+        shellState: KCloudShellState,
+    ): WorkbenchSidebarRenderer {
+        return KCloudSidebarRenderer(
+            routeCatalog = routeCatalog,
+            shellState = shellState,
         )
     }
-    single<WorkbenchContentRenderer> {
-        KCloudContentRenderer(
-            routeCatalog = get(),
-            shellState = get(),
+
+    @Single
+    fun provideHeaderRenderer(
+        routeCatalog: KCloudRouteCatalog,
+        shellState: KCloudShellState,
+    ): WorkbenchHeaderRenderer {
+        return KCloudHeaderRenderer(
+            routeCatalog = routeCatalog,
+            shellState = shellState,
+        )
+    }
+
+    @Single
+    fun provideContentRenderer(
+        routeCatalog: KCloudRouteCatalog,
+        shellState: KCloudShellState,
+    ): WorkbenchContentRenderer {
+        return KCloudContentRenderer(
+            routeCatalog = routeCatalog,
+            shellState = shellState,
         )
     }
 }

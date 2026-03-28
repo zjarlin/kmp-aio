@@ -10,10 +10,12 @@ class CodingPlaygroundRuntime(
     private val httpServer: PlaygroundHttpServer,
 ) {
     fun start() {
+        state.startBackgroundSync()
         httpServer.start(wait = false)
     }
 
     fun stop() {
+        state.stopBackgroundSync()
         httpServer.stop()
         koinApplication.close()
     }

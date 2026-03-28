@@ -1,6 +1,8 @@
 package site.addzero.coding.playground
 
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
@@ -8,120 +10,164 @@ import org.sqlite.SQLiteDataSource
 import site.addzero.coding.playground.server.config.PlaygroundJdbcTransactionContext
 import site.addzero.coding.playground.server.config.SqliteLocalDateTimeScalarProvider
 import site.addzero.coding.playground.server.config.initDatabase
-import site.addzero.coding.playground.server.service.LlvmAttributeServiceImpl
-import site.addzero.coding.playground.server.service.LlvmCompileJobServiceImpl
-import site.addzero.coding.playground.server.service.LlvmCompileProfileServiceImpl
-import site.addzero.coding.playground.server.service.LlvmFunctionServiceImpl
-import site.addzero.coding.playground.server.service.LlvmGlobalValueServiceImpl
-import site.addzero.coding.playground.server.service.LlvmLlExportServiceImpl
-import site.addzero.coding.playground.server.service.LlvmMetadataServiceImpl
-import site.addzero.coding.playground.server.service.LlvmModuleServiceImpl
-import site.addzero.coding.playground.server.service.LlvmSnapshotServiceImpl
-import site.addzero.coding.playground.server.service.LlvmTypeServiceImpl
-import site.addzero.coding.playground.server.service.LlvmValidationServiceImpl
+import site.addzero.coding.playground.server.service.CodeRenderAndSyncServiceImpl
+import site.addzero.coding.playground.server.service.CodegenPathResolver
+import site.addzero.coding.playground.server.service.CodegenProjectServiceImpl
+import site.addzero.coding.playground.server.service.CodegenServiceSupport
+import site.addzero.coding.playground.server.service.DeclarationServiceImpl
+import site.addzero.coding.playground.server.service.GenerationTargetServiceImpl
 import site.addzero.coding.playground.server.service.MetadataPersistenceSupport
-import site.addzero.coding.playground.shared.dto.CreateLlvmBasicBlockRequest
-import site.addzero.coding.playground.shared.dto.CreateLlvmCompileProfileRequest
-import site.addzero.coding.playground.shared.dto.CreateLlvmFunctionRequest
-import site.addzero.coding.playground.shared.dto.CreateLlvmInstructionRequest
-import site.addzero.coding.playground.shared.dto.CreateLlvmModuleRequest
-import site.addzero.coding.playground.shared.dto.CreateLlvmTypeRequest
-import site.addzero.coding.playground.shared.dto.LlvmCompileJobStatus
-import site.addzero.coding.playground.shared.dto.LlvmInstructionOpcode
-import site.addzero.coding.playground.shared.dto.LlvmTypeKind
+import site.addzero.coding.playground.server.service.SourceFileServiceImpl
+import site.addzero.coding.playground.shared.dto.CreateCodegenProjectRequest
+import site.addzero.coding.playground.shared.dto.CreateGenerationTargetRequest
+import site.addzero.coding.playground.shared.dto.DeclarationKind
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import javax.sql.DataSource
+import kotlin.io.path.exists
+import kotlin.io.path.readText
+import kotlin.io.path.writeText
+import kotlin.requireNotNull
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PlaygroundWorkbenchStateTest {
     @Test
-    fun workbenchStateSupportsSmokeFlow() = withWorkbenchState { runtime ->
+    fun workbenchStateSupportsCodegenSmokeFlow() = withWorkbenchState { runtime ->
         runBlocking {
             runtime.state.refreshAll()
-            assertTrue(runtime.state.modules.isEmpty())
+            assertTrue(runtime.state.projects.isEmpty())
 
-            runtime.state.saveModule(
+            runtime.state.saveProject(
                 selectedId = null,
-                request = CreateLlvmModuleRequest(
-                    name = "desktop-smoke",
-                    sourceFilename = "desktop-smoke.ll",
-                    targetTriple = "x86_64-unknown-linux-gnu",
-                    dataLayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128",
-                    description = "Workbench smoke test module",
+                request = CreateCodegenProjectRequest(
+                    name = "desktop-project",
+                    description = "桌面状态烟雾测试",
                 ),
             )
-            assertEquals(1, runtime.state.modules.size)
-            assertTrue(runtime.state.selectedModuleId != null)
+            assertEquals(1, runtime.state.projects.size)
+            assertNotNull(runtime.state.selectedProjectId)
 
-            runtime.state.saveType(
+            runtime.state.saveTarget(
                 selectedId = null,
-                request = CreateLlvmTypeRequest(
-                    moduleId = runtime.state.selectedModuleId!!,
-                    name = "Int32",
-                    symbol = "Int32",
-                    kind = LlvmTypeKind.INTEGER,
-                    primitiveWidth = 32,
+                request = CreateGenerationTargetRequest(
+                    projectId = runtime.state.selectedProjectId!!,
+                    name = "desktop-target",
+                    rootDir = runtime.root.resolve("generated").toString(),
+                    sourceSet = "main",
+                    basePackage = "site.addzero.generated.desktop",
+                    indexPackage = "site.addzero.generated.desktop.index",
+                    kspEnabled = true,
                 ),
             )
-            assertTrue(runtime.state.selectedTypeId != null)
+            assertEquals(1, runtime.state.targets.size)
+            assertNotNull(runtime.state.selectedTargetId)
 
-            runtime.state.saveFunction(
-                selectedId = null,
-                request = CreateLlvmFunctionRequest(
-                    moduleId = runtime.state.selectedModuleId!!,
-                    name = "main",
-                    symbol = "main",
-                    returnTypeText = "i32",
-                    returnTypeRefId = runtime.state.selectedTypeId,
-                ),
+            runtime.state.createPreset(
+                kind = DeclarationKind.DATA_CLASS,
+                declarationName = "DesktopItem",
+                packageName = "site.addzero.generated.desktop.model",
             )
-            runtime.state.saveBlock(selectedId = null, name = "entry", label = "entry")
-            runtime.state.saveInstruction(
-                selectedId = null,
-                request = CreateLlvmInstructionRequest(
-                    blockId = runtime.state.selectedBlockId!!,
-                    opcode = LlvmInstructionOpcode.RET,
-                    typeText = "i32",
-                    terminator = true,
-                ),
+            assertNotNull(runtime.state.selectedFileId)
+            assertNotNull(runtime.state.selectedDeclarationId)
+            assertTrue(runtime.state.declarations.any { it.name == "DesktopItem" })
+
+            runtime.state.addProperty("enabled", "Boolean", mutable = false, initializer = "true")
+            runtime.state.addFunction(
+                name = "displayName",
+                returnType = "String",
+                parametersText = "",
             )
 
-            runtime.state.validateSelectedModule()
-            assertTrue(runtime.state.validationIssues.isEmpty())
+            runtime.state.refreshPreview()
+            assertTrue(runtime.state.sourcePreview?.content?.contains("data class DesktopItem") == true)
+            assertTrue(runtime.state.kspPreview?.content?.contains("GeneratedCodeIndex") == true)
+            assertTrue(runtime.state.targetPathPreview?.sourceRoot?.endsWith("/src/main/kotlin") == true)
+            assertTrue(runtime.state.sourcePreview?.content?.contains("@constructor 创建[DesktopItem]") == true)
+            assertTrue(runtime.state.sourcePreview?.content?.contains("@param [id]") == true)
 
-            runtime.state.exportSelectedModule()
-            assertTrue(runtime.state.exportPreviewText.contains("define external default i32 @main"))
+            runtime.state.exportSelectedFile()
+            assertTrue(runtime.state.artifacts.isNotEmpty())
+            val outputPath = Paths.get(requireNotNull(runtime.state.sourcePreview).outputPath)
+            assertTrue(outputPath.exists())
 
-            val originalLanguage = runtime.state.uiLanguage
-            runtime.state.toggleLanguage()
-            assertNotEquals(originalLanguage, runtime.state.uiLanguage)
-            runtime.state.toggleLanguage()
+            runtime.state.importSelectedFile()
+            assertTrue(runtime.state.statusMessage.contains("已导回"))
+            assertTrue(runtime.state.fileAggregate?.declarations?.any { it.name == "DesktopItem" } == true)
+        }
+    }
 
-            runtime.state.exportSnapshot()
-            assertTrue(runtime.state.snapshotEditorText.contains("\"modules\""))
-
-            runtime.state.saveCompileProfile(
+    @Test
+    fun workbenchStateAutoSyncWritesAndImportsExternalChanges() = withWorkbenchState { runtime ->
+        runBlocking {
+            runtime.state.refreshAll()
+            runtime.state.saveProject(
                 selectedId = null,
-                request = CreateLlvmCompileProfileRequest(
-                    moduleId = runtime.state.selectedModuleId!!,
-                    name = "export-only",
-                    targetPlatform = "host",
-                    outputDirectory = runtime.root.resolve("out").toString(),
+                request = CreateCodegenProjectRequest(
+                    name = "auto-sync-project",
+                    description = "自动同步烟雾测试",
                 ),
             )
-            runtime.state.createAndRunCompileJob()
-            assertEquals(LlvmCompileJobStatus.SUCCEEDED, runtime.state.lastCompileResult?.job?.status)
+            runtime.state.saveTarget(
+                selectedId = null,
+                request = CreateGenerationTargetRequest(
+                    projectId = runtime.state.selectedProjectId!!,
+                    name = "auto-sync-target",
+                    rootDir = runtime.root.resolve("generated").toString(),
+                    sourceSet = "main",
+                    basePackage = "site.addzero.generated.auto",
+                    indexPackage = "site.addzero.generated.auto.index",
+                    kspEnabled = true,
+                ),
+            )
+            runtime.state.createPreset(
+                kind = DeclarationKind.DATA_CLASS,
+                declarationName = "AutoSyncItem",
+                packageName = "site.addzero.generated.auto.model",
+            )
+            runtime.state.addProperty("enabled", "Boolean", mutable = false, initializer = "true")
+            runtime.state.awaitAutoSyncSettled()
 
-            runtime.state.removeSelectedModule()
-            assertTrue(runtime.state.modules.isEmpty())
+            val preview = requireNotNull(runtime.state.sourcePreview)
+            val outputPath = Paths.get(preview.outputPath)
+            assertTrue(outputPath.exists())
+            assertTrue(outputPath.readText().contains("val enabled: Boolean = true"))
 
-            runtime.state.importSnapshot()
-            assertEquals(1, runtime.state.modules.size)
-            assertEquals("快照已导入", runtime.state.statusMessage)
+            val externalContent = preview.content.replace(
+                "name: String = \"\"",
+                "name: String = \"外部改动\"",
+            )
+            assertTrue(externalContent.contains("name: String = \"外部改动\""))
+            outputPath.writeText(externalContent)
+
+            val deadline = System.currentTimeMillis() + 8_000
+            while (System.currentTimeMillis() < deadline) {
+                val importedDefault = runtime.state.fileAggregate?.constructorParams
+                    ?.firstOrNull { it.name == "name" }
+                    ?.defaultValue
+                if (importedDefault == "\"外部改动\"") {
+                    break
+                }
+                delay(300)
+            }
+
+            val importedDefault = runtime.state.fileAggregate?.constructorParams
+                ?.firstOrNull { it.name == "name" }
+                ?.defaultValue
+            if (importedDefault != "\"外部改动\"") {
+                runtime.state.refreshFileScope()
+            }
+            val refreshedDefault = runtime.state.fileAggregate?.constructorParams
+                ?.firstOrNull { it.name == "name" }
+                ?.defaultValue
+            assertEquals(
+                "\"外部改动\"",
+                refreshedDefault,
+                "状态=${runtime.state.statusMessage}，错误=${runtime.state.statusIsError}，冲突=${runtime.state.conflicts.joinToString { it.message }}",
+            )
         }
     }
 }
@@ -132,8 +178,8 @@ private data class WorkbenchStateRuntime(
 )
 
 private fun withWorkbenchState(block: (WorkbenchStateRuntime) -> Unit) {
-    val root = Files.createTempDirectory("llvm-playground-workbench-test")
-    val dataSource = sqliteDataSource(root.resolve("llvm.db"))
+    val root = Files.createTempDirectory("coding-playground-workbench-test")
+    val dataSource = sqliteDataSource(root.resolve("coding-playground.db"))
     initDatabase(dataSource)
     val sqlClient = newKSqlClient {
         setDialect(SQLiteDialect())
@@ -149,31 +195,34 @@ private fun withWorkbenchState(block: (WorkbenchStateRuntime) -> Unit) {
         }
     }
     val support = MetadataPersistenceSupport(sqlClient, dataSource)
-    val validationService = LlvmValidationServiceImpl(support)
-    val moduleService = LlvmModuleServiceImpl(support, validationService)
-    val typeService = LlvmTypeServiceImpl(support)
-    val globalValueService = LlvmGlobalValueServiceImpl(support)
-    val functionService = LlvmFunctionServiceImpl(support)
-    val metadataService = LlvmMetadataServiceImpl(support)
-    val attributeService = LlvmAttributeServiceImpl(support)
-    val snapshotService = LlvmSnapshotServiceImpl(support)
-    val exportService = LlvmLlExportServiceImpl(support)
-    val compileProfileService = LlvmCompileProfileServiceImpl(support)
-    val compileJobService = LlvmCompileJobServiceImpl(support, exportService)
-    val state = PlaygroundWorkbenchState(
-        moduleService = moduleService,
-        typeService = typeService,
-        globalValueService = globalValueService,
-        functionService = functionService,
-        metadataService = metadataService,
-        attributeService = attributeService,
-        validationService = validationService,
-        snapshotService = snapshotService,
-        exportService = exportService,
-        compileProfileService = compileProfileService,
-        compileJobService = compileJobService,
+    val serviceSupport = CodegenServiceSupport()
+    val pathResolver = CodegenPathResolver()
+    val declarationService = DeclarationServiceImpl(support, serviceSupport)
+    val fileService = SourceFileServiceImpl(support, serviceSupport, declarationService)
+    val renderSyncService = CodeRenderAndSyncServiceImpl(
+        support = support,
+        pathResolver = pathResolver,
+        json = Json {
+            ignoreUnknownKeys = true
+            prettyPrint = true
+        },
     )
-    block(WorkbenchStateRuntime(root = root, state = state))
+    val state = PlaygroundWorkbenchState(
+        projectService = CodegenProjectServiceImpl(support, serviceSupport),
+        targetService = GenerationTargetServiceImpl(support, serviceSupport, pathResolver),
+        fileService = fileService,
+        declarationService = declarationService,
+        renderService = renderSyncService,
+        artifactService = renderSyncService,
+        syncService = renderSyncService,
+        kspIndexService = renderSyncService,
+    )
+    state.startBackgroundSync()
+    try {
+        block(WorkbenchStateRuntime(root = root, state = state))
+    } finally {
+        state.stopBackgroundSync()
+    }
 }
 
 private fun sqliteDataSource(path: Path): DataSource {

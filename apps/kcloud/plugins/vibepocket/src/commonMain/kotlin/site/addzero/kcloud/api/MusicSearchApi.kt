@@ -5,9 +5,9 @@ import de.jensklingenberg.ktorfit.http.GET
 import de.jensklingenberg.ktorfit.http.Headers
 import de.jensklingenberg.ktorfit.http.POST
 import de.jensklingenberg.ktorfit.http.Query
-import site.addzero.vibepocket.api.music.MusicLyric
-import site.addzero.vibepocket.api.music.MusicResolvedAsset
-import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.kcloud.api.music.MusicLyric
+import site.addzero.kcloud.api.music.MusicResolvedAsset
+import site.addzero.kcloud.api.music.MusicTrack
 import site.addzero.vibepocket.music.UploadCoverSourcePrepareRequest
 import site.addzero.vibepocket.music.UploadCoverSourcePrepareResponse
 

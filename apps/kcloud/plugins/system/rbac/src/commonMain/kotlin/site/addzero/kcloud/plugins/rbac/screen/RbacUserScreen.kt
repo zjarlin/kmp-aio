@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import site.addzero.annotation.Route
 
 @Route(
-    value = "系统",
+    value = "权限中心",
     title = "RBAC权限管理",
     routePath = "system/rbac",
     icon = "AdminPanelSettings",

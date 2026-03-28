@@ -150,34 +150,32 @@ private fun SidebarShowcaseContent(
     val isAdminShell = state.currentShell == AppSidebarScaffoldShell.AdminWorkbench
     val panelShape = RoundedCornerShape(if (isAdminShell) 0.dp else 26.dp)
     Box(
-        modifier = Modifier.fillMaxSize()
-            .background(
-                brush = if (isAdminShell) {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFFF2F5F9),
-                            Color(0xFFF2F5F9),
-                        ),
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xB3121A27),
-                            Color(0xAA0B121F),
-                        ),
-                    )
-                },
-                shape = panelShape,
-            )
-            .border(
-                width = 1.dp,
-                color = if (isAdminShell) {
-                    Color.Transparent
-                } else {
-                    Color.White.copy(alpha = 0.07f)
-                },
-                shape = panelShape,
-            ),
+        modifier = Modifier.fillMaxSize().background(
+            brush = if (isAdminShell) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFF2F5F9),
+                        Color(0xFFF2F5F9),
+                    ),
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xB3121A27),
+                        Color(0xAA0B121F),
+                    ),
+                )
+            },
+            shape = panelShape,
+        ).border(
+            width = 1.dp,
+            color = if (isAdminShell) {
+                Color.Transparent
+            } else {
+                Color.White.copy(alpha = 0.07f)
+            },
+            shape = panelShape,
+        ),
     ) {
         ProvideShowcasePageTone(
             tone = if (isAdminShell) ShowcasePageTone.Light else ShowcasePageTone.Dark,
@@ -195,34 +193,32 @@ private fun SidebarShowcaseDetail(
     val isAdminShell = state.currentShell == AppSidebarScaffoldShell.AdminWorkbench
     val panelShape = RoundedCornerShape(if (isAdminShell) 0.dp else 26.dp)
     Box(
-        modifier = Modifier.fillMaxSize()
-            .background(
-                brush = if (isAdminShell) {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFFFFFFFF),
-                            Color(0xFFFFFFFF),
-                        ),
-                    )
-                } else {
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xB3121A27),
-                            Color(0xAA0B121F),
-                        ),
-                    )
-                },
-                shape = panelShape,
-            )
-            .border(
-                width = 1.dp,
-                color = if (isAdminShell) {
-                    Color.Transparent
-                } else {
-                    Color.White.copy(alpha = 0.07f)
-                },
-                shape = panelShape,
-            ),
+        modifier = Modifier.fillMaxSize().background(
+            brush = if (isAdminShell) {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFFFFFFFF),
+                        Color(0xFFFFFFFF),
+                    ),
+                )
+            } else {
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xB3121A27),
+                        Color(0xAA0B121F),
+                    ),
+                )
+            },
+            shape = panelShape,
+        ).border(
+            width = 1.dp,
+            color = if (isAdminShell) {
+                Color.Transparent
+            } else {
+                Color.White.copy(alpha = 0.07f)
+            },
+            shape = panelShape,
+        ),
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(18.dp),
@@ -363,9 +359,7 @@ private fun SidebarShowcaseDetailToolbar(
 }
 
 @Composable
-private fun SidebarShowcaseDetailToggleButton(
-    state: SidebarShowcaseState,
-) {
+private fun SidebarShowcaseDetailToggleButton(state: SidebarShowcaseState) {
     OutlinedButton(
         onClick = state::toggleDetailVisibility,
     ) {

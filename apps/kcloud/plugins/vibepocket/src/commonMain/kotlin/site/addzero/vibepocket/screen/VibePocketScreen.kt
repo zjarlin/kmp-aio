@@ -1,8 +1,11 @@
 package site.addzero.vibepocket.screen
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import org.koin.compose.koinInject
+import androidx.compose.ui.Modifier
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
+import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 import site.addzero.vibepocket.music.MusicTaskResourcePage
 import site.addzero.vibepocket.music.MusicVibeScreen
 import site.addzero.vibepocket.screens.creativeassets.CreativeAssetsViewModel
@@ -11,7 +14,7 @@ import site.addzero.vibepocket.screens.settings.SettingsViewModel
 import site.addzero.vibepocket.settings.SettingsPage
 
 @Route(
-    value = "音乐创作",
+    value = "创作中心",
     title = "音乐工作台",
     routePath = "vibepocket/music-studio",
     icon = "PlayArrow",
@@ -19,12 +22,14 @@ import site.addzero.vibepocket.settings.SettingsPage
 )
 @Composable
 fun MusicStudioScreen() {
-    val viewModel: MusicStudioViewModel = koinInject()
-    MusicVibeScreen(viewModel = viewModel)
+    val viewModel: MusicStudioViewModel = koinViewModel()
+    VibePocketSceneRoot {
+        MusicVibeScreen(viewModel = viewModel)
+    }
 }
 
 @Route(
-    value = "音乐创作",
+    value = "创作中心",
     title = "创作资产",
     routePath = "vibepocket/creative-assets",
     icon = "Dashboard",
@@ -32,12 +37,14 @@ fun MusicStudioScreen() {
 )
 @Composable
 fun CreativeAssetsScreen() {
-    val viewModel: CreativeAssetsViewModel = koinInject()
-    MusicTaskResourcePage(viewModel = viewModel)
+    val viewModel: CreativeAssetsViewModel = koinViewModel()
+    VibePocketSceneRoot {
+        MusicTaskResourcePage(viewModel = viewModel)
+    }
 }
 
 @Route(
-    value = "音乐创作",
+    value = "系统设置",
     title = "设置",
     routePath = "vibepocket/settings",
     icon = "Settings",
@@ -45,6 +52,19 @@ fun CreativeAssetsScreen() {
 )
 @Composable
 fun SettingsScreen() {
-    val viewModel: SettingsViewModel = koinInject()
-    SettingsPage(viewModel = viewModel)
+    val viewModel: SettingsViewModel = koinViewModel()
+    VibePocketSceneRoot {
+        SettingsPage(viewModel = viewModel)
+    }
+}
+
+@Composable
+private fun VibePocketSceneRoot(
+    content: @Composable () -> Unit,
+) {
+    LiquidGlassWorkbenchRoot(
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        content()
+    }
 }

@@ -5,9 +5,9 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import site.addzero.vibepocket.api.MusicSearchApi
 import site.addzero.vibepocket.api.ServerApiClient
-import site.addzero.vibepocket.api.music.MusicLyric
-import site.addzero.vibepocket.api.music.MusicResolvedAsset
-import site.addzero.vibepocket.api.music.MusicTrack
+import site.addzero.kcloud.api.music.MusicLyric
+import site.addzero.kcloud.api.music.MusicResolvedAsset
+import site.addzero.kcloud.api.music.MusicTrack
 
 object MusicSearchService {
     private val supportedProviders = listOf("netease", "qq")

@@ -1,5 +1,8 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.kmp-ktor-client")
+    id("site.addzero.buildlogic.kmp.kmp-ktorfit")
+    id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-json")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
@@ -32,6 +35,7 @@ ksp {
 
 dependencies {
     add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
 }
 
 kotlin {
@@ -39,10 +43,14 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":lib:compose:workbench-shell"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
-            implementation("site.addzero:compose-native-component-button:2026.03.13")
+            implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
+            implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         }
         jvmMain.dependencies {
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
+            implementation(libs.findLibrary("jserialcomm").get())
+            implementation(libs.findLibrary("spring2ktor-server-core").get())
+            compileOnly(libs.findLibrary("org-springframework-spring-web").get())
         }
     }
 }

@@ -1,13 +1,10 @@
 package site.addzero.coding.playground
 
-import io.ktor.http.HttpHeaders
-import io.ktor.http.HttpMethod
 import io.ktor.server.application.install
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.routing.routing
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
@@ -33,14 +30,6 @@ class PlaygroundHttpServer(
                         ignoreUnknownKeys = true
                     },
                 )
-            }
-            install(CORS) {
-                anyHost()
-                allowHeader(HttpHeaders.ContentType)
-                allowMethod(HttpMethod.Get)
-                allowMethod(HttpMethod.Post)
-                allowMethod(HttpMethod.Put)
-                allowMethod(HttpMethod.Delete)
             }
             routing {
                 registerGeneratedSpringRoutes()
