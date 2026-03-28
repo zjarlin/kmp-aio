@@ -50,6 +50,7 @@ class MusicLibCatalogService : MusicCatalogService {
 
         val song = Song(
             id = normalizedSongId,
+            name = normalizedSongId,
             source = normalizedProvider,
             extra = sourceIdKey(normalizedProvider, normalizedSongId),
         )
@@ -90,7 +91,7 @@ class MusicLibCatalogService : MusicCatalogService {
             artist = song.artist,
             album = song.album,
             coverUrl = song.cover.ifBlank { null },
-            durationMs = song.duration * 1000,
+            durationMs = song.duration.toLong() * 1000L,
             platform = normalizeProvider(song.source),
             link = song.link.ifBlank { null },
             extra = song.extra,
@@ -104,7 +105,7 @@ class MusicLibCatalogService : MusicCatalogService {
             name = name,
             artist = artist,
             album = album,
-            duration = durationMs / 1000,
+            duration = (durationMs / 1000L).toInt(),
             source = provider,
             cover = coverUrl.orEmpty(),
             link = link.orEmpty(),

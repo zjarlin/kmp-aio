@@ -68,14 +68,14 @@ private fun scanLocalPorts(): List<McuConsolePort> {
     if (!devDir.exists()) {
         return emptyList()
     }
-    return devDir.listFiles()
+    val toList = devDir.listFiles()
         .orEmpty()
         .asSequence()
         .filter { file ->
             file.name.startsWith("cu.")
-                || file.name.startsWith("tty.")
-                || file.name.startsWith("ttyUSB")
-                || file.name.startsWith("ttyACM")
+                    || file.name.startsWith("tty.")
+                    || file.name.startsWith("ttyUSB")
+                    || file.name.startsWith("ttyACM")
         }
         .sortedBy { file -> file.name }
         .map { file ->
@@ -92,4 +92,5 @@ private fun scanLocalPorts(): List<McuConsolePort> {
             )
         }
         .toList()
+    return toList
 }

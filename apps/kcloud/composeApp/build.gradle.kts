@@ -14,13 +14,14 @@ val desktopMainClass = "site.addzero.kcloud.MainKt"
 kotlin {
     dependencies {
         implementation(project(":lib:compose:workbench-shell"))
-                implementation(project(":apps:kcloud:shared"))
-                implementation(project(":apps:kcloud:plugins:mcu-console"))
-                implementation(project(":apps:kcloud:plugins:system:rbac"))
-                implementation(project(":apps:kcloud:plugins:vibepocket"))
-                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
-                implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
-            }
+        implementation(project(":apps:kcloud:shared"))
+        implementation(project(":apps:kcloud:plugins:mcu-console"))
+        implementation(project(":apps:kcloud:plugins:system:rbac"))
+        implementation(project(":apps:kcloud:plugins:vibepocket"))
+        implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+        implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+
+    }
     sourceSets {
     }
 }

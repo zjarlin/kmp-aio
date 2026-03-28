@@ -15,9 +15,9 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.kcloud.dto.OkResponse
-import site.addzero.kcloud.model.*
-import site.addzero.kcloud.model.by
+import site.addzero.vibepocket.dto.OkResponse
+import site.addzero.vibepocket.model.*
+import site.addzero.vibepocket.model.by
 import java.time.LocalDateTime
 
 @Serializable
