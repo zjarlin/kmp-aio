@@ -119,20 +119,61 @@ enum class McuFlashRunState {
 }
 
 @Serializable
+enum class McuFlashRuntimeKind {
+    RHAI_VM,
+    MICROPYTHON,
+}
+
+@Serializable
+enum class McuFlashStrategyKind {
+    SERIAL_ACK_STREAM,
+    COMMAND_TEMPLATE,
+}
+
+@Serializable
+data class McuFlashProfileSummary(
+    val id: String = "",
+    val title: String = "",
+    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.RHAI_VM,
+    val strategyKind: McuFlashStrategyKind = McuFlashStrategyKind.SERIAL_ACK_STREAM,
+    val mcuFamily: String = "generic",
+    val description: String = "",
+    val artifactLabel: String = "固件路径",
+    val artifactHint: String = "",
+    val defaultBaudRate: Int = 115200,
+    val commandTemplate: String? = null,
+    val supportsCommandOverride: Boolean = false,
+    val requiresPort: Boolean = true,
+)
+
+@Serializable
+data class McuFlashProfilesResponse(
+    val items: List<McuFlashProfileSummary> = emptyList(),
+    val defaultProfileId: String? = null,
+)
+
+@Serializable
 data class McuFlashRequest(
+    val profileId: String = "",
     val firmwarePath: String = "",
     val portPath: String? = null,
     val baudRate: Int? = null,
+    val commandTemplate: String? = null,
 )
 
 @Serializable
 data class McuFlashStatusResponse(
     val state: McuFlashRunState = McuFlashRunState.IDLE,
+    val profileId: String? = null,
+    val profileTitle: String? = null,
+    val runtimeKind: McuFlashRuntimeKind? = null,
+    val strategyKind: McuFlashStrategyKind? = null,
     val portPath: String? = null,
     val baudRate: Int = 115200,
     val firmwarePath: String? = null,
     val bytesSent: Int = 0,
     val totalBytes: Int = 0,
+    val commandPreview: String? = null,
     val lastMessage: String? = null,
     val updatedAt: String? = null,
 )

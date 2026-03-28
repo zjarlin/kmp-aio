@@ -20,11 +20,14 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":apps:coding-playground:shared"))
+            implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+            implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
         }
         jvmMain.dependencies {
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":lib:coding-playground-demo-alpha"))
             implementation(project(":lib:coding-playground-demo-beta"))
+            implementation(project(":lib:coding-playground-demo-gamma"))
             implementation(project(":apps:coding-playground:server"))
         }
         jvmTest.dependencies {

@@ -4,9 +4,18 @@ import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashService
+
+/**
+ * 读取内置烧录能力包列表。
+ */
+@GetMapping("/api/mcu/flash/profiles")
+fun listMcuFlashProfiles(): McuFlashProfilesResponse {
+    return flashService().listProfiles()
+}
 
 /**
  * MCU 固件烧录相关路由。

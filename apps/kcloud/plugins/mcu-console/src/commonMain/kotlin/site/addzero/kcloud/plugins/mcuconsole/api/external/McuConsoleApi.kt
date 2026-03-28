@@ -5,6 +5,7 @@ import de.jensklingenberg.ktorfit.http.GET
 import de.jensklingenberg.ktorfit.http.Headers
 import de.jensklingenberg.ktorfit.http.POST
 import de.jensklingenberg.ktorfit.http.Query
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
@@ -57,6 +58,9 @@ interface McuConsoleApi {
 
     @GET("api/mcu/script/status")
     suspend fun getScriptStatus(): McuScriptStatusResponse
+
+    @GET("api/mcu/flash/profiles")
+    suspend fun listFlashProfiles(): McuFlashProfilesResponse
 
     @Headers("Content-Type: application/json")
     @POST("api/mcu/flash/start")

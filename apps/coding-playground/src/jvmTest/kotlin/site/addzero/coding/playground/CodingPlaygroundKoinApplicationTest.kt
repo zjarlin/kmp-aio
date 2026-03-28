@@ -2,6 +2,7 @@ package site.addzero.coding.playground
 
 import org.koin.core.context.GlobalContext
 import site.addzero.coding.playground.demo.beta.DemoBetaService
+import site.addzero.demo.gamma.DemoGammaService
 import site.addzero.coding.playground.server.config.PlaygroundServerSettings
 import site.addzero.coding.playground.shared.dto.CodegenSearchRequest
 import site.addzero.coding.playground.shared.service.CodegenProjectService
@@ -32,6 +33,7 @@ class CodingPlaygroundKoinApplicationTest {
                 projectService.list(CodegenSearchRequest())
             })
             assertEquals("beta:alpha", demoBetaService.marker())
+            assertEquals("gamma", koin.get<DemoGammaService>().marker())
         } finally {
             runtime.stop()
             restoreSystemProperty("coding.playground.data.dir", previousDataDir)

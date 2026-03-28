@@ -6,7 +6,6 @@ import site.addzero.kcloud.plugins.mcuconsole.McuConsoleComposeKoinModule
 import site.addzero.vibepocket.VibePocketKoinModule
 
 @KoinApplication(
-    configurations = ["kcloud-compose", "vibepocket", "mcuconsole-compose"],
-    modules = [KCloudWorkbenchKoinModule::class, VibePocketKoinModule::class, McuConsoleComposeKoinModule::class],
+    modules = [KCloudWorkbenchKoinModule::class, McuConsoleComposeKoinModule::class, VibePocketKoinModule::class],
 )
 object KCloudComposeKoinApplication

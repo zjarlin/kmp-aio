@@ -92,6 +92,22 @@ apps/myapp/build/compose-binaries/
 
 详见 [apps/README.md](./apps/README.md)
 
+## 文档站生成
+
+仓库已内置 `xiaoeyu`，可以把各模块 `README.md` 收集成静态文档站：
+
+```bash
+# 生成 docs 站点脚手架
+node xiaoeyu/src/cli.mjs scaffold-site --target docs
+
+# 根据 xiaoeyu.config.json 生成内容
+node xiaoeyu/src/cli.mjs generate --config ./xiaoeyu.config.json
+
+# 在 docs/ 下安装依赖并构建 Docusaurus 站点
+npm install --prefix docs
+npm run build --prefix docs
+```
+
 ## 技术栈
 
 - **UI**: Compose Multiplatform (Desktop/JVM)

@@ -60,18 +60,16 @@ fun MainWindow(
             },
             isDarkTheme = darkTheme,
             onThemeToggle = {
-                shellSettingsService.setThemeMode(themeMode.next())
+                shellSettingsService.setThemeMode(
+                    if (darkTheme) {
+                        ShellThemeMode.LIGHT
+                    } else {
+                        ShellThemeMode.DARK
+                    },
+                )
             },
             userLabel = "KC",
             onUserClick = {},
         )
-    }
-}
-
-private fun ShellThemeMode.next(): ShellThemeMode {
-    return when (this) {
-        ShellThemeMode.LIGHT -> ShellThemeMode.DARK
-        ShellThemeMode.DARK -> ShellThemeMode.SYSTEM
-        ShellThemeMode.SYSTEM -> ShellThemeMode.LIGHT
     }
 }

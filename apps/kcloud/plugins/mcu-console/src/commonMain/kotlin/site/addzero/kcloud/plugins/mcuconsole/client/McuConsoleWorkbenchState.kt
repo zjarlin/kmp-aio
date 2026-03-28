@@ -5,7 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.math.max
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashStrategyKind
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
@@ -22,8 +24,12 @@ class McuConsoleWorkbenchState(
 ) {
     var ports by mutableStateOf<List<McuPortSummary>>(emptyList())
         private set
+    var flashProfiles by mutableStateOf<List<McuFlashProfileSummary>>(emptyList())
+        private set
     var portQuery by mutableStateOf("")
     var selectedPortPath by mutableStateOf<String?>(null)
+        private set
+    var selectedFlashProfileId by mutableStateOf<String?>(null)
         private set
     var baudRateText by mutableStateOf("115200")
     var session by mutableStateOf(McuSessionSnapshot())
@@ -44,6 +50,7 @@ class McuConsoleWorkbenchState(
         """.trimIndent(),
     )
     var firmwarePathText by mutableStateOf("")
+    var flashCommandTemplateText by mutableStateOf("")
     var timeoutMsText by mutableStateOf("5000")
     var feedbackMessage by mutableStateOf<String?>(null)
         private set
@@ -80,6 +87,15 @@ class McuConsoleWorkbenchState(
         portPath: String?,
     ) {
         selectedPortPath = portPath
+    }
+
+    fun selectFlashProfile(
+        profileId: String,
+    ) {
+        val profile = flashProfiles.firstOrNull { it.id == profileId } ?: return
+        selectedFlashProfileId = profile.id
+        baudRateText = profile.defaultBaudRate.toString()
+        flashCommandTemplateText = profile.commandTemplate.orEmpty()
     }
 
     fun clearVisibleEvents() {
@@ -153,6 +169,28 @@ class McuConsoleWorkbenchState(
         }
     }
 
+    suspend fun refreshFlashProfiles() {
+        try {
+            val loadedProfiles = remoteService.listFlashProfiles()
+            flashProfiles = loadedProfiles
+            val selected = loadedProfiles.firstOrNull { it.id == selectedFlashProfileId }
+            val fallback = loadedProfiles.firstOrNull()
+            val nextProfile = selected ?: fallback
+            if (nextProfile != null) {
+                val shouldResetCommand = selectedFlashProfileId == null || selected == null
+                selectedFlashProfileId = nextProfile.id
+                if (shouldResetCommand || flashCommandTemplateText.isBlank()) {
+                    flashCommandTemplateText = nextProfile.commandTemplate.orEmpty()
+                }
+                if (baudRateText.isBlank() || baudRateText == "115200") {
+                    baudRateText = nextProfile.defaultBaudRate.toString()
+                }
+            }
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        }
+    }
+
     suspend fun refreshFlashStatus() {
         try {
             flashStatus = remoteService.getFlashStatus()
@@ -163,6 +201,7 @@ class McuConsoleWorkbenchState(
 
     suspend fun refreshAll() {
         refreshPorts()
+        refreshFlashProfiles()
         refreshSession()
         refreshScriptStatus()
         refreshFlashStatus()
@@ -273,12 +312,25 @@ class McuConsoleWorkbenchState(
                 updateFeedback("波特率无效", true)
                 return
             }
+        if (selectedFlashProfile?.requiresPort == true &&
+            (selectedPortPath ?: session.portPath).isNullOrBlank()
+        ) {
+            updateFeedback("请先选择串口", true)
+            return
+        }
         runSubmitting("烧录完成") {
             flashStatus = remoteService.startFlash(
                 McuFlashRequest(
+                    profileId = selectedFlashProfile?.id.orEmpty(),
                     firmwarePath = firmwarePath,
                     portPath = selectedPortPath ?: session.portPath,
                     baudRate = baudRate,
+                    commandTemplate = flashCommandTemplateText
+                        .trim()
+                        .takeIf {
+                            selectedFlashProfile?.strategyKind == McuFlashStrategyKind.COMMAND_TEMPLATE &&
+                                it.isNotBlank()
+                        },
                 ),
             )
             refreshSession()
@@ -321,4 +373,19 @@ class McuConsoleWorkbenchState(
 
     val isScriptRunning: Boolean
         get() = scriptStatus.state == McuScriptRunState.RUNNING || scriptStatus.state == McuScriptRunState.STOPPING
+
+    val selectedFlashProfile: McuFlashProfileSummary?
+        get() = flashProfiles.firstOrNull { it.id == selectedFlashProfileId }
+
+    val canStartFlash: Boolean
+        get() {
+            val profile = selectedFlashProfile ?: return false
+            if (firmwarePathText.isBlank()) {
+                return false
+            }
+            if (profile.requiresPort && (selectedPortPath ?: session.portPath).isNullOrBlank()) {
+                return false
+            }
+            return true
+        }
 }

@@ -5,7 +5,6 @@ import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
-import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import org.sqlite.SQLiteDataSource
@@ -13,7 +12,6 @@ import java.nio.file.Files
 import javax.sql.DataSource
 
 @Module
-@Configuration
 class CodingPlaygroundServerKoinModule {
     @Single
     fun provideJson(): Json {

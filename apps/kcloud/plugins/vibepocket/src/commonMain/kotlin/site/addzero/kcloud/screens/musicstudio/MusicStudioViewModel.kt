@@ -3,18 +3,17 @@ package site.addzero.vibepocket.screens.musicstudio
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.KoinViewModel
+import org.koin.core.annotation.Factory
 import site.addzero.vibepocket.music.SunoRuntimeConfig
 import site.addzero.vibepocket.music.SunoWorkflowService
 
-@KoinViewModel
-class MusicStudioViewModel : ViewModel() {
+@Factory
+class MusicStudioViewModel {
     private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     var selectedTab by mutableStateOf(MusicStudioTab.COVER)
@@ -55,8 +54,7 @@ class MusicStudioViewModel : ViewModel() {
         }
     }
 
-    override fun onCleared() {
+    fun dispose() {
         screenScope.cancel()
-        super.onCleared()
     }
 }

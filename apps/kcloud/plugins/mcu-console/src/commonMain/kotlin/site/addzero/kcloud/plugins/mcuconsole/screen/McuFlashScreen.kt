@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.screen
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,12 +36,13 @@ fun McuFlashScreen() {
             McuToolbarAction("刷新串口", Icons.Default.Search) {
                 scope.launch {
                     state.refreshPorts()
+                    state.refreshFlashProfiles()
                 }
             },
             McuToolbarAction(
                 label = "开始烧录",
                 icon = Icons.Default.Upload,
-                enabled = state.selectedPortPath != null && state.firmwarePathText.isNotBlank(),
+                enabled = state.canStartFlash,
             ) {
                 scope.launch {
                     state.startFlash()
@@ -59,25 +61,46 @@ fun McuFlashScreen() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             McuPanel(
-                title = "烧录参数",
+                title = "烧录能力包",
                 modifier = Modifier.width(360.dp).fillMaxHeight(),
             ) {
+                McuFlashProfileBrowser(
+                    profiles = state.flashProfiles,
+                    selectedProfileId = state.selectedFlashProfileId,
+                    onSelect = { profileId -> state.selectFlashProfile(profileId) },
+                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                )
                 McuCompactInput(
                     value = state.firmwarePathText,
                     onValueChange = { state.firmwarePathText = it },
-                    label = "firmware.bin",
+                    label = state.selectedFlashProfile?.artifactLabel ?: "firmware.bin",
+                    supportingText = state.selectedFlashProfile?.artifactHint,
                 )
                 McuCompactInput(
                     value = state.baudRateText,
                     onValueChange = { state.baudRateText = it },
                     label = "baudRate",
                 )
+                if (state.selectedFlashProfile?.supportsCommandOverride == true) {
+                    McuCompactInput(
+                        value = state.flashCommandTemplateText,
+                        onValueChange = { state.flashCommandTemplateText = it },
+                        label = "commandTemplate",
+                        supportingText = "{firmwarePath} {portPath} {baudRate} {firmwareName} {firmwareDir} {profileId} {runtimeKind} {mcuFamily}",
+                        singleLine = false,
+                    )
+                }
                 McuSummaryTable(
                     rows = listOf(
+                        "能力包" to (state.selectedFlashProfile?.title.orEmpty()),
+                        "运行时" to (state.selectedFlashProfile?.runtimeKind?.name.orEmpty()),
+                        "策略" to (state.selectedFlashProfile?.strategyKind?.name.orEmpty()),
+                        "串口要求" to if (state.selectedFlashProfile?.requiresPort == true) "需要" else "可选",
                         "目标串口" to (state.selectedPortPath ?: state.session.portPath.orEmpty()),
                         "烧录状态" to state.flashStatus.state.name,
                         "进度" to "${state.flashStatus.bytesSent} / ${state.flashStatus.totalBytes}",
                         "固件" to state.flashStatus.firmwarePath.orEmpty(),
+                        "命令" to state.flashStatus.commandPreview.orEmpty(),
                         "消息" to state.flashStatus.lastMessage.orEmpty(),
                     ),
                 )

@@ -12,14 +12,11 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import org.koin.plugin.module.dsl.withConfiguration
 import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.disableTitleBar
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
-import site.addzero.kcloud.app.KCloudWorkbenchKoinModule
-import site.addzero.kcloud.app.module as kcloudWorkbenchModule
-import site.addzero.kcloud.plugins.mcuconsole.McuConsoleComposeKoinModule
-import site.addzero.kcloud.plugins.mcuconsole.module as mcuConsoleComposeModule
 import java.awt.Container
 import javax.swing.JComponent
 
@@ -30,10 +27,7 @@ fun main() = application {
     val embeddedServer = remember {
         startEmbeddedDesktopServer(
             configureKoin = {
-                modules(
-                    KCloudWorkbenchKoinModule().kcloudWorkbenchModule(),
-                    McuConsoleComposeKoinModule().mcuConsoleComposeModule(),
-                )
+                withConfiguration<KCloudDesktopSupplementKoinApplication>()
             },
         )
     }

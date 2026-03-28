@@ -20,7 +20,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -203,8 +206,13 @@ fun WorkbenchScaffold(
                         .fillMaxHeight()
                         .then(detailContainerModifier)
                         .padding(detailPadding),
-                    content = detail,
-                )
+                ) {
+                    CompositionLocalProvider(
+                        LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+                    ) {
+                        detail()
+                    }
+                }
             }
         },
     )
@@ -266,8 +274,13 @@ private fun ResizableSidebarShell(
                 modifier = Modifier.width(sidebarWidth)
                     .fillMaxHeight()
                     .then(sidebarContainerModifier),
-                content = sidebar,
-            )
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+                ) {
+                    sidebar()
+                }
+            }
             Row(
                 modifier = Modifier.weight(1f)
                     .fillMaxHeight()
@@ -327,8 +340,13 @@ private fun MainWorkbenchPanel(
                     .workbenchHeaderFrame(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                content = contentHeader,
-            )
+            ) {
+                CompositionLocalProvider(
+                    LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+                ) {
+                    contentHeader()
+                }
+            }
             Box(
                 modifier = Modifier.workbenchHorizontalDivider(
                     color = dividerColor,
@@ -338,8 +356,13 @@ private fun MainWorkbenchPanel(
 
         Box(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(contentPadding),
-            content = content,
-        )
+        ) {
+            CompositionLocalProvider(
+                LocalContentColor provides MaterialTheme.colorScheme.onSurface,
+            ) {
+                content()
+            }
+        }
     }
 }
 

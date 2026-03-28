@@ -1,13 +1,11 @@
 package site.addzero.kcloud.plugins.mcuconsole
 
-import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleRemoteService
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
 
 @Module
-@Configuration("mcuconsole-compose")
 class McuConsoleComposeKoinModule {
     @Single
     fun provideRemoteService(): McuConsoleRemoteService {

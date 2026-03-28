@@ -93,7 +93,125 @@ class CodingPlaygroundServerTest {
             assertTrue(indexPreview.content.contains("CatalogItem"))
         }
     }
+
+    @Test
+    fun kotlinCodegenSupportsAllDeclarationPresets() = withRuntime { runtime ->
+        runBlocking {
+            val project = runtime.projectService.create(
+                CreateCodegenProjectRequest(
+                    name = "preset-project",
+                    description = "五种声明预设烟雾测试",
+                ),
+            )
+            val target = runtime.targetService.create(
+                CreateGenerationTargetRequest(
+                    projectId = project.id,
+                    name = "preset-target",
+                    rootDir = runtime.root.resolve("generated").toString(),
+                    sourceSet = "main",
+                    basePackage = "site.addzero.generated.presets",
+                    indexPackage = "site.addzero.generated.presets.index",
+                    kspEnabled = true,
+                ),
+            )
+
+            val cases = listOf(
+                PresetCase(
+                    kind = DeclarationKind.ENUM_CLASS,
+                    declarationName = "OrderStatus",
+                    packageName = "site.addzero.generated.presets.enums",
+                    expectedSnippets = listOf(
+                        "enum class OrderStatus",
+                        "DEFAULT",
+                        "DISABLED",
+                        "@author",
+                    ),
+                ),
+                PresetCase(
+                    kind = DeclarationKind.INTERFACE,
+                    declarationName = "CatalogGateway",
+                    packageName = "site.addzero.generated.presets.api",
+                    expectedSnippets = listOf(
+                        "interface CatalogGateway",
+                        "fun load(id: String): CatalogGateway",
+                        "@author",
+                    ),
+                ),
+                PresetCase(
+                    kind = DeclarationKind.OBJECT,
+                    declarationName = "CatalogDefaults",
+                    packageName = "site.addzero.generated.presets.support",
+                    expectedSnippets = listOf(
+                        "object CatalogDefaults",
+                        "val version: String = \"1.0.0\"",
+                        "@author",
+                    ),
+                ),
+                PresetCase(
+                    kind = DeclarationKind.ANNOTATION_CLASS,
+                    declarationName = "ManagedCatalog",
+                    packageName = "site.addzero.generated.presets.annotation",
+                    expectedSnippets = listOf(
+                        "annotation class ManagedCatalog",
+                        "@constructor 创建[ManagedCatalog]",
+                        "val value: String = \"\"",
+                        "@param [value]",
+                    ),
+                ),
+            )
+
+            val createdFiles = mutableListOf<String>()
+            cases.forEach { case ->
+                val aggregate = runtime.fileService.createPreset(
+                    CreateDeclarationPresetRequest(
+                        targetId = target.id,
+                        packageName = case.packageName,
+                        declarationName = case.declarationName,
+                        kind = case.kind,
+                    ),
+                )
+                createdFiles += aggregate.file.id
+
+                val preview = runtime.renderService.previewFile(aggregate.file.id)
+                case.expectedSnippets.forEach { snippet ->
+                    assertTrue(
+                        preview.content.contains(snippet),
+                        "预览缺少片段 `$snippet`，kind=${case.kind}，content=\n${preview.content}",
+                    )
+                }
+
+                val export = runtime.renderService.export(SyncExportRequest(fileId = aggregate.file.id))
+                val outputPath = Paths.get(export.artifacts.single().absolutePath)
+                assertTrue(outputPath.exists())
+                val exportedText = outputPath.readText()
+                case.expectedSnippets.forEach { snippet ->
+                    assertTrue(
+                        exportedText.contains(snippet),
+                        "写盘缺少片段 `$snippet`，kind=${case.kind}，content=\n$exportedText",
+                    )
+                }
+
+                val importResult = runtime.renderService.importSource(SyncImportRequest(fileId = aggregate.file.id))
+                val importedDeclaration = importResult.files.single().declarations.single()
+                assertEquals(case.kind, importedDeclaration.kind)
+                assertEquals(case.declarationName, importedDeclaration.name)
+            }
+
+            val indexPreview = runtime.renderService.previewIndex(target.id)
+            cases.forEach { case ->
+                assertTrue(indexPreview.content.contains(case.declarationName))
+            }
+            assertEquals(cases.size, createdFiles.distinct().size)
+        }
+    }
 }
+
+private data class PresetCase(
+    val kind: DeclarationKind,
+    val declarationName: String,
+    val packageName: String,
+    val expectedSnippets: List<String>,
+)
 
 private data class ServerRuntime(
     val root: Path,

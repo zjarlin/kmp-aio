@@ -1,0 +1,60 @@
+{
+  "source": {
+    "type": "local",
+    "path": "."
+  },
+  "site": {
+    "title": "kmp-aio Docs",
+    "tagline": "Repository documentation generated from module README files.",
+    "url": "https://zjarlin.github.io",
+    "baseUrl": "/kmp-aio/",
+    "organizationName": "zjarlin",
+    "projectName": "kmp-aio",
+    "repositoryUrl": "https://github.com/zjarlin/kmp-aio",
+    "editUrl": "https://github.com/zjarlin/kmp-aio/tree/main",
+    "defaultLocale": "zh",
+    "locales": [
+      "zh",
+      "en"
+    ],
+    "navbar": {
+      "docsLabel": "Docs",
+      "repositoryLabel": "GitHub"
+    }
+  },
+  "collect": {
+    "include": [
+      "README.md",
+      "apps/**/README.md",
+      "lib/**/README.md"
+    ],
+    "exclude": [
+      "docs/**",
+      "**/.git/**",
+      "**/.gradle/**",
+      "**/build/**",
+      "**/node_modules/**"
+    ]
+  },
+  "render": {
+    "contentDir": "docs/content",
+    "generatedMetaFile": "docs/.xiaoeyu/site-metadata.json",
+    "stripFirstH1": true,
+    "generateIndex": true,
+    "indexSlug": "/",
+    "sourceNotice": "Automatically collected from `{path}`.",
+    "index": {
+      "title": "kmp-aio Docs",
+      "heading": "kmp-aio Docs",
+      "description": "Generated from README files across apps and shared libraries.",
+      "featuresTitle": "Highlights",
+      "features": [
+        "Collects app and library README files into one site.",
+        "Keeps module documentation navigable without hand-maintained sidebars.",
+        "Can be published directly as a static site."
+      ],
+      "emptyMessage": "No README files matched the current rules.",
+      "sectionTitle": "Modules"
+    }
+  }
+}

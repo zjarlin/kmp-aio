@@ -2,8 +2,9 @@ package site.addzero.vibepocket.screen
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import site.addzero.annotation.Route
 import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 import site.addzero.vibepocket.music.MusicTaskResourcePage
@@ -22,7 +23,12 @@ import site.addzero.vibepocket.settings.SettingsPage
 )
 @Composable
 fun MusicStudioScreen() {
-    val viewModel: MusicStudioViewModel = koinViewModel()
+    val viewModel: MusicStudioViewModel = koinInject()
+    DisposableEffect(viewModel) {
+        onDispose {
+            viewModel.dispose()
+        }
+    }
     VibePocketSceneRoot {
         MusicVibeScreen(viewModel = viewModel)
     }
@@ -37,7 +43,12 @@ fun MusicStudioScreen() {
 )
 @Composable
 fun CreativeAssetsScreen() {
-    val viewModel: CreativeAssetsViewModel = koinViewModel()
+    val viewModel: CreativeAssetsViewModel = koinInject()
+    DisposableEffect(viewModel) {
+        onDispose {
+            viewModel.dispose()
+        }
+    }
     VibePocketSceneRoot {
         MusicTaskResourcePage(viewModel = viewModel)
     }
@@ -52,7 +63,12 @@ fun CreativeAssetsScreen() {
 )
 @Composable
 fun SettingsScreen() {
-    val viewModel: SettingsViewModel = koinViewModel()
+    val viewModel: SettingsViewModel = koinInject()
+    DisposableEffect(viewModel) {
+        onDispose {
+            viewModel.dispose()
+        }
+    }
     VibePocketSceneRoot {
         SettingsPage(viewModel = viewModel)
     }

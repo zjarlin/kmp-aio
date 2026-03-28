@@ -3,14 +3,13 @@ package site.addzero.vibepocket.screens.creativeassets
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.koin.core.annotation.KoinViewModel
+import org.koin.core.annotation.Factory
 import site.addzero.vibepocket.api.ServerApiClient
 import site.addzero.vibepocket.api.suno.SunoTaskDetail
 import site.addzero.vibepocket.model.SunoTaskResourceItem
@@ -24,8 +23,8 @@ import site.addzero.vibepocket.music.reconcileTaskResourcesWithSuno
 import site.addzero.vibepocket.music.refreshSunoTaskSnapshotById
 import site.addzero.vibepocket.music.replaceTaskResource
 
-@KoinViewModel
-class CreativeAssetsViewModel : ViewModel() {
+@Factory
+class CreativeAssetsViewModel {
     private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var taskRefreshJob: Job? = null
 
@@ -221,9 +220,8 @@ class CreativeAssetsViewModel : ViewModel() {
         }
     }
 
-    override fun onCleared() {
+    fun dispose() {
         taskRefreshJob?.cancel()
         screenScope.cancel()
-        super.onCleared()
     }
 }

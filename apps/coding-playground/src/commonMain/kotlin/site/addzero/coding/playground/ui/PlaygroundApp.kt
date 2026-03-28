@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,10 @@ import site.addzero.coding.playground.shared.dto.SyncConflictMetaDto
 import site.addzero.coding.playground.shared.dto.SyncConflictResolution
 import site.addzero.coding.playground.shared.dto.ValidationIssueDto
 import site.addzero.coding.playground.shared.dto.ValidationSeverity
+import site.addzero.component.search_bar.AddSearchBar
+import site.addzero.component.tree.AddTree
+import site.addzero.component.tree.TreeViewModel
+import site.addzero.component.tree.rememberTreeViewModel
 
 private enum class InspectorTab(val title: String) {
     SOURCE_PREVIEW("源码预览"),
@@ -80,6 +85,21 @@ private data class PendingDelete(
     val title: String,
     val message: String,
     val onConfirm: suspend () -> Unit,
+)
+
+private enum class ExplorerNodeType {
+    PROJECT,
+    TARGET,
+    FILE,
+    DECLARATION,
+}
+
+private data class ExplorerNode(
+    val treeId: String,
+    val entityId: String,
+    val type: ExplorerNodeType,
+    val label: String,
+    val children: List<ExplorerNode> = emptyList(),
 )
 
 @Composable
@@ -131,34 +151,6 @@ fun PlaygroundApp(state: PlaygroundWorkbenchState) {
                     selectedTarget = selectedTarget,
                     selectedFile = selectedFile,
                     selectedDeclaration = selectedDeclaration,
-                    onRefresh = { scope.launchWorkbenchAction(state) { state.refreshAll() } },
-                    onCreateProject = {
-                        scope.launchWorkbenchAction(state) {
-                            state.saveProject(
-                                selectedId = null,
-                                request = CreateCodegenProjectRequest(
-                                    name = state.createDefaultProjectName(),
-                                    description = "新的 Kotlin 声明式代码生成项目",
-                                ),
-                            )
-                        }
-                    },
-                    onSelectProject = { projectId ->
-                        state.selectProject(projectId)
-                        scope.launchWorkbenchAction(state) { state.refreshProjectScope() }
-                    },
-                    onSelectTarget = { targetId ->
-                        state.selectTarget(targetId)
-                        scope.launchWorkbenchAction(state) { state.refreshFileScope() }
-                    },
-                    onSelectFile = { fileId ->
-                        state.selectFile(fileId)
-                        scope.launchWorkbenchAction(state) { state.refreshFileScope() }
-                    },
-                    onSelectDeclaration = { declarationId ->
-                        state.selectDeclaration(declarationId)
-                        scope.launchWorkbenchAction(state) { state.refreshFileScope() }
-                    },
                     modifier = Modifier.width(320.dp).fillMaxHeight(),
                 )
 
@@ -279,16 +271,69 @@ private fun ExplorerPane(
     selectedTarget: GenerationTargetDto?,
     selectedFile: SourceFileMetaDto?,
     selectedDeclaration: DeclarationMetaDto?,
-    onRefresh: () -> Unit,
-    onCreateProject: () -> Unit,
-    onSelectProject: (String?) -> Unit,
-    onSelectTarget: (String?) -> Unit,
-    onSelectFile: (String?) -> Unit,
-    onSelectDeclaration: (String?) -> Unit,
+    treeViewModel: TreeViewModel<ExplorerNode> = rememberTreeViewModel(),
     modifier: Modifier = Modifier,
 ) {
-    val scrollState = rememberScrollState()
-    val query = state.searchQuery.trim()
+    val scope = rememberCoroutineScope()
+    val nodes = remember(
+        state.projects,
+        state.projectAggregate,
+        selectedProject?.id,
+    ) {
+        buildExplorerNodes(
+            projects = state.projects,
+            selectedProjectId = selectedProject?.id,
+            aggregate = state.projectAggregate,
+        )
+    }
+    val selectedTreeId = remember(
+        selectedProject?.id,
+        selectedTarget?.id,
+        selectedFile?.id,
+        selectedDeclaration?.id,
+    ) {
+        selectedExplorerNodeId(
+            projectId = selectedProject?.id,
+            targetId = selectedTarget?.id,
+            fileId = selectedFile?.id,
+            declarationId = selectedDeclaration?.id,
+        )
+    }
+    LaunchedEffect(treeViewModel) {
+        treeViewModel.configure(
+            getId = ExplorerNode::treeId,
+            getLabel = ExplorerNode::label,
+            getChildren = ExplorerNode::children,
+        )
+    }
+
+    SideEffect {
+        treeViewModel.onNodeClick = { node ->
+            scope.launchWorkbenchAction(state) {
+                handleExplorerNodeClick(state, node)
+            }
+        }
+    }
+
+    LaunchedEffect(treeViewModel, nodes) {
+        treeViewModel.setItems(
+            newItems = nodes,
+            initiallyExpandedIds = nodes.expandedBranchIdsForSelection(selectedTreeId),
+        )
+    }
+
+    LaunchedEffect(treeViewModel, selectedTreeId) {
+        treeViewModel.selectNode(selectedTreeId)
+    }
+
+    LaunchedEffect(treeViewModel, state.searchQuery) {
+        if (treeViewModel.searchQuery != state.searchQuery) {
+            treeViewModel.updateSearchQuery(state.searchQuery)
+            if (state.searchQuery.isNotBlank()) {
+                treeViewModel.performSearch()
+            }
+        }
+    }
 
     Surface(
         modifier = modifier,
@@ -301,86 +346,59 @@ private fun ExplorerPane(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text("项目资源树", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = { state.searchQuery = it },
+            AddSearchBar(
+                keyword = state.searchQuery,
+                onKeyWordChanged = { query ->
+                    state.searchQuery = query
+                    treeViewModel.updateSearchQuery(query)
+                    if (query.isNotBlank()) {
+                        treeViewModel.performSearch()
+                    }
+                },
+                onSearch = {
+                    scope.launchWorkbenchAction(state) {
+                        state.refreshAll()
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                label = { Text("按项目、文件、声明搜索") },
+                placeholder = "搜索项目、目标、文件、声明",
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onRefresh, modifier = Modifier.weight(1f)) {
+                Button(
+                    onClick = {
+                        scope.launchWorkbenchAction(state) {
+                            state.refreshAll()
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
                     Text("刷新")
                 }
-                OutlinedButton(onClick = onCreateProject, modifier = Modifier.weight(1f)) {
+                OutlinedButton(
+                    onClick = {
+                        scope.launchWorkbenchAction(state) {
+                            state.saveProject(
+                                selectedId = null,
+                                request = CreateCodegenProjectRequest(
+                                    name = state.createDefaultProjectName(),
+                                    description = "新的 Kotlin 声明式代码生成项目",
+                                ),
+                            )
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                ) {
                     Text("新建项目")
                 }
             }
             HorizontalDivider()
-            Column(
-                modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(scrollState),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                if (state.projects.isEmpty()) {
-                    EmptyHint("还没有项目，先点“新建项目”开始。")
-                } else {
-                    state.projects
-                        .filter { matchesQuery(query, it.name, it.description.orEmpty()) || query.isBlank() }
-                        .forEach { project ->
-                            ExplorerRow(
-                                title = project.name,
-                                subtitle = project.description ?: "项目",
-                                selected = project.id == selectedProject?.id,
-                                level = 0,
-                                onClick = { onSelectProject(project.id) },
-                            )
-
-                            if (project.id == selectedProject?.id) {
-                                state.targets
-                                    .filter { it.projectId == project.id }
-                                    .filter { matchesQuery(query, it.name, it.basePackage, it.rootDir) || query.isBlank() }
-                                    .forEach { target ->
-                                        ExplorerRow(
-                                            title = target.name,
-                                            subtitle = "${target.basePackage} · ${target.sourceSet}",
-                                            selected = target.id == selectedTarget?.id,
-                                            level = 1,
-                                            onClick = { onSelectTarget(target.id) },
-                                        )
-
-                                        if (target.id == selectedTarget?.id) {
-                                            state.files
-                                                .filter { it.targetId == target.id }
-                                                .filter { matchesQuery(query, it.fileName, it.packageName) || query.isBlank() }
-                                                .forEach { file ->
-                                                    ExplorerRow(
-                                                        title = file.fileName,
-                                                        subtitle = file.packageName,
-                                                        selected = file.id == selectedFile?.id,
-                                                        level = 2,
-                                                        onClick = { onSelectFile(file.id) },
-                                                    )
-
-                                                    if (file.id == selectedFile?.id) {
-                                                        state.declarations
-                                                            .filter { it.fileId == file.id }
-                                                            .filter { matchesQuery(query, it.name, it.fqName, it.kind.label()) || query.isBlank() }
-                                                            .forEach { declaration ->
-                                                                ExplorerRow(
-                                                                    title = declaration.name,
-                                                                    subtitle = declaration.kind.label(),
-                                                                    selected = declaration.id == selectedDeclaration?.id,
-                                                                    level = 3,
-                                                                    onClick = { onSelectDeclaration(declaration.id) },
-                                                                )
-                                                            }
-                                                    }
-                                                }
-                                        }
-                                    }
-                            }
-                        }
-                }
+            if (state.projects.isEmpty()) {
+                EmptyHint("还没有项目，先点“新建项目”开始。")
+            } else {
+                AddTree(
+                    viewModel = treeViewModel,
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                )
             }
             HorizontalDivider()
             Text(
@@ -388,31 +406,6 @@ private fun ExplorerPane(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.secondary,
             )
-        }
-    }
-}
-
-@Composable
-private fun ExplorerRow(
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    level: Int,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(start = (level * 16).dp + 10.dp, top = 8.dp, end = 10.dp, bottom = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(title, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
         }
     }
 }
@@ -715,9 +708,14 @@ private fun ProjectEditorCard(
         FormGroupTitle("必填项")
         FieldLabel("项目名称", required = true)
         OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-        FormGroupTitle("可选项")
-        FieldLabel("说明")
-        OutlinedTextField(value = description, onValueChange = { description = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        OptionalFieldsSection(
+            rememberKey = selectedProject?.id,
+            defaultExpanded = !selectedProject?.description.isNullOrBlank(),
+            collapsedHint = "说明默认留空，需要时再展开。",
+        ) {
+            FieldLabel("说明")
+            OutlinedTextField(value = description, onValueChange = { description = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
                 onClick = { onSave(ProjectFormState(name = name.trim(), description = description.ifBlank { null })) },
@@ -787,26 +785,26 @@ private fun TargetEditorCard(
                     OutlinedTextField(value = indexPackage, onValueChange = { indexPackage = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 },
             )
-            FormGroupTitle("可选项")
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+            OptionalFieldsSection(
+                rememberKey = selectedTarget?.id,
+                defaultExpanded = selectedTarget?.variables?.isNotEmpty() == true || selectedTarget?.kspEnabled == false,
+                collapsedHint = "高级配置默认收起，避免干扰核心定义。",
             ) {
-                Column {
-                    Text("启用 KSP 索引伴生")
-                    Text("开启后，目标工程可通过注解处理器生成静态索引。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-                }
-                Switch(checked = kspEnabled, onCheckedChange = { kspEnabled = it })
+                CompactSwitchField(
+                    label = "启用 KSP 索引伴生",
+                    description = "开启后，目标工程可通过注解处理器生成静态索引。",
+                    checked = kspEnabled,
+                    onCheckedChange = { kspEnabled = it },
+                )
+                FieldLabel("自定义变量")
+                OutlinedTextField(
+                    value = variablesText,
+                    onValueChange = { variablesText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    supportingText = { Text("每行一个键值对，格式为 key=value") },
+                )
             }
-            FieldLabel("自定义变量")
-            OutlinedTextField(
-                value = variablesText,
-                onValueChange = { variablesText = it },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                supportingText = { Text("每行一个键值对，格式为 key=value") },
-            )
             state.targetPathPreview?.let {
                 InfoBlock(
                     title = "当前路径预览",
@@ -872,9 +870,6 @@ private fun FileEditorCard(
                     OutlinedTextField(value = fileName, onValueChange = { fileName = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                 },
             )
-            FormGroupTitle("可选项")
-            FieldLabel("文档说明")
-            OutlinedTextField(value = docComment, onValueChange = { docComment = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -900,34 +895,48 @@ private fun FileEditorCard(
                     }
                 }
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-            Text("导包", fontWeight = FontWeight.SemiBold)
-            imports.forEach { importItem ->
-                TokenRow(
-                    primary = importItem.importPath,
-                    secondary = importItem.alias?.let { "别名：$it" } ?: "普通导包",
-                    onDelete = {
-                        scope.launchWorkbenchAction(state) {
-                            state.deleteImport(importItem.id)
-                        }
+            OptionalFieldsSection(
+                rememberKey = selectedFile?.id,
+                defaultExpanded = docComment.isNotBlank() || imports.isNotEmpty(),
+                collapsedHint = "文档说明和导包默认隐藏，需要时再展开。",
+            ) {
+                FieldLabel("文档说明")
+                OutlinedTextField(value = docComment, onValueChange = { docComment = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                Text("导包", fontWeight = FontWeight.SemiBold)
+                imports.forEach { importItem ->
+                    TokenRow(
+                        primary = importItem.importPath,
+                        secondary = importItem.alias?.let { "别名：$it" } ?: "普通导包",
+                        onDelete = {
+                            scope.launchWorkbenchAction(state) {
+                                state.deleteImport(importItem.id)
+                            }
+                        },
+                    )
+                }
+                CompactFieldRow(
+                    left = {
+                        FieldLabel("新增导包")
+                        OutlinedTextField(value = importPath, onValueChange = { importPath = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    },
+                    right = {
+                        FieldLabel("导包别名")
+                        OutlinedTextField(value = importAlias, onValueChange = { importAlias = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                     },
                 )
-            }
-            FieldLabel("新增导包")
-            OutlinedTextField(value = importPath, onValueChange = { importPath = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            FieldLabel("导包别名")
-            OutlinedTextField(value = importAlias, onValueChange = { importAlias = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            Button(
-                onClick = {
-                    scope.launchWorkbenchAction(state) {
-                        state.addImport(importPath.trim(), importAlias.ifBlank { null })
-                        importPath = ""
-                        importAlias = ""
-                    }
-                },
-                enabled = selectedFile != null && importPath.isNotBlank(),
-            ) {
-                Text("添加导包")
+                Button(
+                    onClick = {
+                        scope.launchWorkbenchAction(state) {
+                            state.addImport(importPath.trim(), importAlias.ifBlank { null })
+                            importPath = ""
+                            importAlias = ""
+                        }
+                    },
+                    enabled = selectedFile != null && importPath.isNotBlank(),
+                ) {
+                    Text("添加导包")
+                }
             }
         }
     }
@@ -980,25 +989,30 @@ private fun DeclarationEditorCard(
                 labelOf = { it.label() },
                 onSelected = { visibility = it },
             )
-            FormGroupTitle("可选项")
-            FieldLabel("文档说明")
-            OutlinedTextField(value = docComment, onValueChange = { docComment = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
-            FieldLabel("修饰符")
-            OutlinedTextField(
-                value = modifiersText,
-                onValueChange = { modifiersText = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                supportingText = { Text("使用逗号分隔，例如 sealed, expect") },
-            )
-            FieldLabel("继承或实现")
-            OutlinedTextField(
-                value = superTypesText,
-                onValueChange = { superTypesText = it },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                supportingText = { Text("使用逗号分隔，例如 Serializable, BaseModel") },
-            )
+            OptionalFieldsSection(
+                rememberKey = selectedDeclaration?.id,
+                defaultExpanded = docComment.isNotBlank() || modifiersText.isNotBlank() || superTypesText.isNotBlank(),
+                collapsedHint = "文档、修饰符和继承列表默认收起。",
+            ) {
+                FieldLabel("文档说明")
+                OutlinedTextField(value = docComment, onValueChange = { docComment = it }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                FieldLabel("修饰符")
+                OutlinedTextField(
+                    value = modifiersText,
+                    onValueChange = { modifiersText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    supportingText = { Text("使用逗号分隔，例如 sealed, expect") },
+                )
+                FieldLabel("继承或实现")
+                OutlinedTextField(
+                    value = superTypesText,
+                    onValueChange = { superTypesText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    supportingText = { Text("使用逗号分隔，例如 Serializable, BaseModel") },
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = {
@@ -1098,15 +1112,20 @@ private fun AnnotationEditorCard(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
         )
-        FormGroupTitle("可选项")
-        FieldLabel("注解参数")
-        OutlinedTextField(
-            value = argsText,
-            onValueChange = { argsText = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            supportingText = { Text("示例：name = \"demo\", enabled = true") },
-        )
+        OptionalFieldsSection(
+            rememberKey = "annotation-${selectedAnnotations.size}",
+            defaultExpanded = false,
+            collapsedHint = "无参数注解可以直接保存。",
+        ) {
+            FieldLabel("注解参数")
+            OutlinedTextField(
+                value = argsText,
+                onValueChange = { argsText = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                supportingText = { Text("示例：name = \"demo\", enabled = true") },
+            )
+        }
         Button(
             onClick = {
                 scope.launchWorkbenchAction(state) {
@@ -1152,20 +1171,22 @@ private fun ConstructorParamCard(
             },
             right = {
                 FieldLabel("类型", required = true)
-                OutlinedTextField(value = type, onValueChange = { type = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            },
+                    OutlinedTextField(value = type, onValueChange = { type = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                },
         )
-        FormGroupTitle("可选项")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        OptionalFieldsSection(
+            rememberKey = "ctor-${selectedDeclaration.id}",
+            defaultExpanded = false,
+            collapsedHint = "默认生成 val 参数；只有需要 var 或默认值时再展开。",
         ) {
-            Text("使用 var")
-            Switch(checked = mutable, onCheckedChange = { mutable = it })
+            CompactSwitchField(
+                label = "使用 var",
+                checked = mutable,
+                onCheckedChange = { mutable = it },
+            )
+            FieldLabel("默认值")
+            OutlinedTextField(value = defaultValue, onValueChange = { defaultValue = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         }
-        FieldLabel("默认值")
-        OutlinedTextField(value = defaultValue, onValueChange = { defaultValue = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Button(
             onClick = {
                 scope.launchWorkbenchAction(state) {
@@ -1213,20 +1234,22 @@ private fun PropertyEditorCard(
             },
             right = {
                 FieldLabel("类型", required = true)
-                OutlinedTextField(value = type, onValueChange = { type = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            },
+                    OutlinedTextField(value = type, onValueChange = { type = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                },
         )
-        FormGroupTitle("可选项")
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        OptionalFieldsSection(
+            rememberKey = "property-${selectedDeclaration.id}",
+            defaultExpanded = false,
+            collapsedHint = "默认生成只读属性；只有需要 var 或初始值时再展开。",
         ) {
-            Text("使用 var")
-            Switch(checked = mutable, onCheckedChange = { mutable = it })
+            CompactSwitchField(
+                label = "使用 var",
+                checked = mutable,
+                onCheckedChange = { mutable = it },
+            )
+            FieldLabel("初始值")
+            OutlinedTextField(value = initializer, onValueChange = { initializer = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         }
-        FieldLabel("初始值")
-        OutlinedTextField(value = initializer, onValueChange = { initializer = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         Button(
             onClick = {
                 scope.launchWorkbenchAction(state) {
@@ -1309,18 +1332,23 @@ private fun FunctionEditorCard(
             },
             right = {
                 FieldLabel("返回类型", required = true)
-                OutlinedTextField(value = returnType, onValueChange = { returnType = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            },
+                    OutlinedTextField(value = returnType, onValueChange = { returnType = it }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                },
         )
-        FormGroupTitle("可选项")
-        FieldLabel("参数列表")
-        OutlinedTextField(
-            value = parametersText,
-            onValueChange = { parametersText = it },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3,
-            supportingText = { Text("每行一个参数，格式：name: Type = default") },
-        )
+        OptionalFieldsSection(
+            rememberKey = "function-${selectedDeclaration.id}",
+            defaultExpanded = false,
+            collapsedHint = "无参函数可直接保存；需要参数时再展开。",
+        ) {
+            FieldLabel("参数列表")
+            OutlinedTextField(
+                value = parametersText,
+                onValueChange = { parametersText = it },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 3,
+                supportingText = { Text("每行一个参数，格式：name: Type = default") },
+            )
+        }
         Button(
             onClick = {
                 scope.launchWorkbenchAction(state) {
@@ -1556,8 +1584,8 @@ private fun SectionCard(
         shape = RoundedCornerShape(16.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
             content = {
                 Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 content()
@@ -1571,7 +1599,7 @@ private fun FormGroupTitle(text: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.primary,
         )
@@ -1586,7 +1614,7 @@ private fun CompactFieldRow(
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.Top,
     ) {
         Column(
@@ -1599,6 +1627,73 @@ private fun CompactFieldRow(
             verticalArrangement = Arrangement.spacedBy(4.dp),
             content = right,
         )
+    }
+}
+
+@Composable
+private fun OptionalFieldsSection(
+    rememberKey: Any?,
+    defaultExpanded: Boolean = false,
+    title: String = "可选项",
+    collapsedHint: String = "默认收起，需要时再展开。",
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    var expanded by remember(rememberKey) { mutableStateOf(defaultExpanded) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+            TextButton(onClick = { expanded = !expanded }) {
+                Text(if (expanded) "收起" else "展开")
+            }
+        }
+        if (expanded) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+        } else {
+            Text(
+                text = collapsedHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.secondary,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactSwitchField(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    description: String? = null,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(label)
+            description?.let {
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -1618,7 +1713,7 @@ private fun FieldLabel(
         )
         if (required) {
             Text(
-                text = "必填",
+                text = "*",
                 style = MaterialTheme.typography.labelSmall,
                 color = Color(0xFFB91C1C),
                 fontWeight = FontWeight.SemiBold,
@@ -1636,8 +1731,9 @@ private fun EmptyHint(text: String) {
     ) {
         Text(
             text = text,
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 9.dp),
             color = MaterialTheme.colorScheme.secondary,
+            style = MaterialTheme.typography.bodySmall,
         )
     }
 }
@@ -1674,7 +1770,7 @@ private fun TokenRow(
         color = MaterialTheme.colorScheme.surface,
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -1751,11 +1847,122 @@ private fun ConfirmDeleteDialog(
     )
 }
 
-private fun matchesQuery(query: String, vararg values: String): Boolean {
-    if (query.isBlank()) {
-        return true
+private fun buildExplorerNodes(
+    projects: List<CodegenProjectDto>,
+    selectedProjectId: String?,
+    aggregate: site.addzero.coding.playground.shared.dto.CodegenProjectAggregateDto?,
+): List<ExplorerNode> {
+    return projects.map { project ->
+        val targetNodes = if (project.id == selectedProjectId && aggregate != null) {
+            aggregate.targets.map { target ->
+                val fileNodes = aggregate.files
+                    .filter { it.targetId == target.id }
+                    .map { file ->
+                        ExplorerNode(
+                            treeId = explorerTreeId(ExplorerNodeType.FILE, file.id),
+                            entityId = file.id,
+                            type = ExplorerNodeType.FILE,
+                            label = "${file.fileName} · ${file.packageName}",
+                            children = aggregate.declarations
+                                .filter { it.fileId == file.id }
+                                .map { declaration ->
+                                    ExplorerNode(
+                                        treeId = explorerTreeId(ExplorerNodeType.DECLARATION, declaration.id),
+                                        entityId = declaration.id,
+                                        type = ExplorerNodeType.DECLARATION,
+                                        label = "${declaration.name} · ${declaration.kind.label()}",
+                                    )
+                                },
+                        )
+                    }
+                ExplorerNode(
+                    treeId = explorerTreeId(ExplorerNodeType.TARGET, target.id),
+                    entityId = target.id,
+                    type = ExplorerNodeType.TARGET,
+                    label = "${target.name} · ${target.sourceSet}",
+                    children = fileNodes,
+                )
+            }
+        } else {
+            emptyList()
+        }
+        ExplorerNode(
+            treeId = explorerTreeId(ExplorerNodeType.PROJECT, project.id),
+            entityId = project.id,
+            type = ExplorerNodeType.PROJECT,
+            label = project.description?.takeIf { it.isNotBlank() }?.let { "${project.name} · $it" } ?: project.name,
+            children = targetNodes,
+        )
     }
-    return values.any { it.contains(query, ignoreCase = true) }
+}
+
+private fun selectedExplorerNodeId(
+    projectId: String?,
+    targetId: String?,
+    fileId: String?,
+    declarationId: String?,
+): String? {
+    return when {
+        declarationId != null -> explorerTreeId(ExplorerNodeType.DECLARATION, declarationId)
+        fileId != null -> explorerTreeId(ExplorerNodeType.FILE, fileId)
+        targetId != null -> explorerTreeId(ExplorerNodeType.TARGET, targetId)
+        projectId != null -> explorerTreeId(ExplorerNodeType.PROJECT, projectId)
+        else -> null
+    }
+}
+
+private fun explorerTreeId(
+    type: ExplorerNodeType,
+    entityId: String,
+): String {
+    return "${type.name.lowercase()}:$entityId"
+}
+
+private suspend fun handleExplorerNodeClick(
+    state: PlaygroundWorkbenchState,
+    node: ExplorerNode,
+) {
+    when (node.type) {
+        ExplorerNodeType.PROJECT -> {
+            state.selectProject(node.entityId)
+            state.refreshProjectScope()
+        }
+        ExplorerNodeType.TARGET -> {
+            state.selectTarget(node.entityId)
+            state.refreshFileScope()
+        }
+        ExplorerNodeType.FILE -> {
+            state.selectFile(node.entityId)
+            state.refreshFileScope()
+        }
+        ExplorerNodeType.DECLARATION -> {
+            state.selectDeclaration(node.entityId)
+            state.refreshFileScope()
+        }
+    }
+}
+
+private fun List<ExplorerNode>.expandedBranchIdsForSelection(
+    selectedTreeId: String?,
+): Set<Any> {
+    if (selectedTreeId == null) {
+        return emptySet()
+    }
+    return buildSet {
+        fun collect(nodes: List<ExplorerNode>): Boolean {
+            nodes.forEach { node ->
+                val containsSelection = node.treeId == selectedTreeId || collect(node.children)
+                if (containsSelection && node.children.isNotEmpty()) {
+                    add(node.treeId)
+                }
+                if (containsSelection) {
+                    return true
+                }
+            }
+            return false
+        }
+        collect(this@expandedBranchIdsForSelection)
+    }
 }
 
 private fun CoroutineScope.launchWorkbenchAction(

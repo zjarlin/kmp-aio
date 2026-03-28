@@ -1,3 +1,14 @@
+pluginManagement {
+    val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+    if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+        includeBuild(localAddzeroLibJvmDir) {
+            name = "addzero-lib-jvm"
+        }
+    }
+}
+
+val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
@@ -8,9 +19,10 @@ plugins {
     id("site.addzero.gradle.plugin.modules-buddy") version "+"
 }
 
-val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
 if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
-    includeBuild(localAddzeroLibJvmDir)
+    includeBuild(localAddzeroLibJvmDir) {
+        name = "addzero-lib-jvm"
+    }
 }
 
 dependencyResolutionManagement {

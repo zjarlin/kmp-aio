@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.client
 
 import site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
@@ -66,6 +67,10 @@ class McuConsoleRemoteService {
 
     suspend fun getScriptStatus(): McuScriptStatusResponse {
         return McuConsoleApiClient.api.getScriptStatus()
+    }
+
+    suspend fun listFlashProfiles(): List<McuFlashProfileSummary> {
+        return McuConsoleApiClient.api.listFlashProfiles().items
     }
 
     suspend fun startFlash(

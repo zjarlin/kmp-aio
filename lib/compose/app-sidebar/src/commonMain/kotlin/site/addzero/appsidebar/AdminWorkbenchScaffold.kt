@@ -192,13 +192,13 @@ fun WorkbenchThemeToggleButton(
     lightLabel: String = "浅色",
 ) {
     WorkbenchUtilityButton(
-        label = if (isDarkTheme) darkLabel else lightLabel,
+        label = if (isDarkTheme) lightLabel else darkLabel,
         modifier = modifier,
         onClick = onClick,
         highlighted = true,
         leading = {
             Icon(
-                imageVector = if (isDarkTheme) Icons.Rounded.DarkMode else Icons.Rounded.LightMode,
+                imageVector = if (isDarkTheme) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
                 contentDescription = null,
                 tint = AdminWorkbenchTokens.textPrimary,
             )

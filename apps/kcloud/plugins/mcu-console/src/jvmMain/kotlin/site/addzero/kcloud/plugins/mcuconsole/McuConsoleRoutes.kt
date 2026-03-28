@@ -9,6 +9,7 @@ import site.addzero.kcloud.plugins.mcuconsole.routes.executeMcuScript
 import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuFlashStatus
 import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuScriptStatus
 import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuSession
+import site.addzero.kcloud.plugins.mcuconsole.routes.listMcuFlashProfiles
 import site.addzero.kcloud.plugins.mcuconsole.routes.listMcuPorts
 import site.addzero.kcloud.plugins.mcuconsole.routes.openMcuSession
 import site.addzero.kcloud.plugins.mcuconsole.routes.readMcuEvents
@@ -56,6 +57,9 @@ fun Route.mcuConsoleRoutes() {
     }
     get("/api/mcu/script/status") {
         call.respond(getMcuScriptStatus())
+    }
+    get("/api/mcu/flash/profiles") {
+        call.respond(listMcuFlashProfiles())
     }
     post("/api/mcu/flash/start") {
         call.respond(startMcuFlash(call.requireRequestBody()))

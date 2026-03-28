@@ -41,7 +41,7 @@ object KCloudSceneRegistry {
             iconName = "Build",
             sort = 0,
             routePathPrefixes = listOf("mcu/"),
-            defaultRoutePath = RouteKeys.MCU_CONTROL_SCREEN,
+            defaultRoutePath = RouteKeys.MCU_FLASH_SCREEN,
         ),
         KCloudSceneDefinition(
             id = "system",

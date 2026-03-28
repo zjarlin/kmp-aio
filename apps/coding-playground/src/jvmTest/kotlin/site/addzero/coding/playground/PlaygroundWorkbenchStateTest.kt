@@ -170,6 +170,61 @@ class PlaygroundWorkbenchStateTest {
             )
         }
     }
+
+    @Test
+    fun workbenchStateSupportsOtherDeclarationPresetFlows() = withWorkbenchState { runtime ->
+        runBlocking {
+            runtime.state.refreshAll()
+            runtime.state.saveProject(
+                selectedId = null,
+                request = CreateCodegenProjectRequest(
+                    name = "multi-kind-project",
+                    description = "多声明类型状态测试",
+                ),
+            )
+            runtime.state.saveTarget(
+                selectedId = null,
+                request = CreateGenerationTargetRequest(
+                    projectId = runtime.state.selectedProjectId!!,
+                    name = "multi-kind-target",
+                    rootDir = runtime.root.resolve("generated").toString(),
+                    sourceSet = "main",
+                    basePackage = "site.addzero.generated.multikind",
+                    indexPackage = "site.addzero.generated.multikind.index",
+                    kspEnabled = true,
+                ),
+            )
+
+            val cases = listOf(
+                DeclarationKind.ENUM_CLASS to "WorkbenchStatus",
+                DeclarationKind.INTERFACE to "WorkbenchGateway",
+                DeclarationKind.OBJECT to "WorkbenchDefaults",
+                DeclarationKind.ANNOTATION_CLASS to "WorkbenchManaged",
+            )
+
+            cases.forEach { (kind, name) ->
+                runtime.state.createPreset(
+                    kind = kind,
+                    declarationName = name,
+                    packageName = "site.addzero.generated.multikind.${kind.name.lowercase()}",
+                )
+                runtime.state.refreshPreview()
+                val preview = requireNotNull(runtime.state.sourcePreview)
+                assertTrue(preview.content.contains(name), "预览没有声明 $name")
+                runtime.state.exportSelectedFile()
+                runtime.state.importSelectedFile()
+                assertTrue(
+                    runtime.state.fileAggregate?.declarations?.any { it.name == name && it.kind == kind } == true,
+                    "导回后没有保留声明 $name / $kind",
+                )
+            }
+
+            val preview = requireNotNull(runtime.state.kspPreview)
+            cases.forEach { (_, name) ->
+                assertTrue(preview.content.contains(name), "索引预览缺少 $name")
+            }
+        }
+    }
 }
 
 private data class WorkbenchStateRuntime(

@@ -36,6 +36,7 @@ import site.addzero.component.button.AddIconButton
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
 import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
 
@@ -118,6 +119,7 @@ internal fun McuPanel(
         shape = RoundedCornerShape(16.dp),
         tonalElevation = 2.dp,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(14.dp),
@@ -143,6 +145,7 @@ internal fun McuToolbar(
         shape = RoundedCornerShape(14.dp),
         tonalElevation = 1.dp,
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
@@ -206,6 +209,44 @@ internal fun McuPortBrowser(
 }
 
 @Composable
+internal fun McuFlashProfileBrowser(
+    profiles: List<McuFlashProfileSummary>,
+    selectedProfileId: String?,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (profiles.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxWidth().height(120.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "暂无烧录能力包",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            items = profiles,
+            key = { profile -> profile.id },
+        ) { profile ->
+            McuFlashProfileRow(
+                profile = profile,
+                selected = profile.id == selectedProfileId,
+                onClick = { onSelect(profile.id) },
+            )
+        }
+    }
+}
+
+@Composable
 private fun McuPortRow(
     port: McuPortSummary,
     selected: Boolean,
@@ -216,10 +257,16 @@ private fun McuPortRow(
     } else {
         MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
     }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = background,
+        contentColor = contentColor,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -238,10 +285,67 @@ private fun McuPortRow(
                     .joinToString(" / ")
                     .ifBlank { "-" },
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.76f),
+                color = contentColor.copy(alpha = 0.76f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+    }
+}
+
+@Composable
+private fun McuFlashProfileRow(
+    profile: McuFlashProfileSummary,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val background = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = background,
+        contentColor = contentColor,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = profile.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${profile.runtimeKind.name} / ${profile.strategyKind.name} / ${profile.mcuFamily}",
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.76f),
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (profile.description.isNotBlank()) {
+                Text(
+                    text = buildString {
+                        append(profile.description)
+                        append(" / ")
+                        append(if (profile.requiresPort) "串口必选" else "串口可选")
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = contentColor.copy(alpha = 0.68f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
@@ -265,11 +369,12 @@ internal fun McuSummaryTable(
                     text = label,
                     modifier = Modifier.width(78.dp),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
                     text = value.ifBlank { "-" },
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     fontFamily = if (value.contains('/') || value.contains('\\') || value.contains('{')) {
                         FontFamily.Monospace
                     } else {
@@ -296,7 +401,7 @@ internal fun McuEventFeed(
             Text(
                 text = "暂无事件",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.54f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         return
@@ -321,6 +426,7 @@ internal fun McuEventFeed(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.78f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(10.dp),
@@ -342,7 +448,7 @@ internal fun McuEventFeed(
                         Text(
                             text = event.timestamp.substringAfter('T').substringBefore('.'),
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.54f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     Text(
@@ -354,7 +460,7 @@ internal fun McuEventFeed(
                             text = raw,
                             style = MaterialTheme.typography.bodySmall,
                             fontFamily = FontFamily.Monospace,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.66f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -370,6 +476,7 @@ internal fun McuCompactInput(
     label: String,
     modifier: Modifier = Modifier,
     singleLine: Boolean = true,
+    supportingText: String? = null,
 ) {
     OutlinedTextField(
         value = value,
@@ -377,6 +484,21 @@ internal fun McuCompactInput(
         label = {
             Text(label)
         },
+        supportingText = supportingText
+            ?.takeIf { it.isNotBlank() }
+            ?.let { text ->
+                {
+                    Text(
+                        text = text,
+                        maxLines = if (singleLine) {
+                            1
+                        } else {
+                            2
+                        },
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            },
         modifier = modifier.fillMaxWidth(),
         singleLine = singleLine,
         textStyle = MaterialTheme.typography.bodyMedium.copy(
