@@ -11,6 +11,7 @@ captures
 .externalNativeBuild
 .cxx
 *.xcodeproj/*
+build-logic
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
