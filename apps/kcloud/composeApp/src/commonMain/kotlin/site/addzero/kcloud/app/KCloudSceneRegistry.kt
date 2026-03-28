@@ -49,7 +49,7 @@ object KCloudSceneRegistry {
             iconName = "AdminPanelSettings",
             sort = 100,
             routePathPrefixes = listOf("system/"),
-            defaultRoutePath = RouteKeys.RBAC_USER_SCREEN,
+            defaultRoutePath = "system/config-center/entries",
         ),
         KCloudSceneDefinition(
             id = "music-creation",

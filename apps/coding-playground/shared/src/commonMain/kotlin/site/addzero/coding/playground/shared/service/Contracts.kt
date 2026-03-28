@@ -27,6 +27,7 @@ interface GenerationTargetService {
 interface SourceFileService {
     suspend fun create(request: CreateSourceFileRequest): SourceFileMetaDto
     suspend fun createPreset(request: CreateDeclarationPresetRequest): SourceFileAggregateDto
+    suspend fun createScenePreset(request: CreateScenePresetRequest): ScenePresetResultDto
     suspend fun list(search: CodegenSearchRequest = CodegenSearchRequest()): List<SourceFileMetaDto>
     suspend fun get(id: String): SourceFileMetaDto
     suspend fun aggregate(id: String): SourceFileAggregateDto

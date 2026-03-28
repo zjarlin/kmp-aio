@@ -4,16 +4,26 @@ import site.addzero.coding.playground.shared.dto.CodeVisibility
 import site.addzero.coding.playground.shared.dto.ConflictReason
 import site.addzero.coding.playground.shared.dto.DeclarationKind
 import site.addzero.coding.playground.shared.dto.ManagedArtifactSyncStatus
+import site.addzero.coding.playground.shared.dto.ScenePresetKind
 import site.addzero.coding.playground.shared.dto.SyncConflictResolution
 import site.addzero.coding.playground.shared.dto.ValidationSeverity
 
 fun DeclarationKind.label(): String {
     return when (this) {
         DeclarationKind.DATA_CLASS -> "数据类"
+        DeclarationKind.CLASS -> "普通类"
         DeclarationKind.ENUM_CLASS -> "枚举类"
         DeclarationKind.INTERFACE -> "接口"
         DeclarationKind.OBJECT -> "对象"
         DeclarationKind.ANNOTATION_CLASS -> "注解类"
+    }
+}
+
+fun ScenePresetKind.label(): String {
+    return when (this) {
+        ScenePresetKind.BUSINESS_CRUD -> "业务 CRUD 壳"
+        ScenePresetKind.SKILL_DOTFILE -> "Skills / Dotfiles 场景"
+        ScenePresetKind.KCLOUD_PLUGIN -> "KCloud 插件场景"
     }
 }
 

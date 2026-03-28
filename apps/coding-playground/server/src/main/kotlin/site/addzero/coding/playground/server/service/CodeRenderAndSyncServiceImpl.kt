@@ -730,6 +730,14 @@ class CodeRenderAndSyncServiceImpl(
                 lines += "${prefix}data class ${declaration.name}$constructorText$superTypeSuffix${renderOptionalBody(members)}"
             }
 
+            DeclarationKind.CLASS -> {
+                val constructorText = constructorParams.takeIf { it.isNotEmpty() }?.joinToString(",\n", prefix = "(\n", postfix = "\n)") {
+                    "    ${renderConstructorParam(it, ownerAnnotations, annotationArgs)}"
+                }.orEmpty()
+                val body = renderMembers(properties, functions, ownerAnnotations, annotationArgs)
+                lines += "${prefix}class ${declaration.name}$constructorText$superTypeSuffix ${body.ifBlank { "{\n}" }}"
+            }
+
             DeclarationKind.ENUM_CLASS -> {
                 val header = "${prefix}enum class ${declaration.name}$superTypeSuffix"
                 val body = renderEnumBody(enumEntries, properties, functions, ownerAnnotations, annotationArgs)
@@ -769,7 +777,10 @@ class CodeRenderAndSyncServiceImpl(
         val tagLines = buildList {
             add("@author ${resolveDocAuthor()}")
             add("@date ${formatDocDate(declaration.createdAt)}")
-            if (declaration.kind == DeclarationKind.DATA_CLASS || declaration.kind == DeclarationKind.ANNOTATION_CLASS) {
+            if (declaration.kind == DeclarationKind.DATA_CLASS ||
+                declaration.kind == DeclarationKind.ANNOTATION_CLASS ||
+                (declaration.kind == DeclarationKind.CLASS && constructorParams.isNotEmpty())
+            ) {
                 add("@constructor 创建[${declaration.name}]")
                 constructorParams.forEach { param ->
                     add("@param [${param.name}]")
@@ -1080,7 +1091,7 @@ private fun parseDeclaration(text: String): ParsedDeclaration {
     }
     val headerAndBody = lines.joinToString("\n").trim()
     val declarationId = Regex("""@GeneratedManagedDeclaration\(declarationId = "([^"]+)"""").find(text)?.groupValues?.get(1)
-    val headerRegex = Regex("""^(public|internal|private)\s+([A-Za-z\s]*)?(data class|enum class|interface|object|annotation class)\s+([A-Za-z_][A-Za-z0-9_]*)([\s\S]*)$""")
+    val headerRegex = Regex("""^(public|internal|private)\s+([A-Za-z\s]*)?(data class|class|enum class|interface|object|annotation class)\s+([A-Za-z_][A-Za-z0-9_]*)([\s\S]*)$""")
     val match = headerRegex.find(headerAndBody) ?: throw PlaygroundValidationException("暂不支持当前声明头部格式")
     val visibility = enumValueOf<CodeVisibility>(match.groupValues[1].uppercase())
     val modifierText = match.groupValues[2].trim()
@@ -1089,6 +1100,7 @@ private fun parseDeclaration(text: String): ParsedDeclaration {
     val remainder = match.groupValues[5]
     val kind = when (kindToken) {
         "data class" -> DeclarationKind.DATA_CLASS
+        "class" -> DeclarationKind.CLASS
         "enum class" -> DeclarationKind.ENUM_CLASS
         "interface" -> DeclarationKind.INTERFACE
         "object" -> DeclarationKind.OBJECT
@@ -1097,7 +1109,7 @@ private fun parseDeclaration(text: String): ParsedDeclaration {
     }
     val signature = remainder.substringBefore("{").trim()
     val body = if (remainder.contains("{")) remainder.substringAfter("{").substringBeforeLast("}").trim() else ""
-    val constructorParams = if (kind in setOf(DeclarationKind.DATA_CLASS, DeclarationKind.ANNOTATION_CLASS)) {
+    val constructorParams = if (kind in setOf(DeclarationKind.DATA_CLASS, DeclarationKind.CLASS, DeclarationKind.ANNOTATION_CLASS)) {
         parseConstructorParams(signature)
     } else {
         emptyList()

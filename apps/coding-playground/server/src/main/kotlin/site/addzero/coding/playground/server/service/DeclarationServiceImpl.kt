@@ -103,6 +103,9 @@ class DeclarationServiceImpl(
         if (declaration.kind == DeclarationKind.DATA_CLASS && support.listConstructorParams(id).isEmpty()) {
             issues += serviceSupport.buildValidationIssue("declaration", id, ValidationSeverity.WARNING, "data class 没有主构造参数")
         }
+        if (declaration.kind == DeclarationKind.CLASS && support.listFunctionStubs(id).isEmpty() && support.listProperties(id).isEmpty()) {
+            issues += serviceSupport.buildValidationIssue("declaration", id, ValidationSeverity.INFO, "普通类还没有属性或函数")
+        }
         if (declaration.kind == DeclarationKind.ENUM_CLASS && support.listEnumEntries(id).isEmpty()) {
             issues += serviceSupport.buildValidationIssue("declaration", id, ValidationSeverity.WARNING, "枚举类还没有枚举项")
         }
@@ -148,8 +151,8 @@ class DeclarationServiceImpl(
 
     override suspend fun createConstructorParam(request: CreateConstructorParamRequest): ConstructorParamMetaDto {
         val declaration = support.declarationOrThrow(request.declarationId).toDto()
-        if (declaration.kind !in setOf(DeclarationKind.DATA_CLASS, DeclarationKind.ANNOTATION_CLASS)) {
-            throw PlaygroundValidationException("只有 data class 和 annotation class 支持主构造参数")
+        if (declaration.kind !in setOf(DeclarationKind.DATA_CLASS, DeclarationKind.CLASS, DeclarationKind.ANNOTATION_CLASS)) {
+            throw PlaygroundValidationException("只有 data class、class 和 annotation class 支持主构造参数")
         }
         serviceSupport.requireIdentifier(request.name, "参数名称")
         serviceSupport.requireText(request.type, "参数类型")

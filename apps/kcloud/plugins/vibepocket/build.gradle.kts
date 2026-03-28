@@ -51,6 +51,7 @@ kotlin {
             implementation(libs.findLibrary("site-addzero-route-core").get())
         }
         jvmMain.dependencies {
+            implementation(project(":lib:config-center:runtime-jvm"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation("site.addzero:tool-api-suno:2026.02.06")

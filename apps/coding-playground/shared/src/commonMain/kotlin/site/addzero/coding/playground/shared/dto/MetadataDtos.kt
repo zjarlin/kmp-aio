@@ -5,10 +5,18 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class DeclarationKind {
     DATA_CLASS,
+    CLASS,
     ENUM_CLASS,
     INTERFACE,
     OBJECT,
     ANNOTATION_CLASS,
+}
+
+@Serializable
+enum class ScenePresetKind {
+    BUSINESS_CRUD,
+    SKILL_DOTFILE,
+    KCLOUD_PLUGIN,
 }
 
 @Serializable
@@ -287,4 +295,14 @@ data class CodegenProjectAggregateDto(
     val functionStubs: List<FunctionStubMetaDto> = emptyList(),
     val artifacts: List<ManagedArtifactMetaDto> = emptyList(),
     val conflicts: List<SyncConflictMetaDto> = emptyList(),
+)
+
+@Serializable
+data class ScenePresetResultDto(
+    val preset: ScenePresetKind,
+    val primaryFileId: String? = null,
+    val createdFiles: List<SourceFileMetaDto> = emptyList(),
+    val affectedTargetIds: List<String> = emptyList(),
+    val notes: List<String> = emptyList(),
+    val message: String,
 )

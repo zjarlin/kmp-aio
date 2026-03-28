@@ -20,6 +20,14 @@ fun String.toLowerCamelIdentifier(): String {
     return pascal.replaceFirstChar { it.lowercase() }
 }
 
+fun String.toKebabCase(): String {
+    val normalized = trim()
+        .replace(Regex("([a-z0-9])([A-Z])"), "$1-$2")
+        .replace(Regex("[^A-Za-z0-9]+"), "-")
+        .trim('-')
+    return normalized.lowercase().ifBlank { "generated" }
+}
+
 fun String.isValidKotlinIdentifier(): Boolean = matches(kotlinIdentifierRegex)
 
 fun String.isValidKotlinPackage(): Boolean = matches(kotlinPackageRegex)

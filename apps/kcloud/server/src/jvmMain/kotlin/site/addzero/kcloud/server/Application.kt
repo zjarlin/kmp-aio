@@ -10,6 +10,11 @@ import io.ktor.server.routing.routing
 import org.koin.core.KoinApplication as CoreKoinApplication
 import org.koin.core.module.Module as KoinModule
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.configcenter.ktor.configCenterRoutes
+import site.addzero.configcenter.runtime.ConfigCenterBootstrap
+import site.addzero.configcenter.runtime.ConfigCenterBootstrapOptions
+import site.addzero.configcenter.runtime.JvmConfigCenterGateway
+import site.addzero.configcenter.runtime.KtorConfigBridge
 import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
 import site.addzero.vibepocket.routes.vibePocketRoutes
 import site.addzero.starter.koin.installKoin
@@ -62,6 +67,7 @@ fun Application.module(
     }
     runStarters()
     routing {
+        configCenterRoutes()
         mcuConsoleRoutes()
         vibePocketRoutes()
     }
@@ -75,14 +81,17 @@ fun serverApplication(
     embeddedApplicationConfigOverride = null
     embeddedDesktopKoinConfigurer = null
     val config = loadServerConfig(configPath)
+    val configCenterBridge = createConfigCenterBridge()
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
+        ?: configCenterBridge?.getString("ktor.deployment.host")
         ?: config.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
+        ?: configCenterBridge?.getInt("ktor.deployment.port", 8080)
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: 8080
 
@@ -113,6 +122,7 @@ fun ktorApplication(
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val config = loadEmbeddedConfig(configPath)
+    val configCenterBridge = createConfigCenterBridge()
     embeddedApplicationConfigOverride = config
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
@@ -120,11 +130,13 @@ fun ktorApplication(
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
+        ?: configCenterBridge?.getString("ktor.deployment.host")
         ?: config.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
+        ?: configCenterBridge?.getInt("ktor.deployment.port", 8080)
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: 8080
 
@@ -206,6 +218,18 @@ private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
             .withFallback(resolved)
             .resolve()
     )
+}
+
+private fun createConfigCenterBridge(): KtorConfigBridge? {
+    val options = ConfigCenterBootstrapOptions(appId = "kcloud")
+    return runCatching {
+        val bootstrap = ConfigCenterBootstrap(options)
+        val gateway = JvmConfigCenterGateway.createDefault(options)
+        KtorConfigBridge(
+            gateway = gateway,
+            bootstrap = bootstrap,
+        )
+    }.getOrNull()
 }
 
 private data class ServerCliArgs(

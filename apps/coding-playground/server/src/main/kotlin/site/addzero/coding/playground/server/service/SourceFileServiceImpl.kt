@@ -8,6 +8,9 @@ import site.addzero.coding.playground.server.entity.SourceFileMeta
 import site.addzero.coding.playground.server.entity.by
 import site.addzero.coding.playground.server.entity.toDto
 import site.addzero.coding.playground.server.util.ensureKtFileName
+import site.addzero.coding.playground.server.util.toKebabCase
+import site.addzero.coding.playground.server.util.toLowerCamelIdentifier
+import site.addzero.coding.playground.server.util.toPascalIdentifier
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.DeclarationService
 import site.addzero.coding.playground.shared.service.SourceFileService
@@ -64,6 +67,25 @@ class SourceFileServiceImpl(
                 declarationService.createConstructorParam(CreateConstructorParamRequest(declaration.id, "name", "String", defaultValue = "\"\""))
             }
 
+            DeclarationKind.CLASS -> {
+                declarationService.createProperty(
+                    CreatePropertyRequest(
+                        declarationId = declaration.id,
+                        name = "statusMessage",
+                        type = "String",
+                        initializer = "\"待补充\"",
+                    ),
+                )
+                declarationService.createFunctionStub(
+                    CreateFunctionStubRequest(
+                        declarationId = declaration.id,
+                        name = "refresh",
+                        returnType = "Unit",
+                        bodyMode = FunctionBodyMode.TEMPLATE,
+                    ),
+                )
+            }
+
             DeclarationKind.ENUM_CLASS -> {
                 declarationService.createEnumEntry(CreateEnumEntryRequest(declaration.id, "DEFAULT"))
                 declarationService.createEnumEntry(CreateEnumEntryRequest(declaration.id, "DISABLED"))
@@ -97,6 +119,57 @@ class SourceFileServiceImpl(
             }
         }
         return aggregate(file.id)
+    }
+
+    override suspend fun createScenePreset(request: CreateScenePresetRequest): ScenePresetResultDto {
+        val primaryTarget = support.targetOrThrow(request.targetId).toDto()
+        val packageName = request.packageName.ifBlank { primaryTarget.basePackage }.trim()
+        serviceSupport.requirePackageName(packageName, "场景包名")
+        serviceSupport.requireText(request.featureName, "场景名称")
+        val featureName = request.featureName.toPascalIdentifier()
+        val routeSegment = request.routeSegment?.trim()?.takeIf { it.isNotBlank() } ?: request.featureName.toKebabCase()
+        val sceneTitle = request.sceneTitle?.trim()?.takeIf { it.isNotBlank() } ?: featureName
+        val targetBundle = resolveSceneTargets(primaryTarget.id, request.includeSiblingTargets)
+        val notes = targetBundle.notes.toMutableList()
+        val fileIds = support.inTransaction {
+            when (request.preset) {
+                ScenePresetKind.BUSINESS_CRUD -> createBusinessCrudScene(
+                    packageName = packageName,
+                    featureName = featureName,
+                    routeSegment = routeSegment,
+                    sceneTitle = sceneTitle,
+                    targetBundle = targetBundle,
+                    notes = notes,
+                )
+
+                ScenePresetKind.SKILL_DOTFILE -> createSkillDotfileScene(
+                    packageName = packageName,
+                    featureName = featureName,
+                    routeSegment = routeSegment,
+                    sceneTitle = sceneTitle,
+                    targetBundle = targetBundle,
+                    notes = notes,
+                )
+
+                ScenePresetKind.KCLOUD_PLUGIN -> createKcloudPluginScene(
+                    packageName = packageName,
+                    featureName = featureName,
+                    routeSegment = routeSegment,
+                    sceneTitle = sceneTitle,
+                    targetBundle = targetBundle,
+                    notes = notes,
+                )
+            }
+        }
+        val createdFiles = fileIds.distinct().map { support.fileOrThrow(it).toDto() }
+        return ScenePresetResultDto(
+            preset = request.preset,
+            primaryFileId = createdFiles.firstOrNull()?.id,
+            createdFiles = createdFiles,
+            affectedTargetIds = createdFiles.map { it.targetId }.distinct(),
+            notes = notes,
+            message = "${request.preset.name} 已生成 ${createdFiles.size} 个文件",
+        )
     }
 
     override suspend fun list(search: CodegenSearchRequest): List<SourceFileMetaDto> {

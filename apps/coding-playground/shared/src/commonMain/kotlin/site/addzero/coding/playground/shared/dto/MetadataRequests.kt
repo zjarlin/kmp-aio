@@ -215,6 +215,17 @@ data class CreateDeclarationPresetRequest(
 )
 
 @Serializable
+data class CreateScenePresetRequest(
+    val targetId: String,
+    val packageName: String,
+    val featureName: String,
+    val preset: ScenePresetKind,
+    val routeSegment: String? = null,
+    val sceneTitle: String? = null,
+    val includeSiblingTargets: Boolean = true,
+)
+
+@Serializable
 data class ResolveSyncConflictRequest(
     val resolution: SyncConflictResolution,
 )

@@ -16,6 +16,7 @@ kotlin {
         implementation(project(":lib:compose:workbench-shell"))
         implementation(project(":apps:kcloud:shared"))
         implementation(project(":apps:kcloud:plugins:mcu-console"))
+        implementation(project(":apps:kcloud:plugins:system:config-center"))
         implementation(project(":apps:kcloud:plugins:system:rbac"))
         implementation(project(":apps:kcloud:plugins:vibepocket"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

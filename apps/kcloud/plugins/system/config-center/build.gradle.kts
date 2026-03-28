@@ -42,7 +42,6 @@ kotlin {
             implementation(libs.findLibrary("site-addzero-route-core").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
-            implementation(libs.findLibrary("site-addzero-compose-native-component-select").get())
         }
     }
 }
