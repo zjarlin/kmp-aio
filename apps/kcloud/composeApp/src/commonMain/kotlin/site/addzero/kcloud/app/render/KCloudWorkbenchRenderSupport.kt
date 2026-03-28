@@ -6,18 +6,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import site.addzero.kcloud.app.KCloudRouteCatalog
+import site.addzero.kcloud.app.KCloudRouteEntry
+import site.addzero.kcloud.app.KCloudRouteScene
 import site.addzero.kcloud.app.KCloudShellState
-import site.addzero.workbenchshell.ScreenNode
-import site.addzero.workbenchshell.ScreenTree
 
 @Composable
-internal fun rememberSelectedNode(
-    screenTree: ScreenTree,
+internal fun rememberSelectedRoute(
+    routeCatalog: KCloudRouteCatalog,
     shellState: KCloudShellState,
-): ScreenNode? {
-    val selectedScreenId = shellState.selectedScreenId
-    return remember(screenTree, selectedScreenId) {
-        screenTree.findLeaf(selectedScreenId)
+): KCloudRouteEntry? {
+    val selectedRoutePath = shellState.selectedRoutePath
+    return remember(routeCatalog, selectedRoutePath) {
+        routeCatalog.findRoute(selectedRoutePath)
     }
 }
 
@@ -28,16 +29,6 @@ internal fun Modifier.statusBarFrame(): Modifier {
         .padding(horizontal = 14.dp, vertical = 10.dp)
 }
 
-internal fun ScreenNode?.visibleLeafCount(): Int {
-    return this?.children.orEmpty().sumOf { child -> child.visibleLeafCountInSubtree() }
-}
-
-internal fun ScreenNode.visibleLeafCountInSubtree(): Int {
-    if (!visible) {
-        return 0
-    }
-    if (isLeaf) {
-        return 1
-    }
-    return children.sumOf { child -> child.visibleLeafCountInSubtree() }
+internal fun KCloudRouteScene?.routeCount(): Int {
+    return this?.routeCount ?: 0
 }

@@ -1,16 +1,15 @@
 package site.addzero.kcloud
 
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.tooling.preview.Preview
-
+import org.koin.compose.KoinApplication
+import org.koin.dsl.koinConfiguration
+import site.addzero.kcloud.app.kCloudWorkbenchModule
+import site.addzero.kcloud.ui.MainWindow
+import site.addzero.vibepocket.vibePocketPluginModule
 
 @Composable
-@Preview
 fun App() {
-    MaterialTheme {
-        Text("helli")
-
-    }
+    KoinApplication(configuration = koinConfiguration(declaration = { modules(kCloudWorkbenchModule, vibePocketPluginModule) }), content = {
+        MainWindow()
+    })
 }

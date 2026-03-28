@@ -4,13 +4,14 @@ import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.routing.*
-import org.koin.core.annotation.ComponentScan
-import org.koin.core.annotation.Configuration
-import org.koin.core.annotation.Module
-import org.koin.core.annotation.Named
-import org.koin.core.annotation.Single
+import org.koin.core.annotation.*
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
+
+@Module
+@Configuration("vibepocket")
+@ComponentScan("site.addzero.starter.openapi")
+class OpenApiStarterKoinModule
 
 @Single(binds = [AppStarter::class])
 class OpenApiStarter : AppStarter {

@@ -6,27 +6,11 @@ import io.ktor.server.application.*
 import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.server.routing.*
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
-import org.koin.core.module.Module
-import org.koin.ktor.ext.getKoin
-import org.koin.ktor.plugin.Koin
-import site.addzero.kcloud.feature.KCloudRouteRegistrar
-import site.addzero.kcloud.feature.KCloudSceneApiKoinModule
-import site.addzero.kcloud.feature.module as sceneApiModule
-import site.addzero.kcloud.feature.registerKCloudRouteRegistrars
-import site.addzero.kcloud.scenes.notes.NotesSceneServerModule
-import site.addzero.kcloud.scenes.notes.module as notesSceneModule
-import site.addzero.kcloud.scenes.ops.OpsSceneServerModule
-import site.addzero.kcloud.scenes.ops.module as opsSceneModule
-import site.addzero.kcloud.scenes.secondbrain.SecondBrainSceneServerModule
-import site.addzero.kcloud.scenes.secondbrain.module as secondBrainSceneModule
-import site.addzero.kcloud.scenes.system.SystemSceneServerModule
-import site.addzero.kcloud.scenes.system.module as systemSceneModule
-import site.addzero.kcloud.scenes.workspace.WorkspaceSceneServerModule
-import site.addzero.kcloud.scenes.workspace.module as workspaceSceneModule
+import io.ktor.server.routing.routing
+import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
+import site.addzero.starter.koin.installKoin
+import site.addzero.starter.koin.runStarters
 import java.io.File
 
 private const val DEFAULT_EMBEDDED_ENV = "dev"
@@ -52,32 +36,15 @@ fun main(args: Array<String>) {
  */
 fun Application.module() {
     val config = embeddedApplicationConfigOverride ?: environment.config
-    install(ContentNegotiation) {
-        json(
-            Json {
-                ignoreUnknownKeys = true
-                prettyPrint = true
-            },
-        )
-    }
-    install(Koin) {
+    installKoin {
+        withConfiguration<KCloudServerStarterKoinApplication>()
         properties(mapOf("kcloud.applicationConfig" to config))
-        modules(kCloudServerModules())
     }
-    val routeRegistrars = getKoin().getAll<KCloudRouteRegistrar>()
+    runStarters()
     routing {
-        registerKCloudRouteRegistrars(routeRegistrars)
+        mcuConsoleRoutes()
     }
 }
-
-private fun kCloudServerModules(): List<Module> = listOf(
-    KCloudSceneApiKoinModule().sceneApiModule(),
-    WorkspaceSceneServerModule().workspaceSceneModule(),
-    NotesSceneServerModule().notesSceneModule(),
-    SecondBrainSceneServerModule().secondBrainSceneModule(),
-    OpsSceneServerModule().opsSceneModule(),
-    SystemSceneServerModule().systemSceneModule(),
-)
 
 fun serverApplication(
     configPath: String? = null,

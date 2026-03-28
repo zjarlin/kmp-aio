@@ -1,33 +1,36 @@
-@file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import org.gradle.api.tasks.testing.Test
-import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
-/**
- * VibePocket 应用模块 - KMP Compose Multiplatform 桌面应用
- *
- * 复制此模块创建新应用:
- * 1. 复制 apps/vibepocket 到 apps/{your-app-name}
- * 2. 修改 namespace 和 artifact
- * 3. 更新依赖
- */
 plugins {
-    id("site.addzero.buildlogic.kmp.cmp-aio")
+    id("site.addzero.buildlogic.kmp.cmp-app")
+    id("site.addzero.buildlogic.kmp.kmp-koin")
+    id("site.addzero.buildlogic.kmp.kmp-json")
 }
 
 val libs = versionCatalogs.named("libs")
+val desktopMainClass = "site.addzero.kcloud.MainKt"
 
 kotlin {
     dependencies {
         implementation(project(":lib:compose:workbench-shell"))
+                implementation(project(":apps:kcloud:shared"))
+                implementation(project(":apps:kcloud:plugins:mcu-console"))
+                implementation(project(":apps:kcloud:plugins:system:rbac"))
+                implementation(project(":apps:kcloud:plugins:vibepocket"))
+                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+            }
+    sourceSets {
     }
+}
 
-//    sourceSets {
-//        jvmMain.dependencies {
-//            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
-//            implementation(libs.findLibrary("io-ktor-ktor-server-content-negotiation").get())
-//            implementation(libs.findLibrary("io-ktor-ktor-serialization-kotlinx-json").get())
-//            implementation(libs.findLibrary("io-ktor-ktor-server-netty-jvm").get())
-//        }
-//    }
+kotlin.jvm().mainRun {
+    mainClass.set(desktopMainClass)
+}
+
+compose.desktop {
+    application {
+        mainClass = desktopMainClass
+    }
 }

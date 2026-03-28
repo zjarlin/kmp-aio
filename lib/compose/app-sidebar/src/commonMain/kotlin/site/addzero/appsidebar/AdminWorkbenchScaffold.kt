@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -66,24 +67,35 @@ fun AdminWorkbenchScaffold(
     userLabel: String? = null,
     onUserClick: (() -> Unit)? = null,
 ) {
+    val windowFrame = LocalWorkbenchWindowFrame.current
+    val topBarDecorator = LocalWorkbenchTopBarDecorator.current
+
     Column(
         modifier = modifier.fillMaxSize().background(AdminWorkbenchTokens.pageBackground),
     ) {
-        AdminWorkbenchGlobalBar(
-            brandLabel = brandLabel,
-            welcomeLabel = welcomeLabel,
-            onGlobalSearchClick = onGlobalSearchClick,
-            githubLabel = githubLabel,
-            onGithubClick = onGithubClick,
-            languageLabel = languageLabel,
-            onLanguageClick = onLanguageClick,
-            isDarkTheme = isDarkTheme,
-            onThemeToggle = onThemeToggle,
-            notificationCount = notificationCount,
-            onNotificationsClick = onNotificationsClick,
-            userLabel = userLabel,
-            onUserClick = onUserClick,
-        )
+        topBarDecorator.Decorate(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            AdminWorkbenchGlobalBar(
+                brandLabel = brandLabel,
+                welcomeLabel = welcomeLabel,
+                onGlobalSearchClick = onGlobalSearchClick,
+                githubLabel = githubLabel,
+                onGithubClick = onGithubClick,
+                languageLabel = languageLabel,
+                onLanguageClick = onLanguageClick,
+                isDarkTheme = isDarkTheme,
+                onThemeToggle = onThemeToggle,
+                notificationCount = notificationCount,
+                onNotificationsClick = onNotificationsClick,
+                userLabel = userLabel,
+                onUserClick = onUserClick,
+                topBarHeight = windowFrame.topBarHeight,
+                leadingInset = windowFrame.leadingInset,
+                trailingInset = windowFrame.trailingInset,
+                immersiveTopBar = windowFrame.immersiveTopBar,
+            )
+        }
 
         WorkbenchScaffold(
             sidebar = sidebar,
@@ -230,12 +242,23 @@ private fun AdminWorkbenchGlobalBar(
     onNotificationsClick: (() -> Unit)?,
     userLabel: String?,
     onUserClick: (() -> Unit)?,
+    topBarHeight: Dp,
+    leadingInset: Dp,
+    trailingInset: Dp,
+    immersiveTopBar: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth()
-            .height(56.dp)
-            .background(AdminWorkbenchTokens.topBarBackground)
-            .padding(horizontal = 18.dp),
+            .height(topBarHeight)
+            .background(
+                AdminWorkbenchTokens.topBarBackground.copy(
+                    alpha = if (immersiveTopBar) 0.96f else 1f,
+                ),
+            )
+            .padding(
+                start = 18.dp + leadingInset,
+                end = 18.dp + trailingInset,
+            ),
         horizontalArrangement = Arrangement.spacedBy(18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

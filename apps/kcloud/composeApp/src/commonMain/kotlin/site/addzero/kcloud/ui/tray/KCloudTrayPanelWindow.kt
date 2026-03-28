@@ -17,24 +17,31 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import site.addzero.kcloud.app.KCloudRouteCatalog
 import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.kcloud.feature.ShellThemeMode
-import site.addzero.kcloud.scenes.ops.OpsSceneMenus
-import site.addzero.kcloud.scenes.workspace.WorkspaceSceneMenus
 import site.addzero.kcloud.ui.theme.KCloudTheme
 
 @Composable
 fun KCloudTrayPanelWindow(
     shellSettingsService: ShellSettingsService = koinInject(),
     shellState: KCloudShellState = koinInject(),
+    routeCatalog: KCloudRouteCatalog = koinInject(),
 ) {
     val themeMode by shellSettingsService.themeMode.collectAsState()
+    val primaryRoute = remember(routeCatalog) {
+        routeCatalog.routeEntries.firstOrNull()
+    }
+    val trailingRoute = remember(routeCatalog) {
+        routeCatalog.routeEntries.lastOrNull()
+    }
 
     KCloudTheme(
         darkTheme = when (themeMode) {
@@ -87,22 +94,22 @@ fun KCloudTrayPanelWindow(
                         Button(
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                shellState.selectScreen(WorkspaceSceneMenus.OVERVIEW)
+                                primaryRoute?.routePath?.let(shellState::selectRoute)
                                 shellState.showWindow()
                                 shellState.hideTrayPanel()
                             },
                         ) {
-                            Text("工作台")
+                            Text(primaryRoute?.title ?: "工作台")
                         }
                         Button(
                             modifier = Modifier.weight(1f),
                             onClick = {
-                                shellState.selectScreen(OpsSceneMenus.SETTINGS)
+                                trailingRoute?.routePath?.let(shellState::selectRoute)
                                 shellState.showWindow()
                                 shellState.hideTrayPanel()
                             },
                         ) {
-                            Text("运维设置")
+                            Text(trailingRoute?.title ?: "最后页面")
                         }
                     }
                 }

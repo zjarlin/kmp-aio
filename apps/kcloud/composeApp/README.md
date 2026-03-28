@@ -162,11 +162,11 @@ apps/kcloud/
 ### 桌面端
 
 ```bash
-./gradlew :apps:kcloud:jvmRun
+./gradlew :apps:kcloud:composeApp:jvmRun
 ```
 
 - 这是当前 **唯一** 的桌面应用入口
-- 实际 `main` 在 [`src/jvmMain/kotlin/com/kcloud/Main.kt`](src/jvmMain/kotlin/com/kcloud/Main.kt)
+- 实际 `main` 在 [`src/jvmMain/kotlin/site/addzero/kcloud/main.kt`](src/jvmMain/kotlin/site/addzero/kcloud/main.kt)
 - 会同时拉起 Compose Desktop 壳层和本地 HTTP 聚合服务
 - 默认优先尝试 `127.0.0.1:18080`
 - 端口可通过 `KCLOUD_LOCAL_SERVER_PORT` 或 `-Dkcloud.localServer.port=...` 覆盖
@@ -182,7 +182,7 @@ apps/kcloud/
 
 ### IDE 指引
 
-- Gradle Run Configuration 指向 `:apps:kcloud:jvmRun`
+- Gradle Run Configuration 指向 `:apps:kcloud:composeApp:jvmRun`
 - 或直接以主类 `site.addzero.kcloud.MainKt` 启动
 
 ### 不要这样运行

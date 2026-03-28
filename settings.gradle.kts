@@ -8,3 +8,17 @@ plugins {
     id("site.addzero.gradle.plugin.modules-buddy") version "+"
 }
 
+val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+    includeBuild(localAddzeroLibJvmDir)
+}
+
+dependencyResolutionManagement {
+    repositories {
+        mavenLocal()
+        google()
+        mavenCentral()
+        maven(url = "https://repo.spring.io/milestone/")
+        maven(url = "https://plugins.gradle.org/m2/")
+    }
+}

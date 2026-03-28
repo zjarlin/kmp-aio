@@ -3,22 +3,28 @@ package site.addzero.kcloud.app
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.koin.core.annotation.Single
+import androidx.navigation3.runtime.NavBackStack
 import site.addzero.kcloud.feature.ShellWindowController
 import site.addzero.kcloud.feature.ShellTrayPanelController
-import site.addzero.workbenchshell.ScreenTree
 
-@Single
 class KCloudShellState(
-    private val screenTree: ScreenTree,
+    private val routeCatalog: KCloudRouteCatalog,
 ) : ShellWindowController, ShellTrayPanelController {
-    var selectedScreenId by mutableStateOf(screenTree.defaultLeafId)
-        private set
-
-    var selectedSceneId by mutableStateOf(
-        screenTree.sceneRootIdFor(screenTree.defaultLeafId),
+    val backStack = NavBackStack(
+        KCloudNavRoute(
+            routePath = routeCatalog.defaultRoutePath,
+        ),
     )
-        private set
+
+    val selectedRoute: KCloudNavRoute
+        get() = backStack.lastOrNull()
+            ?: KCloudNavRoute(routePath = routeCatalog.defaultRoutePath)
+
+    val selectedRoutePath: String
+        get() = selectedRoute.routePath
+
+    val selectedSceneId: String
+        get() = routeCatalog.sceneIdFor(selectedRoutePath)
 
     var windowVisible by mutableStateOf(true)
         private set
@@ -29,20 +35,20 @@ class KCloudShellState(
     var trayPanelVisible by mutableStateOf(false)
         private set
 
-    fun selectScreen(
-        screenId: String,
+    fun selectRoute(
+        routePath: String,
     ) {
-        val leaf = screenTree.findLeaf(screenId) ?: return
-        selectedScreenId = leaf.id
-        selectedSceneId = screenTree.sceneRootIdFor(leaf.id)
+        if (routeCatalog.findRoute(routePath) == null) {
+            return
+        }
+        navigateToRoute(routePath)
     }
 
     fun selectScene(
         sceneId: String,
     ) {
-        val leafId = screenTree.firstVisibleLeafIdUnder(sceneId) ?: return
-        selectedSceneId = sceneId
-        selectedScreenId = leafId
+        val routePath = routeCatalog.firstRoutePathUnder(sceneId) ?: return
+        navigateToRoute(routePath)
     }
 
     override fun showWindow() {
@@ -73,31 +79,26 @@ class KCloudShellState(
     override fun toggleTrayPanel() {
         trayPanelVisible = !trayPanelVisible
     }
-}
 
-private fun ScreenTree.sceneRootIdFor(
-    screenId: String,
-): String {
-    val node = findLeaf(screenId)
-    return when {
-        node == null -> roots.firstOrNull()?.id.orEmpty()
-        node.ancestorIds.isNotEmpty() -> node.ancestorIds.first()
-        else -> node.id
+    fun popNavigation() {
+        if (backStack.size > 1) {
+            backStack.removeLast()
+        }
     }
-}
 
-private fun ScreenTree.firstVisibleLeafIdUnder(
-    sceneId: String,
-): String? {
-    return findNode(sceneId)?.firstVisibleLeafId()
-}
+    private fun navigateToRoute(
+        routePath: String,
+    ) {
+        val route = KCloudNavRoute(routePath = routePath)
+        if (backStack.isEmpty()) {
+            backStack += route
+            return
+        }
+        if (backStack.last() == route) {
+            return
+        }
 
-private fun site.addzero.workbenchshell.ScreenNode.firstVisibleLeafId(): String? {
-    if (!visible) {
-        return null
+        // 工作台导航保持单选语义，切页时替换当前栈顶而不是无限累积历史。
+        backStack[backStack.lastIndex] = route
     }
-    if (isLeaf) {
-        return id
-    }
-    return children.firstNotNullOfOrNull { child -> child.firstVisibleLeafId() }
 }

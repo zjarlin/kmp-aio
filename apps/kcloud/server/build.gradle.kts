@@ -4,11 +4,21 @@ plugins {
 
 
 kotlin {
-    dependencies {
+    sourceSets {
+        jvmMain.dependencies {
+            // Starter 模块（引入即生效）
+            implementation(project(":lib:ktor:starter:starter-spi"))
+            implementation(project(":lib:ktor:starter:starter-koin"))
+            implementation(project(":lib:ktor:starter:starter-serialization"))
+            implementation(project(":lib:ktor:starter:starter-statuspages"))
+            implementation(project(":lib:ktor:starter:starter-banner"))
+            implementation(project(":lib:ktor:starter:starter-openapi"))
+            implementation(project(":lib:ktor:starter:starter-flyway"))
+            implementation(project(":apps:kcloud:plugins:mcu-console"))
+        }
     }
 }
 val serverMainClass = "site.addzero.kcloud.ApplicationKt"
-
 
 kotlin.jvm().mainRun {
     mainClass.set(serverMainClass)

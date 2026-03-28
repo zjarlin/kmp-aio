@@ -17,15 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.koin.core.annotation.Single
+import site.addzero.kcloud.app.KCloudRouteCatalog
+import site.addzero.kcloud.app.KCloudRouteScene
 import site.addzero.kcloud.app.KCloudShellState
-import site.addzero.workbenchshell.ScreenNode
-import site.addzero.workbenchshell.ScreenTree
 import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
 
-@Single
 class KCloudHeaderRenderer(
-    private val screenTree: ScreenTree,
+    private val routeCatalog: KCloudRouteCatalog,
     private val shellState: KCloudShellState,
 ) : WorkbenchHeaderRenderer {
     @Composable
@@ -33,13 +31,16 @@ class KCloudHeaderRenderer(
         modifier: Modifier,
     ) {
         val selectedSceneId = shellState.selectedSceneId
-        val sceneNodes = remember(screenTree) {
-            screenTree.roots.filter { node -> node.visible }
+        val sceneNodes = remember(routeCatalog) {
+            routeCatalog.scenes
         }
-        val selectedNode = rememberSelectedNode(
-            screenTree = screenTree,
+        val selectedRoute = rememberSelectedRoute(
+            routeCatalog = routeCatalog,
             shellState = shellState,
         )
+        val breadcrumb = remember(routeCatalog, shellState.selectedRoutePath) {
+            routeCatalog.breadcrumbNamesFor(shellState.selectedRoutePath)
+        }
         Column(
             modifier = modifier,
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -50,8 +51,8 @@ class KCloudHeaderRenderer(
                 onSceneSelected = shellState::selectScene,
             )
             ScreenHeader(
-                breadcrumb = screenTree.breadcrumbNamesFor(selectedNode?.id.orEmpty()),
-                title = selectedNode?.name ?: "未选择页面",
+                breadcrumb = breadcrumb,
+                title = selectedRoute?.title ?: "未选择页面",
             )
         }
     }
@@ -59,7 +60,7 @@ class KCloudHeaderRenderer(
 
 @Composable
 private fun SceneSwitcher(
-    scenes: List<ScreenNode>,
+    scenes: List<KCloudRouteScene>,
     selectedSceneId: String,
     onSceneSelected: (String) -> Unit,
 ) {
@@ -86,17 +87,15 @@ private fun SceneSwitcher(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    scene.icon?.let { icon ->
-                        androidx.compose.material3.Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = if (selected) {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        )
-                    }
+                    androidx.compose.material3.Icon(
+                        imageVector = scene.icon,
+                        contentDescription = null,
+                        tint = if (selected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
                     Text(
                         text = scene.name,
                         style = MaterialTheme.typography.titleSmall,
@@ -107,7 +106,7 @@ private fun SceneSwitcher(
                         },
                     )
                     Text(
-                        text = scene.visibleLeafCount().toString(),
+                        text = scene.routeCount().toString(),
                         style = MaterialTheme.typography.labelMedium,
                         color = if (selected) {
                             MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)

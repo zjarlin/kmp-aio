@@ -3,8 +3,10 @@ plugins {
     id("site.addzero.buildlogic.jvm.jvm-koin")
 }
 
+val libs = versionCatalogs.named("libs")
+
 dependencies {
-//    api(projects.lib.starterSpi)
-//    implementation(libs.org.flywaydb.flyway.core)
-//    implementation(libs.io.ktor.ktor.server.core)
+    implementation(project(":lib:ktor:starter:starter-spi"))
+    implementation(libs.findLibrary("io-ktor-ktor-server-core").get())
+    implementation(libs.findLibrary("org-flywaydb-flyway-core").get())
 }
