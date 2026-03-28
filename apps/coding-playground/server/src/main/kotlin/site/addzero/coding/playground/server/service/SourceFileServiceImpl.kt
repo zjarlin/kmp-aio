@@ -12,7 +12,7 @@ import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.DeclarationService
 import site.addzero.coding.playground.shared.service.SourceFileService
 
-@Single(binds = [SourceFileService::class])
+@Single
 class SourceFileServiceImpl(
     private val support: MetadataPersistenceSupport,
     private val serviceSupport: CodegenServiceSupport,

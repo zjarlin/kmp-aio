@@ -10,7 +10,7 @@ import site.addzero.coding.playground.server.entity.toDto
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.GenerationTargetService
 
-@Single(binds = [GenerationTargetService::class])
+@Single
 class GenerationTargetServiceImpl(
     private val support: MetadataPersistenceSupport,
     private val serviceSupport: CodegenServiceSupport,

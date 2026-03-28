@@ -85,7 +85,7 @@ class FlywayStarterKoinModule
  * ```
  */
 @Named("flywayStarter")
-@Single(binds = [AppStarter::class])
+@Single
 class FlywayStarter : AppStarter {
 
     override val order: Int = 200

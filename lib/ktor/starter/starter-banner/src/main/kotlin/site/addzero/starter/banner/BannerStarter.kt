@@ -16,7 +16,7 @@ import site.addzero.starter.effectiveConfig
 class BannerStarterKoinModule
 
 @Named("bannerStarter")
-@Single(binds = [AppStarter::class])
+@Single
 class BannerStarter : AppStarter {
     override val order: Int get() = 30
 

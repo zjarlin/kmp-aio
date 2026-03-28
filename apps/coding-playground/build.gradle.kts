@@ -23,6 +23,8 @@ kotlin {
         }
         jvmMain.dependencies {
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(project(":lib:coding-playground-demo-alpha"))
+            implementation(project(":lib:coding-playground-demo-beta"))
             implementation(project(":apps:coding-playground:server"))
         }
         jvmTest.dependencies {

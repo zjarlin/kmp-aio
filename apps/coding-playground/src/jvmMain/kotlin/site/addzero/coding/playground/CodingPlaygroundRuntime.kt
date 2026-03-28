@@ -7,21 +7,28 @@ import org.koin.plugin.module.dsl.withConfiguration
 class CodingPlaygroundRuntime(
     private val koinApplication: KoinApplication,
     val state: PlaygroundWorkbenchState,
-    private val httpServer: PlaygroundHttpServer,
+    private val httpServer: PlaygroundHttpServer?,
+    private val httpServerEnabled: Boolean,
 ) {
     fun start() {
         state.startBackgroundSync()
-        httpServer.start(wait = false)
+        if (httpServerEnabled) {
+            httpServer?.start(wait = false)
+        }
     }
 
     fun stop() {
         state.stopBackgroundSync()
-        httpServer.stop()
+        if (httpServerEnabled) {
+            httpServer?.stop()
+        }
         koinApplication.close()
     }
 }
 
-fun createCodingPlaygroundRuntime(): CodingPlaygroundRuntime {
+fun createCodingPlaygroundRuntime(
+    httpServerEnabled: Boolean = System.getProperty("coding.playground.http.enabled")?.toBooleanStrictOrNull() ?: false,
+): CodingPlaygroundRuntime {
     val koinApplication = startKoin {
         withConfiguration<CodingPlaygroundKoinApplication>()
     }
@@ -29,6 +36,7 @@ fun createCodingPlaygroundRuntime(): CodingPlaygroundRuntime {
     return CodingPlaygroundRuntime(
         koinApplication = koinApplication,
         state = koin.get(),
-        httpServer = koin.get(),
+        httpServer = if (httpServerEnabled) koin.get() else null,
+        httpServerEnabled = httpServerEnabled,
     )
 }

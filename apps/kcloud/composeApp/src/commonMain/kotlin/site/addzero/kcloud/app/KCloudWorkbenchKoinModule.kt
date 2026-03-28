@@ -1,5 +1,6 @@
 package site.addzero.kcloud.app
 
+import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
@@ -12,7 +13,8 @@ import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
 import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
 
 @Module
-@Configuration("vibepocket")
+@Configuration("kcloud-compose")
+@ComponentScan("site.addzero.kcloud.app")
 class KCloudWorkbenchKoinModule {
     @Single
     fun provideRouteCatalog(): KCloudRouteCatalog {

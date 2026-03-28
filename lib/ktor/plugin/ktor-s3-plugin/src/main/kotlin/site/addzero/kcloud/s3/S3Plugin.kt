@@ -54,7 +54,7 @@ class S3KoinModule {
  * S3 自动引导实现类。符合 AppStarter 接口，通过 Koin 自动发现。
  */
 @Named("s3Starter")
-@Single(binds = [AppStarter::class])
+@Single
 class S3Starter : AppStarter {
     override val order: Int get() = 60
 

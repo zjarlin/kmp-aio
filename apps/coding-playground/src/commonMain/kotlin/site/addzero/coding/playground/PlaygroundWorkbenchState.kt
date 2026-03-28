@@ -14,10 +14,6 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.Single
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.*
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.security.MessageDigest
-import kotlin.io.path.readText
 
 @Single
 class PlaygroundWorkbenchState(
@@ -29,6 +25,7 @@ class PlaygroundWorkbenchState(
     private val artifactService: ManagedArtifactService,
     private val syncService: SyncService,
     private val kspIndexService: KspIndexService,
+    private val managedFileSupport: ManagedFileSupport,
 ) {
     private val backgroundScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var autoSyncJob: Job? = null
@@ -646,7 +643,7 @@ class PlaygroundWorkbenchState(
         if (selectedFileId == fileId) {
             preview?.let {
                 trackedOutputPath = it.outputPath
-                val contentHash = it.content.sha256()
+                val contentHash = managedFileSupport.hashContent(it.content)
                 trackedDiskHash = contentHash
                 lastManagedWriteHash = contentHash
             }
@@ -702,20 +699,11 @@ class PlaygroundWorkbenchState(
     }
 
     private fun readFileHashOrNull(pathText: String): String? {
-        val path = Paths.get(pathText)
-        if (!Files.exists(path)) {
-            return null
-        }
-        return runCatching { path.readText().sha256() }.getOrNull()
+        return managedFileSupport.readFileHashOrNull(pathText)
     }
 
     private fun updateStatus(message: String, isError: Boolean = false) {
         statusMessage = message
         statusIsError = isError
-    }
-
-    private fun String.sha256(): String {
-        val digest = MessageDigest.getInstance("SHA-256").digest(toByteArray())
-        return digest.joinToString("") { "%02x".format(it) }
     }
 }

@@ -9,7 +9,7 @@ import site.addzero.coding.playground.server.entity.toDto
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.CodegenProjectService
 
-@Single(binds = [CodegenProjectService::class])
+@Single
 class CodegenProjectServiceImpl(
     private val support: MetadataPersistenceSupport,
     private val serviceSupport: CodegenServiceSupport,

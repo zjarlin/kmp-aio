@@ -216,6 +216,7 @@ private fun withWorkbenchState(block: (WorkbenchStateRuntime) -> Unit) {
         artifactService = renderSyncService,
         syncService = renderSyncService,
         kspIndexService = renderSyncService,
+        managedFileSupport = JvmManagedFileSupport(),
     )
     state.startBackgroundSync()
     try {

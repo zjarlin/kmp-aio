@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
@@ -102,22 +103,31 @@ private fun ShellStatusBar(
     pageCount: Int,
     modifier: Modifier = Modifier,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val darkThemeEnabled = colorScheme.background.luminance() < 0.5f
+
     Row(
         modifier = modifier.fillMaxWidth()
             .statusBarFrame()
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.24f)),
+            .background(
+                if (darkThemeEnabled) {
+                    colorScheme.surface.copy(alpha = 0.78f)
+                } else {
+                    colorScheme.surfaceVariant.copy(alpha = 0.36f)
+                },
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = "$currentScene / $currentTitle",
             style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
             text = "当前场景 $pageCount 个页面",
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
         )
     }
 }

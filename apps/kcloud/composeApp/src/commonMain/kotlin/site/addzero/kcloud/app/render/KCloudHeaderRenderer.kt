@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import site.addzero.kcloud.app.KCloudRouteCatalog
 import site.addzero.kcloud.app.KCloudRouteScene
@@ -64,6 +67,9 @@ private fun SceneSwitcher(
     selectedSceneId: String,
     onSceneSelected: (String) -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
+    val darkThemeEnabled = colorScheme.background.luminance() < 0.5f
+
     Row(
         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -74,11 +80,27 @@ private fun SceneSwitcher(
                 modifier = Modifier.clickable {
                     onSceneSelected(scene.id)
                 },
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = if (selected) {
+                        colorScheme.primary.copy(alpha = if (darkThemeEnabled) 0.36f else 0.18f)
+                    } else {
+                        colorScheme.outline.copy(alpha = if (darkThemeEnabled) 0.30f else 0.16f)
+                    },
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = 0.dp,
+                ),
                 colors = CardDefaults.cardColors(
                     containerColor = if (selected) {
-                        MaterialTheme.colorScheme.primaryContainer
+                        colorScheme.primaryContainer.copy(
+                            alpha = if (darkThemeEnabled) 0.72f else 1f,
+                        )
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
+                        colorScheme.surfaceVariant.copy(
+                            alpha = if (darkThemeEnabled) 0.52f else 0.68f,
+                        )
                     },
                 ),
             ) {
@@ -100,18 +122,18 @@ private fun SceneSwitcher(
                         text = scene.name,
                         style = MaterialTheme.typography.titleSmall,
                         color = if (selected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
+                            colorScheme.onPrimaryContainer
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            colorScheme.onSurface
                         },
                     )
                     Text(
                         text = scene.routeCount().toString(),
                         style = MaterialTheme.typography.labelMedium,
                         color = if (selected) {
-                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.78f)
+                            colorScheme.onPrimaryContainer.copy(alpha = 0.72f)
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+                            colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
                         },
                     )
                 }
@@ -140,7 +162,7 @@ private fun ScreenHeader(
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = MaterialTheme.colorScheme.onSurface,
         )
     }
 }

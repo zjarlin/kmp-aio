@@ -33,7 +33,7 @@ data class DatasourceProperties(
 
 @Module
 @Configuration("vibepocket")
-@ComponentScan("site.addzero.vibepocket.jimmer")
+@ComponentScan("site.addzero.kcloud.jimmer")
 class JimmerKoinModule {
     @Single
     fun provideDefaultDataSource(registry: DatasourceRegistry): DataSource {

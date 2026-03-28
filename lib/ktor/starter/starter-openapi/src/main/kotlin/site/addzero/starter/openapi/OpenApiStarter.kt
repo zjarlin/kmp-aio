@@ -13,7 +13,7 @@ import site.addzero.starter.effectiveConfig
 @ComponentScan("site.addzero.starter.openapi")
 class OpenApiStarterKoinModule
 
-@Single(binds = [AppStarter::class])
+@Single
 class OpenApiStarter : AppStarter {
 
     override fun Application.enable(): Boolean {

@@ -8,7 +8,7 @@ import site.addzero.coding.playground.server.entity.*
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.coding.playground.shared.service.DeclarationService
 
-@Single(binds = [DeclarationService::class])
+@Single
 class DeclarationServiceImpl(
     private val support: MetadataPersistenceSupport,
     private val serviceSupport: CodegenServiceSupport,

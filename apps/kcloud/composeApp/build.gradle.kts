@@ -23,6 +23,9 @@ kotlin {
 
     }
     sourceSets {
+        jvmMain.dependencies {
+            implementation(project(":apps:kcloud:server"))
+        }
     }
 }
 

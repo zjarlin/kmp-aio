@@ -7,7 +7,7 @@ import site.addzero.starter.AppStarter
 import site.addzero.kcloud.jimmer.plugin.JimmerPlugin
 
 @Named("jimmerStarter")
-@Single(binds = [AppStarter::class])
+@Single
 class JimmerStarter : AppStarter {
 
     override fun Application.onInstall() {

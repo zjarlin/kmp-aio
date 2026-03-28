@@ -16,7 +16,7 @@ import site.addzero.starter.AppStarter
 class SerializationStarterKoinModule
 
 @Named("serializationStarter")
-@Single(binds = [AppStarter::class])
+@Single
 class SerializationStarter : AppStarter {
 
     override fun Application.onInstall() {

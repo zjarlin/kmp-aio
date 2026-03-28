@@ -10,7 +10,7 @@ import site.addzero.starter.AppStarter
 class StatusPagesStarterKoinModule
 
 @Named("statusPagesStarter")
-@Single(binds = [AppStarter::class])
+@Single
 class StatusPagesStarter : AppStarter {
 
     override fun Application.onInstall() {

@@ -34,7 +34,7 @@ import site.addzero.appsidebar.WorkbenchScaffold
 import site.addzero.appsidebar.WorkbenchThemeToggleButton
 import site.addzero.workbenchshell.ScreenSidebar
 
-@Single(binds = [AppSidebarScaffoldRenderer::class])
+@Single
 class SidebarShowcaseWorkbenchRenderer(
     private val state: SidebarShowcaseState,
 ) : AppSidebarScaffoldRenderer {
@@ -68,7 +68,7 @@ class SidebarShowcaseWorkbenchRenderer(
     }
 }
 
-@Single(binds = [AppSidebarScaffoldRenderer::class])
+@Single
 class SidebarShowcaseAdminWorkbenchRenderer(
     private val state: SidebarShowcaseState,
 ) : AppSidebarScaffoldRenderer {

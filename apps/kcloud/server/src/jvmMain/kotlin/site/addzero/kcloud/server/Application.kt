@@ -7,6 +7,7 @@ import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.routing.routing
+import org.koin.core.KoinApplication as CoreKoinApplication
 import org.koin.core.module.Module as KoinModule
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
@@ -18,8 +19,13 @@ import java.io.File
 private const val DEFAULT_EMBEDDED_ENV = "dev"
 private const val DESKTOP_APP_DIRECTORY_NAME = "KCloud"
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
+private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
+private const val KCLOUD_APPLICATION_CONFIG_PROPERTY = "kcloud.applicationConfig"
+private const val VIBEPOCKET_APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
 @Volatile
 private var embeddedApplicationConfigOverride: ApplicationConfig? = null
+@Volatile
+private var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
 
 /**
  * Server 入口。
@@ -40,12 +46,19 @@ fun Application.module(
     overrideModules: List<KoinModule> = emptyList(),
 ) {
     val config = embeddedApplicationConfigOverride ?: environment.config
+    val desktopKoinConfigurer = embeddedDesktopKoinConfigurer
     installKoin {
         withConfiguration<KCloudServerStarterKoinApplication>()
+        desktopKoinConfigurer?.invoke(this)
         if (overrideModules.isNotEmpty()) {
             modules(overrideModules)
         }
-        properties(mapOf("kcloud.applicationConfig" to config))
+        properties(
+            mapOf(
+                KCLOUD_APPLICATION_CONFIG_PROPERTY to config,
+                VIBEPOCKET_APPLICATION_CONFIG_PROPERTY to config,
+            ),
+        )
     }
     runStarters()
     routing {
@@ -60,6 +73,7 @@ fun serverApplication(
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     embeddedApplicationConfigOverride = null
+    embeddedDesktopKoinConfigurer = null
     val config = loadServerConfig(configPath)
 
     val finalHost = host
@@ -101,6 +115,7 @@ fun ktorApplication(
     val config = loadEmbeddedConfig(configPath)
     embeddedApplicationConfigOverride = config
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
+    System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
 
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val finalHost = host
@@ -128,6 +143,34 @@ fun ktorApplication(
         },
         module = Application::module,
     )
+}
+
+/**
+ * 桌面端使用的内嵌 server 句柄，避免把 Ktor engine 类型暴露给 UI 模块。
+ */
+fun startEmbeddedDesktopServer(
+    configPath: String? = null,
+    host: String? = null,
+    port: Int? = null,
+    configureKoin: (CoreKoinApplication.() -> Unit)? = null,
+): AutoCloseable {
+    embeddedDesktopKoinConfigurer = configureKoin
+    val server = ktorApplication(
+        configPath = configPath,
+        host = host,
+        port = port,
+    ).start(wait = false)
+
+    return AutoCloseable {
+        server.stop(
+            gracePeriodMillis = 1_000,
+            timeoutMillis = 5_000,
+        )
+        embeddedDesktopKoinConfigurer = null
+        embeddedApplicationConfigOverride = null
+        System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
+        System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
+    }
 }
 
 private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {

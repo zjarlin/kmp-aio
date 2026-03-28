@@ -14,6 +14,7 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-banner"))
             implementation(project(":lib:ktor:starter:starter-openapi"))
             implementation(project(":lib:ktor:starter:starter-flyway"))
+            implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":apps:kcloud:plugins:mcu-console"))
             implementation(project(":apps:kcloud:plugins:vibepocket"))
         }

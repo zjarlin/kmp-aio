@@ -3,6 +3,7 @@ package site.addzero.kcloud
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.ComposeWindow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
@@ -15,6 +16,10 @@ import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.disableTitleBar
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
+import site.addzero.kcloud.app.KCloudWorkbenchKoinModule
+import site.addzero.kcloud.app.module as kcloudWorkbenchModule
+import site.addzero.kcloud.plugins.mcuconsole.McuConsoleComposeKoinModule
+import site.addzero.kcloud.plugins.mcuconsole.module as mcuConsoleComposeModule
 import java.awt.Container
 import javax.swing.JComponent
 
@@ -22,6 +27,23 @@ private val macCaptionBarHeight = 56.dp
 private val macCaptionBarLeadingInset = 84.dp
 
 fun main() = application {
+    val embeddedServer = remember {
+        startEmbeddedDesktopServer(
+            configureKoin = {
+                modules(
+                    KCloudWorkbenchKoinModule().kcloudWorkbenchModule(),
+                    McuConsoleComposeKoinModule().mcuConsoleComposeModule(),
+                )
+            },
+        )
+    }
+
+    DisposableEffect(embeddedServer) {
+        onDispose {
+            embeddedServer.close()
+        }
+    }
+
     val windowState = rememberWindowState(
         width = 1440.dp,
         height = 920.dp,
