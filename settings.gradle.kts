@@ -56,6 +56,7 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     remapExternalProject(":lib:api:api-suno", "lib/api/api-suno")
     remapExternalProject(":lib:compose", "lib/compose")
     remapExternalProject(":lib:compose:app-sidebar", "lib/compose/app-sidebar")
+    remapExternalProject(":lib:compose:compose-icon-map", "lib/compose/compose-icon-map")
     remapExternalProject(":lib:compose:glass-components", "lib/compose/glass-components")
     remapExternalProject(":lib:compose:liquid-glass", "lib/compose/liquid-glass")
     remapExternalProject(":lib:compose:media-playlist-player", "lib/compose/media-playlist-player")
@@ -66,6 +67,21 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     remapExternalProject(":lib:ksp:route", "lib/ksp/route")
     remapExternalProject(":lib:ksp:route:route-core", "lib/ksp/route/route-core")
     remapExternalProject(":lib:ksp:route:route-processor", "lib/ksp/route/route-processor")
+
+    gradle.beforeProject {
+        configurations.configureEach {
+            resolutionStrategy.dependencySubstitution {
+                substitute(module("site.addzero:network-starter"))
+                    .using(project(":lib:tool-kmp:network-starter"))
+                substitute(module("site.addzero:compose-icon-map"))
+                    .using(project(":lib:compose:compose-icon-map"))
+                substitute(module("site.addzero:route-core"))
+                    .using(project(":lib:ksp:route:route-core"))
+                substitute(module("site.addzero:route-processor"))
+                    .using(project(":lib:ksp:route:route-processor"))
+            }
+        }
+    }
 }
 
 dependencyResolutionManagement {

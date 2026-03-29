@@ -35,8 +35,8 @@ ksp {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
-    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspCommonMainMetadata", project(":lib:ksp:route:route-processor"))
+    add("kspJvm", project(":lib:ksp:route:route-processor"))
 }
 
 kotlin {
@@ -49,8 +49,8 @@ kotlin {
             implementation(project(":lib:api:api-netease"))
             implementation(project(":lib:api:api-qqmusic"))
             implementation(projects.lib.compose.liquidGlass)
-            implementation(libs.findLibrary("site-addzero-route-core").get())
-            implementation(libs.findLibrary("site-addzero-network-starter").get())
+            implementation(project(":lib:ksp:route:route-core"))
+            implementation(project(":lib:tool-kmp:network-starter"))
         }
     }
 }

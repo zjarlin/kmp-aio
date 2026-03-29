@@ -12,12 +12,7 @@ import org.jetbrains.skiko.disableTitleBar
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
-import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
-import site.addzero.kcloud.plugins.system.aichat.api.AiChatApiClient
-import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterApiClient
-import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeBaseApiClient
-import site.addzero.kcloud.plugins.system.rbac.api.RbacApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
 import java.awt.Container
 import javax.swing.JComponent
@@ -67,12 +62,7 @@ fun main() {
 private fun configureLocalApiClients(
     baseUrl: String,
 ) {
-    ServerApiClient.configureBaseUrl(baseUrl)
     McuConsoleApiClient.configureBaseUrl(baseUrl)
-    RbacApiClient.configureBaseUrl(baseUrl)
-    AiChatApiClient.configureBaseUrl(baseUrl)
-    ConfigCenterApiClient.configureBaseUrl(baseUrl)
-    KnowledgeBaseApiClient.configureBaseUrl(baseUrl)
 }
 
 @Composable

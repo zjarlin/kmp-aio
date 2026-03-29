@@ -1,14 +1,13 @@
 package site.addzero.kcloud.app
 
 import androidx.compose.ui.graphics.vector.ImageVector
-import org.koin.core.annotation.Single
 import site.addzero.annotation.Route
 import site.addzero.compose.icons.IconMap
-import site.addzero.generated.RouteKeys
 import kotlin.math.roundToInt
 
-@Single
-class KCloudRouteCatalog (val routeMeta:List<Route> =RouteKeys.allMeta){
+class KCloudRouteCatalog(
+    val routeMeta: List<Route>,
+) {
     val scenes: List<KCloudRouteScene> = buildScenes(
         routeMeta = routeMeta,
     )

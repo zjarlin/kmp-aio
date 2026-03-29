@@ -17,8 +17,7 @@ interface FavoriteApi {
  * 路径: /api/favorites
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.FavoriteResponse>
  */
-    @GET("/api/favorites")
-    suspend fun getFavorites(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.FavoriteResponse>
+    @GET("/api/favorites")    suspend fun getFavorites(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.FavoriteResponse>
 
 /**
  * addFavorite
@@ -28,9 +27,7 @@ interface FavoriteApi {
  *   - request: site.addzero.kcloud.vibepocket.routes.FavoriteRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.vibepocket.routes.FavoriteResponse
  */
-    @POST("/api/favorites")
-    @Headers("Content-Type: application/json")
-    suspend fun addFavorite(
+    @POST("/api/favorites")    suspend fun addFavorite(
         @Body request: site.addzero.kcloud.vibepocket.routes.FavoriteRequest
     ): site.addzero.kcloud.vibepocket.routes.FavoriteResponse
 
@@ -42,8 +39,7 @@ interface FavoriteApi {
  *   - trackId: kotlin.String (PathVariable)
  * 返回类型: site.addzero.kcloud.vibepocket.dto.OkResponse
  */
-    @DELETE("/api/favorites/{trackId}")
-    suspend fun removeFavorite(
+    @DELETE("/api/favorites/{trackId}")    suspend fun removeFavorite(
         @Path("trackId") trackId: kotlin.String
     ): site.addzero.kcloud.vibepocket.dto.OkResponse
 

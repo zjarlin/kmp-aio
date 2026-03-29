@@ -26,8 +26,7 @@ interface ConfigCenterApi {
  * 路径: /api/system/config-center/projects
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto>
  */
-    @GET("/api/system/config-center/projects")
-    suspend fun listConfigCenterProjects(): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto>
+    @GET("/api/system/config-center/projects")    suspend fun listConfigCenterProjects(): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto>
 
 /**
  * listConfigCenterEnvironments
@@ -37,8 +36,7 @@ interface ConfigCenterApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentDto>
  */
-    @GET("/api/system/config-center/projects/{projectId}/environments")
-    suspend fun listConfigCenterEnvironments(
+    @GET("/api/system/config-center/projects/{projectId}/environments")    suspend fun listConfigCenterEnvironments(
         @Path("projectId") projectId: kotlin.Long
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentDto>
 
@@ -50,8 +48,7 @@ interface ConfigCenterApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigDto>
  */
-    @GET("/api/system/config-center/projects/{projectId}/configs")
-    suspend fun listConfigCenterConfigs(
+    @GET("/api/system/config-center/projects/{projectId}/configs")    suspend fun listConfigCenterConfigs(
         @Path("projectId") projectId: kotlin.Long
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigDto>
 
@@ -64,8 +61,7 @@ interface ConfigCenterApi {
  *   - includeInherited: kotlin.Boolean? (RequestParam)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretDto>
  */
-    @GET("/api/system/config-center/configs/{configId}/secrets")
-    suspend fun listConfigCenterSecrets(
+    @GET("/api/system/config-center/configs/{configId}/secrets")    suspend fun listConfigCenterSecrets(
         @Path("configId") configId: kotlin.Long,
         @Query("includeInherited") includeInherited: kotlin.Boolean?
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretDto>
@@ -78,8 +74,7 @@ interface ConfigCenterApi {
  *   - secretId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretVersionDto>
  */
-    @GET("/api/system/config-center/secrets/{secretId}/versions")
-    suspend fun listConfigCenterSecretVersions(
+    @GET("/api/system/config-center/secrets/{secretId}/versions")    suspend fun listConfigCenterSecretVersions(
         @Path("secretId") secretId: kotlin.Long
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretVersionDto>
 
@@ -91,8 +86,7 @@ interface ConfigCenterApi {
  *   - configId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenDto>
  */
-    @GET("/api/system/config-center/configs/{configId}/tokens")
-    suspend fun listConfigCenterServiceTokens(
+    @GET("/api/system/config-center/configs/{configId}/tokens")    suspend fun listConfigCenterServiceTokens(
         @Path("configId") configId: kotlin.Long
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenDto>
 
@@ -105,8 +99,7 @@ interface ConfigCenterApi {
  *   - limit: kotlin.Int? (RequestParam)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterActivityLogDto>
  */
-    @GET("/api/system/config-center/projects/{projectId}/activities")
-    suspend fun listConfigCenterActivityLogs(
+    @GET("/api/system/config-center/projects/{projectId}/activities")    suspend fun listConfigCenterActivityLogs(
         @Path("projectId") projectId: kotlin.Long,
         @Query("limit") limit: kotlin.Int?
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterActivityLogDto>
@@ -121,8 +114,7 @@ interface ConfigCenterApi {
  *   - profile: kotlin.String? (RequestParam)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterCompatValueDto
  */
-    @GET("/api/system/config-center/compat/value")
-    suspend fun getConfigCenterCompatValue(
+    @GET("/api/system/config-center/compat/value")    suspend fun getConfigCenterCompatValue(
         @Query("namespace") namespace: kotlin.String,
         @Query("key") key: kotlin.String,
         @Query("profile") profile: kotlin.String?
@@ -136,9 +128,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto
  */
-    @POST("/api/system/config-center/projects")
-    @Headers("Content-Type: application/json")
-    suspend fun createConfigCenterProject(
+    @POST("/api/system/config-center/projects")    suspend fun createConfigCenterProject(
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto
 
@@ -151,9 +141,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentDto
  */
-    @POST("/api/system/config-center/projects/{projectId}/environments")
-    @Headers("Content-Type: application/json")
-    suspend fun createConfigCenterEnvironment(
+    @POST("/api/system/config-center/projects/{projectId}/environments")    suspend fun createConfigCenterEnvironment(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentDto
@@ -167,9 +155,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigDto
  */
-    @POST("/api/system/config-center/projects/{projectId}/configs")
-    @Headers("Content-Type: application/json")
-    suspend fun createConfigCenterConfig(
+    @POST("/api/system/config-center/projects/{projectId}/configs")    suspend fun createConfigCenterConfig(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigDto
@@ -182,9 +168,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretDto
  */
-    @POST("/api/system/config-center/secrets")
-    @Headers("Content-Type: application/json")
-    suspend fun createConfigCenterSecret(
+    @POST("/api/system/config-center/secrets")    suspend fun createConfigCenterSecret(
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretDto
 
@@ -196,9 +180,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenIssueRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenIssueResult
  */
-    @POST("/api/system/config-center/tokens")
-    @Headers("Content-Type: application/json")
-    suspend fun issueConfigCenterServiceToken(
+    @POST("/api/system/config-center/tokens")    suspend fun issueConfigCenterServiceToken(
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenIssueRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenIssueResult
 
@@ -210,8 +192,7 @@ interface ConfigCenterApi {
  *   - tokenId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenDto
  */
-    @POST("/api/system/config-center/tokens/{tokenId}/revoke")
-    suspend fun revokeConfigCenterServiceToken(
+    @POST("/api/system/config-center/tokens/{tokenId}/revoke")    suspend fun revokeConfigCenterServiceToken(
         @Path("tokenId") tokenId: kotlin.Long
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterServiceTokenDto
 
@@ -224,9 +205,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto
  */
-    @PUT("/api/system/config-center/projects/{projectId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateConfigCenterProject(
+    @PUT("/api/system/config-center/projects/{projectId}")    suspend fun updateConfigCenterProject(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterProjectDto
@@ -241,9 +220,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentDto
  */
-    @PUT("/api/system/config-center/projects/{projectId}/environments/{environmentId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateConfigCenterEnvironment(
+    @PUT("/api/system/config-center/projects/{projectId}/environments/{environmentId}")    suspend fun updateConfigCenterEnvironment(
         @Path("projectId") projectId: kotlin.Long,
         @Path("environmentId") environmentId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterEnvironmentMutationRequest
@@ -258,9 +235,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigDto
  */
-    @PUT("/api/system/config-center/configs/{configId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateConfigCenterConfig(
+    @PUT("/api/system/config-center/configs/{configId}")    suspend fun updateConfigCenterConfig(
         @Path("configId") configId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigDto
@@ -274,9 +249,7 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretDto
  */
-    @PUT("/api/system/config-center/secrets/{secretId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateConfigCenterSecret(
+    @PUT("/api/system/config-center/secrets/{secretId}")    suspend fun updateConfigCenterSecret(
         @Path("secretId") secretId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretMutationRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterSecretDto
@@ -289,8 +262,7 @@ interface ConfigCenterApi {
  *   - secretId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.Unit
  */
-    @DELETE("/api/system/config-center/secrets/{secretId}")
-    suspend fun deleteConfigCenterSecret(
+    @DELETE("/api/system/config-center/secrets/{secretId}")    suspend fun deleteConfigCenterSecret(
         @Path("secretId") secretId: kotlin.Long
     ): kotlin.Unit
 

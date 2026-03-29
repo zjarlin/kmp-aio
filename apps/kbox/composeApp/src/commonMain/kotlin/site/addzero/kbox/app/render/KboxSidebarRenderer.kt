@@ -33,12 +33,12 @@ import site.addzero.kbox.app.KboxRouteCatalog
 import site.addzero.kbox.app.KboxShellState
 import site.addzero.kbox.app.KboxSidebarNode
 import site.addzero.kbox.plugin.api.KboxDynamicRouteRegistry
-import site.addzero.workbenchshell.spi.sidebar.SidebarRenderer
+import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
 class KboxSidebarRenderer(
     private val routeCatalog: KboxRouteCatalog,
     private val shellState: KboxShellState,
-) : SidebarRenderer {
+) : SidebarRender {
     @Composable
     override fun Render(
         modifier: Modifier,

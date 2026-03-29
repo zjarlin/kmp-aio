@@ -32,8 +32,8 @@ ksp {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
-    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspCommonMainMetadata", project(":lib:ksp:route:route-processor"))
+    add("kspJvm", project(":lib:ksp:route:route-processor"))
 }
 
 kotlin {
@@ -41,7 +41,7 @@ kotlin {
         commonMain.dependencies {
             api(project(":apps:kcloud:plugins:system:plugin-market:shared"))
             implementation(project(":lib:compose:scaffold-spi"))
-            implementation(libs.findLibrary("site-addzero-route-core").get())
+            implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())

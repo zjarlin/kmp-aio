@@ -10,7 +10,6 @@ import io.ktor.server.routing.*
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
-import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterBootstrapBridge
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
@@ -84,17 +83,14 @@ fun serverApplication(
     embeddedApplicationConfigOverride = null
     embeddedDesktopKoinConfigurer = null
     val config = loadServerConfig(configPath)
-    val configCenterBridge = createConfigCenterBridge(config)
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: configCenterBridge?.getString("ktor.deployment.host")
         ?: config.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: configCenterBridge?.getInt("ktor.deployment.port", 8080)
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: 8080
 
@@ -125,7 +121,6 @@ fun ktorApplication(
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val config = loadEmbeddedConfig(configPath)
-    val configCenterBridge = createConfigCenterBridge(config)
     embeddedApplicationConfigOverride = config
     System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
@@ -134,13 +129,11 @@ fun ktorApplication(
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val requestedHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: configCenterBridge?.getString("ktor.deployment.host")
         ?: config.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: configCenterBridge?.getInt("ktor.deployment.port", 8080)
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: DEFAULT_EMBEDDED_DESKTOP_PORT
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
@@ -252,18 +245,6 @@ private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
             .withFallback(resolved)
             .resolve()
     )
-}
-
-private fun createConfigCenterBridge(
-    config: ApplicationConfig,
-): ConfigCenterBootstrapBridge? {
-    return runCatching {
-        ConfigCenterBootstrapBridge(
-            applicationConfig = config,
-            namespace = "kcloud",
-            profile = DEFAULT_EMBEDDED_ENV,
-        )
-    }.getOrNull()
 }
 
 private data class ServerCliArgs(

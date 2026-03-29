@@ -17,8 +17,7 @@ interface McuScriptApi {
  * 路径: /api/mcu/script/status
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
  */
-    @GET("/api/mcu/script/status")
-    suspend fun getMcuScriptStatus(): site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
+    @GET("/api/mcu/script/status")    suspend fun getMcuScriptStatus(): site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
 
 /**
  * executeMcuScript
@@ -28,9 +27,7 @@ interface McuScriptApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
  */
-    @POST("/api/mcu/script/execute")
-    @Headers("Content-Type: application/json")
-    suspend fun executeMcuScript(
+    @POST("/api/mcu/script/execute")    suspend fun executeMcuScript(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
 
@@ -42,9 +39,7 @@ interface McuScriptApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuScriptStopRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
  */
-    @POST("/api/mcu/script/stop")
-    @Headers("Content-Type: application/json")
-    suspend fun stopMcuScript(
+    @POST("/api/mcu/script/stop")    suspend fun stopMcuScript(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuScriptStopRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
 

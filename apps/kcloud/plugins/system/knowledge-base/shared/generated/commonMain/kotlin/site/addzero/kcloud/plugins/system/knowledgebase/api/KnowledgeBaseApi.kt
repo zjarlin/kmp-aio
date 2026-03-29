@@ -19,8 +19,7 @@ interface KnowledgeBaseApi {
  * 路径: /api/system/knowledge-base/spaces
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto>
  */
-    @GET("/api/system/knowledge-base/spaces")
-    suspend fun listKnowledgeSpaces(): kotlin.collections.List<site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto>
+    @GET("/api/system/knowledge-base/spaces")    suspend fun listKnowledgeSpaces(): kotlin.collections.List<site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto>
 
 /**
  * listKnowledgeDocuments
@@ -30,8 +29,7 @@ interface KnowledgeBaseApi {
  *   - spaceId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto>
  */
-    @GET("/api/system/knowledge-base/spaces/{spaceId}/documents")
-    suspend fun listKnowledgeDocuments(
+    @GET("/api/system/knowledge-base/spaces/{spaceId}/documents")    suspend fun listKnowledgeDocuments(
         @Path("spaceId") spaceId: kotlin.Long
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto>
 
@@ -43,9 +41,7 @@ interface KnowledgeBaseApi {
  *   - request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
  */
-    @POST("/api/system/knowledge-base/spaces")
-    @Headers("Content-Type: application/json")
-    suspend fun createKnowledgeSpace(
+    @POST("/api/system/knowledge-base/spaces")    suspend fun createKnowledgeSpace(
         @Body request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceMutationRequest
     ): site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
 
@@ -58,9 +54,7 @@ interface KnowledgeBaseApi {
  *   - request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
  */
-    @POST("/api/system/knowledge-base/spaces/{spaceId}/documents")
-    @Headers("Content-Type: application/json")
-    suspend fun createKnowledgeDocument(
+    @POST("/api/system/knowledge-base/spaces/{spaceId}/documents")    suspend fun createKnowledgeDocument(
         @Path("spaceId") spaceId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentMutationRequest
     ): site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
@@ -74,9 +68,7 @@ interface KnowledgeBaseApi {
  *   - request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
  */
-    @PUT("/api/system/knowledge-base/spaces/{spaceId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateKnowledgeSpace(
+    @PUT("/api/system/knowledge-base/spaces/{spaceId}")    suspend fun updateKnowledgeSpace(
         @Path("spaceId") spaceId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceMutationRequest
     ): site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
@@ -90,9 +82,7 @@ interface KnowledgeBaseApi {
  *   - request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
  */
-    @PUT("/api/system/knowledge-base/documents/{documentId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateKnowledgeDocument(
+    @PUT("/api/system/knowledge-base/documents/{documentId}")    suspend fun updateKnowledgeDocument(
         @Path("documentId") documentId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentMutationRequest
     ): site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
@@ -105,8 +95,7 @@ interface KnowledgeBaseApi {
  *   - spaceId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDeleteResult
  */
-    @DELETE("/api/system/knowledge-base/spaces/{spaceId}")
-    suspend fun deleteKnowledgeSpace(
+    @DELETE("/api/system/knowledge-base/spaces/{spaceId}")    suspend fun deleteKnowledgeSpace(
         @Path("spaceId") spaceId: kotlin.Long
     ): site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDeleteResult
 
@@ -118,8 +107,7 @@ interface KnowledgeBaseApi {
  *   - documentId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDeleteResult
  */
-    @DELETE("/api/system/knowledge-base/documents/{documentId}")
-    suspend fun deleteKnowledgeDocument(
+    @DELETE("/api/system/knowledge-base/documents/{documentId}")    suspend fun deleteKnowledgeDocument(
         @Path("documentId") documentId: kotlin.Long
     ): site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDeleteResult
 

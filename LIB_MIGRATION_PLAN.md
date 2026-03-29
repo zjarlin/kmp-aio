@@ -12,26 +12,18 @@ Scope rule:
 
 These are the best first migration candidates because they are already library-shaped and have low app coupling.
 
-### Config Center Suite
+### Config Center
 
-- `lib/config-center/spec`
-- `lib/config-center/client`
-- `lib/config-center/runtime-jvm`
-- `lib/config-center/ktor`
+The old `lib/config-center` suite has been removed from `kmp-aio`.
 
-Why:
+Replacement path:
 
-- Package names are already generic: `site.addzero.configcenter.*`
-- Internal dependency graph is clean and suite-like
-- No direct dependency on `apps/*`
-- Easy fit for a published library family in `addzero-lib-jvm`
+- `apps/kcloud/plugins/system/config-center`
 
-Expected target shape:
+Reason:
 
-- `addzero-lib-jvm/lib/config-center/spec`
-- `addzero-lib-jvm/lib/config-center/client`
-- `addzero-lib-jvm/lib/config-center/runtime-jvm`
-- `addzero-lib-jvm/lib/config-center/ktor`
+- `config-center` is now treated as a `kcloud` system plugin instead of a generic reusable library family
+- The Doppler-style online management model is owned by the `kcloud` workbench and server plugin path
 
 ### Workbench UI Base
 
@@ -183,13 +175,9 @@ These remain demos unless explicitly reclassified.
 
 ## Next Execution Order
 
-1. Migrate `config-center/spec`
-2. Migrate `config-center/client`
-3. Migrate `config-center/runtime-jvm`
-4. Migrate `config-center/ktor`
-5. Migrate `compose/app-sidebar`
-6. Migrate `compose/scaffold-spi`
-7. Migrate `spec/system-spec`
+1. Migrate `compose/app-sidebar`
+2. Migrate `compose/scaffold-spi`
+3. Migrate `spec/system-spec`
 
 ## Publish Gate
 

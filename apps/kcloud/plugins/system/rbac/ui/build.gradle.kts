@@ -32,15 +32,15 @@ ksp {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
-    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspCommonMainMetadata", project(":lib:ksp:route:route-processor"))
+    add("kspJvm", project(":lib:ksp:route:route-processor"))
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":apps:kcloud:plugins:system:rbac:shared"))
-            implementation(libs.findLibrary("site-addzero-route-core").get())
+            implementation(project(":lib:ksp:route:route-core"))
         }
     }
 }

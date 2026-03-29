@@ -16,13 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
-import org.koin.core.annotation.Single
 import site.addzero.kcloud.app.KCloudRouteCatalog
 import site.addzero.kcloud.app.KCloudRouteScene
 import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.workbenchshell.spi.header.HeaderRender
 
-@Single
 class KCloudHeaderRender(
     private val routeCatalog: KCloudRouteCatalog,
     private val shellState: KCloudShellState,

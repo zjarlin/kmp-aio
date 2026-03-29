@@ -16,8 +16,7 @@ interface PersonaApi {
  * 路径: /api/personas
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.PersonaResponse>
  */
-    @GET("/api/personas")
-    suspend fun getPersonas(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.PersonaResponse>
+    @GET("/api/personas")    suspend fun getPersonas(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.PersonaResponse>
 
 /**
  * savePersona
@@ -27,9 +26,7 @@ interface PersonaApi {
  *   - request: site.addzero.kcloud.vibepocket.routes.PersonaSaveRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.vibepocket.routes.PersonaResponse
  */
-    @POST("/api/personas")
-    @Headers("Content-Type: application/json")
-    suspend fun savePersona(
+    @POST("/api/personas")    suspend fun savePersona(
         @Body request: site.addzero.kcloud.vibepocket.routes.PersonaSaveRequest
     ): site.addzero.kcloud.vibepocket.routes.PersonaResponse
 

@@ -17,8 +17,7 @@ interface McuRuntimeApi {
  * 路径: /api/mcu/runtime/bundles
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundlesResponse
  */
-    @GET("/api/mcu/runtime/bundles")
-    suspend fun listMcuRuntimeBundles(): site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundlesResponse
+    @GET("/api/mcu/runtime/bundles")    suspend fun listMcuRuntimeBundles(): site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundlesResponse
 
 /**
  * getMcuRuntimeStatus
@@ -26,8 +25,7 @@ interface McuRuntimeApi {
  * 路径: /api/mcu/runtime/status
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
  */
-    @GET("/api/mcu/runtime/status")
-    suspend fun getMcuRuntimeStatus(): site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
+    @GET("/api/mcu/runtime/status")    suspend fun getMcuRuntimeStatus(): site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
 
 /**
  * ensureMcuRuntime
@@ -37,9 +35,7 @@ interface McuRuntimeApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
  */
-    @POST("/api/mcu/runtime/ensure")
-    @Headers("Content-Type: application/json")
-    suspend fun ensureMcuRuntime(
+    @POST("/api/mcu/runtime/ensure")    suspend fun ensureMcuRuntime(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
 

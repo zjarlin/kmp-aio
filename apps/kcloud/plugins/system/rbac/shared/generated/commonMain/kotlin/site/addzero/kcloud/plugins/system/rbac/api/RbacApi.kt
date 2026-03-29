@@ -17,8 +17,7 @@ interface RbacApi {
  * 路径: /api/system/rbac/roles
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto>
  */
-    @GET("/api/system/rbac/roles")
-    suspend fun listRbacRoles(): kotlin.collections.List<site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto>
+    @GET("/api/system/rbac/roles")    suspend fun listRbacRoles(): kotlin.collections.List<site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto>
 
 /**
  * createRbacRole
@@ -28,9 +27,7 @@ interface RbacApi {
  *   - request: site.addzero.kcloud.plugins.system.rbac.api.RbacRoleMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto
  */
-    @POST("/api/system/rbac/roles")
-    @Headers("Content-Type: application/json")
-    suspend fun createRbacRole(
+    @POST("/api/system/rbac/roles")    suspend fun createRbacRole(
         @Body request: site.addzero.kcloud.plugins.system.rbac.api.RbacRoleMutationRequest
     ): site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto
 
@@ -43,9 +40,7 @@ interface RbacApi {
  *   - request: site.addzero.kcloud.plugins.system.rbac.api.RbacRoleMutationRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto
  */
-    @PUT("/api/system/rbac/roles/{roleId}")
-    @Headers("Content-Type: application/json")
-    suspend fun updateRbacRole(
+    @PUT("/api/system/rbac/roles/{roleId}")    suspend fun updateRbacRole(
         @Path("roleId") roleId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.rbac.api.RbacRoleMutationRequest
     ): site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto
@@ -58,8 +53,7 @@ interface RbacApi {
  *   - roleId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.system.rbac.api.RbacDeleteResult
  */
-    @DELETE("/api/system/rbac/roles/{roleId}")
-    suspend fun deleteRbacRole(
+    @DELETE("/api/system/rbac/roles/{roleId}")    suspend fun deleteRbacRole(
         @Path("roleId") roleId: kotlin.Long
     ): site.addzero.kcloud.plugins.system.rbac.api.RbacDeleteResult
 

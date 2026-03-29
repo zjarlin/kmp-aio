@@ -22,8 +22,7 @@ interface MusicSearchApi {
  *   - keyword: kotlin.String? (RequestParam)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.api.music.MusicTrack>
  */
-    @GET("/api/music/search")
-    suspend fun search(
+    @GET("/api/music/search")    suspend fun search(
         @Query("provider") provider: kotlin.String?,
         @Query("keyword") keyword: kotlin.String?
     ): kotlin.collections.List<site.addzero.kcloud.api.music.MusicTrack>
@@ -37,8 +36,7 @@ interface MusicSearchApi {
  *   - songId: kotlin.String? (RequestParam)
  * 返回类型: site.addzero.kcloud.api.music.MusicLyric
  */
-    @GET("/api/music/lyrics")
-    suspend fun getLyrics(
+    @GET("/api/music/lyrics")    suspend fun getLyrics(
         @Query("provider") provider: kotlin.String?,
         @Query("songId") songId: kotlin.String?
     ): site.addzero.kcloud.api.music.MusicLyric
@@ -51,9 +49,7 @@ interface MusicSearchApi {
  *   - track: site.addzero.kcloud.api.music.MusicTrack (RequestBody)
  * 返回类型: site.addzero.kcloud.api.music.MusicResolvedAsset
  */
-    @POST("/api/music/resolve")
-    @Headers("Content-Type: application/json")
-    suspend fun resolve(
+    @POST("/api/music/resolve")    suspend fun resolve(
         @Body track: site.addzero.kcloud.api.music.MusicTrack
     ): site.addzero.kcloud.api.music.MusicResolvedAsset
 
@@ -65,9 +61,7 @@ interface MusicSearchApi {
  *   - request: site.addzero.vibepocket.music.UploadCoverSourcePrepareRequest (RequestBody)
  * 返回类型: site.addzero.vibepocket.music.UploadCoverSourcePrepareResponse
  */
-    @POST("/api/music/upload-cover-source/prepare")
-    @Headers("Content-Type: application/json")
-    suspend fun prepareUploadCoverSource(
+    @POST("/api/music/upload-cover-source/prepare")    suspend fun prepareUploadCoverSource(
         @Body request: site.addzero.vibepocket.music.UploadCoverSourcePrepareRequest
     ): site.addzero.vibepocket.music.UploadCoverSourcePrepareResponse
 

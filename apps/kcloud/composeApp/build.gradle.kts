@@ -20,11 +20,11 @@ val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
 kotlin {
     dependencies {
         implementation(project(":lib:compose:scaffold-spi"))
+        implementation("site.addzero:compose-icon-map:2026.10329.10127")
         implementation(project(":apps:kcloud:shared"))
         // KCloud 插件 UI/root 模块由 cmp-kcloud-aio 自动扫描并注入到 commonMain，
         // 这里仅保留 composeApp 自身的基础依赖。
-        implementation(libs.findLibrary("site-addzero-network-starter").get())
-        implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
+        implementation(project(":lib:tool-kmp:network-starter"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
 

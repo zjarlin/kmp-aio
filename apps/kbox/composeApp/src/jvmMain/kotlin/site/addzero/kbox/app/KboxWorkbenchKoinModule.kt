@@ -9,7 +9,7 @@ import site.addzero.kbox.feature.KboxShellSettingsService
 import site.addzero.kbox.plugin.api.KboxDynamicRouteRegistry
 import site.addzero.workbenchshell.spi.content.ContentRender
 import site.addzero.workbenchshell.spi.header.HeaderRender
-import site.addzero.workbenchshell.spi.sidebar.SidebarRenderer
+import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
 @Module
 class KboxWorkbenchKoinModule {
@@ -36,7 +36,7 @@ class KboxWorkbenchKoinModule {
     fun provideSidebarRenderer(
         routeCatalog: KboxRouteCatalog,
         shellState: KboxShellState,
-    ): SidebarRenderer {
+    ): SidebarRender {
         return KboxSidebarRenderer(routeCatalog, shellState)
     }
 

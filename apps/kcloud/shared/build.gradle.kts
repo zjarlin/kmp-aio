@@ -4,12 +4,10 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-kcloud-aio")
 }
 
-val libs = versionCatalogs.named("libs")
-
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            api(libs.findLibrary("site-addzero-route-core").get())
+            api(project(":lib:ksp:route:route-core"))
         }
     }
 }

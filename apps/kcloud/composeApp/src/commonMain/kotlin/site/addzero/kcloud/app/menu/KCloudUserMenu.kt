@@ -6,7 +6,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,25 +15,19 @@ import site.addzero.appsidebar.WorkbenchUserButton
 import site.addzero.kcloud.app.KCloudRouteCatalog
 import site.addzero.kcloud.app.KCloudSidebarNode
 import site.addzero.kcloud.app.KCloudShellState
-import site.addzero.kcloud.plugins.system.rbac.UserCenterWorkbenchState
 
 @Composable
 fun KCloudUserMenu(
     shellState: KCloudShellState = koinInject(),
     routeCatalog: KCloudRouteCatalog = koinInject(),
-    profileState: UserCenterWorkbenchState = koinInject(),
 ) {
-    LaunchedEffect(profileState) {
-        profileState.ensureLoaded()
-    }
-
     var expanded by remember { mutableStateOf(false) }
     val items = remember(routeCatalog) {
         routeCatalog.findScene(SYSTEM_SCENE_ID)?.menuNodes.orEmpty()
     }
-    val displayName = profileState.displayName.ifBlank { "用户" }
-    val avatarInitials = remember(profileState.avatarLabel, displayName) {
-        profileState.avatarLabel.ifBlank { displayName }.toAvatarInitials()
+    val displayName = "本地工作台"
+    val avatarInitials = remember(displayName) {
+        displayName.toAvatarInitials()
     }
 
     Box {

@@ -16,7 +16,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.koin.core.annotation.Single
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
@@ -24,13 +23,12 @@ import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.kcloud.app.KCloudRouteCatalog
 import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.kcloud.app.KCloudSidebarNode
-import site.addzero.workbenchshell.spi.sidebar.SidebarRenderer
+import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
-@Single
 class SidebarRenderImpl(
     private val routeCatalog: KCloudRouteCatalog,
     private val shellState: KCloudShellState,
-) : SidebarRenderer {
+) : SidebarRender {
     @Composable
     override fun Render(
         modifier: Modifier,

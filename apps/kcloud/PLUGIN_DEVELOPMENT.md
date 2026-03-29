@@ -1,70 +1,70 @@
-# KCloud Plugin Development Guide
+# KCloud 插件开发指南
 
-## Goal
+## 目标
 
-`kcloud` now aggregates plugin modules through the Gradle convention plugin `site.addzero.buildlogic.kmp.cmp-kcloud-aio`.
+`kcloud` 现在通过 Gradle 约定插件 `site.addzero.buildlogic.kmp.cmp-kcloud-aio` 自动聚合插件模块。
 
-That changes the contribution model:
+这会直接改变插件接入方式：
 
-- Plugin contributors focus on adding modules under `apps/kcloud/plugins/**`
-- The shell no longer keeps a hand-maintained plugin dependency list
-- `composeApp`, `server`, and `shared` discover plugin entrypoints during the build
+- 插件开发者只需要把模块放到 `apps/kcloud/plugins/**` 下
+- 壳层不再手工维护插件依赖列表
+- `composeApp`、`server`、`shared` 会在构建阶段自动发现插件入口
 
-If a plugin follows the layout and naming rules below, the main shell will pick it up automatically.
+只要插件遵守下面的目录结构和命名约定，主壳层就会自动接入它。
 
-## Required Layout
+## 必要目录结构
 
-Recommended structure:
+推荐结构：
 
 ```text
 apps/kcloud/plugins/
 └── <group>/<plugin-id>/
-    ├── build.gradle.kts          # optional shared/common/api module
+    ├── build.gradle.kts          # 可选，共享/common/api 根模块
     ├── src/commonMain/kotlin/...
-    ├── ui/                       # optional Compose UI facet
+    ├── ui/                       # 可选，Compose UI 分面
     │   ├── build.gradle.kts
     │   └── src/commonMain/kotlin/...
-    └── server/                   # optional server facet
+    └── server/                   # 可选，服务端分面
         ├── build.gradle.kts
         └── src/jvmMain/kotlin/...
 ```
 
-Rules:
+规则：
 
-- Put every community plugin under `apps/kcloud/plugins/**`
-- Use the root module for shared models, API contracts, and common logic
-- Use `ui/` when the plugin has a clear UI facet separated from shared contracts
-- Use `server/` only when the plugin exposes backend services or routes
-- A plugin can be UI-only, server-only, or full-stack, but UI-only is the most common case
+- 所有社区插件都必须放在 `apps/kcloud/plugins/**` 下
+- 根模块用于放共享模型、API 契约和公共逻辑
+- 当插件的 UI 与共享契约能够明确分离时，使用 `ui/`
+- 只有插件需要暴露后端服务或路由时才使用 `server/`
+- 插件可以是纯 UI、纯 server 或全栈，但最常见的是纯 UI 插件
 
-## Automatic Aggregation Rules
+## 自动聚合规则
 
-`site.addzero.buildlogic.kmp.cmp-kcloud-aio` scans plugin modules using these conventions:
+`site.addzero.buildlogic.kmp.cmp-kcloud-aio` 会按以下约定扫描插件模块：
 
-- Compose aggregation target:
-  - `<plugin>` if the root module itself contains `@Route` screens or a Compose Koin module
-  - otherwise `<plugin>:ui`
-- Server aggregation target:
-  - `<plugin>:server` when it contains a server Koin module or a `Route` registrar
-- Shared route snapshot dependency:
-  - the Compose aggregation target's `:compileKotlinJvm`
+- Compose 聚合目标：
+  - 如果根模块本身包含 `@Route` 页面或 Compose Koin 模块，则使用 `<plugin>`
+  - 否则使用 `<plugin>:ui`
+- Server 聚合目标：
+  - 当模块里存在 server Koin 模块或 `Route` 注册函数时，使用 `<plugin>:server`
+- Shared 路由快照依赖：
+  - 指向 Compose 聚合目标的 `:compileKotlinJvm`
 
-This means the shell aggregates by module layout. No extra registration file is needed.
+这意味着壳层是按模块结构自动聚合的，不再需要额外的注册文件。
 
-## Compose Plugin Contract
+## Compose 插件契约
 
-For a Compose plugin facet, the aggregator expects both routing and DI conventions.
+对于 Compose 插件分面，聚合器要求同时满足路由和 DI 约定。
 
-### 1. Screens
+### 1. 页面
 
-Follow the existing KCloud route rules:
+遵循现有的 KCloud 路由规则：
 
-- Screen entrypoints must be top-level `@Composable` functions
-- Entry function names must end with `Screen`
-- Put screen entrypoints in the plugin's `screen` package
-- Every screen entrypoint must declare `@Route(...)`
+- 页面入口必须是顶层 `@Composable` 函数
+- 入口函数名必须以 `Screen` 结尾
+- 页面入口必须放在插件自己的 `screen` 包下
+- 每个页面入口都必须声明 `@Route(...)`
 
-Example:
+示例：
 
 ```kotlin
 package site.addzero.kcloud.plugins.example.screen
@@ -85,16 +85,16 @@ fun PluginOverviewScreen() {
 }
 ```
 
-### 2. Compose Koin Module
+### 2. Compose Koin 模块
 
-The aggregator scans for a top-level class or object whose name ends with:
+聚合器会扫描顶层 `class` 或 `object`，名称必须以下列后缀之一结尾：
 
 - `ComposeKoinModule`
-- or `KoinModule`
+- `KoinModule`
 
-Recommendation: prefer the explicit `ComposeKoinModule` suffix for new community plugins.
+建议：新插件优先使用更明确的 `ComposeKoinModule` 后缀。
 
-Example:
+示例：
 
 ```kotlin
 package site.addzero.kcloud.plugins.example
@@ -105,11 +105,11 @@ import org.koin.core.annotation.ComponentScan
 class ExampleComposeKoinModule
 ```
 
-### 3. Gradle Wiring
+### 3. Gradle 接线
 
-For a Compose facet, keep the existing route/KSP chain so `RouteKeys` and `RouteTable` keep generating correctly.
+对于 Compose 分面，必须保留现有的 route/KSP 链路，确保 `RouteKeys` 和 `RouteTable` 能正确生成。
 
-Typical `ui/build.gradle.kts` or root `build.gradle.kts`:
+典型的 `ui/build.gradle.kts` 或根模块 `build.gradle.kts`：
 
 ```kotlin
 plugins {
@@ -151,33 +151,33 @@ dependencies {
 }
 ```
 
-Keep `routeModuleKey` stable. It is part of the generated route ownership contract.
+`routeModuleKey` 必须保持稳定。它是生成路由归属关系的一部分契约。
 
-### 4. Optional: Ktorfit API Aggregation
+### 4. 可选：Ktorfit API 聚合
 
-If the plugin defines multiple Ktorfit service interfaces and you want one generated aggregation entry instead of manually assembling factories one by one, you can combine:
+如果插件里定义了多组 Ktorfit service interface，并且你希望有一个统一生成的聚合入口，而不是手工一个个拼 factory，可以组合使用：
 
 - `site.addzero.buildlogic.kmp.kmp-ktorfit`
 - `site.addzero.ksp.apiprovider`
 
-The Gradle plugin entry is defined in:
+这个 Gradle 插件入口定义在：
 
 - `/Users/zjarlin/IdeaProjects/addzero-lib-jvm/lib/ksp/metadata/apiprovider-gradle-plugin/build.gradle.kts`
 
-Its purpose is straightforward:
+它的职责很直接：
 
-- scan Ktorfit HTTP service interfaces
-- run the `apiprovider-processor`
-- generate a shared aggregation class `site.addzero.generated.api.ApiProvider`
+- 扫描 Ktorfit HTTP service interface
+- 执行 `apiprovider-processor`
+- 生成共享聚合类 `site.addzero.generated.api.ApiProvider`
 
-Current generator behavior:
+当前生成器行为：
 
-- generated package: `site.addzero.generated.api`
-- generated object name: `ApiProvider`
-- each detected Ktorfit interface becomes one property on `ApiProvider`
-- the property is created through the corresponding generated `ktorfit.createXxxApi()` entry
+- 生成包名：`site.addzero.generated.api`
+- 生成对象名：`ApiProvider`
+- 每个识别到的 Ktorfit interface 会变成 `ApiProvider` 上的一个属性
+- 该属性通过对应的生成入口 `ktorfit.createXxxApi()` 创建
 
-Typical plugin wiring:
+典型插件接线：
 
 ```kotlin
 plugins {
@@ -186,18 +186,18 @@ plugins {
 }
 ```
 
-Use this only when the plugin truly has a cluster of related Ktorfit APIs that benefit from one aggregation surface. If there is only one or two APIs, do not introduce another generated layer without need.
+只有当插件内确实存在一组相关联的 Ktorfit API，且值得共享一个聚合入口时，才使用这个方案。如果只有一两个 API，不要为了“统一”再多引入一层生成代码。
 
-### 5. KCloud API Client Wrapper Pattern
+### 5. KCloud API Client 包装器模式
 
-Inside `kcloud`, there is another repeated pattern beyond plain `ApiProvider`:
+在 `kcloud` 内部，除了纯 `ApiProvider` 之外，还反复出现另一种模式：
 
 - `object XxxApiClient`
 - `configureBaseUrl(...)`
-- one shared `HttpClientFactory` profile
-- one or more lazily exposed Ktorfit APIs such as `xxxApi`
+- 一组共享的 `HttpClientFactory` profile
+- 一个或多个惰性暴露的 Ktorfit API，例如 `xxxApi`
 
-Typical examples already present in the repo:
+仓库里已经存在的典型例子：
 
 - `ServerApiClient`
 - `RbacApiClient`
@@ -205,56 +205,56 @@ Typical examples already present in the repo:
 - `KnowledgeBaseApiClient`
 - `McuConsoleApiClient`
 
-These wrappers are strong KSP generation candidates because most of the code is mechanical:
+这些包装器非常适合做成 KSP 生成目标，因为它们大部分都是机械性代码：
 
-- hold `baseUrl`
-- pick one `HttpClientFactory` profile
-- call `Ktorfit.Builder().baseUrl(...).httpClient(...).build()`
-- expose `createXxxApi()` / `create<SomeApi>()` results as properties
+- 保存 `baseUrl`
+- 选择一个 `HttpClientFactory` profile
+- 调用 `Ktorfit.Builder().baseUrl(...).httpClient(...).build()`
+- 以属性形式暴露 `createXxxApi()` / `create<SomeApi>()` 结果
 
-For future generator work, treat the wrapper as the real generation target, not the remote service call site.
+后续如果继续做生成器，应把这种包装器本身当成真正的生成目标，而不是把注意力只放在 remote service 调用层。
 
-Good generation targets:
+适合生成的目标：
 
-- wrappers whose body is mostly `baseUrl + profile + Ktorfit.createXxxApi()`
-- wrappers that only expose API properties and no extra domain policy
+- 函数体基本就是 `baseUrl + profile + Ktorfit.createXxxApi()` 的包装器
+- 只暴露 API 属性，不包含额外领域策略
 
-Do not force generation when the wrapper also owns real behavior, for example:
+不要强行生成这类同时承担真实业务行为的包装器，例如：
 
-- fallback policy
-- cross-request caching
-- batching
-- state recovery
-- non-trivial helper methods
+- fallback 策略
+- 跨请求缓存
+- 批处理
+- 状态恢复
+- 复杂 helper 方法
 
-Current status of `site.addzero.ksp.apiprovider`:
+`site.addzero.ksp.apiprovider` 当前状态：
 
-- it can already generate plain `site.addzero.generated.api.ApiProvider`
-- it does **not** yet generate `object XxxApiClient` wrappers
-- it does **not** yet cover `configureBaseUrl(...)`, `HttpClientFactory` profile selection, or cached grouped APIs
+- 已经能生成普通的 `site.addzero.generated.api.ApiProvider`
+- **还不能** 生成 `object XxxApiClient` 这类包装对象
+- **还没有** 覆盖 `configureBaseUrl(...)`、`HttpClientFactory` profile 选择和分组缓存 API
 
-So if you want to remove hand-written client wrappers in KCloud, the next processor step is:
+所以，如果你想去掉 KCloud 里手写的 client wrapper，下一步处理器工作应该是：
 
-1. keep scanning Ktorfit interfaces
-2. add typed options for wrapper name, base URL, and HTTP client profile
-3. generate `XxxApiClient` wrapper objects instead of only a global `ApiProvider`
-4. support grouped multi-API wrappers where needed
+1. 继续扫描 Ktorfit interface
+2. 为包装器名称、基础 URL、HTTP client profile 增加类型化参数
+3. 生成 `XxxApiClient` 包装对象，而不是只生成全局 `ApiProvider`
+4. 在需要时支持多 API 分组包装器
 
-Use this rule when evaluating whether a class should still be hand-written: if it is only a thin Ktorfit wrapper, prefer making it a future KSP target instead of keeping manual boilerplate.
+评估一个类是否还要手写时，遵循这条规则：如果它只是一个薄薄的 Ktorfit wrapper，就应优先把它视为未来的 KSP 生成目标，而不是继续保留手工样板代码。
 
-## Server Plugin Contract
+## Server 插件契约
 
-Server aggregation is optional. Only add it when the plugin has backend APIs, storage, or local service behavior.
+Server 聚合是可选的。只有插件需要提供后端 API、存储或本地服务行为时才添加。
 
-### 1. Server Koin Module
+### 1. Server Koin 模块
 
-An explicit server Koin module is optional.
+显式的 server Koin 模块不是强制要求。
 
-The shell already includes `KCloudServerScanKoinModule`, which does `@ComponentScan("site.addzero")`. That means plain `@Single`, `@Factory`, and similar annotated services inside your plugin can be discovered without adding another wrapper module.
+壳层已经内置了 `KCloudServerScanKoinModule`，其中包含 `@ComponentScan("site.addzero")`。这意味着，只要插件内部使用了普通的 `@Single`、`@Factory` 之类注解，通常就能被发现，而不必额外套一层包装模块。
 
-Only add a dedicated server Koin module when you need explicit module composition. If you do, the aggregator scans `server/src/jvmMain/kotlin` for classes whose names end with `ServerKoinModule`.
+只有当你确实需要显式模块组合时，才添加专门的 server Koin 模块。如果要加，聚合器会扫描 `server/src/jvmMain/kotlin` 下名称以 `ServerKoinModule` 结尾的类。
 
-Example:
+示例：
 
 ```kotlin
 package site.addzero.kcloud.plugins.example
@@ -265,15 +265,15 @@ import org.koin.core.annotation.ComponentScan
 class ExampleServerKoinModule
 ```
 
-### 2. Route Registrar
+### 2. 路由注册函数
 
-The aggregator scans `*Routes.kt` files for public top-level functions with the shape:
+聚合器会扫描 `*Routes.kt` 文件里的公开顶层函数，函数形状必须是：
 
 ```kotlin
 fun Route.exampleRoutes()
 ```
 
-Example:
+示例：
 
 ```kotlin
 package site.addzero.kcloud.plugins.example
@@ -288,9 +288,9 @@ fun Route.exampleRoutes() {
 }
 ```
 
-### 3. Gradle Wiring
+### 3. Gradle 接线
 
-Typical `server/build.gradle.kts`:
+典型的 `server/build.gradle.kts`：
 
 ```kotlin
 plugins {
@@ -300,33 +300,33 @@ plugins {
 }
 ```
 
-Add server-specific dependencies as needed, but do not repeat shell starter modules that already belong to `apps/kcloud/server`.
+按需添加 server 专属依赖即可，不要重复声明那些已经属于 `apps/kcloud/server` 壳层的 starter 模块。
 
-## How The Shell Picks Up Your Plugin
+## 壳层如何接入你的插件
 
-When a plugin is added under `apps/kcloud/plugins/**` and included by `modules-buddy`, the shell will do the following at build time:
+当插件被放到 `apps/kcloud/plugins/**` 下，并被 `modules-buddy` 纳入后，壳层会在构建期间自动完成以下事情：
 
-1. `apps/kcloud/shared` depends on the plugin UI compile task so route metadata is ready first.
-2. `apps/kcloud/composeApp` adds the discovered UI module as a dependency.
-3. `apps/kcloud/composeApp` generates `KCloudComposeKoinApplication` from discovered Compose Koin modules.
-4. `apps/kcloud/server` adds discovered `server` facets as dependencies.
-5. `apps/kcloud/server` generates `KCloudServerStarterKoinApplication` and `registerKCloudPluginRoutes()` from discovered server entrypoints.
+1. `apps/kcloud/shared` 先依赖插件 UI 的编译任务，确保路由元数据优先就绪。
+2. `apps/kcloud/composeApp` 把识别到的 UI 模块加入依赖。
+3. `apps/kcloud/composeApp` 根据识别到的 Compose Koin 模块生成 `KCloudComposeKoinApplication`。
+4. `apps/kcloud/server` 把识别到的 `server` 分面加入依赖。
+5. `apps/kcloud/server` 根据识别到的 server 入口生成 `KCloudServerStarterKoinApplication` 和 `registerKCloudPluginRoutes()`。
 
-No shell source patching is required anymore.
+因此，现在已经不再需要手工修改壳层源码。
 
-## Contributor Checklist
+## 贡献者检查清单
 
-- The plugin lives under `apps/kcloud/plugins/**`
-- The UI facet has top-level `@Route` `...Screen()` functions
-- The UI facet exposes a `*ComposeKoinModule` or `*KoinModule`
-- The server facet, if present, exposes a public `fun Route.xxxRoutes()` in a `*Routes.kt` file
-- The server facet adds `*ServerKoinModule` only when explicit module composition is needed
-- Route KSP arguments point to `:apps:kcloud:shared` and `:apps:kcloud:composeApp`
-- The plugin compiles in isolation before asking the shell to aggregate it
+- 插件位于 `apps/kcloud/plugins/**` 下
+- UI 分面包含顶层 `@Route` 的 `...Screen()` 函数
+- UI 分面对外暴露了 `*ComposeKoinModule` 或 `*KoinModule`
+- 如果存在 server 分面，则在某个 `*Routes.kt` 文件中暴露公开的 `fun Route.xxxRoutes()`
+- 只有在确实需要显式模块组合时，server 分面才添加 `*ServerKoinModule`
+- Route KSP 参数正确指向 `:apps:kcloud:shared` 和 `:apps:kcloud:composeApp`
+- 在让壳层自动聚合前，插件本身已经可以单独编译通过
 
-## Validation Commands
+## 验证命令
 
-After adding a plugin, verify the integration with:
+新增插件后，使用以下命令验证接入是否正确：
 
 ```bash
 ./gradlew :apps:kcloud:shared:compileCommonMainKotlinMetadata
@@ -334,4 +334,4 @@ After adding a plugin, verify the integration with:
 ./gradlew :apps:kcloud:server:compileKotlinJvm
 ```
 
-If one of these fails, the plugin is not yet following the shell contract correctly.
+如果其中任何一个失败，就说明插件还没有正确遵守壳层契约。

@@ -6,12 +6,7 @@ plugins {
 kotlin {
     sourceSets {
         jvmMain.dependencies {
-            // Starter 模块（引入即生效）
-            implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
-            implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
-            implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
-            implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
-            implementation(project(":apps:kcloud:plugins:system:config-center:server"))
+            // 第一阶段只保留 MCU 控制台链路，系统插件稍后再恢复。
             implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-koin"))
             implementation(project(":lib:ktor:starter:starter-serialization"))
