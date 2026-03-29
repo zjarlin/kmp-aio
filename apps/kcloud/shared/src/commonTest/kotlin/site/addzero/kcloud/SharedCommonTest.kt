@@ -1,4 +1,4 @@
-package site.addzero.vibepocket
+package site.addzero.kcloud
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

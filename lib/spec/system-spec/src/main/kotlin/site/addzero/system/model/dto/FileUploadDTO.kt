@@ -1,7 +1,7 @@
-package site.addzero.system.spi.fileupload.dto
+package site.addzero.system.model.dto
 
-import site.addzero.system.spi.common.dto.PageQuery
-import site.addzero.system.spi.fileupload.spi.StorageType
+import site.addzero.system.dto.PageQuery
+import site.addzero.system.model.spi.StorageType
 import java.time.Instant
 
 /**

@@ -1,4 +1,4 @@
-package site.addzero.vibepocket.model
+package site.addzero.kcloud.model
 
 import kotlinx.serialization.Serializable
 

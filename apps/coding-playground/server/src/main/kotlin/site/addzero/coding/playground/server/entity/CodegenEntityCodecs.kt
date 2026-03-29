@@ -1,6 +1,5 @@
 package site.addzero.coding.playground.server.entity
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import site.addzero.coding.playground.shared.dto.FunctionParameterDto
 

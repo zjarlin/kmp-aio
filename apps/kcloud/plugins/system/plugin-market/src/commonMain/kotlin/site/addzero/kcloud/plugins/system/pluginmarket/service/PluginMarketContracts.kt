@@ -1,21 +1,6 @@
 package site.addzero.kcloud.plugins.system.pluginmarket.service
 
-import site.addzero.kcloud.plugins.system.pluginmarket.model.CreatePluginPackageRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.DeployPluginPackageRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.ImportDiscoveredPluginRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeleteCheckResultDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeploymentJobDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDiscoveryItemDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginMarketConfigDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginMarketSearchRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPackageAggregateDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPackageDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPresetKind
-import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginSourceFileDto
-import site.addzero.kcloud.plugins.system.pluginmarket.model.RunPluginBuildRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.SavePluginSourceFileRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.UpdatePluginMarketConfigRequest
-import site.addzero.kcloud.plugins.system.pluginmarket.model.UpdatePluginPackageRequest
+import site.addzero.kcloud.plugins.system.pluginmarket.model.*
 
 interface PluginPackageService {
     suspend fun create(request: CreatePluginPackageRequest): PluginPackageAggregateDto

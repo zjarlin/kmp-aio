@@ -1,6 +1,6 @@
-package site.addzero.kcloud
+package site.addzero.kcloud.server
 
-import io.ktor.server.routing.Route
+import io.ktor.server.routing.*
 
 /**
  * 由插件市场维护的服务端插件路由聚合入口。

@@ -1,8 +1,8 @@
 package site.addzero.system.spi.config
 
-import site.addzero.system.spi.common.dto.PageResult
-import site.addzero.system.spi.config.dto.ConfigDTO
-import site.addzero.system.spi.config.dto.ConfigQuery
+import site.addzero.system.dto.PageResult
+import site.addzero.system.model.dto.ConfigDTO
+import site.addzero.system.model.dto.ConfigQuery
 
 /**
  * 系统配置服务SPI

@@ -1,37 +1,31 @@
-package site.addzero.vibepocket.routes
+package site.addzero.kcloud.vibepocket.routes
 
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
-import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
-import site.addzero.network.call.suno.SunoClient
-import site.addzero.network.call.suno.model.SunoMusicRequest
-import site.addzero.vibepocket.dto.GenerateRequest
-import site.addzero.vibepocket.dto.TaskListResult
-import site.addzero.vibepocket.dto.TaskResponse
-import site.addzero.vibepocket.dto.TaskResult
-import site.addzero.vibepocket.model.*
-import site.addzero.vibepocket.model.by
+import site.addzero.configcenter.runtime.ConfigCenterCompatService
+import site.addzero.kcloud.api.suno.SunoApiClient
+import site.addzero.kcloud.api.suno.SunoGenerateRequest
+import site.addzero.kcloud.vibepocket.dto.GenerateRequest
+import site.addzero.kcloud.vibepocket.dto.TaskListResult
+import site.addzero.kcloud.vibepocket.dto.TaskResponse
+import site.addzero.kcloud.vibepocket.dto.TaskResult
+import site.addzero.kcloud.vibepocket.model.MusicTask
+import site.addzero.kcloud.vibepocket.model.MusicTaskDraft
 import java.time.LocalDateTime
 
 private const val CALLBACK_TASK_ID_CONFIG_PREFIX = "suno.callback.taskId."
 private const val CALLBACK_PAYLOAD_CONFIG_PREFIX = "suno.callback.payload."
 
-/**
- * Suno 音乐生成相关路由
- *
- * 依赖通过 Koin 自动注入，不需要外部传参。
- */
 @PostMapping("/api/suno/generate")
 suspend fun generateMusic(
     @RequestBody request: GenerateRequest,
@@ -40,30 +34,32 @@ suspend fun generateMusic(
     val token = sqlClient.getConfig("suno.api.token")
         ?: throw IllegalArgumentException("Suno API Token 未配置，请在设置页面填写")
 
-    val client = SunoClient(apiToken = token)
-    val sunoRequest = SunoMusicRequest(
-        prompt = request.prompt,
-        title = request.title,
-        tags = request.tags,
-        mv = request.mv,
-        makeInstrumental = request.makeInstrumental,
+    val client = SunoApiClient(apiToken = token)
+    val taskId = client.generateMusic(
+        SunoGenerateRequest(
+            prompt = request.prompt,
+            title = request.title,
+            style = request.tags,
+            model = request.mv,
+            instrumental = request.makeInstrumental,
+        ),
     )
-    val audioUrl = client.generateMusic(sunoRequest)
 
     val now = LocalDateTime.now()
-    val task = new(MusicTask::class).by {
-        taskId = audioUrl
-        status = "complete"
+    val task = MusicTaskDraft.`$`.produce {
+        this.taskId = taskId
+        status = "queued"
         title = request.title
         tags = request.tags
         prompt = request.prompt
         mv = request.mv
-        this.audioUrl = audioUrl
+        audioUrl = null
+        videoUrl = null
+        errorMessage = null
         createdAt = now
         updatedAt = now
     }
-    val saved = sqlClient.save(task)
-    return TaskResult(data = saved.modifiedEntity.toResponse())
+    return TaskResult(data = sqlClient.save(task).modifiedEntity.toResponse())
 }
 
 @GetMapping("/api/suno/tasks")
@@ -79,13 +75,9 @@ suspend fun readTask(
     @PathVariable taskId: String,
 ): TaskResult {
     val task = sqlClient().createQuery(MusicTask::class) {
-        where(table.taskId eq taskId)
         select(table)
-    }.execute().firstOrNull()
-
-    if (task == null) {
-        throw NoSuchElementException("Task not found")
-    }
+    }.execute().firstOrNull { it.taskId == taskId }
+        ?: throw NoSuchElementException("Task not found: $taskId")
 
     return TaskResult(data = task.toResponse())
 }
@@ -108,7 +100,7 @@ suspend fun handleSunoCallback(
         ?: payload.stringValue("message")
 
     println(
-        "[SunoCallback] kind=$kind requestId=${normalizedRequestId ?: "-"} taskId=${taskId ?: "-"} callbackType=${callbackType ?: "-"} code=${code ?: "-"} msg=${message ?: "-"} payload=$payload"
+        "[SunoCallback] kind=$kind requestId=${normalizedRequestId ?: "-"} taskId=${taskId ?: "-"} callbackType=${callbackType ?: "-"} code=${code ?: "-"} msg=${message ?: "-"} payload=$payload",
     )
 
     if (normalizedRequestId != null) {
@@ -168,7 +160,7 @@ private suspend fun KSqlClient.setConfig(
     )
 }
 
-private fun compatService(): site.addzero.configcenter.runtime.ConfigCenterCompatService {
+private fun compatService(): ConfigCenterCompatService {
     return KoinPlatform.getKoin().get()
 }
 

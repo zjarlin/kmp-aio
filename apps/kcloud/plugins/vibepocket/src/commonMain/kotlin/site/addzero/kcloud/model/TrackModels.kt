@@ -1,4 +1,4 @@
-package site.addzero.vibepocket.model
+package site.addzero.kcloud.model
 
 // ══════════════════════════════════════════════════════════════
 //  Track 交互数据模型

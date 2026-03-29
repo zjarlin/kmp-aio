@@ -1,8 +1,8 @@
-package site.addzero.system.spi.audit.dto
+package site.addzero.system.model.dto
 
-import site.addzero.system.spi.audit.spi.OperationStatus
-import site.addzero.system.spi.audit.spi.OperationType
-import site.addzero.system.spi.common.dto.PageQuery
+import site.addzero.system.model.common.PageQuery
+import site.addzero.system.spi.audit.OperationStatus
+import site.addzero.system.spi.audit.OperationType
 import java.time.Instant
 
 /**

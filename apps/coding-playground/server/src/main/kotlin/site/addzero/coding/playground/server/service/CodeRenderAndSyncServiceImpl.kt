@@ -1,6 +1,5 @@
 package site.addzero.coding.playground.server.service
 
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.babyfish.jimmer.kt.new
 import org.koin.core.annotation.Single
@@ -13,8 +12,6 @@ import site.addzero.coding.playground.shared.service.CodeRenderService
 import site.addzero.coding.playground.shared.service.KspIndexService
 import site.addzero.coding.playground.shared.service.ManagedArtifactService
 import site.addzero.coding.playground.shared.service.SyncService
-import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

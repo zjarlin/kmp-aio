@@ -1,6 +1,6 @@
 package site.addzero.system.spi.rbac.dto
 
-import site.addzero.system.spi.common.dto.PageQuery
+import site.addzero.system.dto.PageQuery
 import java.time.Instant
 
 /**

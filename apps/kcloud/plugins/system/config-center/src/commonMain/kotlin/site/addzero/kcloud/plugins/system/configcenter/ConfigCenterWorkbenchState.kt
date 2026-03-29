@@ -5,15 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.spec.ConfigDomain
-import site.addzero.configcenter.spec.ConfigEntryDto
-import site.addzero.configcenter.spec.ConfigMutationRequest
-import site.addzero.configcenter.spec.ConfigQuery
-import site.addzero.configcenter.spec.ConfigStorageMode
-import site.addzero.configcenter.spec.ConfigTargetDto
-import site.addzero.configcenter.spec.ConfigTargetKind
-import site.addzero.configcenter.spec.ConfigTargetMutationRequest
-import site.addzero.configcenter.spec.ConfigValueType
+import site.addzero.configcenter.spec.*
 
 @Single
 class ConfigCenterWorkbenchState(

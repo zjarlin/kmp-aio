@@ -1,4 +1,4 @@
-package site.addzero.vibepocket
+package site.addzero.kcloud
 
 interface Platform {
     val name: String

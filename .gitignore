@@ -18,7 +18,7 @@ build-logic
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 node_modules/
-/composeApp/hs_err_pid42727.log
+/apps/kcloud/composeApp/hs_err_pid*.log
 .kiro
 bin/
 out/

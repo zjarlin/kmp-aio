@@ -1,35 +1,68 @@
-package site.addzero.vibepocket.api
+package site.addzero.kcloud.api
 
-import de.jensklingenberg.ktorfit.http.Body
-import de.jensklingenberg.ktorfit.http.GET
-import de.jensklingenberg.ktorfit.http.Headers
-import de.jensklingenberg.ktorfit.http.PUT
-import de.jensklingenberg.ktorfit.http.Path
-import site.addzero.vibepocket.model.ConfigEntry
-import site.addzero.vibepocket.model.ConfigResponse
-import site.addzero.vibepocket.model.ConfigRuntimeInfo
-import site.addzero.vibepocket.model.StorageConfig
+import de.jensklingenberg.ktorfit.http.*
+import site.addzero.kcloud.vibepocket.routes.ConfigRuntimeInfo
+import site.addzero.kcloud.vibepocket.routes.ConfigResponse
+import site.addzero.kcloud.vibepocket.routes.StorageConfig
+import site.addzero.kcloud.vibepocket.dto.OkResponse
+import site.addzero.kcloud.vibepocket.routes.ConfigEntry
 
+/**
+ * 原始文件: site.addzero.kcloud.vibepocket.routes.Config.kt
+ * 基础路径: 
+ */
 interface ConfigApi {
 
-    // ── 通用配置 ──────────────────────────────────────────────
+/**
+ * getRuntimeInfo
+ * HTTP方法: GET
+ * 路径: /api/config/runtime
+ * 返回类型: site.addzero.kcloud.vibepocket.routes.ConfigRuntimeInfo
+ */
+    @GET("/api/config/runtime")    suspend fun getRuntimeInfo(): site.addzero.kcloud.vibepocket.routes.ConfigRuntimeInfo
 
-    @GET("api/config/{key}")
-    suspend fun getConfig(@Path("key") key: String): ConfigResponse
+/**
+ * getConfig
+ * HTTP方法: GET
+ * 路径: /api/config/{key}
+ * 参数:
+ *   - key: kotlin.String (PathVariable)
+ * 返回类型: site.addzero.kcloud.vibepocket.routes.ConfigResponse
+ */
+    @GET("/api/config/{key}")    suspend fun getConfig(
+        @Path("key") key: kotlin.String
+    ): site.addzero.kcloud.vibepocket.routes.ConfigResponse
 
-    @GET("api/config/runtime")
-    suspend fun getRuntimeInfo(): ConfigRuntimeInfo
+/**
+ * getStorageConfig
+ * HTTP方法: GET
+ * 路径: /api/config/storage
+ * 返回类型: site.addzero.kcloud.vibepocket.routes.StorageConfig
+ */
+    @GET("/api/config/storage")    suspend fun getStorageConfig(): site.addzero.kcloud.vibepocket.routes.StorageConfig
 
-    @Headers("Content-Type: application/json")
-    @PUT("api/config")
-    suspend fun updateConfig(@Body entry: ConfigEntry)
+/**
+ * updateConfig
+ * HTTP方法: PUT
+ * 路径: /api/config
+ * 参数:
+ *   - entry: site.addzero.kcloud.vibepocket.routes.ConfigEntry (RequestBody)
+ * 返回类型: site.addzero.kcloud.vibepocket.dto.OkResponse
+ */
+    @PUT("/api/config")    suspend fun updateConfig(
+        @Body entry: site.addzero.kcloud.vibepocket.routes.ConfigEntry
+    ): site.addzero.kcloud.vibepocket.dto.OkResponse
 
-    // ── 存储配置 ──────────────────────────────────────────────
+/**
+ * saveStorageConfig
+ * HTTP方法: PUT
+ * 路径: /api/config/storage
+ * 参数:
+ *   - config: site.addzero.kcloud.vibepocket.routes.StorageConfig (RequestBody)
+ * 返回类型: site.addzero.kcloud.vibepocket.dto.OkResponse
+ */
+    @PUT("/api/config/storage")    suspend fun saveStorageConfig(
+        @Body config: site.addzero.kcloud.vibepocket.routes.StorageConfig
+    ): site.addzero.kcloud.vibepocket.dto.OkResponse
 
-    @GET("api/config/storage")
-    suspend fun getStorageConfig(): StorageConfig
-
-    @Headers("Content-Type: application/json")
-    @PUT("api/config/storage")
-    suspend fun saveStorageConfig(@Body config: StorageConfig)
 }

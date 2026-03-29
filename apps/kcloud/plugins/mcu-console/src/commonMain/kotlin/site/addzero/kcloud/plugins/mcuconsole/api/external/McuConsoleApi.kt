@@ -1,26 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.api.external
 
-import de.jensklingenberg.ktorfit.http.Body
-import de.jensklingenberg.ktorfit.http.GET
-import de.jensklingenberg.ktorfit.http.Headers
-import de.jensklingenberg.ktorfit.http.POST
-import de.jensklingenberg.ktorfit.http.Query
-import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuScriptStopRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
-import site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundlesResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
+import de.jensklingenberg.ktorfit.http.*
+import site.addzero.kcloud.plugins.mcuconsole.*
 
 interface McuConsoleApi {
     @GET("api/mcu/ports")

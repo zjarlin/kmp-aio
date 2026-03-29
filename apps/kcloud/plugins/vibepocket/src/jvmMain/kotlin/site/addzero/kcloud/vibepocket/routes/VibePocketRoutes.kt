@@ -1,16 +1,12 @@
-package site.addzero.vibepocket.routes
+package site.addzero.kcloud.vibepocket.routes
 
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import io.ktor.server.routing.put
-import io.ktor.server.response.respond
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import kotlinx.serialization.json.JsonElement
+import site.addzero.kcloud.vibepocket.dto.GenerateRequest
 import site.addzero.springktor.runtime.optionalRequestParam
 import site.addzero.springktor.runtime.requirePathVariable
 import site.addzero.springktor.runtime.requireRequestBody
-import site.addzero.vibepocket.dto.GenerateRequest
 import site.addzero.vibepocket.music.UploadCoverSourcePrepareRequest
 
 /** 统一挂载 vibepocket 插件的后端路由。 */
@@ -26,12 +22,12 @@ fun Route.vibePocketRoutes() {
 
 private fun Route.registerConfigRoutes() {
     get("/api/config/runtime") {
-        val result = readRuntimeConfig(call.application)
+        val result = getRuntimeInfo()
         call.respond(result)
     }
     get("/api/config/{key}") {
         val key = call.requirePathVariable<String>("key")
-        val result = readConfig(key)
+        val result = getConfig(key)
         call.respond(result)
     }
     put("/api/config") {
@@ -40,12 +36,12 @@ private fun Route.registerConfigRoutes() {
         call.respond(result)
     }
     get("/api/config/storage") {
-        val result = readStorageConfig()
+        val result = getStorageConfig()
         call.respond(result)
     }
     put("/api/config/storage") {
         val config = call.requireRequestBody<StorageConfig>()
-        val result = updateStorageConfig(config)
+        val result = saveStorageConfig(config)
         call.respond(result)
     }
 }
@@ -53,16 +49,16 @@ private fun Route.registerConfigRoutes() {
 private fun Route.registerFavoriteRoutes() {
     post("/api/favorites") {
         val request = call.requireRequestBody<FavoriteRequest>()
-        val result = createFavorite(request)
+        val result = addFavorite(request)
         call.respond(result)
     }
     get("/api/favorites") {
-        val result = listFavorites()
+        val result = getFavorites()
         call.respond(result)
     }
     delete("/api/favorites/{trackId}") {
         val trackId = call.requirePathVariable<String>("trackId")
-        val result = deleteFavorite(trackId)
+        val result = removeFavorite(trackId)
         call.respond(result)
     }
 }
@@ -74,7 +70,7 @@ private fun Route.registerHistoryRoutes() {
         call.respond(result)
     }
     get("/api/suno/history") {
-        val result = listHistory()
+        val result = getHistory()
         call.respond(result)
     }
 }
@@ -83,18 +79,18 @@ private fun Route.registerMusicRoutes() {
     get("/api/music/search") {
         val provider = call.optionalRequestParam<String>("provider")
         val keyword = call.optionalRequestParam<String>("keyword")
-        val result = searchMusic(provider, keyword)
+        val result = search(provider, keyword)
         call.respond(result)
     }
     get("/api/music/lyrics") {
         val provider = call.optionalRequestParam<String>("provider")
         val songId = call.optionalRequestParam<String>("songId")
-        val result = readLyrics(provider, songId)
+        val result = getLyrics(provider, songId)
         call.respond(result)
     }
     post("/api/music/resolve") {
         val track = call.requireRequestBody<site.addzero.kcloud.api.music.MusicTrack>()
-        val result = resolveMusic(track)
+        val result = resolve(track)
         call.respond(result)
     }
     post("/api/music/upload-cover-source/prepare") {
@@ -111,7 +107,7 @@ private fun Route.registerPersonaRoutes() {
         call.respond(result)
     }
     get("/api/personas") {
-        val result = listPersonas()
+        val result = getPersonas()
         call.respond(result)
     }
 }
@@ -128,7 +124,7 @@ private fun Route.registerSunoResourceRoutes() {
     }
     get("/api/suno/resources/{taskId}") {
         val taskId = call.requirePathVariable<String>("taskId")
-        val result = readSunoTaskResource(taskId)
+        val result = getSunoTaskResource(taskId)
         call.respond(result)
     }
 }

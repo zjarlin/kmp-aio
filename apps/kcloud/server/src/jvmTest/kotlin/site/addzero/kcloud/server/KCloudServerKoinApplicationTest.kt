@@ -1,9 +1,8 @@
 package site.addzero.kcloud.server
 
-import io.ktor.server.config.MapApplicationConfig
+import io.ktor.server.config.*
 import org.koin.dsl.koinApplication
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.kcloud.KCloudServerStarterKoinApplication
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashService
 import site.addzero.kcloud.plugins.rbac.UserProfileService
 import site.addzero.kcloud.plugins.system.aichat.AiChatService

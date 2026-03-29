@@ -26,17 +26,25 @@ val routeOwnerModuleDir = project(":apps:kcloud:composeApp")
     .srcDirs
     .first()
     .absolutePath
+val generatedApiPackage = "site.addzero.kcloud.api"
+val generatedApiOutputDir = layout.projectDirectory
+    .dir("src/commonMain/kotlin/${generatedApiPackage.replace(".", "/")}")
+    .asFile
+    .absolutePath
 
 ksp {
     arg("sharedSourceDir", sharedSourceDir)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
     arg("routeModuleKey", project.path)
+    arg("apiClientPackageName", generatedApiPackage)
+    arg("apiClientOutputDir", generatedApiOutputDir)
 }
 
 dependencies {
     add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
     add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-controller2api-processor").get())
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
     add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.13")
 }

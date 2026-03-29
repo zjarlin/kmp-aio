@@ -1,4 +1,4 @@
-package com.kyant.backdrop.catalog.components
+package site.addzero.component.liquid.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*

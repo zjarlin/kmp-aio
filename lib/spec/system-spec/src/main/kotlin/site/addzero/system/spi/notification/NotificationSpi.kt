@@ -1,14 +1,14 @@
-package site.addzero.system.spi.notification.spi
+package site.addzero.system.spi.notification
 
-import site.addzero.system.spi.common.dto.PageResult
-import site.addzero.system.spi.notification.dto.BroadcastRequest
-import site.addzero.system.spi.notification.dto.MessageTemplateDTO
-import site.addzero.system.spi.notification.dto.NotificationDTO
-import site.addzero.system.spi.notification.dto.NotificationQuery
-import site.addzero.system.spi.notification.dto.NotificationSendRequest
-import site.addzero.system.spi.notification.dto.Recipient
-import site.addzero.system.spi.notification.dto.TemplateCreateRequest
-import site.addzero.system.spi.notification.dto.TemplateUpdateRequest
+import site.addzero.system.dto.PageResult
+import site.addzero.system.model.dto.BroadcastRequest
+import site.addzero.system.model.dto.MessageTemplateDTO
+import site.addzero.system.model.dto.NotificationDTO
+import site.addzero.system.model.dto.NotificationQuery
+import site.addzero.system.model.dto.NotificationSendRequest
+import site.addzero.system.model.dto.Recipient
+import site.addzero.system.model.dto.TemplateCreateRequest
+import site.addzero.system.model.dto.TemplateUpdateRequest
 
 /**
  * 通知服务SPI

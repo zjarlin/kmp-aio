@@ -1,22 +1,45 @@
-package site.addzero.vibepocket.api
+package site.addzero.kcloud.api
 
-import de.jensklingenberg.ktorfit.http.Body
-import de.jensklingenberg.ktorfit.http.GET
-import de.jensklingenberg.ktorfit.http.Headers
-import de.jensklingenberg.ktorfit.http.POST
-import de.jensklingenberg.ktorfit.http.Path
-import site.addzero.vibepocket.model.SunoTaskResourceItem
-import site.addzero.vibepocket.model.SunoTaskResourceSaveRequest
+import de.jensklingenberg.ktorfit.http.*
+import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
+import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest
 
+/**
+ * 原始文件: site.addzero.kcloud.vibepocket.routes.SunoTaskResource.kt
+ * 基础路径: 
+ */
 interface SunoTaskResourceApi {
 
-    @Headers("Content-Type: application/json")
-    @POST("api/suno/resources")
-    suspend fun save(@Body request: SunoTaskResourceSaveRequest): SunoTaskResourceItem
+/**
+ * listSunoTaskResources
+ * HTTP方法: GET
+ * 路径: /api/suno/resources
+ * 返回类型: kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse>
+ */
+    @GET("/api/suno/resources")    suspend fun listSunoTaskResources(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse>
 
-    @GET("api/suno/resources")
-    suspend fun list(): List<SunoTaskResourceItem>
+/**
+ * getSunoTaskResource
+ * HTTP方法: GET
+ * 路径: /api/suno/resources/{taskId}
+ * 参数:
+ *   - taskId: kotlin.String (PathVariable)
+ * 返回类型: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
+ */
+    @GET("/api/suno/resources/{taskId}")    suspend fun getSunoTaskResource(
+        @Path("taskId") taskId: kotlin.String
+    ): site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
 
-    @GET("api/suno/resources/{taskId}")
-    suspend fun get(@Path("taskId") taskId: String): SunoTaskResourceItem
+/**
+ * saveSunoTaskResource
+ * HTTP方法: POST
+ * 路径: /api/suno/resources
+ * 参数:
+ *   - request: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest (RequestBody)
+ * 返回类型: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
+ */
+    @POST("/api/suno/resources")    suspend fun saveSunoTaskResource(
+        @Body request: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest
+    ): site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
+
 }

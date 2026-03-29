@@ -1,10 +1,6 @@
 package site.addzero.coding.playground.server.entity
 
-import org.babyfish.jimmer.sql.Column
-import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.Id
-import org.babyfish.jimmer.sql.OneToMany
-import org.babyfish.jimmer.sql.Table
+import org.babyfish.jimmer.sql.*
 import java.time.LocalDateTime
 
 @Entity

@@ -90,6 +90,97 @@ CREATE TABLE IF NOT EXISTS persona_record (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- plugin_package 表
+CREATE TABLE IF NOT EXISTS plugin_package (
+    id TEXT PRIMARY KEY,
+    plugin_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    version TEXT NOT NULL DEFAULT '0.1.0',
+    plugin_group TEXT,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    module_dir TEXT NOT NULL UNIQUE,
+    base_package TEXT NOT NULL,
+    managed_by_db BOOLEAN NOT NULL DEFAULT TRUE,
+    compose_koin_module_class TEXT,
+    server_koin_module_class TEXT,
+    route_registrar_import TEXT,
+    route_registrar_call TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- plugin_source_file 表
+CREATE TABLE IF NOT EXISTS plugin_source_file (
+    id TEXT PRIMARY KEY,
+    package_id TEXT NOT NULL REFERENCES plugin_package(id) ON DELETE RESTRICT,
+    relative_path TEXT NOT NULL,
+    content TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    file_group TEXT NOT NULL DEFAULT 'source',
+    read_only BOOLEAN NOT NULL DEFAULT FALSE,
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(package_id, relative_path)
+);
+
+-- plugin_preset_binding 表
+CREATE TABLE IF NOT EXISTS plugin_preset_binding (
+    id TEXT PRIMARY KEY,
+    package_id TEXT NOT NULL REFERENCES plugin_package(id) ON DELETE RESTRICT,
+    preset_kind TEXT NOT NULL,
+    applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- plugin_deployment_job 表
+CREATE TABLE IF NOT EXISTS plugin_deployment_job (
+    id TEXT PRIMARY KEY,
+    package_id TEXT NOT NULL REFERENCES plugin_package(id) ON DELETE RESTRICT,
+    status TEXT NOT NULL,
+    exported_module_dir TEXT NOT NULL,
+    build_command TEXT,
+    stdout_text TEXT,
+    stderr_text TEXT,
+    summary_text TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- plugin_deployment_artifact 表
+CREATE TABLE IF NOT EXISTS plugin_deployment_artifact (
+    id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL REFERENCES plugin_deployment_job(id) ON DELETE RESTRICT,
+    relative_path TEXT NOT NULL,
+    absolute_path TEXT NOT NULL,
+    content_hash TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- plugin_import_record 表
+CREATE TABLE IF NOT EXISTS plugin_import_record (
+    id TEXT PRIMARY KEY,
+    package_id TEXT NOT NULL REFERENCES plugin_package(id) ON DELETE RESTRICT,
+    source_module_dir TEXT NOT NULL,
+    source_gradle_path TEXT NOT NULL,
+    imported_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_source_file_package
+    ON plugin_source_file(package_id, order_index);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_preset_binding_package
+    ON plugin_preset_binding(package_id, applied_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_deployment_job_package
+    ON plugin_deployment_job(package_id, updated_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_deployment_artifact_job
+    ON plugin_deployment_artifact(job_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_plugin_import_record_package
+    ON plugin_import_record(package_id, imported_at DESC);
+
 CREATE TABLE IF NOT EXISTS user_profile (
     id BIGSERIAL PRIMARY KEY,
     account_key TEXT NOT NULL UNIQUE,

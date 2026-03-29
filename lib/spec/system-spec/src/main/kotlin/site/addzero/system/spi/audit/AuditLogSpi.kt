@@ -1,9 +1,9 @@
-package site.addzero.system.spi.audit.spi
+package site.addzero.system.spi.audit
 
-import site.addzero.system.spi.common.dto.PageResult
-import site.addzero.system.spi.audit.dto.AuditLogDTO
-import site.addzero.system.spi.audit.dto.AuditLogQuery
-import site.addzero.system.spi.audit.dto.AuditOperationRequest
+import site.addzero.system.model.common.PageResult
+import site.addzero.system.model.dto.AuditLogDTO
+import site.addzero.system.model.dto.AuditLogQuery
+import site.addzero.system.model.dto.AuditOperationRequest
 import java.time.Instant
 
 /**

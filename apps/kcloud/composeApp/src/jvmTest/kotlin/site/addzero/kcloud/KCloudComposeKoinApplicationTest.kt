@@ -9,6 +9,7 @@ import site.addzero.kcloud.plugins.rbac.UserCenterWorkbenchState
 import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterWorkbenchState
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseWorkbenchState
+import site.addzero.kcloud.server.KCloudServerStarterKoinApplication
 import site.addzero.vibepocket.screens.creativeassets.CreativeAssetsViewModel
 import site.addzero.vibepocket.screens.musicstudio.MusicStudioViewModel
 import site.addzero.vibepocket.screens.settings.SettingsViewModel

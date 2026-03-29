@@ -1,12 +1,6 @@
 package site.addzero.kcloud.system.api
 
-import de.jensklingenberg.ktorfit.http.Body
-import de.jensklingenberg.ktorfit.http.DELETE
-import de.jensklingenberg.ktorfit.http.GET
-import de.jensklingenberg.ktorfit.http.Headers
-import de.jensklingenberg.ktorfit.http.POST
-import de.jensklingenberg.ktorfit.http.PUT
-import de.jensklingenberg.ktorfit.http.Path
+import de.jensklingenberg.ktorfit.http.*
 
 interface KnowledgeBaseApi {
     @GET("api/system/knowledge-base/spaces")

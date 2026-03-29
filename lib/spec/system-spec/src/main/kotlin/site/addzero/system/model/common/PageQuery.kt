@@ -1,4 +1,4 @@
-package site.addzero.system.spi.common.dto
+package site.addzero.system.model.common
 
 /**
  * 通用分页查询参数

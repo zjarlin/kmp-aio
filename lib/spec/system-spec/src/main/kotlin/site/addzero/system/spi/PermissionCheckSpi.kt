@@ -1,4 +1,4 @@
-package site.addzero.system.spi.rbac.spi
+package site.addzero.system.spi
 
 /**
  * 权限校验服务SPI

@@ -3,8 +3,8 @@ package site.addzero.kcloud
 import androidx.compose.runtime.Composable
 import org.koin.compose.KoinApplication
 import org.koin.mp.KoinPlatform
-import org.koin.plugin.module.dsl.koinConfiguration as kcpConfiguration
 import site.addzero.kcloud.ui.MainWindow
+import org.koin.plugin.module.dsl.koinConfiguration as kcpConfiguration
 
 @Composable
 fun App() {

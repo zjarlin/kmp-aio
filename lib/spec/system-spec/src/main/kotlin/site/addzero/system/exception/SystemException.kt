@@ -1,4 +1,4 @@
-package site.addzero.system.spi.common.exception
+package site.addzero.system.exception
 
 /**
  * 系统模块基础异常

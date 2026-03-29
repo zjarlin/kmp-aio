@@ -1,7 +1,7 @@
 package site.addzero.kcloud.system.api
 
 import de.jensklingenberg.ktorfit.Ktorfit
-import io.ktor.client.HttpClient
+import io.ktor.client.*
 
 internal actual fun buildUserCenterApi(
     baseUrl: String,

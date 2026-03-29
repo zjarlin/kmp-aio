@@ -8,7 +8,6 @@ import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import org.sqlite.SQLiteDataSource
-import java.nio.file.Files
 import javax.sql.DataSource
 
 @Module

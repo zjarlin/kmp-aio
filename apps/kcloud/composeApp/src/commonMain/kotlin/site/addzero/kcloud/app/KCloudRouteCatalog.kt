@@ -2,29 +2,11 @@ package site.addzero.kcloud.app
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Help
-import androidx.compose.material.icons.rounded.AdminPanelSettings
-import androidx.compose.material.icons.rounded.Apps
-import androidx.compose.material.icons.rounded.BugReport
-import androidx.compose.material.icons.rounded.Build
-import androidx.compose.material.icons.rounded.Dashboard
-import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.MenuBook
-import androidx.compose.material.icons.rounded.Person
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.PowerSettingsNew
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.SmartToy
-import androidx.compose.material.icons.rounded.Stop
-import androidx.compose.material.icons.rounded.Sync
-import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.Upload
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.graphics.vector.ImageVector
-import kotlin.math.roundToInt
 import site.addzero.annotation.Route
 import site.addzero.generated.RouteKeys
+import kotlin.math.roundToInt
 
 class KCloudRouteCatalog(
     routeMeta: List<Route> = RouteKeys.allMeta,

@@ -1,18 +1,9 @@
 package site.addzero.kcloud.app.render
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import site.addzero.component.search_bar.AddSearchBar
@@ -20,8 +11,8 @@ import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.kcloud.app.KCloudRouteCatalog
-import site.addzero.kcloud.app.KCloudSidebarNode
 import site.addzero.kcloud.app.KCloudShellState
+import site.addzero.kcloud.app.KCloudSidebarNode
 import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
 
 class KCloudSidebarRenderer(

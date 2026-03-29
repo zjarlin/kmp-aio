@@ -1,10 +1,10 @@
-package site.addzero.system.spi.rbac.spi
+package site.addzero.system.spi
 
-import site.addzero.system.spi.common.dto.PageResult
-import site.addzero.system.spi.rbac.dto.RoleDTO
-import site.addzero.system.spi.rbac.dto.RoleCreateRequest
-import site.addzero.system.spi.rbac.dto.RoleUpdateRequest
-import site.addzero.system.spi.rbac.dto.RoleQuery
+import site.addzero.system.dto.PageResult
+import site.addzero.system.dto.RoleDTO
+import site.addzero.system.dto.RoleCreateRequest
+import site.addzero.system.dto.RoleUpdateRequest
+import site.addzero.system.dto.RoleQuery
 
 /**
  * 角色服务SPI

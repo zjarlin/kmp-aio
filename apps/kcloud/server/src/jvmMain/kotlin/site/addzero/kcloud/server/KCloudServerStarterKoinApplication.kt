@@ -1,27 +1,19 @@
-package site.addzero.kcloud
+package site.addzero.kcloud.server
 
 import org.koin.core.annotation.KoinApplication
-import site.addzero.configcenter.ktor.ConfigCenterKtorKoinModule
-import site.addzero.kcloud.jimmer.di.JimmerKoinModule
-import site.addzero.kcloud.plugins.mcuconsole.McuConsoleServerKoinModule
-import site.addzero.kcloud.plugins.rbac.RbacKoinModule
-import site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule
-import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule
-import site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketServerKoinModule
-import site.addzero.vibepocket.VibePocketKoinModule
 
 @KoinApplication(
-    configurations = ["vibepocket"],
     modules = [
         // <managed:plugin-market-server-koin:start>
-        site.addzero.vibepocket.VibePocketKoinModule::class,
+        site.addzero.kcloud.server.KCloudServerScanKoinModule::class,
         site.addzero.kcloud.jimmer.di.JimmerKoinModule::class,
         site.addzero.kcloud.plugins.mcuconsole.McuConsoleServerKoinModule::class,
-        site.addzero.kcloud.plugins.rbac.RbacKoinModule::class,
-        site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule::class,
-        site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule::class,
         site.addzero.configcenter.ktor.ConfigCenterKtorKoinModule::class,
-        site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketServerKoinModule::class,
+        site.addzero.starter.banner.BannerStarterKoinModule::class,
+        site.addzero.starter.flyway.FlywayStarterKoinModule::class,
+        site.addzero.starter.openapi.OpenApiStarterKoinModule::class,
+        site.addzero.starter.serialization.SerializationStarterKoinModule::class,
+        site.addzero.starter.statuspages.StatusPagesStarterKoinModule::class,
         // <managed:plugin-market-server-koin:end>
     ],
 )

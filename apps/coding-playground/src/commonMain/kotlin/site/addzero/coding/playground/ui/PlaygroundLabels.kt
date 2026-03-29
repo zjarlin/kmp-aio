@@ -1,12 +1,6 @@
 package site.addzero.coding.playground.ui
 
-import site.addzero.coding.playground.shared.dto.CodeVisibility
-import site.addzero.coding.playground.shared.dto.ConflictReason
-import site.addzero.coding.playground.shared.dto.DeclarationKind
-import site.addzero.coding.playground.shared.dto.ManagedArtifactSyncStatus
-import site.addzero.coding.playground.shared.dto.ScenePresetKind
-import site.addzero.coding.playground.shared.dto.SyncConflictResolution
-import site.addzero.coding.playground.shared.dto.ValidationSeverity
+import site.addzero.coding.playground.shared.dto.*
 
 fun DeclarationKind.label(): String {
     return when (this) {

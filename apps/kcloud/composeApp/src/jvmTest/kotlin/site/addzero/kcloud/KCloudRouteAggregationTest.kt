@@ -1,15 +1,15 @@
 package site.addzero.kcloud
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.generated.RouteKeys
 import site.addzero.generated.RouteTable
 import site.addzero.kcloud.app.KCloudRouteCatalog
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class KCloudRouteAggregationTest {
     @Test

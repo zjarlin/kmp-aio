@@ -1,9 +1,9 @@
-package site.addzero.system.spi.notification.dto
+package site.addzero.system.model.dto
 
-import site.addzero.system.spi.common.dto.PageQuery
-import site.addzero.system.spi.notification.spi.NotificationChannel
-import site.addzero.system.spi.notification.spi.NotificationPriority
-import site.addzero.system.spi.notification.spi.NotificationStatus
+import site.addzero.system.dto.PageQuery
+import site.addzero.system.model.spi.NotificationChannel
+import site.addzero.system.model.spi.NotificationPriority
+import site.addzero.system.model.spi.NotificationStatus
 import java.time.Instant
 
 /**

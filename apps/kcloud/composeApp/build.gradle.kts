@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import org.gradle.api.tasks.JavaExec
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
@@ -40,17 +39,8 @@ kotlin.jvm().mainRun {
     mainClass.set(desktopMainClass)
 }
 
-tasks.withType<JavaExec>().configureEach {
-    if (name == "run" || name == "jvmRun" || name == "runJvm") {
-        jvmArgs("-Dsun.java2d.metal=false")
-    }
-}
-
 compose.desktop {
     application {
         mainClass = desktopMainClass
-        jvmArgs += listOf(
-            "-Dsun.java2d.metal=false",
-        )
     }
 }

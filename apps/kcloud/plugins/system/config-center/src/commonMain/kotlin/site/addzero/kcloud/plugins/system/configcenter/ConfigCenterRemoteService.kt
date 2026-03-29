@@ -2,13 +2,7 @@ package site.addzero.kcloud.plugins.system.configcenter
 
 import org.koin.core.annotation.Single
 import site.addzero.configcenter.client.ConfigCenter
-import site.addzero.configcenter.spec.ConfigEntryDto
-import site.addzero.configcenter.spec.ConfigMutationRequest
-import site.addzero.configcenter.spec.ConfigQuery
-import site.addzero.configcenter.spec.ConfigTargetDto
-import site.addzero.configcenter.spec.ConfigTargetMutationRequest
-import site.addzero.configcenter.spec.ConfigValueResponse
-import site.addzero.configcenter.spec.RenderedConfig
+import site.addzero.configcenter.spec.*
 
 @Single
 class ConfigCenterRemoteService {

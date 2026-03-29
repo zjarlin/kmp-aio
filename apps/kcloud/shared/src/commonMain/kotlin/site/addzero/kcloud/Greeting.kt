@@ -1,4 +1,4 @@
-package site.addzero.vibepocket
+package site.addzero.kcloud
 
 class Greeting {
     private val platform = getPlatform()

@@ -1,4 +1,4 @@
-package site.addzero.kcloud.sync.api
+package site.addzero.system.spi
 
 /**
  * 存储客户端接口 - 抽象S3/SSH等存储后端

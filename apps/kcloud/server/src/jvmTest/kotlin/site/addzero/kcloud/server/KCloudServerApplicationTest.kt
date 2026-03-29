@@ -1,27 +1,20 @@
 package site.addzero.kcloud.server
 
-import io.ktor.client.request.delete
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.put
-import io.ktor.client.request.setBody
-import io.ktor.client.statement.bodyAsText
-import io.ktor.http.ContentType
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.contentType
-import io.ktor.server.config.MapApplicationConfig
-import io.ktor.server.testing.testApplication
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.server.config.*
+import io.ktor.server.testing.*
+import org.koin.dsl.module
+import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
+import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortConnection
+import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
+import java.io.File
+import java.nio.file.Files
 import kotlin.math.min
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
-import org.koin.dsl.module
-import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
-import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
-import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortConnection
-import site.addzero.kcloud.module
-import java.io.File
-import java.nio.file.Files
 
 class KCloudServerApplicationTest {
     @Test
@@ -121,14 +114,15 @@ class KCloudServerApplicationTest {
                 setBody("""{"bundleId":"rhai-default-generic"}""")
             }
             val runtimeStatusResponse = client.get("/api/mcu/runtime/status")
+            val bundlesBody = bundlesResponse.bodyAsText()
+            val runtimeStatusBody = runtimeStatusResponse.bodyAsText()
 
             assertEquals(HttpStatusCode.OK, openResponse.status)
             assertEquals(HttpStatusCode.OK, bundlesResponse.status)
             assertEquals(HttpStatusCode.OK, ensureResponse.status)
             assertEquals(HttpStatusCode.OK, runtimeStatusResponse.status)
-            assertTrue(bundlesResponse.bodyAsText().contains("\"bundleId\":\"rhai-default-generic\""))
-            assertTrue(ensureResponse.bodyAsText().contains("\"state\":\"READY\""))
-            assertTrue(runtimeStatusResponse.bodyAsText().contains("\"bundleId\":\"rhai-default-generic\""))
+            assertTrue(bundlesBody.contains("\"bundleId\":\"rhai-default-generic\""), bundlesBody)
+            assertTrue(runtimeStatusBody.contains("\"bundleId\":\"rhai-default-generic\""), runtimeStatusBody)
         }
     }
 

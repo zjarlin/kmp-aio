@@ -1,4 +1,4 @@
-package site.addzero.vibepocket
+package site.addzero.kcloud
 
 class JVMPlatform : Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"

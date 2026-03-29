@@ -1,7 +1,5 @@
 @file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
 
-import org.gradle.api.tasks.JavaExec
-import org.gradle.jvm.toolchain.JavaLanguageVersion
 import java.io.File
 
 plugins {

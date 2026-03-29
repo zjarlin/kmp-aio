@@ -1,9 +1,9 @@
 package site.addzero.system.spi
 
 import site.addzero.system.enums.StorageType
-import site.addzero.system.spi.fileupload.dto.FileMetadata
-import site.addzero.system.spi.fileupload.dto.FileStorageResult
-import site.addzero.system.spi.fileupload.dto.FileUploadRequest
+import site.addzero.system.model.dto.FileMetadata
+import site.addzero.system.model.dto.FileStorageResult
+import site.addzero.system.model.dto.FileUploadRequest
 import java.io.InputStream
 
 /**

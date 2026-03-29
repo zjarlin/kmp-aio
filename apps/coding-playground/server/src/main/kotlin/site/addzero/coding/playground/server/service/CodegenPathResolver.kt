@@ -1,13 +1,12 @@
 package site.addzero.coding.playground.server.service
 
 import org.koin.core.annotation.Single
+import site.addzero.coding.playground.server.util.packagePath
 import site.addzero.coding.playground.shared.dto.GenerationTargetDto
 import site.addzero.coding.playground.shared.dto.PathPreviewDto
 import site.addzero.coding.playground.shared.dto.SourceFileMetaDto
-import site.addzero.coding.playground.server.util.packagePath
 import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.absolutePathString
 
 @Single
 class CodegenPathResolver {

@@ -2,10 +2,10 @@ package site.addzero.coding.playground
 
 import org.koin.core.context.GlobalContext
 import site.addzero.coding.playground.demo.beta.DemoBetaService
-import site.addzero.demo.gamma.DemoGammaService
 import site.addzero.coding.playground.server.config.PlaygroundServerSettings
 import site.addzero.coding.playground.shared.dto.CodegenSearchRequest
 import site.addzero.coding.playground.shared.service.CodegenProjectService
+import site.addzero.demo.gamma.DemoGammaService
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
