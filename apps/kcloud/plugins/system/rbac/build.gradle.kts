@@ -1,5 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-json")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
@@ -32,12 +33,21 @@ ksp {
 
 dependencies {
     add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
+    add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
 }
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":apps:kcloud:plugins:system:shared"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
+        }
+        jvmMain.dependencies {
+            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
+            implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
+            implementation(libs.findLibrary("spring2ktor-server-core").get())
+            compileOnly(libs.findLibrary("org-springframework-spring-web").get())
         }
     }
 }
