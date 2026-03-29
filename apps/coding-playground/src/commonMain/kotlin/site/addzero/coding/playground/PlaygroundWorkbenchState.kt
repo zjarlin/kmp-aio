@@ -292,6 +292,30 @@ class PlaygroundWorkbenchState(
         markMetadataChanged()
     }
 
+    suspend fun createScenePreset(
+        preset: ScenePresetKind,
+        featureName: String,
+        packageName: String,
+        routeSegment: String?,
+        sceneTitle: String?,
+    ) {
+        val targetId = selectedTargetId ?: return
+        val result = fileService.createScenePreset(
+            CreateScenePresetRequest(
+                targetId = targetId,
+                packageName = packageName,
+                featureName = featureName,
+                preset = preset,
+                routeSegment = routeSegment,
+                sceneTitle = sceneTitle,
+            ),
+        )
+        selectedFileId = result.primaryFileId
+        updateStatus(result.notes.joinToString("；").ifBlank { result.message })
+        refreshProjectScope()
+        markMetadataChanged()
+    }
+
     suspend fun addImport(importPath: String, alias: String?) {
         val fileId = selectedFileId ?: return
         fileService.createImport(CreateImportRequest(fileId, importPath, alias))

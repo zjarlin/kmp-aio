@@ -12,7 +12,7 @@ class ConfigCenterDatabase(
         get() = "jdbc:sqlite:${bootstrap.dbFile.absolutePath}"
 
     init {
-        Class.forName("org.sqlite.SQLiteDriver")
+        Class.forName("org.sqlite.JDBC")
         ensureDatabaseReady()
     }
 
@@ -241,4 +241,3 @@ private fun File.ensureDirectory(): File {
     }
     return this
 }
-

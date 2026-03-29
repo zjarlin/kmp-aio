@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.koin.core.annotation.Single
 import site.addzero.configcenter.spec.ConfigDomain
 import site.addzero.configcenter.spec.ConfigEntryDto
 import site.addzero.configcenter.spec.ConfigMutationRequest
@@ -14,6 +15,7 @@ import site.addzero.configcenter.spec.ConfigTargetKind
 import site.addzero.configcenter.spec.ConfigTargetMutationRequest
 import site.addzero.configcenter.spec.ConfigValueType
 
+@Single
 class ConfigCenterWorkbenchState(
     private val remoteService: ConfigCenterRemoteService,
 ) {
@@ -78,7 +80,7 @@ class ConfigCenterWorkbenchState(
                     includeDisabled = true,
                 ),
             )
-            entries.replaceAll(result)
+            entries.resetWith(result)
             selectedEntryId?.let { selectedId ->
                 result.firstOrNull { it.id == selectedId }?.let(::selectEntry)
             }
@@ -155,7 +157,7 @@ class ConfigCenterWorkbenchState(
     suspend fun refreshTargets() {
         runBusy("已刷新渲染目标") {
             val result = remoteService.listTargets()
-            targets.replaceAll(result)
+            targets.resetWith(result)
             selectedTargetId?.let { selectedId ->
                 result.firstOrNull { it.id == selectedId }?.let(::selectTarget)
             }
@@ -266,7 +268,7 @@ class ConfigCenterWorkbenchState(
     }
 }
 
-private fun <T> MutableList<T>.replaceAll(
+private fun <T> MutableList<T>.resetWith(
     data: List<T>,
 ) {
     clear()

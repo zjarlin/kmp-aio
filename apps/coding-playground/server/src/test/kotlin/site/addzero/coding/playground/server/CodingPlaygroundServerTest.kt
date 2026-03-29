@@ -20,7 +20,9 @@ import site.addzero.coding.playground.server.service.SourceFileServiceImpl
 import site.addzero.coding.playground.shared.dto.CreateCodegenProjectRequest
 import site.addzero.coding.playground.shared.dto.CreateDeclarationPresetRequest
 import site.addzero.coding.playground.shared.dto.CreateGenerationTargetRequest
+import site.addzero.coding.playground.shared.dto.CreateScenePresetRequest
 import site.addzero.coding.playground.shared.dto.DeclarationKind
+import site.addzero.coding.playground.shared.dto.ScenePresetKind
 import site.addzero.coding.playground.shared.dto.SyncExportRequest
 import site.addzero.coding.playground.shared.dto.SyncImportRequest
 import java.nio.file.Files
@@ -117,6 +119,16 @@ class CodingPlaygroundServerTest {
 
             val cases = listOf(
                 PresetCase(
+                    kind = DeclarationKind.CLASS,
+                    declarationName = "CatalogViewState",
+                    packageName = "site.addzero.generated.presets.state",
+                    expectedSnippets = listOf(
+                        "class CatalogViewState",
+                        "var statusMessage: String = \"待补充\"",
+                        "fun refresh(): Unit",
+                    ),
+                ),
+                PresetCase(
                     kind = DeclarationKind.ENUM_CLASS,
                     declarationName = "OrderStatus",
                     packageName = "site.addzero.generated.presets.enums",
@@ -202,6 +214,92 @@ class CodingPlaygroundServerTest {
                 assertTrue(indexPreview.content.contains(case.declarationName))
             }
             assertEquals(cases.size, createdFiles.distinct().size)
+        }
+    }
+
+    @Test
+    fun scenePresetsGenerateBusinessSkillAndKcloudShells() = withRuntime { runtime ->
+        runBlocking {
+            val project = runtime.projectService.create(
+                CreateCodegenProjectRequest(
+                    name = "scene-project",
+                    description = "场景预设测试",
+                ),
+            )
+            val moduleRoot = runtime.root.resolve("plugin-demo")
+            val commonTarget = runtime.targetService.create(
+                CreateGenerationTargetRequest(
+                    projectId = project.id,
+                    name = "plugin-common",
+                    rootDir = moduleRoot.toString(),
+                    sourceSet = "commonMain",
+                    basePackage = "site.addzero.generated.scene",
+                    indexPackage = "site.addzero.generated.scene.index",
+                    kspEnabled = true,
+                ),
+            )
+            runtime.targetService.create(
+                CreateGenerationTargetRequest(
+                    projectId = project.id,
+                    name = "plugin-jvm",
+                    rootDir = moduleRoot.toString(),
+                    sourceSet = "jvmMain",
+                    basePackage = "site.addzero.generated.scene",
+                    indexPackage = "site.addzero.generated.scene.index",
+                    kspEnabled = true,
+                ),
+            )
+
+            val crudResult = runtime.fileService.createScenePreset(
+                CreateScenePresetRequest(
+                    targetId = commonTarget.id,
+                    packageName = "site.addzero.generated.scene.customer",
+                    featureName = "Customer",
+                    preset = ScenePresetKind.BUSINESS_CRUD,
+                    routeSegment = "customer",
+                    sceneTitle = "客户档案",
+                ),
+            )
+            assertTrue(crudResult.createdFiles.size >= 10)
+            assertTrue(crudResult.affectedTargetIds.size >= 2)
+            val requestFile = crudResult.createdFiles.first { it.fileName == "CustomerRequest.kt" }
+            val routeFile = crudResult.createdFiles.first { it.fileName == "CustomerRouteShell.kt" }
+            val listPageFile = crudResult.createdFiles.first { it.fileName == "CustomerListPage.kt" }
+            assertTrue(runtime.renderService.previewFile(requestFile.id).content.contains("data class CustomerRequest"))
+            assertTrue(runtime.renderService.previewFile(routeFile.id).content.contains("POST /api/customer/page"))
+            assertTrue(runtime.renderService.previewFile(listPageFile.id).content.contains("Text(\"客户档案 列表页壳"))
+
+            val skillResult = runtime.fileService.createScenePreset(
+                CreateScenePresetRequest(
+                    targetId = commonTarget.id,
+                    packageName = "site.addzero.generated.scene.skill",
+                    featureName = "SkillBundle",
+                    preset = ScenePresetKind.SKILL_DOTFILE,
+                    routeSegment = "skills",
+                    sceneTitle = "Skill 仓库",
+                ),
+            )
+            assertTrue(skillResult.createdFiles.any { it.fileName == "SkillBundleStorageMode.kt" })
+            val skillPreview = runtime.renderService.previewFile(
+                skillResult.createdFiles.first { it.fileName == "SkillBundleResponse.kt" }.id,
+            )
+            assertTrue(skillPreview.content.contains("storageMode: SkillBundleStorageMode"))
+
+            val kcloudResult = runtime.fileService.createScenePreset(
+                CreateScenePresetRequest(
+                    targetId = commonTarget.id,
+                    packageName = "site.addzero.generated.scene.plugin",
+                    featureName = "OpsWorkbench",
+                    preset = ScenePresetKind.KCLOUD_PLUGIN,
+                    routeSegment = "ops/workbench",
+                    sceneTitle = "运维工作台",
+                ),
+            )
+            assertTrue(kcloudResult.notes.any { it.contains("KCloud 顶层 @Route") })
+            val routeSpecPreview = runtime.renderService.previewFile(
+                kcloudResult.createdFiles.first { it.fileName == "OpsWorkbenchKCloudRouteSpec.kt" }.id,
+            )
+            assertTrue(routeSpecPreview.content.contains("val listRoute: String = \"ops/workbench/list\""))
         }
     }
 }

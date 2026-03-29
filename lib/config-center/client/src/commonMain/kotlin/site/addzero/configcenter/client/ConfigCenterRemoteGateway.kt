@@ -13,6 +13,11 @@ import site.addzero.configcenter.spec.ConfigTargetDto
 import site.addzero.configcenter.spec.ConfigTargetMutationRequest
 import site.addzero.configcenter.spec.RenderedConfig
 
+internal expect fun buildConfigCenterHttpApi(
+    baseUrl: String,
+    httpClient: HttpClient,
+): ConfigCenterHttpApi
+
 object ConfigCenterApiClient {
     private val json = Json {
         ignoreUnknownKeys = true
@@ -36,11 +41,10 @@ object ConfigCenterApiClient {
     }
 
     fun createApi(): ConfigCenterHttpApi {
-        val ktorfit = Ktorfit.Builder()
-            .baseUrl(baseUrl)
-            .httpClient(httpClient)
-            .build()
-        return ktorfit.createConfigCenterHttpApi()
+        return buildConfigCenterHttpApi(
+            baseUrl = baseUrl,
+            httpClient = httpClient,
+        )
     }
 }
 
@@ -119,7 +123,12 @@ class ConfigCenterRemoteGateway(
     override suspend fun saveTarget(
         request: ConfigTargetMutationRequest,
     ): ConfigTargetDto {
-        return apiFactory().saveTarget(request)
+        val requestId = request.id
+        return if (requestId.isNullOrBlank()) {
+            apiFactory().saveTarget(request)
+        } else {
+            apiFactory().updateTarget(requestId, request)
+        }
     }
 
     override suspend fun deleteTarget(

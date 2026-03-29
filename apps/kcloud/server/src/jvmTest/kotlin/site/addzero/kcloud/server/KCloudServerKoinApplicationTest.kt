@@ -23,7 +23,7 @@ class KCloudServerKoinApplicationTest {
         System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
         val config = MapApplicationConfig(
             "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
-            "datasources.sqlite.driver" to "org.sqlite.SQLiteDriver",
+            "datasources.sqlite.driver" to "org.sqlite.JDBC",
         )
         val application = koinApplication {
             withConfiguration<KCloudServerStarterKoinApplication>()
@@ -57,7 +57,7 @@ class KCloudServerKoinApplicationTest {
         System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
         val config = MapApplicationConfig(
             "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
-            "datasources.sqlite.driver" to "org.sqlite.SQLiteDriver",
+            "datasources.sqlite.driver" to "org.sqlite.JDBC",
         )
         val application = koinApplication {
             withConfiguration<KCloudServerStarterKoinApplication>()

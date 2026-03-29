@@ -8,8 +8,7 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:config-center:spec"))
+            api(project(":lib:config-center:spec"))
         }
     }
 }
-

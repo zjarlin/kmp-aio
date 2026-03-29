@@ -90,6 +90,70 @@ class KCloudServerApplicationTest {
             assertTrue(statusResponse.bodyAsText().contains("\"state\":\"RUNNING\""))
         }
     }
+
+    @Test
+    fun `config center routes create entry list target and preview render`() =
+        withEmbeddedDesktopDatasource { testConfig ->
+            withConfigCenterBootstrap { _ ->
+                testApplication {
+                    environment {
+                        config = testConfig
+                    }
+                    application {
+                        module()
+                    }
+
+                    val createEntryResponse = client.post("/api/config-center/entries") {
+                        contentType(ContentType.Application.Json)
+                        setBody(
+                            """
+                            {
+                              "key":"demo.value",
+                              "namespace":"kcloud",
+                              "domain":"SYSTEM",
+                              "profile":"default",
+                              "valueType":"STRING",
+                              "storageMode":"REPO_PLAIN",
+                              "value":"demo-1"
+                            }
+                            """.trimIndent(),
+                        )
+                    }
+                    val createTargetResponse = client.post("/api/config-center/targets") {
+                        contentType(ContentType.Application.Json)
+                        setBody(
+                            """
+                            {
+                              "name":"Demo Template",
+                              "targetKind":"GENERIC_TEXT_TEMPLATE",
+                              "outputPath":"",
+                              "namespaceFilter":"kcloud",
+                              "profile":"default",
+                              "templateText":"demo={{demo.value}}",
+                              "enabled":true,
+                              "sortOrder":50
+                            }
+                            """.trimIndent(),
+                        )
+                    }
+                    val entriesResponse = client.get("/api/config-center/entries?namespace=kcloud&includeDisabled=true")
+                    val targetId = "\"id\":\"([^\"]+)\"".toRegex()
+                        .find(createTargetResponse.bodyAsText())
+                        ?.groupValues
+                        ?.getOrNull(1)
+                        .orEmpty()
+                    val previewResponse = client.post("/api/config-center/render/$targetId/preview")
+
+                    assertEquals(HttpStatusCode.OK, createEntryResponse.status)
+                    assertEquals(HttpStatusCode.OK, createTargetResponse.status)
+                    assertEquals(HttpStatusCode.OK, entriesResponse.status)
+                    assertEquals(HttpStatusCode.OK, previewResponse.status)
+                    assertTrue(targetId.isNotBlank())
+                    assertTrue(entriesResponse.bodyAsText().contains("\"key\":\"demo.value\""))
+                    assertTrue(previewResponse.bodyAsText().contains("demo=demo-1"))
+                }
+            }
+        }
 }
 
 private inline fun withEmbeddedDesktopDatasource(
@@ -102,7 +166,7 @@ private inline fun withEmbeddedDesktopDatasource(
         block(
             MapApplicationConfig(
                 "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
-                "datasources.sqlite.driver" to "org.sqlite.SQLiteDriver",
+                "datasources.sqlite.driver" to "org.sqlite.JDBC",
             ),
         )
     } finally {
@@ -112,6 +176,37 @@ private inline fun withEmbeddedDesktopDatasource(
             System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, previousEmbeddedFlag)
         }
         tempDatabase.delete()
+    }
+}
+
+private inline fun withConfigCenterBootstrap(
+    block: (File) -> Unit,
+) {
+    val tempDatabase = Files.createTempFile("kcloud-config-center-test-", ".sqlite").toFile()
+    val previousDbPath = System.getProperty("CONFIG_CENTER_DB_PATH")
+    val previousMasterKey = System.getProperty("CONFIG_CENTER_MASTER_KEY")
+    val previousAppId = System.getProperty("CONFIG_CENTER_APP_ID")
+    System.setProperty("CONFIG_CENTER_DB_PATH", tempDatabase.absolutePath)
+    System.setProperty("CONFIG_CENTER_MASTER_KEY", "test-master-key")
+    System.setProperty("CONFIG_CENTER_APP_ID", "kcloud")
+    try {
+        block(tempDatabase)
+    } finally {
+        restoreSystemProperty("CONFIG_CENTER_DB_PATH", previousDbPath)
+        restoreSystemProperty("CONFIG_CENTER_MASTER_KEY", previousMasterKey)
+        restoreSystemProperty("CONFIG_CENTER_APP_ID", previousAppId)
+        tempDatabase.delete()
+    }
+}
+
+private fun restoreSystemProperty(
+    key: String,
+    value: String?,
+) {
+    if (value == null) {
+        System.clearProperty(key)
+    } else {
+        System.setProperty(key, value)
     }
 }
 

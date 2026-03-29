@@ -88,9 +88,41 @@ class ConfigCenterRuntimeKoinModule {
     }
 
     @Single
+    fun provideSpringBridge(
+        gateway: ConfigCenterGateway,
+        bootstrap: ConfigCenterBootstrap,
+    ): SpringPropertySourceBridge {
+        return SpringPropertySourceBridge(gateway, bootstrap)
+    }
+
+    @Single
+    fun provideProcessEnvBridge(
+        gateway: ConfigCenterGateway,
+        bootstrap: ConfigCenterBootstrap,
+    ): ProcessEnvBridge {
+        return ProcessEnvBridge(gateway, bootstrap)
+    }
+
+    @Single
+    fun provideGenericTemplateBridge(
+        gateway: ConfigCenterGateway,
+        bootstrap: ConfigCenterBootstrap,
+    ): GenericTemplateBridge {
+        return GenericTemplateBridge(gateway, bootstrap)
+    }
+
+    @Single
     fun provideBridgeList(
         ktorConfigBridge: KtorConfigBridge,
+        springPropertySourceBridge: SpringPropertySourceBridge,
+        processEnvBridge: ProcessEnvBridge,
+        genericTemplateBridge: GenericTemplateBridge,
     ): List<ConfigBridgeSpi> {
-        return listOf(ktorConfigBridge)
+        return listOf(
+            ktorConfigBridge,
+            springPropertySourceBridge,
+            processEnvBridge,
+            genericTemplateBridge,
+        )
     }
 }

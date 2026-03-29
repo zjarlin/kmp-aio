@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.math.max
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
@@ -19,6 +20,7 @@ import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
 
+@Single
 class McuConsoleWorkbenchState(
     private val remoteService: McuConsoleRemoteService,
 ) {

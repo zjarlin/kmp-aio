@@ -78,6 +78,13 @@ interface ConfigCenterHttpApi {
         @Body request: ConfigTargetMutationRequest,
     ): ConfigTargetDto
 
+    @Headers("Content-Type: application/json")
+    @PUT("api/config-center/targets/{id}")
+    suspend fun updateTarget(
+        @Path("id") id: String,
+        @Body request: ConfigTargetMutationRequest,
+    ): ConfigTargetDto
+
     @DELETE("api/config-center/targets/{id}")
     suspend fun deleteTarget(
         @Path("id") id: String,
@@ -102,4 +109,3 @@ interface ConfigCenterHttpApi {
 internal fun ConfigQuery.domainQueryValue(): String? {
     return domain?.name
 }
-

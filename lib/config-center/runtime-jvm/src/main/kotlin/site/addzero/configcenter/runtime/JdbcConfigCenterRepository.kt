@@ -2,6 +2,7 @@ package site.addzero.configcenter.runtime
 
 import java.sql.ResultSet
 import java.util.UUID
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import site.addzero.configcenter.spec.ConfigDomain
@@ -23,6 +24,7 @@ class JdbcConfigCenterRepository(
     override suspend fun listEntries(
         query: ConfigQuery,
     ): List<ConfigEntryDto> {
+        val keyword = query.keyword?.trim()?.takeIf { it.isNotEmpty() }
         return database.withConnection { connection ->
             val sql = buildString {
                 append(
@@ -34,7 +36,7 @@ class JdbcConfigCenterRepository(
                 if (query.namespace != null) append(" AND namespace = ?")
                 if (query.domain != null) append(" AND domain = ?")
                 if (!query.includeDisabled) append(" AND enabled = 1")
-                if (!query.keyword.isNullOrBlank()) append(" AND (key LIKE ? OR description LIKE ?)")
+                if (keyword != null) append(" AND (key LIKE ? OR description LIKE ?)")
                 append(" ORDER BY namespace ASC, key ASC, updated_at DESC")
             }
             connection.prepareStatement(sql).use { statement ->
@@ -42,8 +44,8 @@ class JdbcConfigCenterRepository(
                 statement.setString(index++, query.profile)
                 query.namespace?.let { statement.setString(index++, it) }
                 query.domain?.let { statement.setString(index++, it.name) }
-                if (!query.keyword.isNullOrBlank()) {
-                    val likeValue = "%${query.keyword.trim()}%"
+                if (keyword != null) {
+                    val likeValue = "%$keyword%"
                     statement.setString(index++, likeValue)
                     statement.setString(index++, likeValue)
                 }
@@ -388,4 +390,3 @@ class JdbcConfigCenterRepository(
         return runCatching { json.decodeFromString<List<String>>(rawValue) }.getOrDefault(emptyList())
     }
 }
-

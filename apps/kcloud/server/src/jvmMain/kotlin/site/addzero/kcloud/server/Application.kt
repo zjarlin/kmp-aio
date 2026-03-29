@@ -311,7 +311,7 @@ private fun embeddedDesktopDefaults() = ConfigFactory.parseString(
       sqlite {
         enabled = true
         url = "jdbc:sqlite:kcloud-desktop.db"
-        driver = "org.sqlite.SQLiteDriver"
+        driver = "org.sqlite.JDBC"
       }
       postgres {
         enabled = false
@@ -337,7 +337,7 @@ private fun embeddedDesktopRuntimeOverrides(paths: EmbeddedDesktopPaths) =
     ConfigFactory.empty()
         .withValue("datasources.sqlite.enabled", ConfigValueFactory.fromAnyRef(true))
         .withValue("datasources.sqlite.url", ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
-        .withValue("datasources.sqlite.driver", ConfigValueFactory.fromAnyRef("org.sqlite.SQLiteDriver"))
+        .withValue("datasources.sqlite.driver", ConfigValueFactory.fromAnyRef("org.sqlite.JDBC"))
         .withValue("datasources.postgres.enabled", ConfigValueFactory.fromAnyRef(false))
         .withValue("kcloud.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
         .withValue("kcloud.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))

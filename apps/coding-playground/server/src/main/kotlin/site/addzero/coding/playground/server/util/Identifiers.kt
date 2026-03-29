@@ -6,7 +6,10 @@ private val kotlinIdentifierRegex = Regex("[A-Za-z_][A-Za-z0-9_]*")
 private val kotlinPackageRegex = Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*")
 
 fun String.toPascalIdentifier(): String {
-    val parts = split(Regex("[^A-Za-z0-9]+")).filter { it.isNotBlank() }
+    val normalized = trim()
+        .replace(Regex("([a-z0-9])([A-Z])"), "$1 $2")
+        .replace(Regex("[^A-Za-z0-9]+"), " ")
+    val parts = normalized.split(Regex("\\s+")).filter { it.isNotBlank() }
     if (parts.isEmpty()) {
         return "Generated"
     }

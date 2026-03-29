@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.system.configcenter
 
+import org.koin.core.annotation.Single
 import site.addzero.configcenter.client.ConfigCenter
 import site.addzero.configcenter.spec.ConfigEntryDto
 import site.addzero.configcenter.spec.ConfigMutationRequest
@@ -9,6 +10,7 @@ import site.addzero.configcenter.spec.ConfigTargetMutationRequest
 import site.addzero.configcenter.spec.ConfigValueResponse
 import site.addzero.configcenter.spec.RenderedConfig
 
+@Single
 class ConfigCenterRemoteService {
     suspend fun listEntries(
         query: ConfigQuery,
@@ -19,10 +21,11 @@ class ConfigCenterRemoteService {
     suspend fun saveEntry(
         request: ConfigMutationRequest,
     ): ConfigEntryDto {
-        return if (request.id.isNullOrBlank()) {
+        val requestId = request.id
+        return if (requestId.isNullOrBlank()) {
             ConfigCenter.addEnv(request)
         } else {
-            ConfigCenter.updateEnv(request.id, request)
+            ConfigCenter.updateEnv(requestId, request)
         }
     }
 
@@ -68,4 +71,3 @@ class ConfigCenterRemoteService {
             .getBootstrapValue(key)
     }
 }
-

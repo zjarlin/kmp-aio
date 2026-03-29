@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.client
 
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
@@ -14,6 +15,7 @@ import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 
+@Single
 class McuConsoleRemoteService {
     suspend fun listPorts() = McuConsoleApiClient.api.listPorts().items
 

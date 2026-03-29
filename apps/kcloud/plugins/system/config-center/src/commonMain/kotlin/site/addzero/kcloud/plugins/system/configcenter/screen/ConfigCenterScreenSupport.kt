@@ -24,10 +24,9 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
@@ -46,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.mp.KoinPlatform
+import site.addzero.configcenter.spec.ConfigDomain
 import site.addzero.component.button.AddButton
 import site.addzero.component.button.AddIconButton
 import site.addzero.component.search_bar.AddSearchBar
@@ -63,11 +63,11 @@ internal fun ConfigCenterPageFrame(
     title: String,
     state: ConfigCenterWorkbenchState,
     onRefresh: suspend () -> Unit,
-    onCreate: () -> Unit,
-    onSave: suspend () -> Unit,
+    onCreate: (() -> Unit)? = null,
+    onSave: (suspend () -> Unit)? = null,
     onDelete: (suspend () -> Unit)? = null,
     searchBar: @Composable (() -> Unit)? = null,
-    content: @Composable () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -108,17 +108,21 @@ internal fun ConfigCenterPageFrame(
                         ) {
                             scope.launch { onRefresh() }
                         }
-                        AddIconButton(
-                            text = "新建",
-                            imageVector = Icons.Default.Add,
-                        ) {
-                            onCreate()
+                        if (onCreate != null) {
+                            AddIconButton(
+                                text = "新建",
+                                imageVector = Icons.Default.Add,
+                            ) {
+                                onCreate()
+                            }
                         }
-                        AddIconButton(
-                            text = "保存",
-                            imageVector = Icons.Default.Save,
-                        ) {
-                            scope.launch { onSave() }
+                        if (onSave != null) {
+                            AddIconButton(
+                                text = "保存",
+                                imageVector = Icons.Default.Save,
+                            ) {
+                                scope.launch { onSave() }
+                            }
                         }
                         if (onDelete != null) {
                             AddIconButton(
@@ -150,7 +154,7 @@ internal fun ConfigCenterPageFrame(
 internal fun ConfigCenterPanel(
     title: String,
     modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
 ) {
     Card(
         modifier = modifier,
@@ -168,7 +172,7 @@ internal fun ConfigCenterPanel(
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             content()
         }
     }
@@ -235,22 +239,18 @@ internal fun EnumSelectRow(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-        ) {
+        Box {
             OutlinedTextField(
                 value = currentValue.name,
                 onValueChange = {},
-                modifier = Modifier.menuAnchor().fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true },
                 readOnly = true,
                 singleLine = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
                 label = { Text(label) },
             )
-            ExposedDropdownMenu(
+            DropdownMenu(
                 expanded = expanded,
                 onDismissRequest = { expanded = false },
             ) {
@@ -319,6 +319,51 @@ internal fun ConfigCenterEntryFilters(
                 singleLine = true,
                 label = { Text("Profile") },
             )
+            NullableDomainFilterField(
+                value = state.domainFilter,
+                onValueChange = { state.domainFilter = it },
+            )
+        }
+    }
+}
+
+@Composable
+private fun NullableDomainFilterField(
+    value: ConfigDomain?,
+    onValueChange: (ConfigDomain?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box(modifier = Modifier.width(180.dp)) {
+        OutlinedTextField(
+            value = value?.name ?: "ALL",
+            onValueChange = {},
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = true },
+            readOnly = true,
+            singleLine = true,
+            label = { Text("分类过滤") },
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("ALL") },
+                onClick = {
+                    onValueChange(null)
+                    expanded = false
+                },
+            )
+            ConfigDomain.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.name) },
+                    onClick = {
+                        onValueChange(option)
+                        expanded = false
+                    },
+                )
+            }
         }
     }
 }

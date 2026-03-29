@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -39,8 +38,6 @@ fun ConfigCenterPreviewScreen() {
             state.refreshTargets()
             state.loadBootstrapSummary()
         },
-        onCreate = { },
-        onSave = { state.previewSelectedTarget() },
         searchBar = {
             Row(
                 modifier = Modifier.fillMaxWidth(),

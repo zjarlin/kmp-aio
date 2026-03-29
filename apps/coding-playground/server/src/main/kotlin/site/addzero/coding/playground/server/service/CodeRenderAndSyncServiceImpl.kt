@@ -807,7 +807,9 @@ class CodeRenderAndSyncServiceImpl(
 
     private fun buildPrefix(visibility: CodeVisibility, modifiers: List<String>): String {
         val parts = buildList {
-            add(visibility.name.lowercase())
+            if (visibility != CodeVisibility.PUBLIC) {
+                add(visibility.name.lowercase())
+            }
             addAll(modifiers.map { it.lowercase() })
         }.filter { it.isNotBlank() }
         return if (parts.isEmpty()) "" else parts.joinToString(" ", postfix = " ")
@@ -845,10 +847,11 @@ class CodeRenderAndSyncServiceImpl(
                 memberLines += "    @${annotation.annotationClassName}${renderAnnotationArgs(annotation.id, annotationArgs)}"
             }
             val overridePrefix = if (property.isOverride) "override " else ""
+            val visibilityPrefix = if (property.visibility == CodeVisibility.PUBLIC) "" else "${property.visibility.name.lowercase()} "
             val valOrVar = if (property.mutable) "var" else "val"
             val initializer = property.initializer?.let { " = $it" }.orEmpty()
             val effectiveInitializer = if (interfaceMode) "" else initializer
-            memberLines += "    ${property.visibility.name.lowercase()} ${overridePrefix}$valOrVar ${property.name}: ${property.type}$effectiveInitializer"
+            memberLines += "    $visibilityPrefix${overridePrefix}$valOrVar ${property.name}: ${property.type}$effectiveInitializer"
         }
         functions.forEach { function ->
             ownerAnnotations[function.id].orEmpty().forEach { annotation ->
@@ -1091,9 +1094,10 @@ private fun parseDeclaration(text: String): ParsedDeclaration {
     }
     val headerAndBody = lines.joinToString("\n").trim()
     val declarationId = Regex("""@GeneratedManagedDeclaration\(declarationId = "([^"]+)"""").find(text)?.groupValues?.get(1)
-    val headerRegex = Regex("""^(public|internal|private)\s+([A-Za-z\s]*)?(data class|class|enum class|interface|object|annotation class)\s+([A-Za-z_][A-Za-z0-9_]*)([\s\S]*)$""")
+    val headerRegex = Regex("""^(?:(public|internal|private)\s+)?([A-Za-z\s]*?)?(annotation class|data class|enum class|class|interface|object)\s+([A-Za-z_][A-Za-z0-9_]*)([\s\S]*)$""")
     val match = headerRegex.find(headerAndBody) ?: throw PlaygroundValidationException("暂不支持当前声明头部格式")
-    val visibility = enumValueOf<CodeVisibility>(match.groupValues[1].uppercase())
+    val visibility = match.groupValues[1].takeIf { it.isNotBlank() }?.let { enumValueOf<CodeVisibility>(it.uppercase()) }
+        ?: CodeVisibility.PUBLIC
     val modifierText = match.groupValues[2].trim()
     val kindToken = match.groupValues[3].trim()
     val name = match.groupValues[4].trim()
@@ -1175,7 +1179,7 @@ private fun parseProperties(body: String): List<ParsedProperty> {
             pendingAnnotations += parseAnnotationLine(line.removePrefix("@").trim())
             return@forEach
         }
-        val regex = Regex("""(public|internal|private)\s+(override\s+)?(val|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)(?:\s*=\s*(.+))?$""")
+        val regex = Regex("""(?:(public|internal|private)\s+)?(override\s+)?(val|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*([^=]+?)(?:\s*=\s*(.+))?$""")
         val match = regex.find(line) ?: return@forEach
         results += ParsedProperty(
             name = match.groupValues[4].trim(),
@@ -1183,7 +1187,8 @@ private fun parseProperties(body: String): List<ParsedProperty> {
             mutable = match.groupValues[3] == "var",
             nullable = match.groupValues[5].trim().endsWith("?"),
             initializer = match.groupValues.getOrNull(6)?.takeIf { it.isNotBlank() }?.trim(),
-            visibility = enumValueOf<CodeVisibility>(match.groupValues[1].uppercase()),
+            visibility = match.groupValues[1].takeIf { it.isNotBlank() }?.let { enumValueOf<CodeVisibility>(it.uppercase()) }
+                ?: CodeVisibility.PUBLIC,
             isOverride = match.groupValues[2].isNotBlank(),
             annotations = pendingAnnotations.toList(),
         )
@@ -1245,7 +1250,7 @@ private fun parseFunctions(body: String, interfaceMode: Boolean): List<ParsedFun
 private fun parseFunctionBlock(text: String, annotations: List<ParsedAnnotation>, interfaceMode: Boolean): ParsedFunction {
     val header = text.substringBefore("{").trim()
     val body = text.substringAfter("{", "").substringBeforeLast("}", "").trim().ifBlank { null }
-    val regex = Regex("""(public|internal|private)\s+([A-Za-z\s]*)fun\s+([A-Za-z_][A-Za-z0-9_]*)\((.*)\)\s*:\s*(.+)$""")
+    val regex = Regex("""(?:(public|internal|private)\s+)?([A-Za-z\s]*)fun\s+([A-Za-z_][A-Za-z0-9_]*)\((.*)\)\s*:\s*(.+)$""")
     val match = regex.find(header) ?: throw PlaygroundValidationException("无法解析函数声明: $text")
     val parameters = match.groupValues[4].split(',').mapNotNull { item ->
         val raw = item.trim()
@@ -1265,7 +1270,8 @@ private fun parseFunctionBlock(text: String, annotations: List<ParsedAnnotation>
     return ParsedFunction(
         name = match.groupValues[3].trim(),
         returnType = match.groupValues[5].trim(),
-        visibility = enumValueOf<CodeVisibility>(match.groupValues[1].uppercase()),
+        visibility = match.groupValues[1].takeIf { it.isNotBlank() }?.let { enumValueOf<CodeVisibility>(it.uppercase()) }
+            ?: CodeVisibility.PUBLIC,
         modifiers = match.groupValues[2].split(' ').filter { it.isNotBlank() },
         parameters = parameters,
         bodyMode = if (body.isNullOrBlank() && interfaceMode) FunctionBodyMode.TEMPLATE else FunctionBodyMode.RAW_TEXT,

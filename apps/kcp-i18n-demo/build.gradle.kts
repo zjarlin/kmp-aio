@@ -63,8 +63,8 @@ val desktopEntryPoint = project.layout.projectDirectory
 val desktopMainClass = desktopEntryPoint.mainClassName
 
 i18n {
-    targetLocale.set("en")
     resourceBasePath.set("i18n")
+    managedLocales.addAll("en", "ja")
 }
 
 kotlin {

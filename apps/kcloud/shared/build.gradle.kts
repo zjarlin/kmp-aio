@@ -6,7 +6,10 @@ plugins {
 val libs = versionCatalogs.named("libs")
 val routeSnapshotTasks = listOf(
     ":apps:kcloud:plugins:mcu-console:kspCommonMainKotlinMetadata",
+    ":apps:kcloud:plugins:system:config-center:kspCommonMainKotlinMetadata",
     ":apps:kcloud:plugins:system:rbac:kspCommonMainKotlinMetadata",
+    ":apps:kcloud:plugins:system:ai-chat:kspCommonMainKotlinMetadata",
+    ":apps:kcloud:plugins:system:knowledge-base:kspCommonMainKotlinMetadata",
     ":apps:kcloud:plugins:vibepocket:kspCommonMainKotlinMetadata",
 )
 

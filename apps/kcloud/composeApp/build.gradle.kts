@@ -18,6 +18,8 @@ kotlin {
         implementation(project(":apps:kcloud:plugins:mcu-console"))
         implementation(project(":apps:kcloud:plugins:system:config-center"))
         implementation(project(":apps:kcloud:plugins:system:rbac"))
+        implementation(project(":apps:kcloud:plugins:system:ai-chat"))
+        implementation(project(":apps:kcloud:plugins:system:knowledge-base"))
         implementation(project(":apps:kcloud:plugins:vibepocket"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())

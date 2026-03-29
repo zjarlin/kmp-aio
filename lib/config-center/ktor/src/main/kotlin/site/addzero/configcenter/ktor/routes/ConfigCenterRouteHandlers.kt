@@ -178,6 +178,19 @@ fun saveConfigCenterTarget(
 }
 
 /**
+ * 更新渲染目标。
+ */
+@PutMapping("/api/config-center/targets/{id}")
+fun updateConfigCenterTarget(
+    @PathVariable("id") id: String,
+    @RequestBody request: ConfigTargetMutationRequest,
+): ConfigTargetDto {
+    return kotlinx.coroutines.runBlocking {
+        gateway().saveTarget(request.copy(id = id))
+    }
+}
+
+/**
  * 删除渲染目标。
  */
 @DeleteMapping("/api/config-center/targets/{id}")

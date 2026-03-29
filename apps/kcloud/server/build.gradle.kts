@@ -17,6 +17,9 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-flyway"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":apps:kcloud:plugins:mcu-console"))
+            implementation(project(":apps:kcloud:plugins:system:rbac"))
+            implementation(project(":apps:kcloud:plugins:system:ai-chat"))
+            implementation(project(":apps:kcloud:plugins:system:knowledge-base"))
             implementation(project(":apps:kcloud:plugins:vibepocket"))
         }
     }

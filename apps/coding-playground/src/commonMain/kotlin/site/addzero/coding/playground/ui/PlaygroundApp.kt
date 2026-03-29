@@ -63,6 +63,7 @@ import site.addzero.coding.playground.shared.dto.FunctionBodyMode
 import site.addzero.coding.playground.shared.dto.GenerationTargetDto
 import site.addzero.coding.playground.shared.dto.ManagedArtifactMetaDto
 import site.addzero.coding.playground.shared.dto.PropertyMetaDto
+import site.addzero.coding.playground.shared.dto.ScenePresetKind
 import site.addzero.coding.playground.shared.dto.SourceFileMetaDto
 import site.addzero.coding.playground.shared.dto.SyncConflictMetaDto
 import site.addzero.coding.playground.shared.dto.SyncConflictResolution
@@ -79,6 +80,11 @@ private enum class InspectorTab(val title: String) {
     CONFLICTS("冲突列表"),
     KSP_INDEX("KSP 索引"),
     VALIDATION("校验结果"),
+}
+
+private enum class PresetCreateMode(val title: String) {
+    DECLARATION("单声明"),
+    SCENE("场景预设"),
 }
 
 private data class PendingDelete(
@@ -631,60 +637,165 @@ private fun PresetCreateCard(
     selectedTarget: GenerationTargetDto?,
 ) {
     val scope = rememberCoroutineScope()
+    var createMode by remember { mutableStateOf(PresetCreateMode.SCENE) }
     var declarationName by remember(selectedTarget?.id) { mutableStateOf("SampleModel") }
+    var featureName by remember(selectedTarget?.id) { mutableStateOf("SampleFeature") }
     var packageName by remember(selectedTarget?.id) { mutableStateOf(selectedTarget?.basePackage ?: "") }
     var kind by remember(selectedTarget?.id) { mutableStateOf(DeclarationKind.DATA_CLASS) }
+    var scenePreset by remember(selectedTarget?.id) { mutableStateOf(ScenePresetKind.BUSINESS_CRUD) }
+    var routeSegment by remember(selectedTarget?.id) { mutableStateOf("") }
+    var sceneTitle by remember(selectedTarget?.id) { mutableStateOf("") }
 
     SectionCard(title = "快速预设") {
-        Text("先选中一个生成目标，再用预设快速创建文件和声明。", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
-        FormGroupTitle("必填项")
-        CompactFieldRow(
-            left = {
-                FieldLabel("预设类型", required = true)
-                EnumDropdownField(
-                    value = kind,
-                    values = DeclarationKind.entries,
-                    labelOf = { it.label() },
-                    onSelected = { kind = it },
-                )
-            },
-            right = {
-                FieldLabel("声明名", required = true)
-                OutlinedTextField(
-                    value = declarationName,
-                    onValueChange = { declarationName = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = selectedTarget != null,
-                )
-            },
+        Text(
+            "先选中一个生成目标。业务 CRUD、skills / dotfiles 和 KCloud 页面壳优先用场景预设；只建单个 Kotlin 声明时再切回单声明模式。",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.secondary,
         )
-        FieldLabel("包名", required = true)
-        OutlinedTextField(
-            value = packageName,
-            onValueChange = { packageName = it },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-            enabled = selectedTarget != null,
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(
-                onClick = {
-                    scope.launchWorkbenchAction(state) {
-                        state.createPreset(kind, declarationName.trim(), packageName.trim())
-                    }
-                },
-                enabled = selectedTarget != null && declarationName.isNotBlank() && packageName.isNotBlank(),
-            ) {
-                Text("创建预设")
+        PrimaryTabRow(selectedTabIndex = createMode.ordinal) {
+            PresetCreateMode.entries.forEach { mode ->
+                Tab(
+                    selected = createMode == mode,
+                    onClick = { createMode = mode },
+                    text = { Text(mode.title) },
+                )
             }
-            selectedTarget?.let {
-                Text(
-                    text = "目标包前缀：${it.basePackage}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.secondary,
-                    modifier = Modifier.align(Alignment.CenterVertically),
+        }
+        if (createMode == PresetCreateMode.DECLARATION) {
+            FormGroupTitle("必填项")
+            CompactFieldRow(
+                left = {
+                    FieldLabel("预设类型", required = true)
+                    EnumDropdownField(
+                        value = kind,
+                        values = DeclarationKind.entries,
+                        labelOf = { it.label() },
+                        onSelected = { kind = it },
+                    )
+                },
+                right = {
+                    FieldLabel("声明名", required = true)
+                    OutlinedTextField(
+                        value = declarationName,
+                        onValueChange = { declarationName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = selectedTarget != null,
+                    )
+                },
+            )
+            FieldLabel("包名", required = true)
+            OutlinedTextField(
+                value = packageName,
+                onValueChange = { packageName = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = selectedTarget != null,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        scope.launchWorkbenchAction(state) {
+                            state.createPreset(kind, declarationName.trim(), packageName.trim())
+                        }
+                    },
+                    enabled = selectedTarget != null && declarationName.isNotBlank() && packageName.isNotBlank(),
+                ) {
+                    Text("创建声明预设")
+                }
+                selectedTarget?.let {
+                    Text(
+                        text = "目标包前缀：${it.basePackage}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                }
+            }
+        } else {
+            FormGroupTitle("必填项")
+            CompactFieldRow(
+                left = {
+                    FieldLabel("场景类型", required = true)
+                    EnumDropdownField(
+                        value = scenePreset,
+                        values = ScenePresetKind.entries,
+                        labelOf = { it.label() },
+                        onSelected = { scenePreset = it },
+                    )
+                },
+                right = {
+                    FieldLabel("特征名", required = true)
+                    OutlinedTextField(
+                        value = featureName,
+                        onValueChange = { featureName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        enabled = selectedTarget != null,
+                    )
+                },
+            )
+            FieldLabel("包名", required = true)
+            OutlinedTextField(
+                value = packageName,
+                onValueChange = { packageName = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                enabled = selectedTarget != null,
+            )
+            OptionalFieldsSection(
+                rememberKey = "scene-preset-${selectedTarget?.id}",
+                defaultExpanded = routeSegment.isNotBlank() || sceneTitle.isNotBlank(),
+                collapsedHint = "路由段和场景标题默认自动推导，需要覆盖时再展开。",
+            ) {
+                CompactFieldRow(
+                    left = {
+                        FieldLabel("路由段")
+                        OutlinedTextField(
+                            value = routeSegment,
+                            onValueChange = { routeSegment = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = selectedTarget != null,
+                        )
+                    },
+                    right = {
+                        FieldLabel("场景标题")
+                        OutlinedTextField(
+                            value = sceneTitle,
+                            onValueChange = { sceneTitle = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            enabled = selectedTarget != null,
+                        )
+                    },
                 )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        scope.launchWorkbenchAction(state) {
+                            state.createScenePreset(
+                                preset = scenePreset,
+                                featureName = featureName.trim(),
+                                packageName = packageName.trim(),
+                                routeSegment = routeSegment.trim().ifBlank { null },
+                                sceneTitle = sceneTitle.trim().ifBlank { null },
+                            )
+                        }
+                    },
+                    enabled = selectedTarget != null && featureName.isNotBlank() && packageName.isNotBlank(),
+                ) {
+                    Text("创建场景预设")
+                }
+                selectedTarget?.let {
+                    Text(
+                        text = "当前 sourceSet：${it.sourceSet}，若同根目录存在 commonMain / jvmMain 兄弟目标，会自动联动生成。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                    )
+                }
             }
         }
     }
@@ -1062,10 +1173,14 @@ private fun DeclarationContentCard(
             selectedAnnotations = selectedAnnotations,
             annotationArguments = annotationArguments,
         )
-        if (selectedDeclaration.kind == DeclarationKind.DATA_CLASS || selectedDeclaration.kind == DeclarationKind.ANNOTATION_CLASS) {
+        if (selectedDeclaration.kind == DeclarationKind.DATA_CLASS ||
+            selectedDeclaration.kind == DeclarationKind.CLASS ||
+            selectedDeclaration.kind == DeclarationKind.ANNOTATION_CLASS
+        ) {
             ConstructorParamCard(state, selectedDeclaration, selectedConstructorParams)
         }
         if (selectedDeclaration.kind == DeclarationKind.DATA_CLASS ||
+            selectedDeclaration.kind == DeclarationKind.CLASS ||
             selectedDeclaration.kind == DeclarationKind.INTERFACE ||
             selectedDeclaration.kind == DeclarationKind.OBJECT
         ) {

@@ -21,6 +21,7 @@ import site.addzero.coding.playground.server.service.SourceFileServiceImpl
 import site.addzero.coding.playground.shared.dto.CreateCodegenProjectRequest
 import site.addzero.coding.playground.shared.dto.CreateGenerationTargetRequest
 import site.addzero.coding.playground.shared.dto.DeclarationKind
+import site.addzero.coding.playground.shared.dto.ScenePresetKind
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -196,6 +197,7 @@ class PlaygroundWorkbenchStateTest {
             )
 
             val cases = listOf(
+                DeclarationKind.CLASS to "WorkbenchViewState",
                 DeclarationKind.ENUM_CLASS to "WorkbenchStatus",
                 DeclarationKind.INTERFACE to "WorkbenchGateway",
                 DeclarationKind.OBJECT to "WorkbenchDefaults",
@@ -214,7 +216,7 @@ class PlaygroundWorkbenchStateTest {
                 runtime.state.exportSelectedFile()
                 runtime.state.importSelectedFile()
                 assertTrue(
-                    runtime.state.fileAggregate?.declarations?.any { it.name == name && it.kind == kind } == true,
+                    runtime.state.projectAggregate?.declarations?.any { it.name == name && it.kind == kind } == true,
                     "导回后没有保留声明 $name / $kind",
                 )
             }
@@ -223,6 +225,60 @@ class PlaygroundWorkbenchStateTest {
             cases.forEach { (_, name) ->
                 assertTrue(preview.content.contains(name), "索引预览缺少 $name")
             }
+        }
+    }
+
+    @Test
+    fun workbenchStateSupportsScenePresetFlow() = withWorkbenchState { runtime ->
+        runBlocking {
+            runtime.state.refreshAll()
+            runtime.state.saveProject(
+                selectedId = null,
+                request = CreateCodegenProjectRequest(
+                    name = "scene-state-project",
+                    description = "场景预设状态测试",
+                ),
+            )
+            val moduleRoot = runtime.root.resolve("scene-plugin")
+            runtime.state.saveTarget(
+                selectedId = null,
+                request = CreateGenerationTargetRequest(
+                    projectId = runtime.state.selectedProjectId!!,
+                    name = "scene-common",
+                    rootDir = moduleRoot.toString(),
+                    sourceSet = "commonMain",
+                    basePackage = "site.addzero.generated.scene",
+                    indexPackage = "site.addzero.generated.scene.index",
+                    kspEnabled = true,
+                ),
+            )
+            runtime.state.saveTarget(
+                selectedId = null,
+                request = CreateGenerationTargetRequest(
+                    projectId = runtime.state.selectedProjectId!!,
+                    name = "scene-jvm",
+                    rootDir = moduleRoot.toString(),
+                    sourceSet = "jvmMain",
+                    basePackage = "site.addzero.generated.scene",
+                    indexPackage = "site.addzero.generated.scene.index",
+                    kspEnabled = true,
+                ),
+            )
+            runtime.state.selectTarget(runtime.state.targets.first { it.sourceSet == "commonMain" }.id)
+            runtime.state.refreshProjectScope()
+
+            runtime.state.createScenePreset(
+                preset = ScenePresetKind.BUSINESS_CRUD,
+                featureName = "Customer",
+                packageName = "site.addzero.generated.scene.customer",
+                routeSegment = "customer",
+                sceneTitle = "客户档案",
+            )
+
+            assertTrue(runtime.state.files.any { it.fileName == "CustomerRequest.kt" })
+            assertTrue(runtime.state.projectAggregate?.files?.any { it.fileName == "CustomerRouteShell.kt" } == true)
+            runtime.state.refreshPreview()
+            assertTrue(runtime.state.sourcePreview?.content?.contains("Customer") == true)
         }
     }
 }

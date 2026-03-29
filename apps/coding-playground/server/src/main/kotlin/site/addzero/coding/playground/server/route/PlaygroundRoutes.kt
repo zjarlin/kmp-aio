@@ -80,6 +80,9 @@ suspend fun createFile(@RequestBody request: CreateSourceFileRequest): SourceFil
 @PostMapping("/api/codegen/files/presets")
 suspend fun createFilePreset(@RequestBody request: CreateDeclarationPresetRequest): SourceFileAggregateDto = fileService().createPreset(request)
 
+@PostMapping("/api/codegen/scenes/presets")
+suspend fun createScenePreset(@RequestBody request: CreateScenePresetRequest): ScenePresetResultDto = fileService().createScenePreset(request)
+
 @GetMapping("/api/codegen/files/{id}")
 suspend fun getFile(@PathVariable id: String): SourceFileMetaDto = fileService().get(id)
 
