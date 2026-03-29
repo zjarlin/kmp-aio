@@ -7,10 +7,13 @@ import io.ktor.server.routing.post
 import site.addzero.kcloud.plugins.mcuconsole.routes.closeMcuSession
 import site.addzero.kcloud.plugins.mcuconsole.routes.executeMcuScript
 import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuFlashStatus
+import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuRuntimeStatus
 import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuScriptStatus
 import site.addzero.kcloud.plugins.mcuconsole.routes.getMcuSession
+import site.addzero.kcloud.plugins.mcuconsole.routes.listMcuRuntimeBundles
 import site.addzero.kcloud.plugins.mcuconsole.routes.listMcuFlashProfiles
 import site.addzero.kcloud.plugins.mcuconsole.routes.listMcuPorts
+import site.addzero.kcloud.plugins.mcuconsole.routes.ensureMcuRuntime
 import site.addzero.kcloud.plugins.mcuconsole.routes.openMcuSession
 import site.addzero.kcloud.plugins.mcuconsole.routes.readMcuEvents
 import site.addzero.kcloud.plugins.mcuconsole.routes.readMcuRecentLines
@@ -66,5 +69,14 @@ fun Route.mcuConsoleRoutes() {
     }
     get("/api/mcu/flash/status") {
         call.respond(getMcuFlashStatus())
+    }
+    get("/api/mcu/runtime/bundles") {
+        call.respond(listMcuRuntimeBundles())
+    }
+    post("/api/mcu/runtime/ensure") {
+        call.respond(ensureMcuRuntime(call.requireRequestBody()))
+    }
+    get("/api/mcu/runtime/status") {
+        call.respond(getMcuRuntimeStatus())
     }
 }

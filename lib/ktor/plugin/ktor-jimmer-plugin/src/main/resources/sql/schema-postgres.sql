@@ -69,3 +69,59 @@ CREATE TABLE IF NOT EXISTS persona_record (
     description TEXT NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS user_profile (
+    id BIGSERIAL PRIMARY KEY,
+    account_key TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    email TEXT,
+    avatar_label TEXT NOT NULL DEFAULT '',
+    locale TEXT NOT NULL DEFAULT 'zh-CN',
+    time_zone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ai_chat_session (
+    id BIGSERIAL PRIMARY KEY,
+    session_key TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS ai_chat_message (
+    id BIGSERIAL PRIMARY KEY,
+    message_key TEXT NOT NULL UNIQUE,
+    session_id BIGINT NOT NULL REFERENCES ai_chat_session(id),
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_chat_message_session_id
+    ON ai_chat_message(session_id);
+
+CREATE TABLE IF NOT EXISTS knowledge_space (
+    id BIGSERIAL PRIMARY KEY,
+    space_key TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_document (
+    id BIGSERIAL PRIMARY KEY,
+    document_key TEXT NOT NULL UNIQUE,
+    space_id BIGINT NOT NULL REFERENCES knowledge_space(id),
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_document_space_id
+    ON knowledge_document(space_id);

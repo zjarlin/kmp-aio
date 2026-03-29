@@ -35,6 +35,7 @@ ksp {
 
 dependencies {
     add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
     add("kspJvm", "site.addzero:spring2ktor-server-processor:2026.03.13")
 }

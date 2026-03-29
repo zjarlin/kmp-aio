@@ -9,11 +9,14 @@ import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tune
@@ -273,11 +276,14 @@ internal fun resolveKCloudIcon(
         "Download" -> Icons.Rounded.Download
         "Help" -> Icons.AutoMirrored.Rounded.Help
         "Info" -> Icons.Rounded.Info
+        "MenuBook" -> Icons.Rounded.MenuBook
+        "Person" -> Icons.Rounded.Person
         "PlayArrow" -> Icons.Rounded.PlayArrow
         "PowerSettingsNew" -> Icons.Rounded.PowerSettingsNew
         "Refresh" -> Icons.Rounded.Refresh
         "Search" -> Icons.Rounded.Search
         "Settings" -> Icons.Rounded.Settings
+        "SmartToy" -> Icons.Rounded.SmartToy
         "Stop" -> Icons.Rounded.Stop
         "Sync" -> Icons.Rounded.Sync
         "Tune" -> Icons.Rounded.Tune

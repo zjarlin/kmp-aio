@@ -18,6 +18,9 @@ import site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundlesResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
 
 interface McuConsoleApi {
     @GET("api/mcu/ports")
@@ -68,4 +71,14 @@ interface McuConsoleApi {
 
     @GET("api/mcu/flash/status")
     suspend fun getFlashStatus(): McuFlashStatusResponse
+
+    @GET("api/mcu/runtime/bundles")
+    suspend fun listRuntimeBundles(): McuRuntimeBundlesResponse
+
+    @Headers("Content-Type: application/json")
+    @POST("api/mcu/runtime/ensure")
+    suspend fun ensureRuntime(@Body request: McuRuntimeEnsureRequest): McuRuntimeStatusResponse
+
+    @GET("api/mcu/runtime/status")
+    suspend fun getRuntimeStatus(): McuRuntimeStatusResponse
 }

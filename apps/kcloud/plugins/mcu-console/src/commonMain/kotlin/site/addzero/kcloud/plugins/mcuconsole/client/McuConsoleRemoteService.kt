@@ -6,6 +6,9 @@ import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundleSummary
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptStopRequest
@@ -83,5 +86,19 @@ class McuConsoleRemoteService {
 
     suspend fun getFlashStatus(): McuFlashStatusResponse {
         return McuConsoleApiClient.api.getFlashStatus()
+    }
+
+    suspend fun listRuntimeBundles(): List<McuRuntimeBundleSummary> {
+        return McuConsoleApiClient.api.listRuntimeBundles().items
+    }
+
+    suspend fun ensureRuntime(
+        request: McuRuntimeEnsureRequest,
+    ): McuRuntimeStatusResponse {
+        return McuConsoleApiClient.api.ensureRuntime(request)
+    }
+
+    suspend fun getRuntimeStatus(): McuRuntimeStatusResponse {
+        return McuConsoleApiClient.api.getRuntimeStatus()
     }
 }

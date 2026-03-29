@@ -148,6 +148,30 @@ private fun sqlClient(): KSqlClient {
     return KoinPlatform.getKoin().get()
 }
 
+private suspend fun KSqlClient.getConfig(key: String): String? {
+    return compatService().getOrImportLegacyValue(
+        namespace = "vibepocket",
+        key = key,
+    )
+}
+
+private suspend fun KSqlClient.setConfig(
+    key: String,
+    value: String,
+    description: String? = null,
+) {
+    compatService().saveLegacyValue(
+        namespace = "vibepocket",
+        key = key,
+        value = value,
+        description = description,
+    )
+}
+
+private fun compatService(): site.addzero.configcenter.runtime.ConfigCenterCompatService {
+    return KoinPlatform.getKoin().get()
+}
+
 private fun callbackTaskIdConfigKey(requestId: String): String {
     return CALLBACK_TASK_ID_CONFIG_PREFIX + requestId
 }

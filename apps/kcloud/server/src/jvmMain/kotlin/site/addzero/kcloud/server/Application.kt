@@ -10,13 +10,10 @@ import io.ktor.server.routing.routing
 import org.koin.core.KoinApplication as CoreKoinApplication
 import org.koin.core.module.Module as KoinModule
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.configcenter.ktor.configCenterRoutes
 import site.addzero.configcenter.runtime.ConfigCenterBootstrap
 import site.addzero.configcenter.runtime.ConfigCenterBootstrapOptions
 import site.addzero.configcenter.runtime.JvmConfigCenterGateway
 import site.addzero.configcenter.runtime.KtorConfigBridge
-import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
-import site.addzero.vibepocket.routes.vibePocketRoutes
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
@@ -67,9 +64,7 @@ fun Application.module(
     }
     runStarters()
     routing {
-        configCenterRoutes()
-        mcuConsoleRoutes()
-        vibePocketRoutes()
+        registerKCloudPluginRoutes()
     }
 }
 

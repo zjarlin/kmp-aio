@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.appsidebar.AdminWorkbenchScaffold
+import site.addzero.kcloud.app.menu.KCloudUserMenu
 import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.kcloud.feature.ShellThemeMode
 import site.addzero.kcloud.ui.theme.KCloudTheme
@@ -68,8 +69,9 @@ fun MainWindow(
                     },
                 )
             },
-            userLabel = "KC",
-            onUserClick = {},
+            userContent = {
+                KCloudUserMenu()
+            },
         )
     }
 }

@@ -23,7 +23,9 @@ import javax.swing.JComponent
 private val macCaptionBarHeight = 56.dp
 private val macCaptionBarLeadingInset = 84.dp
 
-fun main() = application {
+fun main() {
+    configureDesktopRuntime()
+    application {
     val embeddedServer = remember {
         startEmbeddedDesktopServer(
             configureKoin = {
@@ -55,13 +57,14 @@ fun main() = application {
         }
     }
 }
+}
 
 @Composable
 private fun FrameWindowScope.ProvideKCloudWindowFrame(
     state: WindowState,
     content: @Composable () -> Unit,
 ) {
-    val immersiveEnabled = isMacOs() && state.placement != WindowPlacement.Fullscreen
+    val immersiveEnabled = shouldEnableImmersiveTopBar(state)
 
     DisposableEffect(window, immersiveEnabled) {
         if (immersiveEnabled) {
@@ -92,6 +95,30 @@ private fun FrameWindowScope.ProvideKCloudWindowFrame(
 private fun isMacOs(): Boolean {
     return System.getProperty("os.name")
         ?.contains("Mac", ignoreCase = true) == true
+}
+
+private fun configureDesktopRuntime() {
+    System.setProperty("sun.java2d.metal", System.getProperty("sun.java2d.metal") ?: "false")
+}
+
+private fun shouldEnableImmersiveTopBar(state: WindowState): Boolean {
+    if (!isMacOs() || state.placement == WindowPlacement.Fullscreen) {
+        return false
+    }
+    val explicitToggle = System.getProperty("kcloud.window.macImmersive.enabled")
+        ?.toBooleanStrictOrNull()
+    if (explicitToggle != null) {
+        return explicitToggle
+    }
+    return isMacImmersiveHostCompatible()
+}
+
+private fun isMacImmersiveHostCompatible(): Boolean {
+    val javaFeature = Runtime.version().feature()
+    val macMajorVersion = System.getProperty("os.version")
+        ?.substringBefore('.')
+        ?.toIntOrNull()
+    return javaFeature < 25 && (macMajorVersion == null || macMajorVersion < 26)
 }
 
 private fun <T : JComponent> findComponent(

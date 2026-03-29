@@ -11,6 +11,9 @@ import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashCommandRunner
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashProfileCatalog
 import site.addzero.kcloud.plugins.mcuconsole.service.McuConsoleSessionService
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashService
+import site.addzero.kcloud.plugins.mcuconsole.service.McuRuntimeAssetExtractor
+import site.addzero.kcloud.plugins.mcuconsole.service.McuRuntimeBundleCatalog
+import site.addzero.kcloud.plugins.mcuconsole.service.McuRuntimeEnsureService
 import site.addzero.kcloud.plugins.mcuconsole.service.McuScriptService
 
 @Module
@@ -43,6 +46,20 @@ class McuConsoleServerKoinModule {
     @Single
     fun provideFlashCommandRunner(): McuFlashCommandRunner {
         return JvmMcuFlashCommandRunner()
+    }
+
+    @Single
+    fun provideRuntimeBundleCatalog(
+        json: Json,
+    ): McuRuntimeBundleCatalog {
+        return McuRuntimeBundleCatalog(json)
+    }
+
+    @Single
+    fun provideRuntimeAssetExtractor(
+        bundleCatalog: McuRuntimeBundleCatalog,
+    ): McuRuntimeAssetExtractor {
+        return McuRuntimeAssetExtractor(bundleCatalog)
     }
 
     @Single
@@ -79,6 +96,23 @@ class McuConsoleServerKoinModule {
             sessionService = sessionService,
             profileCatalog = profileCatalog,
             commandRunner = commandRunner,
+        )
+    }
+
+    @Single
+    fun provideRuntimeEnsureService(
+        bundleCatalog: McuRuntimeBundleCatalog,
+        assetExtractor: McuRuntimeAssetExtractor,
+        flashService: McuFlashService,
+        sessionService: McuConsoleSessionService,
+        protocolCodec: McuVmProtocolCodec,
+    ): McuRuntimeEnsureService {
+        return McuRuntimeEnsureService(
+            bundleCatalog = bundleCatalog,
+            assetExtractor = assetExtractor,
+            flashService = flashService,
+            sessionService = sessionService,
+            protocolCodec = protocolCodec,
         )
     }
 }

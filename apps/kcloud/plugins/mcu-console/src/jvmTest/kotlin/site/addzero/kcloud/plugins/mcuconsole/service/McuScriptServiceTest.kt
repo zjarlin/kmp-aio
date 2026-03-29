@@ -41,4 +41,30 @@ class McuScriptServiceTest {
         assertEquals(McuScriptRunState.RUNNING, refreshed.state)
         assertTrue(refreshed.lastMessage?.contains("ready") == true)
     }
+
+    @Test
+    fun `result frame keeps payload and frame type`() {
+        val sessionService = McuConsoleSessionService(
+            gateway = gateway,
+            protocolCodec = codec,
+        )
+        val scriptService = McuScriptService(
+            sessionService = sessionService,
+            protocolCodec = codec,
+        )
+
+        sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
+        val running = scriptService.execute(
+            McuScriptExecuteRequest(script = "adc_read(1);"),
+        )
+        gateway.openedConnections.last().enqueueIncomingText(
+            """{"requestId":"${running.activeRequestId.orEmpty()}","type":"result","success":true,"message":"done","payload":{"value":512}}""" + "\n",
+        )
+        Thread.sleep(120)
+        val refreshed = scriptService.queryStatus()
+
+        assertEquals(McuScriptRunState.IDLE, refreshed.state)
+        assertEquals("result", refreshed.lastFrameType)
+        assertTrue(refreshed.lastPayload.toString().contains("512"))
+    }
 }

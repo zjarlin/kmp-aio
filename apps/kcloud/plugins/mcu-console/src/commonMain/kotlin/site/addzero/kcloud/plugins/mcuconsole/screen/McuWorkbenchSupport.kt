@@ -38,6 +38,7 @@ import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
 import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundleSummary
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
 
 @Composable
@@ -54,6 +55,7 @@ internal fun rememberMcuWorkbenchState(): McuConsoleWorkbenchState {
                 state.pollEvents()
                 state.refreshSession()
                 state.refreshScriptStatus()
+                state.refreshRuntimeStatus()
             }
             state.refreshFlashStatus()
             delay(
@@ -247,6 +249,44 @@ internal fun McuFlashProfileBrowser(
 }
 
 @Composable
+internal fun McuRuntimeBundleBrowser(
+    bundles: List<McuRuntimeBundleSummary>,
+    selectedBundleId: String?,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (bundles.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxWidth().height(120.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "暂无运行时包",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            items = bundles,
+            key = { bundle -> bundle.bundleId },
+        ) { bundle ->
+            McuRuntimeBundleRow(
+                bundle = bundle,
+                selected = bundle.bundleId == selectedBundleId,
+                onClick = { onSelect(bundle.bundleId) },
+            )
+        }
+    }
+}
+
+@Composable
 private fun McuPortRow(
     port: McuPortSummary,
     selected: Boolean,
@@ -346,6 +386,50 @@ private fun McuFlashProfileRow(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun McuRuntimeBundleRow(
+    bundle: McuRuntimeBundleSummary,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val background = if (selected) {
+        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = background,
+        contentColor = contentColor,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = bundle.title,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "${bundle.runtimeKind.name} / ${bundle.mcuFamily} / ${bundle.defaultFlashProfileId}",
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.76f),
+                fontFamily = FontFamily.Monospace,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -513,3 +597,24 @@ internal data class McuToolbarAction(
     val enabled: Boolean = true,
     val onClick: () -> Unit,
 )
+
+@Composable
+internal fun McuScriptPreview(
+    script: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Text(
+            text = script.ifBlank { "-" },
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            fontFamily = FontFamily.Monospace,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}

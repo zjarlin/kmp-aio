@@ -5,12 +5,15 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val routeSnapshotTasks = listOf(
-    ":apps:kcloud:plugins:mcu-console:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:system:config-center:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:system:rbac:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:system:ai-chat:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:system:knowledge-base:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:vibepocket:kspCommonMainKotlinMetadata",
+    // <managed:plugin-market-route-tasks:start>
+    ":apps:kcloud:plugins:mcu-console:compileKotlinJvm",
+    ":apps:kcloud:plugins:system:config-center:compileKotlinJvm",
+    ":apps:kcloud:plugins:system:ai-chat:compileKotlinJvm",
+    ":apps:kcloud:plugins:system:knowledge-base:compileKotlinJvm",
+    ":apps:kcloud:plugins:system:plugin-market:compileKotlinJvm",
+    ":apps:kcloud:plugins:system:rbac:compileKotlinJvm",
+    ":apps:kcloud:plugins:vibepocket:compileKotlinJvm",
+    // <managed:plugin-market-route-tasks:end>
 )
 
 kotlin {

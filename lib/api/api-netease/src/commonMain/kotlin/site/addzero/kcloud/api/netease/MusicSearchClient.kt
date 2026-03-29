@@ -1,9 +1,14 @@
 package site.addzero.kcloud.api.netease
 
-import de.jensklingenberg.ktorfit.Ktorfit
+import io.ktor.client.HttpClient
 import io.ktor.client.plugins.*
 import io.ktor.http.*
 import site.addzero.core.network.apiClient
+
+internal expect fun buildNeteaseApi(
+    baseUrl: String,
+    httpClient: HttpClient,
+): NeteaseApi
 
 /**
  * 网易云音乐 API 客户端
@@ -34,12 +39,10 @@ object MusicSearchClient {
 
     }
 
-    private val music163Ktorfit = Ktorfit.Builder()
-        .baseUrl(BASE_URL)
-        .httpClient(apiClient)
-        .build()
-
-    val musicApi = music163Ktorfit.createNeteaseApi()
+    val musicApi: NeteaseApi = buildNeteaseApi(
+        baseUrl = BASE_URL,
+        httpClient = apiClient,
+    )
 
 //
 //    /**

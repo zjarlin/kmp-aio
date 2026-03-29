@@ -72,6 +72,7 @@ private fun buildSqlClient(
     setDatabaseNamingStrategy(DefaultDatabaseNamingStrategy.LOWER_CASE)
     if (dialect is SQLiteDialect) {
         addScalarProvider(SqliteLocalDateTimeScalarProvider)
+        addScalarProvider(SqliteInstantScalarProvider)
     }
     setConnectionManager { dataSource.connection.use { proceed(it) } }
 }
@@ -102,6 +103,11 @@ private fun normalizeSqliteEpochDateTimeColumns(dataSource: DataSource) {
         "music_history" to listOf("created_at"),
         "persona_record" to listOf("created_at"),
         "suno_task_resource" to listOf("created_at", "updated_at"),
+        "user_profile" to listOf("create_time", "update_time"),
+        "ai_chat_session" to listOf("create_time", "update_time"),
+        "ai_chat_message" to listOf("create_time", "update_time"),
+        "knowledge_space" to listOf("create_time", "update_time"),
+        "knowledge_document" to listOf("create_time", "update_time"),
     )
     dataSource.connection.use { conn ->
         conn.createStatement().use { stmt ->

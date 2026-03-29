@@ -13,8 +13,12 @@ internal class FakeSerialPortGateway(
             descriptiveName = "Mock MCU",
         ),
     ),
+    runtimeInstalledInitially: Boolean = true,
 ) : SerialPortGateway {
     val openedConnections = mutableListOf<FakeSerialPortConnection>()
+
+    @Volatile
+    var runtimeInstalled: Boolean = runtimeInstalledInitially
 
     override fun listPorts(): List<McuPortSummary> = ports
 
@@ -23,6 +27,7 @@ internal class FakeSerialPortGateway(
         baudRate: Int,
     ): SerialPortConnection {
         return FakeSerialPortConnection(
+            gateway = this,
             portPath = portPath,
             baudRate = baudRate,
         ).also { connection ->
@@ -32,6 +37,7 @@ internal class FakeSerialPortGateway(
 }
 
 internal class FakeSerialPortConnection(
+    private val gateway: FakeSerialPortGateway,
     override val portPath: String,
     override val baudRate: Int,
 ) : SerialPortConnection {
@@ -58,15 +64,27 @@ internal class FakeSerialPortConnection(
         textWrites += text
         val requestId = REQUEST_ID_REGEX.find(text)?.groupValues?.getOrNull(1)
         when {
-            text.contains("\"command\":\"vm.execute\"") -> {
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.execute\"") -> {
                 enqueueIncomingText(
                     """{"requestId":"${requestId.orEmpty()}","type":"ack","success":true,"message":"ready"}""" + "\n",
                 )
             }
 
-            text.contains("\"command\":\"vm.stop\"") -> {
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.stop\"") -> {
                 enqueueIncomingText(
                     """{"requestId":"${requestId.orEmpty()}","type":"status","success":true,"message":"stopping","payload":{"state":"STOPPING"}}""" + "\n",
+                )
+            }
+
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.ping\"") -> {
+                enqueueIncomingText(
+                    """{"requestId":"${requestId.orEmpty()}","type":"ack","success":true,"message":"runtime-ready","payload":{"runtime":"rhai"}}""" + "\n",
+                )
+            }
+
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.status\"") -> {
+                enqueueIncomingText(
+                    """{"requestId":"${requestId.orEmpty()}","type":"status","success":true,"message":"runtime-ready","payload":{"state":"IDLE","runtime":"rhai"}}""" + "\n",
                 )
             }
 
@@ -75,6 +93,8 @@ internal class FakeSerialPortConnection(
             }
 
             text == "DONE\r\n" -> {
+                gateway.runtimeInstalled = true
+                flashMode = false
                 enqueueIncomingText("SUCCESS")
             }
         }

@@ -69,6 +69,7 @@ fun AdminWorkbenchScaffold(
     onThemeToggle: (() -> Unit)? = null,
     notificationCount: Int? = null,
     onNotificationsClick: (() -> Unit)? = null,
+    userContent: (@Composable RowScope.() -> Unit)? = null,
     userLabel: String? = null,
     onUserClick: (() -> Unit)? = null,
 ) {
@@ -99,6 +100,7 @@ fun AdminWorkbenchScaffold(
                     onThemeToggle = onThemeToggle,
                     notificationCount = notificationCount,
                     onNotificationsClick = onNotificationsClick,
+                    userContent = userContent,
                     userLabel = userLabel,
                     onUserClick = onUserClick,
                     topBarHeight = windowFrame.topBarHeight,
@@ -226,6 +228,7 @@ fun WorkbenchUserButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    avatarInitials: String = label.toAvatarInitials(),
 ) {
     WorkbenchUtilityButton(
         label = label,
@@ -233,7 +236,7 @@ fun WorkbenchUserButton(
         onClick = onClick,
         leading = {
             WorkbenchUserAvatar(
-                initials = label.toAvatarInitials(),
+                initials = avatarInitials,
             )
         },
     )
@@ -252,6 +255,7 @@ private fun AdminWorkbenchGlobalBar(
     onThemeToggle: (() -> Unit)?,
     notificationCount: Int?,
     onNotificationsClick: (() -> Unit)?,
+    userContent: (@Composable RowScope.() -> Unit)?,
     userLabel: String?,
     onUserClick: (() -> Unit)?,
     topBarHeight: Dp,
@@ -334,7 +338,9 @@ private fun AdminWorkbenchGlobalBar(
                     onClick = onNotificationsClick,
                 )
             }
-            if (!userLabel.isNullOrBlank() && onUserClick != null) {
+            if (userContent != null) {
+                userContent()
+            } else if (!userLabel.isNullOrBlank() && onUserClick != null) {
                 WorkbenchUserButton(
                     label = userLabel,
                     onClick = onUserClick,

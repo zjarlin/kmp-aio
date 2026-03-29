@@ -5,13 +5,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.math.max
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.mcuconsole.McuAtomicCommandDefinition
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashRuntimeKind
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStrategyKind
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundleSummary
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureState
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuScriptExample
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptRunState
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
@@ -19,6 +26,9 @@ import site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuWidgetBinding
+import site.addzero.kcloud.plugins.mcuconsole.McuWidgetFieldKind
+import site.addzero.kcloud.plugins.mcuconsole.McuWidgetTemplateKind
 
 @Single
 class McuConsoleWorkbenchState(
@@ -28,19 +38,32 @@ class McuConsoleWorkbenchState(
         private set
     var flashProfiles by mutableStateOf<List<McuFlashProfileSummary>>(emptyList())
         private set
+    var runtimeBundles by mutableStateOf<List<McuRuntimeBundleSummary>>(emptyList())
+        private set
     var portQuery by mutableStateOf("")
     var selectedPortPath by mutableStateOf<String?>(null)
         private set
     var selectedFlashProfileId by mutableStateOf<String?>(null)
         private set
+    var selectedRuntimeBundleId by mutableStateOf<String?>(null)
+        private set
+    var selectedScriptExampleId by mutableStateOf<String?>(null)
+        private set
+    var selectedAtomicCommandId by mutableStateOf<String?>(null)
+        private set
     var baudRateText by mutableStateOf("115200")
+    var scriptLanguage by mutableStateOf("rhai")
     var session by mutableStateOf(McuSessionSnapshot())
         private set
     var scriptStatus by mutableStateOf(McuScriptStatusResponse())
         private set
     var flashStatus by mutableStateOf(McuFlashStatusResponse())
         private set
+    var runtimeStatus by mutableStateOf(McuRuntimeStatusResponse())
+        private set
     var events by mutableStateOf<List<McuEventEnvelope>>(emptyList())
+        private set
+    var widgetInstances by mutableStateOf<List<McuWidgetInstanceState>>(emptyList())
         private set
     var scriptText by mutableStateOf(
         """
@@ -48,7 +71,6 @@ class McuConsoleWorkbenchState(
         delay_ms(300);
         gpio_set(2, false);
         delay_ms(300);
-        uart_send("hello from kcloud");
         """.trimIndent(),
     )
     var firmwarePathText by mutableStateOf("")
@@ -64,6 +86,8 @@ class McuConsoleWorkbenchState(
         private set
 
     private var lastSeenSeq: Long = 0
+    private var widgetInstanceSequence = 0
+    private var autoFilledFirmwarePath: String? = null
 
     val filteredPorts: List<McuPortSummary>
         get() {
@@ -85,6 +109,42 @@ class McuConsoleWorkbenchState(
             }
         }
 
+    val selectedFlashProfile: McuFlashProfileSummary?
+        get() = flashProfiles.firstOrNull { it.id == selectedFlashProfileId }
+
+    val selectedRuntimeBundle: McuRuntimeBundleSummary?
+        get() = runtimeBundles.firstOrNull { it.bundleId == selectedRuntimeBundleId }
+
+    val selectedScriptExample: McuScriptExample?
+        get() = selectedRuntimeBundle?.scriptExamples?.firstOrNull { it.id == selectedScriptExampleId }
+
+    val selectedAtomicCommand: McuAtomicCommandDefinition?
+        get() = selectedRuntimeBundle?.atomicCommands?.firstOrNull { it.id == selectedAtomicCommandId }
+
+    val hasActiveSession: Boolean
+        get() = session.isOpen
+
+    val isScriptRunning: Boolean
+        get() = scriptStatus.state == McuScriptRunState.RUNNING || scriptStatus.state == McuScriptRunState.STOPPING
+
+    val isRuntimeReady: Boolean
+        get() = runtimeStatus.state == McuRuntimeEnsureState.READY
+
+    val canUseWidgets: Boolean
+        get() = hasActiveSession && isRuntimeReady && !isSubmitting
+
+    val canStartFlash: Boolean
+        get() {
+            val profile = selectedFlashProfile ?: return false
+            if (firmwarePathText.isBlank()) {
+                return false
+            }
+            if (profile.requiresPort && (selectedPortPath ?: session.portPath).isNullOrBlank()) {
+                return false
+            }
+            return true
+        }
+
     fun selectPort(
         portPath: String?,
     ) {
@@ -100,9 +160,97 @@ class McuConsoleWorkbenchState(
         flashCommandTemplateText = profile.commandTemplate.orEmpty()
     }
 
+    fun selectRuntimeBundle(
+        bundleId: String,
+    ) {
+        val bundle = runtimeBundles.firstOrNull { it.bundleId == bundleId } ?: return
+        val changed = selectedRuntimeBundleId != bundle.bundleId
+        selectedRuntimeBundleId = bundle.bundleId
+        if (changed) {
+            widgetInstances = emptyList()
+            selectedScriptExampleId = null
+            selectedAtomicCommandId = null
+        }
+        scriptLanguage = bundle.defaultLanguage()
+        syncBundleDefaults(bundle)
+        if (changed && bundle.scriptExamples.isNotEmpty()) {
+            val defaultExample = bundle.scriptExamples.first()
+            selectedScriptExampleId = defaultExample.id
+            scriptText = defaultExample.script
+            scriptLanguage = defaultExample.language
+        }
+    }
+
+    fun selectScriptExample(
+        exampleId: String,
+    ) {
+        val example = selectedRuntimeBundle?.scriptExamples?.firstOrNull { it.id == exampleId } ?: return
+        selectedScriptExampleId = example.id
+        scriptLanguage = example.language
+        scriptText = example.script
+    }
+
+    fun selectAtomicCommand(
+        commandId: String,
+    ) {
+        val command = selectedRuntimeBundle?.atomicCommands?.firstOrNull { it.id == commandId } ?: return
+        selectedAtomicCommandId = command.id
+        if (command.exampleScript.isNotBlank()) {
+            scriptText = command.exampleScript
+        }
+    }
+
+    fun addWidgetFromTemplate(
+        templateId: String,
+    ) {
+        val bundle = selectedRuntimeBundle ?: return
+        val template = bundle.widgetTemplates.firstOrNull { it.id == templateId } ?: return
+        widgetInstanceSequence += 1
+        widgetInstances = widgetInstances + McuWidgetInstanceState(
+            instanceId = "widget-${widgetInstanceSequence}",
+            templateId = template.id,
+            bundleId = bundle.bundleId,
+            title = template.title,
+            kind = template.kind,
+            language = bundle.defaultLanguage(),
+            scriptTemplate = template.scriptTemplate,
+            bindings = template.bindings,
+            values = template.bindings.associate { binding ->
+                binding.key to binding.defaultValue
+            },
+        )
+    }
+
+    fun removeWidgetInstance(
+        instanceId: String,
+    ) {
+        widgetInstances = widgetInstances.filterNot { it.instanceId == instanceId }
+    }
+
+    fun updateWidgetValue(
+        instanceId: String,
+        key: String,
+        value: String,
+    ) {
+        widgetInstances = widgetInstances.map { widget ->
+            if (widget.instanceId == instanceId) {
+                widget.copy(values = widget.values + (key to value))
+            } else {
+                widget
+            }
+        }
+    }
+
     fun clearVisibleEvents() {
         events = emptyList()
         lastSeenSeq = session.latestSeq
+    }
+
+    fun previewWidgetScript(
+        instanceId: String,
+    ): String {
+        val widget = widgetInstances.firstOrNull { it.instanceId == instanceId } ?: return ""
+        return buildWidgetScript(widget).orEmpty()
     }
 
     suspend fun refreshPorts() {
@@ -166,6 +314,7 @@ class McuConsoleWorkbenchState(
     suspend fun refreshScriptStatus() {
         try {
             scriptStatus = remoteService.getScriptStatus()
+            syncWidgetResult(scriptStatus)
         } catch (throwable: Throwable) {
             reportError(throwable)
         }
@@ -176,7 +325,12 @@ class McuConsoleWorkbenchState(
             val loadedProfiles = remoteService.listFlashProfiles()
             flashProfiles = loadedProfiles
             val selected = loadedProfiles.firstOrNull { it.id == selectedFlashProfileId }
-            val fallback = loadedProfiles.firstOrNull()
+            val fallback = selectedRuntimeBundle
+                ?.defaultFlashProfileId
+                ?.let { bundleProfileId ->
+                    loadedProfiles.firstOrNull { it.id == bundleProfileId }
+                }
+                ?: loadedProfiles.firstOrNull()
             val nextProfile = selected ?: fallback
             if (nextProfile != null) {
                 val shouldResetCommand = selectedFlashProfileId == null || selected == null
@@ -201,12 +355,43 @@ class McuConsoleWorkbenchState(
         }
     }
 
+    suspend fun refreshRuntimeBundles() {
+        try {
+            val loadedBundles = remoteService.listRuntimeBundles()
+            runtimeBundles = loadedBundles
+            val fallback = loadedBundles.firstOrNull { it.bundleId == "rhai-default-generic" }
+                ?: loadedBundles.firstOrNull()
+            val nextBundle = loadedBundles.firstOrNull { it.bundleId == selectedRuntimeBundleId } ?: fallback
+            nextBundle?.let { bundle ->
+                selectRuntimeBundle(bundle.bundleId)
+            }
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        }
+    }
+
+    suspend fun loadRuntimeBundlesIfNeeded() {
+        if (runtimeBundles.isEmpty()) {
+            refreshRuntimeBundles()
+        }
+    }
+
+    suspend fun refreshRuntimeStatus() {
+        try {
+            applyRuntimeStatus(remoteService.getRuntimeStatus())
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        }
+    }
+
     suspend fun refreshAll() {
         refreshPorts()
         refreshFlashProfiles()
+        refreshRuntimeBundles()
         refreshSession()
         refreshScriptStatus()
         refreshFlashStatus()
+        refreshRuntimeStatus()
         if (events.isEmpty()) {
             loadRecentEvents()
         } else {
@@ -225,21 +410,32 @@ class McuConsoleWorkbenchState(
                 updateFeedback("波特率无效", true)
                 return
             }
-        runSubmitting("串口已打开") {
+        isSubmitting = true
+        try {
             session = remoteService.openSession(
                 McuSessionOpenRequest(
                     portPath = portPath,
                     baudRate = baudRate,
                 ),
             )
+            loadRuntimeBundlesIfNeeded()
+            ensureRuntimeInternal(forceReflash = false, showSubmitting = false)
             loadRecentEvents()
             refreshScriptStatus()
+            refreshFlashStatus()
+            val message = runtimeStatus.lastMessage ?: "串口已打开"
+            updateFeedback(message, runtimeStatus.state == McuRuntimeEnsureState.ERROR)
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        } finally {
+            isSubmitting = false
         }
     }
 
     suspend fun closeSession() {
         runSubmitting("串口已关闭") {
             session = remoteService.closeSession()
+            runtimeStatus = McuRuntimeStatusResponse()
             refreshScriptStatus()
         }
     }
@@ -275,23 +471,73 @@ class McuConsoleWorkbenchState(
     }
 
     suspend fun executeScript() {
-        val timeoutMs = timeoutMsText.toIntOrNull()
-            ?: run {
-                updateFeedback("超时设置无效", true)
-                return
-            }
         val normalizedScript = scriptText.trim()
         if (normalizedScript.isBlank()) {
             updateFeedback("脚本不能为空", true)
             return
         }
+        val timeoutMs = timeoutMsText.toIntOrNull()
+            ?: run {
+                updateFeedback("超时设置无效", true)
+                return
+            }
         runSubmitting("脚本已下发") {
             scriptStatus = remoteService.executeScript(
                 McuScriptExecuteRequest(
+                    language = scriptLanguage,
                     script = normalizedScript,
                     timeoutMs = timeoutMs,
                 ),
             )
+            syncWidgetResult(scriptStatus)
+            pollEvents()
+        }
+    }
+
+    suspend fun executeWidget(
+        instanceId: String,
+    ) {
+        val widget = widgetInstances.firstOrNull { it.instanceId == instanceId }
+            ?: run {
+                updateFeedback("控件实例不存在", true)
+                return
+            }
+        if (!canUseWidgets) {
+            updateFeedback("运行时未就绪", true)
+            return
+        }
+        val timeoutMs = timeoutMsText.toIntOrNull()
+            ?: run {
+                updateFeedback("超时设置无效", true)
+                return
+            }
+        val script = buildWidgetScript(widget)
+            ?: run {
+                updateFeedback("控件参数不完整", true)
+                return
+            }
+        runSubmitting("${widget.title} 已执行") {
+            scriptText = script
+            scriptLanguage = widget.language
+            scriptStatus = remoteService.executeScript(
+                McuScriptExecuteRequest(
+                    language = widget.language,
+                    script = script,
+                    timeoutMs = timeoutMs,
+                ),
+            )
+            widgetInstances = widgetInstances.map { current ->
+                if (current.instanceId == widget.instanceId) {
+                    current.copy(
+                        activeRequestId = scriptStatus.activeRequestId,
+                        lastRequestId = scriptStatus.lastRequestId ?: scriptStatus.activeRequestId,
+                        lastMessage = scriptStatus.lastMessage,
+                    )
+                } else {
+                    current
+                }
+            }
+            syncWidgetResult(scriptStatus)
             pollEvents()
         }
     }
@@ -299,6 +545,7 @@ class McuConsoleWorkbenchState(
     suspend fun stopScript() {
         runSubmitting("已发送停止请求") {
             scriptStatus = remoteService.stopScript()
+            syncWidgetResult(scriptStatus)
             pollEvents()
         }
     }
@@ -336,7 +583,143 @@ class McuConsoleWorkbenchState(
                 ),
             )
             refreshSession()
+            refreshRuntimeStatus()
             loadRecentEvents()
+        }
+    }
+
+    suspend fun ensureRuntime(
+        forceReflash: Boolean = false,
+    ) {
+        ensureRuntimeInternal(forceReflash = forceReflash, showSubmitting = true)
+    }
+
+    private suspend fun ensureRuntimeInternal(
+        forceReflash: Boolean,
+        showSubmitting: Boolean,
+    ) {
+        val bundleId = selectedRuntimeBundleId ?: runtimeBundles.firstOrNull()?.bundleId
+            ?: run {
+                updateFeedback("没有可用运行时包", true)
+                return
+            }
+        val execute: suspend () -> Unit = {
+            applyRuntimeStatus(
+                remoteService.ensureRuntime(
+                    McuRuntimeEnsureRequest(
+                        bundleId = bundleId,
+                        forceReflash = forceReflash,
+                    ),
+                ),
+            )
+            session = remoteService.getSession()
+            refreshFlashStatus()
+            pollEvents()
+        }
+        if (showSubmitting) {
+            isSubmitting = true
+            try {
+                execute()
+                updateFeedback(
+                    runtimeStatus.lastMessage ?: "运行时已就绪",
+                    runtimeStatus.state == McuRuntimeEnsureState.ERROR,
+                )
+            } catch (throwable: Throwable) {
+                reportError(throwable)
+            } finally {
+                isSubmitting = false
+            }
+        } else {
+            execute()
+        }
+    }
+
+    private fun applyRuntimeStatus(
+        nextStatus: McuRuntimeStatusResponse,
+    ) {
+        runtimeStatus = nextStatus
+        nextStatus.bundleId?.takeIf { it.isNotBlank() }?.let { bundleId ->
+            if (runtimeBundles.any { it.bundleId == bundleId } && selectedRuntimeBundleId != bundleId) {
+                selectRuntimeBundle(bundleId)
+            }
+        }
+        nextStatus.artifactPath
+            ?.takeIf { it.isNotBlank() }
+            ?.let { artifactPath ->
+                if (firmwarePathText.isBlank() || firmwarePathText == autoFilledFirmwarePath) {
+                    firmwarePathText = artifactPath
+                    autoFilledFirmwarePath = artifactPath
+                }
+            }
+        nextStatus.defaultFlashProfileId
+            ?.takeIf { it.isNotBlank() && flashProfiles.any { profile -> profile.id == it } }
+            ?.let { profileId ->
+                if (selectedFlashProfileId != profileId) {
+                    selectFlashProfile(profileId)
+                }
+            }
+        nextStatus.baudRate?.takeIf { it > 0 }?.let { baudRate ->
+            baudRateText = baudRate.toString()
+        }
+    }
+
+    private fun syncBundleDefaults(
+        bundle: McuRuntimeBundleSummary,
+    ) {
+        if (flashProfiles.any { it.id == bundle.defaultFlashProfileId }) {
+            selectFlashProfile(bundle.defaultFlashProfileId)
+        } else if (baudRateText.isBlank() || baudRateText == "115200") {
+            baudRateText = bundle.defaultBaudRate.toString()
+        }
+    }
+
+    private fun syncWidgetResult(
+        nextStatus: McuScriptStatusResponse,
+    ) {
+        val requestId = nextStatus.lastRequestId ?: nextStatus.activeRequestId ?: return
+        widgetInstances = widgetInstances.map { widget ->
+            if (widget.lastRequestId == requestId || widget.activeRequestId == requestId) {
+                widget.copy(
+                    activeRequestId = if (nextStatus.state == McuScriptRunState.RUNNING || nextStatus.state == McuScriptRunState.STOPPING) {
+                        requestId
+                    } else {
+                        null
+                    },
+                    lastRequestId = requestId,
+                    lastFrameType = nextStatus.lastFrameType,
+                    lastPayloadText = nextStatus.lastPayload?.toString(),
+                    lastMessage = nextStatus.lastMessage,
+                )
+            } else {
+                widget
+            }
+        }
+    }
+
+    private fun buildWidgetScript(
+        widget: McuWidgetInstanceState,
+    ): String? {
+        var rendered = widget.scriptTemplate
+        widget.bindings.forEach { binding ->
+            val resolvedValue = resolveBindingValue(binding, widget.values[binding.key]) ?: return null
+            rendered = rendered.replace("{{${binding.key}}}", resolvedValue)
+        }
+        return rendered.trim()
+    }
+
+    private fun resolveBindingValue(
+        binding: McuWidgetBinding,
+        rawValue: String?,
+    ): String? {
+        val normalized = rawValue?.ifBlank { null } ?: binding.defaultValue.takeIf { it.isNotBlank() }
+        if (binding.required && normalized == null) {
+            return null
+        }
+        return when (binding.fieldKind) {
+            McuWidgetFieldKind.BOOLEAN -> normalized?.lowercase() ?: "false"
+            McuWidgetFieldKind.INTEGER -> normalized ?: "0"
+            McuWidgetFieldKind.NUMBER -> normalized ?: "0"
+            else -> (normalized ?: "").escapeScriptText()
         }
     }
 
@@ -369,25 +752,34 @@ class McuConsoleWorkbenchState(
         feedbackMessage = message
         feedbackIsError = isError
     }
+}
 
-    val hasActiveSession: Boolean
-        get() = session.isOpen
+data class McuWidgetInstanceState(
+    val instanceId: String,
+    val templateId: String,
+    val bundleId: String,
+    val title: String,
+    val kind: McuWidgetTemplateKind,
+    val language: String,
+    val scriptTemplate: String,
+    val bindings: List<McuWidgetBinding>,
+    val values: Map<String, String> = emptyMap(),
+    val activeRequestId: String? = null,
+    val lastRequestId: String? = null,
+    val lastFrameType: String? = null,
+    val lastPayloadText: String? = null,
+    val lastMessage: String? = null,
+)
 
-    val isScriptRunning: Boolean
-        get() = scriptStatus.state == McuScriptRunState.RUNNING || scriptStatus.state == McuScriptRunState.STOPPING
+private fun McuRuntimeBundleSummary.defaultLanguage(): String {
+    return when (runtimeKind) {
+        McuFlashRuntimeKind.MICROPYTHON -> "micropython"
+        McuFlashRuntimeKind.RHAI_VM -> "rhai"
+    }
+}
 
-    val selectedFlashProfile: McuFlashProfileSummary?
-        get() = flashProfiles.firstOrNull { it.id == selectedFlashProfileId }
-
-    val canStartFlash: Boolean
-        get() {
-            val profile = selectedFlashProfile ?: return false
-            if (firmwarePathText.isBlank()) {
-                return false
-            }
-            if (profile.requiresPort && (selectedPortPath ?: session.portPath).isNullOrBlank()) {
-                return false
-            }
-            return true
-        }
+private fun String.escapeScriptText(): String {
+    return replace("\\", "\\\\")
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
 }

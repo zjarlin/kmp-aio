@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -58,6 +59,15 @@ fun McuControlScreen() {
                 }
             },
             McuToolbarAction(
+                label = "确保运行时",
+                icon = Icons.Default.Build,
+                enabled = state.session.isOpen && state.selectedRuntimeBundle != null,
+            ) {
+                scope.launch {
+                    state.ensureRuntime(forceReflash = false)
+                }
+            },
+            McuToolbarAction(
                 label = "复位",
                 icon = Icons.Default.Refresh,
                 enabled = state.session.isOpen,
@@ -106,17 +116,21 @@ fun McuControlScreen() {
 
             McuPanel(
                 title = "会话状态",
-                modifier = Modifier.width(340.dp).fillMaxHeight(),
+                modifier = Modifier.width(360.dp).fillMaxHeight(),
             ) {
                 McuSummaryTable(
                     rows = listOf(
                         "当前串口" to (state.session.portPath ?: state.selectedPortPath.orEmpty()),
                         "波特率" to state.baudRateText,
                         "会话" to if (state.session.isOpen) "OPEN" else "CLOSED",
-                        "DTR" to state.session.dtrEnabled.toString(),
-                        "RTS" to state.session.rtsEnabled.toString(),
+                        "运行时" to state.runtimeStatus.state.name,
+                        "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
+                        "Profile" to (state.runtimeStatus.defaultFlashProfileId ?: state.selectedRuntimeBundle?.defaultFlashProfileId.orEmpty()),
                         "脚本" to state.scriptStatus.state.name,
                         "烧录" to state.flashStatus.state.name,
+                        "DTR" to state.session.dtrEnabled.toString(),
+                        "RTS" to state.session.rtsEnabled.toString(),
+                        "消息" to (state.runtimeStatus.lastMessage ?: state.scriptStatus.lastMessage.orEmpty()),
                         "最后错误" to state.session.lastError.orEmpty(),
                     ),
                 )

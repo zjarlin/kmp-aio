@@ -107,6 +107,8 @@ data class McuScriptStatusResponse(
     val lastRequestId: String? = null,
     val language: String = "rhai",
     val lastMessage: String? = null,
+    val lastFrameType: String? = null,
+    val lastPayload: JsonElement? = null,
     val updatedAt: String? = null,
 )
 
@@ -174,6 +176,116 @@ data class McuFlashStatusResponse(
     val bytesSent: Int = 0,
     val totalBytes: Int = 0,
     val commandPreview: String? = null,
+    val lastMessage: String? = null,
+    val updatedAt: String? = null,
+)
+
+@Serializable
+enum class McuRuntimeEnsureState {
+    IDLE,
+    PROBING,
+    INITIALIZING,
+    READY,
+    ERROR,
+}
+
+@Serializable
+data class McuAtomicCommandDefinition(
+    val id: String = "",
+    val title: String = "",
+    val signature: String = "",
+    val description: String = "",
+    val exampleScript: String = "",
+)
+
+@Serializable
+data class McuScriptExample(
+    val id: String = "",
+    val title: String = "",
+    val description: String = "",
+    val language: String = "rhai",
+    val script: String = "",
+)
+
+@Serializable
+enum class McuWidgetFieldKind {
+    TEXT,
+    MULTILINE,
+    BOOLEAN,
+    INTEGER,
+    NUMBER,
+    SELECT,
+}
+
+@Serializable
+data class McuWidgetBinding(
+    val key: String = "",
+    val label: String = "",
+    val fieldKind: McuWidgetFieldKind = McuWidgetFieldKind.TEXT,
+    val defaultValue: String = "",
+    val required: Boolean = true,
+    val placeholder: String = "",
+    val options: List<String> = emptyList(),
+    val min: Double? = null,
+    val max: Double? = null,
+    val step: Double? = null,
+)
+
+@Serializable
+enum class McuWidgetTemplateKind {
+    ACTION_BUTTON,
+    BOOLEAN_SWITCH,
+    PWM_SLIDER,
+    VALUE_CARD,
+    TEXT_SEND,
+}
+
+@Serializable
+data class McuWidgetTemplate(
+    val id: String = "",
+    val title: String = "",
+    val description: String = "",
+    val kind: McuWidgetTemplateKind = McuWidgetTemplateKind.ACTION_BUTTON,
+    val scriptTemplate: String = "",
+    val bindings: List<McuWidgetBinding> = emptyList(),
+)
+
+@Serializable
+data class McuRuntimeBundleSummary(
+    val bundleId: String = "",
+    val title: String = "",
+    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.RHAI_VM,
+    val mcuFamily: String = "generic",
+    val defaultFlashProfileId: String = "",
+    val defaultBaudRate: Int = 115200,
+    val artifactRelativePath: String = "",
+    val atomicCommands: List<McuAtomicCommandDefinition> = emptyList(),
+    val scriptExamples: List<McuScriptExample> = emptyList(),
+    val widgetTemplates: List<McuWidgetTemplate> = emptyList(),
+)
+
+@Serializable
+data class McuRuntimeBundlesResponse(
+    val items: List<McuRuntimeBundleSummary> = emptyList(),
+    val defaultBundleId: String? = null,
+)
+
+@Serializable
+data class McuRuntimeEnsureRequest(
+    val bundleId: String = "",
+    val forceReflash: Boolean = false,
+)
+
+@Serializable
+data class McuRuntimeStatusResponse(
+    val state: McuRuntimeEnsureState = McuRuntimeEnsureState.IDLE,
+    val bundleId: String? = null,
+    val bundleTitle: String? = null,
+    val runtimeKind: McuFlashRuntimeKind? = null,
+    val mcuFamily: String? = null,
+    val defaultFlashProfileId: String? = null,
+    val baudRate: Int? = null,
+    val artifactPath: String? = null,
     val lastMessage: String? = null,
     val updatedAt: String? = null,
 )

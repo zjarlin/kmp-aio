@@ -1,6 +1,5 @@
 package site.addzero.kcloud.api.suno
 
-import de.jensklingenberg.ktorfit.Ktorfit
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
@@ -22,6 +21,11 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.minutes
 import io.ktor.serialization.kotlinx.json.json
+
+internal expect fun buildSunoApi(
+    baseUrl: String,
+    httpClient: HttpClient,
+): SunoApi
 
 /**
  * Suno API 客户端（全量接口）
@@ -69,11 +73,10 @@ class SunoApiClient(
         println("[SunoApiClient] $message")
     }
 
-    val sunoKtorfit = Ktorfit.Builder()
-        .baseUrl(normalizedBaseUrl.trimEnd('/') + "/")
-        .httpClient(httpClient)
-        .build()
-    private val api = sunoKtorfit.createSunoApi()
+    private val api = buildSunoApi(
+        baseUrl = normalizedBaseUrl.trimEnd('/') + "/",
+        httpClient = httpClient,
+    )
 
     private val auth get() = "Bearer $apiToken"
 

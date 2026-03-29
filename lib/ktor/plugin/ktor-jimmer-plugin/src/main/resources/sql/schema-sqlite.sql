@@ -70,6 +70,64 @@ CREATE TABLE IF NOT EXISTS persona_record (
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS user_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_key TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL,
+    email TEXT,
+    avatar_label TEXT NOT NULL DEFAULT '',
+    locale TEXT NOT NULL DEFAULT 'zh-CN',
+    time_zone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS ai_chat_session (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_key TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    archived INTEGER NOT NULL DEFAULT 0,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS ai_chat_message (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_key TEXT NOT NULL UNIQUE,
+    session_id INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (session_id) REFERENCES ai_chat_session(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_chat_message_session_id
+    ON ai_chat_message(session_id);
+
+CREATE TABLE IF NOT EXISTS knowledge_space (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    space_key TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS knowledge_document (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_key TEXT NOT NULL UNIQUE,
+    space_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL DEFAULT '',
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    FOREIGN KEY (space_id) REFERENCES knowledge_space(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_knowledge_document_space_id
+    ON knowledge_document(space_id);
+
 -- 默认插入 Neon Postgres 数据源配置
 INSERT OR IGNORE INTO datasource_config (owner, name, db_type, url, enabled, description)
 VALUES ('system', 'neon-postgres', 'POSTGRES', 

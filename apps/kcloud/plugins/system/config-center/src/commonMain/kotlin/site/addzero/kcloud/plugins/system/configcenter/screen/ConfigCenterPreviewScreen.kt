@@ -24,7 +24,7 @@ import site.addzero.component.button.AddIconButton
     title = "预览发布",
     routePath = "system/config-center/preview",
     icon = "Download",
-    order = 7.0,
+    order = 82.0,
 )
 @Composable
 fun ConfigCenterPreviewScreen() {

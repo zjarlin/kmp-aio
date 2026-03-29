@@ -22,7 +22,7 @@ import site.addzero.configcenter.spec.ConfigTargetKind
     title = "渲染目标",
     routePath = "system/config-center/targets",
     icon = "Tune",
-    order = 6.0,
+    order = 81.0,
 )
 @Composable
 fun ConfigCenterTargetsScreen() {

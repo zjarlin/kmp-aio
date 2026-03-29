@@ -1,12 +1,13 @@
 package site.addzero.kcloud.plugins.mcuconsole.screen
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Upload
@@ -33,10 +34,21 @@ fun McuFlashScreen() {
     McuWorkbenchFrame(
         state = state,
         actions = listOf(
-            McuToolbarAction("刷新串口", Icons.Default.Search) {
+            McuToolbarAction("刷新资源", Icons.Default.Search) {
                 scope.launch {
                     state.refreshPorts()
                     state.refreshFlashProfiles()
+                    state.refreshRuntimeBundles()
+                    state.refreshRuntimeStatus()
+                }
+            },
+            McuToolbarAction(
+                label = "刷内置运行时",
+                icon = Icons.Default.Build,
+                enabled = state.session.isOpen && state.selectedRuntimeBundle != null,
+            ) {
+                scope.launch {
+                    state.ensureRuntime(forceReflash = true)
                 }
             },
             McuToolbarAction(
@@ -51,6 +63,7 @@ fun McuFlashScreen() {
             McuToolbarAction("刷新状态", Icons.Default.Refresh) {
                 scope.launch {
                     state.refreshFlashStatus()
+                    state.refreshRuntimeStatus()
                     state.loadRecentEvents()
                 }
             },
@@ -61,20 +74,27 @@ fun McuFlashScreen() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             McuPanel(
-                title = "烧录能力包",
-                modifier = Modifier.width(360.dp).fillMaxHeight(),
+                title = "运行时与能力包",
+                modifier = Modifier.width(380.dp).fillMaxHeight(),
             ) {
+                McuRuntimeBundleBrowser(
+                    bundles = state.runtimeBundles,
+                    selectedBundleId = state.selectedRuntimeBundleId,
+                    onSelect = { bundleId -> state.selectRuntimeBundle(bundleId) },
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                )
                 McuFlashProfileBrowser(
                     profiles = state.flashProfiles,
                     selectedProfileId = state.selectedFlashProfileId,
                     onSelect = { profileId -> state.selectFlashProfile(profileId) },
-                    modifier = Modifier.fillMaxWidth().height(220.dp),
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
                 )
                 McuCompactInput(
                     value = state.firmwarePathText,
                     onValueChange = { state.firmwarePathText = it },
                     label = state.selectedFlashProfile?.artifactLabel ?: "firmware.bin",
-                    supportingText = state.selectedFlashProfile?.artifactHint,
+                    supportingText = state.runtimeStatus.artifactPath
+                        ?: state.selectedFlashProfile?.artifactHint,
                 )
                 McuCompactInput(
                     value = state.baudRateText,
@@ -90,18 +110,23 @@ fun McuFlashScreen() {
                         singleLine = false,
                     )
                 }
+            }
+
+            McuPanel(
+                title = "任务状态",
+                modifier = Modifier.width(360.dp).fillMaxHeight(),
+            ) {
                 McuSummaryTable(
                     rows = listOf(
-                        "能力包" to (state.selectedFlashProfile?.title.orEmpty()),
-                        "运行时" to (state.selectedFlashProfile?.runtimeKind?.name.orEmpty()),
-                        "策略" to (state.selectedFlashProfile?.strategyKind?.name.orEmpty()),
-                        "串口要求" to if (state.selectedFlashProfile?.requiresPort == true) "需要" else "可选",
+                        "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
+                        "运行时" to state.runtimeStatus.state.name,
+                        "FlashProfile" to (state.runtimeStatus.defaultFlashProfileId ?: state.selectedFlashProfile?.id.orEmpty()),
                         "目标串口" to (state.selectedPortPath ?: state.session.portPath.orEmpty()),
                         "烧录状态" to state.flashStatus.state.name,
                         "进度" to "${state.flashStatus.bytesSent} / ${state.flashStatus.totalBytes}",
-                        "固件" to state.flashStatus.firmwarePath.orEmpty(),
+                        "固件" to (state.flashStatus.firmwarePath ?: state.runtimeStatus.artifactPath.orEmpty()),
                         "命令" to state.flashStatus.commandPreview.orEmpty(),
-                        "消息" to state.flashStatus.lastMessage.orEmpty(),
+                        "消息" to (state.flashStatus.lastMessage ?: state.runtimeStatus.lastMessage.orEmpty()),
                     ),
                 )
             }

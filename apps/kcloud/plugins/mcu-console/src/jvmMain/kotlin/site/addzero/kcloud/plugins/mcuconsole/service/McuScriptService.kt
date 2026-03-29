@@ -36,6 +36,8 @@ class McuScriptService(
                 lastRequestId = requestId,
                 language = request.language,
                 lastMessage = "脚本已下发",
+                lastFrameType = null,
+                lastPayload = null,
                 updatedAt = Instant.now().toString(),
             )
             return status
@@ -52,6 +54,8 @@ class McuScriptService(
                 state = McuScriptRunState.STOPPING,
                 lastRequestId = request.requestId ?: status.lastRequestId,
                 lastMessage = "已发送停止请求",
+                lastFrameType = null,
+                lastPayload = null,
                 updatedAt = Instant.now().toString(),
             )
             return status
@@ -79,11 +83,15 @@ class McuScriptService(
                     activeRequestId = frame.requestId ?: status.activeRequestId,
                     lastRequestId = frame.requestId ?: status.lastRequestId,
                     lastMessage = message ?: "设备已确认",
+                    lastFrameType = frame.type,
+                    lastPayload = frame.payload,
                     updatedAt = Instant.now().toString(),
                 )
 
                 McuVmFrameTypes.LOG -> status.copy(
                     lastMessage = message ?: "脚本正在输出日志",
+                    lastFrameType = frame.type,
+                    lastPayload = frame.payload,
                     updatedAt = Instant.now().toString(),
                 )
 
@@ -92,6 +100,8 @@ class McuScriptService(
                     activeRequestId = null,
                     lastRequestId = frame.requestId ?: status.lastRequestId,
                     lastMessage = message ?: "脚本执行完成",
+                    lastFrameType = frame.type,
+                    lastPayload = frame.payload,
                     updatedAt = Instant.now().toString(),
                 )
 
@@ -100,6 +110,8 @@ class McuScriptService(
                     activeRequestId = null,
                     lastRequestId = frame.requestId ?: status.lastRequestId,
                     lastMessage = message ?: "设备返回错误",
+                    lastFrameType = frame.type,
+                    lastPayload = frame.payload,
                     updatedAt = Instant.now().toString(),
                 )
 
@@ -108,11 +120,15 @@ class McuScriptService(
                     activeRequestId = frame.requestId ?: status.activeRequestId,
                     lastRequestId = frame.requestId ?: status.lastRequestId,
                     lastMessage = message ?: "状态已刷新",
+                    lastFrameType = frame.type,
+                    lastPayload = frame.payload,
                     updatedAt = Instant.now().toString(),
                 )
 
                 else -> status.copy(
                     lastMessage = message ?: status.lastMessage,
+                    lastFrameType = frame.type,
+                    lastPayload = frame.payload ?: status.lastPayload,
                     updatedAt = Instant.now().toString(),
                 )
             }

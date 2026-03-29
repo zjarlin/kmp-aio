@@ -5,6 +5,9 @@ import org.koin.dsl.koinApplication
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.KCloudServerStarterKoinApplication
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashService
+import site.addzero.kcloud.plugins.rbac.UserProfileService
+import site.addzero.kcloud.plugins.system.aichat.AiChatService
+import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseService
 import site.addzero.vibepocket.screens.creativeassets.CreativeAssetsViewModel
 import site.addzero.vibepocket.screens.musicstudio.MusicStudioViewModel
 import site.addzero.vibepocket.screens.settings.SettingsViewModel
@@ -22,6 +25,7 @@ class KCloudServerKoinApplicationTest {
         val previousEmbeddedFlag = System.getProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
         System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
         val config = MapApplicationConfig(
+            "datasources.sqlite.enabled" to "true",
             "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
             "datasources.sqlite.driver" to "org.sqlite.JDBC",
         )
@@ -38,6 +42,9 @@ class KCloudServerKoinApplicationTest {
         try {
             val koin = application.koin
             assertNotNull(koin.getOrNull<McuFlashService>())
+            assertNotNull(koin.getOrNull<UserProfileService>())
+            assertNotNull(koin.getOrNull<AiChatService>())
+            assertNotNull(koin.getOrNull<KnowledgeBaseService>())
             assertIs<MusicLibCatalogService>(koin.get<MusicCatalogService>())
         } finally {
             application.close()
@@ -56,6 +63,7 @@ class KCloudServerKoinApplicationTest {
         val previousEmbeddedFlag = System.getProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
         System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
         val config = MapApplicationConfig(
+            "datasources.sqlite.enabled" to "true",
             "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
             "datasources.sqlite.driver" to "org.sqlite.JDBC",
         )

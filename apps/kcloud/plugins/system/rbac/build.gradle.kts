@@ -33,6 +33,7 @@ ksp {
 
 dependencies {
     add("kspCommonMainMetadata", libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
     add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
 }
@@ -40,10 +41,11 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:system:shared"))
+            api(project(":apps:kcloud:plugins:system:shared"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
         }
         jvmMain.dependencies {
+            implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())

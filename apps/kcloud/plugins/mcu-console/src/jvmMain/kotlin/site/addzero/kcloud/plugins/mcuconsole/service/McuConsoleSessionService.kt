@@ -182,8 +182,11 @@ class McuConsoleSessionService(
 
     fun registerFrameListener(
         listener: (McuVmIncomingFrame) -> Unit,
-    ) {
+    ): AutoCloseable {
         frameListeners += listener
+        return AutoCloseable {
+            frameListeners -= listener
+        }
     }
 
     fun sendVmFrame(

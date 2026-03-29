@@ -1,7 +1,9 @@
 package site.addzero.kcloud.server
 
+import io.ktor.client.request.delete
 import io.ktor.client.request.get
 import io.ktor.client.request.post
+import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
@@ -18,6 +20,7 @@ import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortConnection
 import site.addzero.kcloud.module
+import java.io.File
 import java.nio.file.Files
 
 class KCloudServerApplicationTest {
@@ -92,6 +95,44 @@ class KCloudServerApplicationTest {
     }
 
     @Test
+    fun `runtime routes list bundles and ensure builtin runtime`() = withEmbeddedDesktopDatasource { testConfig ->
+        val fakeGateway = ServerFakeSerialPortGateway(runtimeInstalledInitially = false)
+        testApplication {
+            environment {
+                config = testConfig
+            }
+            application {
+                module(
+                    overrideModules = listOf(
+                        module {
+                            single<SerialPortGateway> { fakeGateway }
+                        },
+                    ),
+                )
+            }
+
+            val openResponse = client.post("/api/mcu/session/open") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"portPath":"COM9","baudRate":115200}""")
+            }
+            val bundlesResponse = client.get("/api/mcu/runtime/bundles")
+            val ensureResponse = client.post("/api/mcu/runtime/ensure") {
+                contentType(ContentType.Application.Json)
+                setBody("""{"bundleId":"rhai-default-generic"}""")
+            }
+            val runtimeStatusResponse = client.get("/api/mcu/runtime/status")
+
+            assertEquals(HttpStatusCode.OK, openResponse.status)
+            assertEquals(HttpStatusCode.OK, bundlesResponse.status)
+            assertEquals(HttpStatusCode.OK, ensureResponse.status)
+            assertEquals(HttpStatusCode.OK, runtimeStatusResponse.status)
+            assertTrue(bundlesResponse.bodyAsText().contains("\"bundleId\":\"rhai-default-generic\""))
+            assertTrue(ensureResponse.bodyAsText().contains("\"state\":\"READY\""))
+            assertTrue(runtimeStatusResponse.bodyAsText().contains("\"bundleId\":\"rhai-default-generic\""))
+        }
+    }
+
+    @Test
     fun `config center routes create entry list target and preview render`() =
         withEmbeddedDesktopDatasource { testConfig ->
             withConfigCenterBootstrap { _ ->
@@ -154,6 +195,127 @@ class KCloudServerApplicationTest {
                 }
             }
         }
+
+    @Test
+    fun `system user profile routes read and update current profile`() =
+        withEmbeddedDesktopDatasource { testConfig ->
+            testApplication {
+                environment {
+                    config = testConfig
+                }
+                application {
+                    module()
+                }
+
+                val readResponse = client.get("/api/system/user/profile")
+                val saveResponse = client.put("/api/system/user/profile") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        """
+                        {
+                          "displayName":"桌面测试账号",
+                          "email":"desktop@example.com",
+                          "avatarLabel":"DT",
+                          "locale":"zh-CN",
+                          "timeZone":"Asia/Shanghai"
+                        }
+                        """.trimIndent(),
+                    )
+                }
+
+                assertEquals(HttpStatusCode.OK, readResponse.status)
+                assertEquals(HttpStatusCode.OK, saveResponse.status)
+                assertTrue(readResponse.bodyAsText().contains("\"accountKey\":\"desktop-user\""))
+                assertTrue(saveResponse.bodyAsText().contains("\"displayName\":\"桌面测试账号\""))
+            }
+        }
+
+    @Test
+    fun `system ai chat routes create session persist messages and delete`() =
+        withEmbeddedDesktopDatasource { testConfig ->
+            testApplication {
+                environment {
+                    config = testConfig
+                }
+                application {
+                    module()
+                }
+
+                val createSessionResponse = client.post("/api/system/ai-chat/sessions") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"title":"测试对话"}""")
+                }
+                val sessionId = "\"id\":(\\d+)".toRegex()
+                    .find(createSessionResponse.bodyAsText())
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    .orEmpty()
+                val sendMessageResponse = client.post("/api/system/ai-chat/sessions/$sessionId/messages") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"content":"先写一条消息"}""")
+                }
+                val listMessagesResponse = client.get("/api/system/ai-chat/sessions/$sessionId/messages")
+                val deleteSessionResponse = client.delete("/api/system/ai-chat/sessions/$sessionId")
+
+                assertEquals(HttpStatusCode.OK, createSessionResponse.status)
+                assertEquals(HttpStatusCode.OK, sendMessageResponse.status)
+                assertEquals(HttpStatusCode.OK, listMessagesResponse.status)
+                assertEquals(HttpStatusCode.OK, deleteSessionResponse.status)
+                assertTrue(sessionId.isNotBlank())
+                assertTrue(sendMessageResponse.bodyAsText().contains("模型提供方尚未接通"))
+                assertTrue(listMessagesResponse.bodyAsText().contains("\"role\":\"assistant\""))
+            }
+        }
+
+    @Test
+    fun `system knowledge base routes create update and delete space document`() =
+        withEmbeddedDesktopDatasource { testConfig ->
+            testApplication {
+                environment {
+                    config = testConfig
+                }
+                application {
+                    module()
+                }
+
+                val createSpaceResponse = client.post("/api/system/knowledge-base/spaces") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"name":"工程知识","description":"第一批文档"}""")
+                }
+                val spaceId = "\"id\":(\\d+)".toRegex()
+                    .find(createSpaceResponse.bodyAsText())
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    .orEmpty()
+                val createDocumentResponse = client.post("/api/system/knowledge-base/spaces/$spaceId/documents") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"title":"接入说明","content":"先记正文"}""")
+                }
+                val documentId = "\"id\":(\\d+)".toRegex()
+                    .find(createDocumentResponse.bodyAsText())
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    .orEmpty()
+                val updateDocumentResponse = client.put("/api/system/knowledge-base/documents/$documentId") {
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"title":"接入说明 v2","content":"补充正文"}""")
+                }
+                val listDocumentsResponse = client.get("/api/system/knowledge-base/spaces/$spaceId/documents")
+                val deleteDocumentResponse = client.delete("/api/system/knowledge-base/documents/$documentId")
+                val deleteSpaceResponse = client.delete("/api/system/knowledge-base/spaces/$spaceId")
+
+                assertEquals(HttpStatusCode.OK, createSpaceResponse.status)
+                assertEquals(HttpStatusCode.OK, createDocumentResponse.status)
+                assertEquals(HttpStatusCode.OK, updateDocumentResponse.status)
+                assertEquals(HttpStatusCode.OK, listDocumentsResponse.status)
+                assertEquals(HttpStatusCode.OK, deleteDocumentResponse.status)
+                assertEquals(HttpStatusCode.OK, deleteSpaceResponse.status)
+                assertTrue(spaceId.isNotBlank())
+                assertTrue(documentId.isNotBlank())
+                assertTrue(updateDocumentResponse.bodyAsText().contains("接入说明 v2"))
+                assertTrue(listDocumentsResponse.bodyAsText().contains("\"title\":\"接入说明 v2\""))
+            }
+        }
 }
 
 private inline fun withEmbeddedDesktopDatasource(
@@ -165,6 +327,7 @@ private inline fun withEmbeddedDesktopDatasource(
     try {
         block(
             MapApplicationConfig(
+                "datasources.sqlite.enabled" to "true",
                 "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
                 "datasources.sqlite.driver" to "org.sqlite.JDBC",
             ),
@@ -213,7 +376,16 @@ private fun restoreSystemProperty(
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
 
 private class ServerFakeSerialPortGateway : SerialPortGateway {
+    constructor(
+        runtimeInstalledInitially: Boolean = true,
+    ) {
+        runtimeInstalled = runtimeInstalledInitially
+    }
+
     val openedConnections = mutableListOf<ServerFakeSerialPortConnection>()
+
+    @Volatile
+    var runtimeInstalled: Boolean = true
 
     override fun listPorts(): List<McuPortSummary> {
         return listOf(
@@ -229,19 +401,21 @@ private class ServerFakeSerialPortGateway : SerialPortGateway {
         portPath: String,
         baudRate: Int,
     ): SerialPortConnection {
-        return ServerFakeSerialPortConnection(portPath, baudRate).also { connection ->
+        return ServerFakeSerialPortConnection(this, portPath, baudRate).also { connection ->
             openedConnections += connection
         }
     }
 }
 
 private class ServerFakeSerialPortConnection(
+    private val gateway: ServerFakeSerialPortGateway,
     override val portPath: String,
     override val baudRate: Int,
 ) : SerialPortConnection {
     override val portName: String = "Server-Fake-$portPath"
 
     private val pendingReads = ArrayDeque<ByteArray>()
+    private var flashMode = false
 
     override var isOpen: Boolean = true
         private set
@@ -250,10 +424,34 @@ private class ServerFakeSerialPortConnection(
         text: String,
     ) {
         val requestId = REQUEST_ID_REGEX.find(text)?.groupValues?.getOrNull(1).orEmpty()
-        if (text.contains("\"command\":\"vm.execute\"")) {
-            pendingReads += (
-                """{"requestId":"$requestId","type":"ack","success":true,"message":"ready"}""" + "\n"
-                ).toByteArray()
+        when {
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.execute\"") -> {
+                pendingReads += (
+                    """{"requestId":"$requestId","type":"ack","success":true,"message":"ready"}""" + "\n"
+                    ).toByteArray()
+            }
+
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.ping\"") -> {
+                pendingReads += (
+                    """{"requestId":"$requestId","type":"ack","success":true,"message":"runtime-ready","payload":{"runtime":"rhai"}}""" + "\n"
+                    ).toByteArray()
+            }
+
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.status\"") -> {
+                pendingReads += (
+                    """{"requestId":"$requestId","type":"status","success":true,"message":"runtime-ready","payload":{"state":"IDLE","runtime":"rhai"}}""" + "\n"
+                    ).toByteArray()
+            }
+
+            text == "START_FLASH\r\n" -> {
+                flashMode = true
+            }
+
+            text == "DONE\r\n" -> {
+                gateway.runtimeInstalled = true
+                flashMode = false
+                pendingReads += "SUCCESS".toByteArray()
+            }
         }
     }
 
@@ -261,6 +459,11 @@ private class ServerFakeSerialPortConnection(
         bytes: ByteArray,
         length: Int,
     ) {
+        if (flashMode) {
+            pendingReads += (
+                "ACK"
+                ).toByteArray()
+        }
     }
 
     override fun read(

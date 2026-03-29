@@ -24,7 +24,7 @@ import site.addzero.configcenter.spec.ConfigValueType
     title = "配置项",
     routePath = "system/config-center/entries",
     icon = "Settings",
-    order = 5.0,
+    order = 80.0,
 )
 @Composable
 fun ConfigCenterEntriesScreen() {
