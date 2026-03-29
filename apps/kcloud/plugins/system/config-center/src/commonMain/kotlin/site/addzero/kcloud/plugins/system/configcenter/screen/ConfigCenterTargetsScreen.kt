@@ -16,18 +16,17 @@ import site.addzero.annotation.RouteScene
 import site.addzero.configcenter.spec.ConfigTargetKind
 
 @Route(
+    value = "配置中心",
     title = "渲染目标",
     routePath = "system/config-center/targets",
     icon = "Tune",
     order = 81.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "system",
             name = "系统",
             icon = "AdminPanelSettings",
             order = 100,
         ),
-        menuPath = ["配置中心"],
     ),
 )
 @Composable

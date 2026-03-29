@@ -1,10 +1,7 @@
 package site.addzero.configcenter.client
 
-import de.jensklingenberg.ktorfit.Ktorfit
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
-import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.AddZeroHttpClientFactory
 import site.addzero.configcenter.spec.ConfigCenterGateway
 import site.addzero.configcenter.spec.ConfigEntryDto
 import site.addzero.configcenter.spec.ConfigMutationRequest
@@ -19,17 +16,9 @@ internal expect fun buildConfigCenterHttpApi(
 ): ConfigCenterHttpApi
 
 object ConfigCenterApiClient {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
-
-    private val httpClient = HttpClient {
-        expectSuccess = true
-        install(ContentNegotiation) {
-            json(json)
-        }
-    }
+    private const val httpClientProfile = "config-center"
+    private val httpClientFactory: AddZeroHttpClientFactory
+        get() = AddZeroHttpClientFactory.shared()
 
     @Volatile
     private var baseUrl: String = "http://localhost:8080/"
@@ -43,7 +32,7 @@ object ConfigCenterApiClient {
     fun createApi(): ConfigCenterHttpApi {
         return buildConfigCenterHttpApi(
             baseUrl = baseUrl,
-            httpClient = httpClient,
+            httpClient = httpClientFactory.get(httpClientProfile),
         )
     }
 }

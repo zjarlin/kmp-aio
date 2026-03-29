@@ -3,21 +3,20 @@ package site.addzero.kcloud.jimmer.di
 import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
-import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
+import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.ComponentScan
-import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Property
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.kcloud.jimmer.spi.DatabaseDriverSpi
+import site.addzero.kcloud.jimmer.spi.DatasourceBootstrapContext
+import site.addzero.kcloud.jimmer.spi.JimmerDatasourceBootstrapSpi
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
-private const val APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
-private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
-private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:vibepocket-desktop.db"
+private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:jimmer-embedded.db"
 
 /**
  * 数据源属性（从 application.conf 的 datasources.xxx 读取）
@@ -32,7 +31,6 @@ data class DatasourceProperties(
 )
 
 @Module
-@Configuration("vibepocket")
 @ComponentScan("site.addzero.kcloud.jimmer")
 class JimmerKoinModule {
     @Single
@@ -77,58 +75,6 @@ private fun buildSqlClient(
     setConnectionManager { dataSource.connection.use { proceed(it) } }
 }
 
-private fun loadSqlFile(filename: String): String =
-    object {}.javaClass.getResource("/sql/$filename")?.readText() ?: ""
-
-/**
- * 执行 schema 初始化脚本
- */
-private fun runSchema(dataSource: DataSource, schemaFile: String) {
-    val sql = loadSqlFile(schemaFile)
-    if (sql.isBlank()) return
-    dataSource.connection.use { conn ->
-        conn.createStatement().use { stmt ->
-            sql.split(";")
-                .map { it.trim() }
-                .filter { it.isNotEmpty() }
-                .forEach { stmt.executeUpdate(it) }
-        }
-    }
-}
-
-private fun normalizeSqliteEpochDateTimeColumns(dataSource: DataSource) {
-    val tableColumns = mapOf(
-        "music_task" to listOf("created_at", "updated_at"),
-        "favorite_track" to listOf("created_at"),
-        "music_history" to listOf("created_at"),
-        "persona_record" to listOf("created_at"),
-        "suno_task_resource" to listOf("created_at", "updated_at"),
-        "user_profile" to listOf("create_time", "update_time"),
-        "ai_chat_session" to listOf("create_time", "update_time"),
-        "ai_chat_message" to listOf("create_time", "update_time"),
-        "knowledge_space" to listOf("create_time", "update_time"),
-        "knowledge_document" to listOf("create_time", "update_time"),
-    )
-    dataSource.connection.use { conn ->
-        conn.createStatement().use { stmt ->
-            tableColumns.forEach { (table, columns) ->
-                columns.forEach { column ->
-                    stmt.executeUpdate(
-                        """
-                        UPDATE $table
-                        SET $column = datetime(CAST($column AS INTEGER) / 1000, 'unixepoch', 'localtime')
-                        WHERE trim($column) GLOB '[0-9]*'
-                          AND length(trim($column)) >= 10
-                          AND instr($column, '-') = 0
-                          AND instr($column, ':') = 0
-                        """.trimIndent()
-                    )
-                }
-            }
-        }
-    }
-}
-
 private data class DatasourceRuntime(
     val properties: DatasourceProperties,
     val dataSource: DataSource,
@@ -137,10 +83,11 @@ private data class DatasourceRuntime(
 
 @Single(createdAtStart = true)
 class DatasourceRegistry(
-    @Property(APPLICATION_CONFIG_PROPERTY)
+    @Property(JIMMER_APPLICATION_CONFIG_PROPERTY)
     private val config: ApplicationConfig,
     private val interceptor: BaseEntityDraftInterceptor,
     private val driverResolver: DatabaseDriverResolver,
+    private val datasourceBootstrappers: List<JimmerDatasourceBootstrapSpi>,
 ) {
     private val runtimesByName: LinkedHashMap<String, DatasourceRuntime> = buildRuntimeMap(config)
     private val defaultRuntime: DatasourceRuntime = runtimesByName.values.firstOrNull()
@@ -182,10 +129,15 @@ class DatasourceRegistry(
         for (props in datasources) {
             val spi = driverResolver.resolve(props.driver)
             val dataSource = spi.createDataSource(props)
-            spi.schemaFile()?.let { runSchema(dataSource, it) }
-            if (spi.dialect() is SQLiteDialect) {
-                normalizeSqliteEpochDateTimeColumns(dataSource)
-            }
+            val context = DatasourceBootstrapContext(
+                properties = props,
+                driver = spi,
+                dataSource = dataSource,
+            )
+            datasourceBootstrappers
+                .sortedBy(JimmerDatasourceBootstrapSpi::order)
+                .filter { bootstrapper -> bootstrapper.supports(context) }
+                .forEach { bootstrapper -> bootstrapper.onDataSourceReady(context) }
             val sqlClient = buildSqlClient(dataSource, spi, interceptor)
             runtimes[props.name] = DatasourceRuntime(props, dataSource, sqlClient)
         }
@@ -194,7 +146,7 @@ class DatasourceRegistry(
 }
 
 private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): DatasourceProperties? {
-    val isEmbeddedDesktop = System.getProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
+    val isEmbeddedDesktop = System.getProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
         ?.toBooleanStrictOrNull()
         ?: false
     if (!isEmbeddedDesktop) {
@@ -216,13 +168,6 @@ private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): Dataso
         url = sqliteUrl,
         driver = sqliteDriver,
     )
-}
-
-/**
- * 对指定 DataSource 执行 SQLite schema 初始化（测试用）
- */
-fun initDatabase(dataSource: DataSource) {
-    runSchema(dataSource, "schema-sqlite.sql")
 }
 
 /**

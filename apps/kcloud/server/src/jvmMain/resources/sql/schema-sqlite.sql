@@ -198,6 +198,21 @@ CREATE TABLE IF NOT EXISTS user_profile (
     update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 
+CREATE TABLE IF NOT EXISTS rbac_role (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    role_key TEXT NOT NULL UNIQUE,
+    role_code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    built_in INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_rbac_role_code
+    ON rbac_role(role_code);
+
 CREATE TABLE IF NOT EXISTS ai_chat_session (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session_key TEXT NOT NULL UNIQUE,

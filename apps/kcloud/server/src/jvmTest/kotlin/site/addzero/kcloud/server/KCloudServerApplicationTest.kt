@@ -225,6 +225,66 @@ class KCloudServerApplicationTest {
         }
 
     @Test
+    fun `system rbac routes list bootstrap roles and support crud`() =
+        withEmbeddedDesktopDatasource { testConfig ->
+            testApplication {
+                environment {
+                    config = testConfig
+                }
+                application {
+                    module()
+                }
+
+                val listResponse = client.get("/api/system/rbac/roles")
+                val createResponse = client.post("/api/system/rbac/roles") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        """
+                        {
+                          "roleCode":"auditor",
+                          "name":"审计员",
+                          "description":"负责只读巡检与审计查看",
+                          "enabled":true
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                val roleId = "\"id\":(\\d+)".toRegex()
+                    .find(createResponse.bodyAsText())
+                    ?.groupValues
+                    ?.getOrNull(1)
+                    .orEmpty()
+                val updateResponse = client.put("/api/system/rbac/roles/$roleId") {
+                    contentType(ContentType.Application.Json)
+                    setBody(
+                        """
+                        {
+                          "roleCode":"security_auditor",
+                          "name":"安全审计员",
+                          "description":"负责巡检、审计和风险复盘",
+                          "enabled":false
+                        }
+                        """.trimIndent(),
+                    )
+                }
+                val deleteResponse = client.delete("/api/system/rbac/roles/$roleId")
+                val listAfterDeleteResponse = client.get("/api/system/rbac/roles")
+
+                assertEquals(HttpStatusCode.OK, listResponse.status)
+                assertEquals(HttpStatusCode.OK, createResponse.status)
+                assertEquals(HttpStatusCode.OK, updateResponse.status)
+                assertEquals(HttpStatusCode.OK, deleteResponse.status)
+                assertEquals(HttpStatusCode.OK, listAfterDeleteResponse.status)
+                assertTrue(listResponse.bodyAsText().contains("\"roleCode\":\"SUPER_ADMIN\""))
+                assertTrue(roleId.isNotBlank())
+                assertTrue(updateResponse.bodyAsText().contains("\"roleCode\":\"SECURITY_AUDITOR\""))
+                assertTrue(updateResponse.bodyAsText().contains("\"enabled\":false"))
+                assertTrue(deleteResponse.bodyAsText().contains("\"ok\":true"))
+                assertTrue(!listAfterDeleteResponse.bodyAsText().contains("\"id\":$roleId"))
+            }
+        }
+
+    @Test
     fun `system ai chat routes create session persist messages and delete`() =
         withEmbeddedDesktopDatasource { testConfig ->
             testApplication {

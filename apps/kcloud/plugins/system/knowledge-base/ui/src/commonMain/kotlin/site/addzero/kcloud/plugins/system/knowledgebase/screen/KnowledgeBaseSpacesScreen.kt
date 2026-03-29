@@ -17,18 +17,17 @@ import site.addzero.annotation.RouteScene
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseWorkbenchState
 
 @Route(
+    value = "知识库",
     title = "知识空间",
     routePath = "system/knowledge-base/spaces",
     icon = "MenuBook",
     order = 40.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "system",
             name = "系统",
             icon = "AdminPanelSettings",
             order = 100,
         ),
-        menuPath = ["知识库"],
     ),
 )
 @Composable

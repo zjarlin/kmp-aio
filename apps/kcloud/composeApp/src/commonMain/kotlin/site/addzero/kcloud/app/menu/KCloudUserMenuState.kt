@@ -65,22 +65,15 @@ class KCloudUserMenuState(
     }
 
     val displayName: String
-        get() = profileState.profile?.displayName
-            ?.ifBlank { null }
-            ?: profileState.displayName.ifBlank { "用户" }
+        get() = profileState.displayName.ifBlank { "用户" }
 
     val avatarInitials: String
         get() {
-            val avatarLabel = profileState.profile?.avatarLabel
-                ?.ifBlank { null }
-                ?: profileState.avatarLabel.ifBlank { null }
+            val avatarLabel = profileState.avatarLabel.ifBlank { null }
             if (avatarLabel != null) {
                 return avatarLabel.toAvatarInitials()
             }
-            val seed = profileState.profile?.accountKey
-                ?.ifBlank { null }
-                ?: displayName
-            return seed.toAvatarInitials()
+            return displayName.toAvatarInitials()
         }
 }
 

@@ -14,6 +14,7 @@ import java.util.*
 import javax.sql.DataSource
 import kotlin.io.path.*
 
+private const val DISABLED_MARKER_FILE = ".kcloud-plugin-disabled"
 private const val COMPOSE_DEP_BLOCK = "plugin-market-compose-deps"
 private const val SERVER_DEP_BLOCK = "plugin-market-server-deps"
 private const val SHARED_ROUTE_TASK_BLOCK = "plugin-market-route-tasks"
@@ -138,6 +139,54 @@ class PluginMarketSupport(
         sqlClient.deleteById(PluginPackage::class, packageId)
     }
 
+    fun moduleRoot(pluginPackage: PluginPackage): Path = Paths.get(pluginPackage.moduleDir).normalize()
+
+    fun disabledMarkerPath(pluginPackage: PluginPackage): Path = moduleRoot(pluginPackage).resolve(DISABLED_MARKER_FILE)
+
+    fun syncEnabledMarker(pluginPackage: PluginPackage) {
+        val moduleRoot = moduleRoot(pluginPackage)
+        if (!moduleRoot.exists()) {
+            return
+        }
+        val markerPath = disabledMarkerPath(pluginPackage)
+        if (pluginPackage.enabled) {
+            markerPath.deleteIfExists()
+        } else {
+            markerPath.parent.createDirectories()
+            if (!markerPath.exists()) {
+                markerPath.writeText(
+                    """
+                    disabledBy=plugin-market
+                    pluginId=${pluginPackage.pluginId}
+                    reason=package-enabled-flag-false
+                    """.trimIndent()
+                )
+            }
+        }
+    }
+
+    fun uninstallManagedModule(pluginPackage: PluginPackage) {
+        val moduleRoot = moduleRoot(pluginPackage)
+        if (!moduleRoot.exists()) {
+            return
+        }
+        val importedFromDisk = listImportRecords(pluginPackage.id).isNotEmpty()
+        if (importedFromDisk) {
+            disabledMarkerPath(pluginPackage).apply {
+                parent.createDirectories()
+                writeText(
+                    """
+                    disabledBy=plugin-market
+                    pluginId=${pluginPackage.pluginId}
+                    reason=package-deleted-from-db
+                    """.trimIndent()
+                )
+            }
+            return
+        }
+        moduleRoot.toFile().deleteRecursively()
+    }
+
     fun discoverPluginModules(searchQuery: String? = null): List<PluginDiscoveryItemDto> {
         val pluginsRoot = Paths.get("apps", "kcloud", "plugins")
         if (!pluginsRoot.exists()) {
@@ -202,33 +251,39 @@ class PluginMarketSupport(
 
     fun renderManagedBlocks(dbPackages: List<PluginPackage>): ManagedIntegrationSnapshot {
         val fixedComposeDeps = listOf(
-            """implementation(project(":apps:kcloud:plugins:mcu-console"))""",
-            """implementation(project(":apps:kcloud:plugins:system:ai-chat"))""",
+            """implementation(project(":apps:kcloud:plugins:mcu-console:ui"))""",
+            """implementation(project(":apps:kcloud:plugins:system:ai-chat:ui"))""",
             """implementation(project(":apps:kcloud:plugins:system:config-center"))""",
-            """implementation(project(":apps:kcloud:plugins:system:knowledge-base"))""",
-            """implementation(project(":apps:kcloud:plugins:system:rbac"))""",
-            """implementation(project(":apps:kcloud:plugins:system:plugin-market"))""",
-            """implementation(project(":apps:kcloud:plugins:vibepocket"))""",
+            """implementation(project(":apps:kcloud:plugins:system:knowledge-base:ui"))""",
+            """implementation(project(":apps:kcloud:plugins:system:rbac:ui"))""",
+            """implementation(project(":apps:kcloud:plugins:system:plugin-market:ui"))""",
+            """implementation(project(":apps:kcloud:plugins:vibepocket:ui"))""",
         )
         val fixedServerDeps = listOf(
-            """implementation(project(":apps:kcloud:plugins:mcu-console"))""",
-            """implementation(project(":apps:kcloud:plugins:system:ai-chat"))""",
-            """implementation(project(":apps:kcloud:plugins:system:knowledge-base"))""",
-            """implementation(project(":apps:kcloud:plugins:system:rbac"))""",
-            """implementation(project(":apps:kcloud:plugins:system:plugin-market"))""",
-            """implementation(project(":apps:kcloud:plugins:vibepocket"))""",
+            """implementation(project(":apps:kcloud:plugins:mcu-console:server"))""",
+            """implementation(project(":apps:kcloud:plugins:system:ai-chat:server"))""",
+            """implementation(project(":apps:kcloud:plugins:system:knowledge-base:server"))""",
+            """implementation(project(":apps:kcloud:plugins:system:rbac:server"))""",
+            """implementation(project(":apps:kcloud:plugins:system:plugin-market:server"))""",
+            """implementation(project(":apps:kcloud:plugins:vibepocket:server"))""",
         )
         val fixedRouteTasks = listOf(
-            """:apps:kcloud:plugins:mcu-console:kspCommonMainKotlinMetadata""",
-            """:apps:kcloud:plugins:system:ai-chat:kspCommonMainKotlinMetadata""",
-            """:apps:kcloud:plugins:system:config-center:kspCommonMainKotlinMetadata""",
-            """:apps:kcloud:plugins:system:knowledge-base:kspCommonMainKotlinMetadata""",
-            """:apps:kcloud:plugins:system:plugin-market:kspCommonMainKotlinMetadata""",
-            """:apps:kcloud:plugins:system:rbac:kspCommonMainKotlinMetadata""",
-            """:apps:kcloud:plugins:vibepocket:kspCommonMainKotlinMetadata""",
+            """:apps:kcloud:plugins:mcu-console:ui:compileKotlinJvm""",
+            """:apps:kcloud:plugins:system:ai-chat:ui:compileKotlinJvm""",
+            """:apps:kcloud:plugins:system:config-center:compileKotlinJvm""",
+            """:apps:kcloud:plugins:system:knowledge-base:ui:compileKotlinJvm""",
+            """:apps:kcloud:plugins:system:plugin-market:ui:compileKotlinJvm""",
+            """:apps:kcloud:plugins:system:rbac:ui:compileKotlinJvm""",
+            """:apps:kcloud:plugins:vibepocket:ui:compileKotlinJvm""",
         )
         val fixedComposeModules = listOf(
-            "site.addzero.kcloud.KCloudComposeScanKoinModule::class",
+            "site.addzero.kcloud.plugins.mcuconsole.McuConsoleComposeKoinModule::class",
+            "site.addzero.kcloud.plugins.system.configcenter.ConfigCenterComposeKoinModule::class",
+            "site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule::class",
+            "site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule::class",
+            "site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketComposeKoinModule::class",
+            "site.addzero.kcloud.plugins.rbac.RbacKoinModule::class",
+            "site.addzero.kcloud.vibepocket.VibePocketComposeKoinModule::class",
             "site.addzero.kcloud.app.KCloudWorkbenchKoinModule::class",
         )
         val fixedDesktopModules = listOf(
@@ -252,7 +307,7 @@ class PluginMarketSupport(
             "site.addzero.kcloud.plugins.system.aichat.aiChatRoutes",
             "site.addzero.kcloud.plugins.system.knowledgebase.knowledgeBaseRoutes",
             "site.addzero.kcloud.plugins.system.pluginmarket.pluginMarketRoutes",
-            "site.addzero.vibepocket.routes.vibePocketRoutes",
+            "site.addzero.kcloud.vibepocket.routes.vibePocketRoutes",
         )
         val fixedRouteCalls = listOf(
             "configCenterRoutes()",
@@ -270,7 +325,7 @@ class PluginMarketSupport(
         val dynamicServerDeps = dbPackages.filter { it.serverKoinModuleClass != null || it.routeRegistrarCall != null }
             .map { packageEntity -> """implementation(project("${gradlePathFor(packageEntity)}"))""" }
         val dynamicRouteTasks = dbPackages.map { packageEntity ->
-            """"${gradlePathFor(packageEntity)}:kspCommonMainKotlinMetadata""""
+            """"${gradlePathFor(packageEntity)}:compileKotlinJvm""""
         }
         val dynamicComposeModules = dbPackages.mapNotNull { it.composeKoinModuleClass?.let { fqcn -> "$fqcn::class" } }
         val dynamicServerModules = dbPackages.mapNotNull { it.serverKoinModuleClass?.let { fqcn -> "$fqcn::class" } }
@@ -290,29 +345,12 @@ class PluginMarketSupport(
     }
 
     fun updateManagedIntegrationFiles(snapshot: ManagedIntegrationSnapshot): ManagedIntegrationResult {
-        val composeBuild = Paths.get("apps", "kcloud", "composeApp", "build.gradle.kts")
-        val serverBuild = Paths.get("apps", "kcloud", "server", "build.gradle.kts")
-        val sharedBuild = Paths.get("apps", "kcloud", "shared", "build.gradle.kts")
-        val composeKoin = Paths.get("apps", "kcloud", "composeApp", "src", "commonMain", "kotlin", "site", "addzero", "kcloud", "KCloudComposeKoinApplication.kt")
-        val desktopKoin = Paths.get("apps", "kcloud", "composeApp", "src", "commonMain", "kotlin", "site", "addzero", "kcloud", "KCloudDesktopSupplementKoinApplication.kt")
-        val serverKoin = Paths.get("apps", "kcloud", "server", "src", "jvmMain", "kotlin", "site", "addzero", "kcloud", "server", "KCloudServerStarterKoinApplication.kt")
-        val serverRoutes = Paths.get("apps", "kcloud", "server", "src", "jvmMain", "kotlin", "site", "addzero", "kcloud", "server", "GeneratedPluginServerRoutes.kt")
-        ensureManagedRouteFile(serverRoutes)
-
-        val changedFiles = buildList {
-            if (replaceManagedBlock(composeBuild, COMPOSE_DEP_BLOCK, snapshot.composeDependencies.joinToString("\n            "))) add(composeBuild)
-            if (replaceManagedBlock(serverBuild, SERVER_DEP_BLOCK, snapshot.serverDependencies.joinToString("\n            "))) add(serverBuild)
-            if (replaceManagedBlock(sharedBuild, SHARED_ROUTE_TASK_BLOCK, snapshot.sharedRouteTasks.joinToString(",\n    "))) add(sharedBuild)
-            if (replaceManagedBlock(composeKoin, COMPOSE_KOIN_BLOCK, snapshot.composeModules.joinToString(",\n        "))) add(composeKoin)
-            if (replaceManagedBlock(desktopKoin, DESKTOP_KOIN_BLOCK, snapshot.desktopModules.joinToString(",\n        "))) add(desktopKoin)
-            if (replaceManagedBlock(serverKoin, SERVER_KOIN_BLOCK, snapshot.serverModules.joinToString(",\n        "))) add(serverKoin)
-            if (replaceManagedBlock(serverRoutes, SERVER_ROUTE_IMPORT_BLOCK, snapshot.serverRouteImports.joinToString("\n"))) add(serverRoutes)
-            if (replaceManagedBlock(serverRoutes, SERVER_ROUTE_BLOCK, snapshot.serverRouteCalls.joinToString("\n        "))) add(serverRoutes)
-        }
-
         return ManagedIntegrationResult(
-            changedFiles = changedFiles.map { it.toString() },
+            changedFiles = emptyList(),
             diffText = buildString {
+                appendLine("KCloud shell aggregation is now handled by Gradle convention plugin `site.addzero.buildlogic.kmp.cmp-kcloud-aio`.")
+                appendLine("No shell source files were rewritten; exporting the plugin module and rerunning Gradle is enough.")
+                appendLine()
                 appendLine("Compose 依赖：")
                 snapshot.composeDependencies.forEach { appendLine(it) }
                 appendLine()
@@ -405,7 +443,7 @@ class PluginMarketSupport(
             import site.addzero.kcloud.plugins.system.aichat.aiChatRoutes
             import site.addzero.kcloud.plugins.system.knowledgebase.knowledgeBaseRoutes
             import site.addzero.kcloud.plugins.system.pluginmarket.pluginMarketRoutes
-            import site.addzero.vibepocket.routes.vibePocketRoutes
+            import site.addzero.kcloud.vibepocket.routes.vibePocketRoutes
             // <managed:$SERVER_ROUTE_IMPORT_BLOCK:end>
 
             /**

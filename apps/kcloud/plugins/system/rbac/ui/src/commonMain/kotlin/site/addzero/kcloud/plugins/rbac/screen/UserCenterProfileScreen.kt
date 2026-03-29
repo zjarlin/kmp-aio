@@ -16,18 +16,17 @@ import site.addzero.annotation.RouteScene
 import site.addzero.kcloud.plugins.rbac.UserCenterWorkbenchState
 
 @Route(
+    value = "用户中心",
     title = "个人资料",
     routePath = "system/user-center/profile",
     icon = "Person",
     order = 10.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "system",
             name = "系统",
             icon = "AdminPanelSettings",
             order = 100,
         ),
-        menuPath = ["用户中心"],
     ),
 )
 @Composable

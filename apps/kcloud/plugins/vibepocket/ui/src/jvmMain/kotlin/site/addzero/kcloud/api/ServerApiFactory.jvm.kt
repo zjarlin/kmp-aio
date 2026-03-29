@@ -2,12 +2,6 @@ package site.addzero.kcloud.api
 
 import de.jensklingenberg.ktorfit.Ktorfit
 import io.ktor.client.*
-import site.addzero.vibepocket.api.createConfigApi
-import site.addzero.vibepocket.api.createFavoriteApi
-import site.addzero.vibepocket.api.createHistoryApi
-import site.addzero.vibepocket.api.createMusicSearchApi
-import site.addzero.vibepocket.api.createPersonaApi
-import site.addzero.vibepocket.api.createSunoTaskResourceApi
 
 internal actual fun buildConfigApi(
     baseUrl: String,

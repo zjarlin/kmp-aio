@@ -1,18 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
-}
-
-// Keep the enabled server plugin set centralized here. Some plugin modules are UI-only or
-// support-only, so server wiring should remain an explicit opt-in list instead of a blind scan.
-val serverPluginProjects = listOf(
-    "mcu-console",
-    "system/ai-chat",
-    "system/knowledge-base",
-    "system/plugin-market",
-    "system/rbac",
-    "vibepocket",
-).map { pluginId ->
-    project(":apps:kcloud:plugins:${pluginId.replace("/", ":")}")
+    id("site.addzero.buildlogic.kmp.cmp-kcloud-aio")
 }
 
 kotlin {
@@ -31,9 +19,9 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-openapi"))
             implementation(project(":lib:ktor:starter:starter-flyway"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
-            // <managed:plugin-market-server-deps:start>
-            serverPluginProjects.forEach { implementation(it) }
-            // <managed:plugin-market-server-deps:end>
+        }
+        jvmTest.dependencies {
+            implementation(project(":apps:kcloud:plugins:mcu-console"))
         }
     }
 }

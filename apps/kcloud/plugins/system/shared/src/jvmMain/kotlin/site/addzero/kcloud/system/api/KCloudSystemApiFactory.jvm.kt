@@ -35,3 +35,14 @@ internal actual fun buildKnowledgeBaseApi(
         .build()
         .createKnowledgeBaseApi()
 }
+
+internal actual fun buildRbacApi(
+    baseUrl: String,
+    httpClient: HttpClient,
+): RbacApi {
+    return Ktorfit.Builder()
+        .baseUrl(baseUrl)
+        .httpClient(httpClient)
+        .build()
+        .createRbacApi()
+}

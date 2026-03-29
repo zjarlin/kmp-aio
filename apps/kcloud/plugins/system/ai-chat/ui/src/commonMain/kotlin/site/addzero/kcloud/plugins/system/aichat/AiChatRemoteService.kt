@@ -6,13 +6,13 @@ import site.addzero.kcloud.system.api.*
 @Single
 class AiChatRemoteService {
     suspend fun listSessions(): List<AiChatSessionDto> {
-        return KCloudSystemApiClient.aiChatApi.listSessions()
+        return KCloudSystemApiClient.aiChatApi.listAiChatSessions()
     }
 
     suspend fun createSession(
         title: String,
     ): AiChatSessionDto {
-        return KCloudSystemApiClient.aiChatApi.createSession(
+        return KCloudSystemApiClient.aiChatApi.createAiChatSession(
             AiChatSessionCreateRequest(title = title),
         )
     }
@@ -20,20 +20,20 @@ class AiChatRemoteService {
     suspend fun deleteSession(
         sessionId: Long,
     ) {
-        KCloudSystemApiClient.aiChatApi.deleteSession(sessionId)
+        KCloudSystemApiClient.aiChatApi.deleteAiChatSession(sessionId)
     }
 
     suspend fun listMessages(
         sessionId: Long,
     ): List<AiChatMessageDto> {
-        return KCloudSystemApiClient.aiChatApi.listMessages(sessionId)
+        return KCloudSystemApiClient.aiChatApi.listAiChatMessages(sessionId)
     }
 
     suspend fun sendMessage(
         sessionId: Long,
         content: String,
     ): AiChatConversationDto {
-        return KCloudSystemApiClient.aiChatApi.sendMessage(
+        return KCloudSystemApiClient.aiChatApi.sendAiChatMessage(
             sessionId = sessionId,
             request = AiChatMessageCreateRequest(content = content),
         )

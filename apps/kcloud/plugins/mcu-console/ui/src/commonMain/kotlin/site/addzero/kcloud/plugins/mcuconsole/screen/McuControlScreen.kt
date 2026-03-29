@@ -13,18 +13,17 @@ import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 
 @Route(
+    value = "设备会话",
     title = "控制台",
     routePath = "mcu/control",
     icon = "PowerSettingsNew",
     order = 0.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "device",
             name = "设备",
             icon = "Build",
             order = 0,
         ),
-        menuPath = ["设备会话"],
     ),
 )
 @Composable

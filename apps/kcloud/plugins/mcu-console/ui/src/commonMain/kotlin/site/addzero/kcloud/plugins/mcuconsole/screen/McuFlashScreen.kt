@@ -17,18 +17,17 @@ import site.addzero.annotation.RouteScene
 import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
 
 @Route(
+    value = "开发工具",
     title = "烧录",
     routePath = "mcu/flash",
     icon = "Upload",
     order = 10.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "device",
             name = "设备",
             icon = "Build",
             order = 0,
         ),
-        menuPath = ["开发工具"],
         defaultInScene = true,
     ),
 )

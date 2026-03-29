@@ -8,7 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import site.addzero.core.network.apiClient
+import site.addzero.core.network.AddZeroHttpClientFactory
 import site.addzero.network.call.qqmusic.model.LyricResponse
 import site.addzero.network.call.qqmusic.model.SearchType
 import kotlin.test.*
@@ -29,7 +29,7 @@ class QQMusicTest {
      * 都需要注册为 JSON 反序列化。
      */
     private val qqJson = Json { ignoreUnknownKeys = true; isLenient = true }
-    private val qqClient = apiClient.config {
+    private val qqClient = AddZeroHttpClientFactory.shared().get().config {
         install(ContentNegotiation) {
             json(qqJson, contentType = ContentType.Text.Plain)
             json(qqJson, contentType = ContentType.Text.Html)

@@ -12,10 +12,10 @@ import org.jetbrains.skiko.disableTitleBar
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
+import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
 import site.addzero.kcloud.system.api.KCloudSystemApiClient
-import site.addzero.vibepocket.api.ServerApiClient
 import java.awt.Container
 import javax.swing.JComponent
 

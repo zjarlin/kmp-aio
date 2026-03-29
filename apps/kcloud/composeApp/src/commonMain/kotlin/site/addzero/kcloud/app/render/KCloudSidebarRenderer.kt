@@ -181,8 +181,8 @@ private fun List<KCloudSidebarNode>.firstLeafIdOrNull(): String? {
 }
 
 private fun KCloudSidebarNode.firstLeafRoutePath(): String? {
-    if (routePath != null) {
-        return routePath
+    routePath?.let { route ->
+        return route
     }
     return children.firstNotNullOfOrNull { child ->
         child.firstLeafRoutePath()

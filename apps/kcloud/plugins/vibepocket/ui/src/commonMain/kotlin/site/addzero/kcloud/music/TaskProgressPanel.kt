@@ -19,13 +19,13 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTaskDetail
-import site.addzero.kcloud.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.kcloud.model.FavoriteRequest
 import site.addzero.kcloud.model.PersonaItem
 import site.addzero.kcloud.model.TrackAction
 import site.addzero.kcloud.ui.StudioEmptyState
 import site.addzero.kcloud.ui.StudioMetricCard
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 
 @Composable
 fun TaskProgressPanel(

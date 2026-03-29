@@ -11,7 +11,7 @@ import javax.sql.DataSource
  * - 驱动匹配判断
  * - DataSource 创建
  * - Jimmer Dialect 提供
- * - Schema 初始化脚本路径
+ * - Jimmer Dialect 提供
  *
  * 新增数据库类型只需新增实现类并标注 @Single，无需修改现有代码。
  */
@@ -25,7 +25,4 @@ interface DatabaseDriverSpi {
 
     /** 返回对应的 Jimmer Dialect */
     fun dialect(): Dialect
-
-    /** schema 初始化脚本的 classpath 路径（如 "schema-sqlite.sql"），返回 null 则跳过 */
-    fun schemaFile(): String? = null
 }

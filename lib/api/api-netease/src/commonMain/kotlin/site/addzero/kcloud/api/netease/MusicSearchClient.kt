@@ -1,9 +1,8 @@
 package site.addzero.kcloud.api.netease
 
 import io.ktor.client.HttpClient
-import io.ktor.client.plugins.*
 import io.ktor.http.*
-import site.addzero.core.network.apiClient
+import site.addzero.core.network.AddZeroHttpClientFactory
 
 internal expect fun buildNeteaseApi(
     baseUrl: String,
@@ -17,32 +16,29 @@ internal expect fun buildNeteaseApi(
  * 本 object 提供业务便捷方法（歌名+歌手搜索、歌词片段搜索等）。
  */
 object MusicSearchClient {
-
+    private const val httpClientProfile = "netease-music"
     private const val BASE_URL = "https://music.163.com/api/"
+    private val httpClientFactory: AddZeroHttpClientFactory
+        get() = AddZeroHttpClientFactory.shared()
 
     var mytoken: String? = null
-
-    init {
-        apiClient.config {
-            defaultRequest {
-                url(BASE_URL)
-            }
-            defaultRequest {
-                headers {
-                    mytoken?.let {
-                        append(HttpHeaders.Authorization, it)
-                    }
-                }
-            }
+        set(value) {
+            field = value
+            httpClientFactory.putHeader(httpClientProfile, HttpHeaders.Authorization, value)
         }
 
+    private val httpClient: HttpClient
+        get() = httpClientFactory.get(httpClientProfile)
 
+    init {
+        mytoken = null
     }
 
-    val musicApi: NeteaseApi = buildNeteaseApi(
-        baseUrl = BASE_URL,
-        httpClient = apiClient,
-    )
+    val musicApi: NeteaseApi
+        get() = buildNeteaseApi(
+            baseUrl = BASE_URL,
+            httpClient = httpClient,
+        )
 
 //
 //    /**

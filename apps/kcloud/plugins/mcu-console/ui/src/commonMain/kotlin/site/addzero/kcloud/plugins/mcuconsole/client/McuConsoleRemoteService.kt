@@ -6,85 +6,85 @@ import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 
 @Single
 class McuConsoleRemoteService {
-    suspend fun listPorts() = McuConsoleApiClient.api.listPorts().items
+    suspend fun listPorts() = McuConsoleApiClient.sessionApi.listMcuPorts().items
 
-    suspend fun getSession(): McuSessionSnapshot = McuConsoleApiClient.api.getSession()
+    suspend fun getSession(): McuSessionSnapshot = McuConsoleApiClient.sessionApi.getMcuSession()
 
     suspend fun openSession(
         request: McuSessionOpenRequest,
     ): McuSessionSnapshot {
-        return McuConsoleApiClient.api.openSession(request)
+        return McuConsoleApiClient.sessionApi.openMcuSession(request)
     }
 
     suspend fun closeSession(): McuSessionSnapshot {
-        return McuConsoleApiClient.api.closeSession()
+        return McuConsoleApiClient.sessionApi.closeMcuSession()
     }
 
     suspend fun resetSession(
         request: McuResetRequest,
     ): McuSessionSnapshot {
-        return McuConsoleApiClient.api.resetSession(request)
+        return McuConsoleApiClient.sessionApi.resetMcuSession(request)
     }
 
     suspend fun updateSignals(
         request: McuSignalRequest,
     ): McuSessionSnapshot {
-        return McuConsoleApiClient.api.updateSignals(request)
+        return McuConsoleApiClient.sessionApi.updateMcuSignals(request)
     }
 
     suspend fun readRecentLines(
         request: McuSessionLinesRequest,
     ): McuEventBatchResponse {
-        return McuConsoleApiClient.api.readRecentLines(request)
+        return McuConsoleApiClient.sessionApi.readMcuRecentLines(request)
     }
 
     suspend fun readEvents(
         afterSeq: Long,
     ): McuEventBatchResponse {
-        return McuConsoleApiClient.api.readEvents(afterSeq)
+        return McuConsoleApiClient.sessionApi.readMcuEvents(afterSeq)
     }
 
     suspend fun executeScript(
         request: McuScriptExecuteRequest,
     ): McuScriptStatusResponse {
-        return McuConsoleApiClient.api.executeScript(request)
+        return McuConsoleApiClient.scriptApi.executeMcuScript(request)
     }
 
     suspend fun stopScript(
         request: McuScriptStopRequest = McuScriptStopRequest(),
     ): McuScriptStatusResponse {
-        return McuConsoleApiClient.api.stopScript(request)
+        return McuConsoleApiClient.scriptApi.stopMcuScript(request)
     }
 
     suspend fun getScriptStatus(): McuScriptStatusResponse {
-        return McuConsoleApiClient.api.getScriptStatus()
+        return McuConsoleApiClient.scriptApi.getMcuScriptStatus()
     }
 
     suspend fun listFlashProfiles(): List<McuFlashProfileSummary> {
-        return McuConsoleApiClient.api.listFlashProfiles().items
+        return McuConsoleApiClient.flashApi.listMcuFlashProfiles().items
     }
 
     suspend fun startFlash(
         request: McuFlashRequest,
     ): McuFlashStatusResponse {
-        return McuConsoleApiClient.api.startFlash(request)
+        return McuConsoleApiClient.flashApi.startMcuFlash(request)
     }
 
     suspend fun getFlashStatus(): McuFlashStatusResponse {
-        return McuConsoleApiClient.api.getFlashStatus()
+        return McuConsoleApiClient.flashApi.getMcuFlashStatus()
     }
 
     suspend fun listRuntimeBundles(): List<McuRuntimeBundleSummary> {
-        return McuConsoleApiClient.api.listRuntimeBundles().items
+        return McuConsoleApiClient.runtimeApi.listMcuRuntimeBundles().items
     }
 
     suspend fun ensureRuntime(
         request: McuRuntimeEnsureRequest,
     ): McuRuntimeStatusResponse {
-        return McuConsoleApiClient.api.ensureRuntime(request)
+        return McuConsoleApiClient.runtimeApi.ensureMcuRuntime(request)
     }
 
     suspend fun getRuntimeStatus(): McuRuntimeStatusResponse {
-        return McuConsoleApiClient.api.getRuntimeStatus()
+        return McuConsoleApiClient.runtimeApi.getMcuRuntimeStatus()
     }
 }

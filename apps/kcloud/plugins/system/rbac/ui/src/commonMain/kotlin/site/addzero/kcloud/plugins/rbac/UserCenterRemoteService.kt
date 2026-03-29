@@ -8,12 +8,12 @@ import site.addzero.kcloud.system.api.UserProfileUpdateRequest
 @Single
 class UserCenterRemoteService {
     suspend fun readCurrentProfile(): UserProfileDto {
-        return KCloudSystemApiClient.userCenterApi.getCurrentProfile()
+        return KCloudSystemApiClient.userCenterApi.getCurrentUserProfile()
     }
 
     suspend fun saveCurrentProfile(
         request: UserProfileUpdateRequest,
     ): UserProfileDto {
-        return KCloudSystemApiClient.userCenterApi.saveCurrentProfile(request)
+        return KCloudSystemApiClient.userCenterApi.saveCurrentUserProfile(request)
     }
 }

@@ -117,47 +117,47 @@ private fun buildScenes(
             .thenBy { route -> route.routePath },
     )
 
-    val sceneMap = linkedMapOf<String, MutableList<KCloudRouteEntry>>()
+    val sceneMap = linkedMapOf<String, MutableList<Route>>()
     val sceneMetaById = linkedMapOf<String, KCloudSceneMeta>()
 
     orderedRoutes.forEach { route ->
         val sceneMeta = route.resolveSceneMeta()
-        val parentSegments = route.resolveMenuPath()
-        val routeEntry = KCloudRouteEntry(
-            route = route,
-            sceneId = sceneMeta.id,
-            sceneName = sceneMeta.name,
-            parentName = parentSegments.lastOrNull().orEmpty(),
-            parentSegments = parentSegments,
-            icon = resolveKCloudIcon(route.icon),
-            sort = route.order.toRouteSort(),
-        )
-
         sceneMetaById.putIfAbsent(sceneMeta.id, sceneMeta)
         sceneMap.getOrPut(sceneMeta.id) { mutableListOf() }
-            .add(routeEntry)
+            .add(route)
     }
 
     return sceneMap.mapNotNull { (sceneId, routes) ->
         val sceneMeta = sceneMetaById[sceneId] ?: return@mapNotNull null
-        val sortedRoutes = routes.sortedWith(
+        val sortedRoutes = routes.map { route ->
+            KCloudRouteEntry(
+                route = route,
+                sceneId = sceneMeta.id,
+                sceneName = sceneMeta.name,
+                parentName = route.resolveParentName(),
+                parentSegments = emptyList(),
+                icon = resolveKCloudIcon(route.icon),
+                sort = route.order.toRouteSort(),
+            )
+        }.sortedWith(
             compareBy<KCloudRouteEntry> { route -> route.sort }
                 .thenBy { route -> route.title }
                 .thenBy { route -> route.routePath },
         )
+        val finalizedRoutes = resolveRouteHierarchy(sortedRoutes)
         KCloudRouteScene(
             id = sceneMeta.id,
             name = sceneMeta.name,
             icon = resolveKCloudIcon(sceneMeta.iconName),
             sort = sceneMeta.sort,
-            routes = sortedRoutes,
+            routes = finalizedRoutes,
             menuNodes = buildSidebarNodes(
                 sceneId = sceneMeta.id,
-                routes = sortedRoutes,
+                routes = finalizedRoutes,
             ),
-            defaultRoutePath = sortedRoutes.firstOrNull { route ->
+            defaultRoutePath = finalizedRoutes.firstOrNull { route ->
                 route.route.placement.defaultInScene
-            }?.routePath ?: sortedRoutes.firstOrNull()?.routePath,
+            }?.routePath ?: finalizedRoutes.firstOrNull()?.routePath,
         )
     }.sortedWith(
         compareBy<KCloudRouteScene> { scene -> scene.sort }
@@ -165,41 +165,99 @@ private fun buildScenes(
     )
 }
 
+private fun resolveRouteHierarchy(
+    routes: List<KCloudRouteEntry>,
+): List<KCloudRouteEntry> {
+    val parentByTitle = linkedMapOf<String, String>()
+    routes.forEach { route ->
+        val title = route.title.trim()
+        val parentName = route.parentName.trim()
+        if (title.isNotBlank() && parentName.isNotBlank() && title !in parentByTitle) {
+            parentByTitle[title] = parentName
+        }
+    }
+
+    val segmentCache = mutableMapOf<String, List<String>>()
+    val visiting = linkedSetOf<String>()
+
+    fun resolveParentSegments(parentName: String): List<String> {
+        val normalizedParent = parentName.trim()
+        if (normalizedParent.isBlank()) {
+            return emptyList()
+        }
+        segmentCache[normalizedParent]?.let { cached ->
+            return cached
+        }
+
+        if (!visiting.add(normalizedParent)) {
+            return listOf(normalizedParent)
+        }
+
+        return try {
+            val explicitSegments = normalizedParent.split('/')
+                .map { segment -> segment.trim() }
+                .filter { segment -> segment.isNotEmpty() }
+            val resolvedSegments = if (explicitSegments.size > 1) {
+                explicitSegments
+            } else {
+                val upperParent = parentByTitle[normalizedParent].orEmpty()
+                val ancestorSegments = if (upperParent.isBlank() || upperParent == normalizedParent) {
+                    emptyList()
+                } else {
+                    resolveParentSegments(upperParent)
+                }
+                ancestorSegments + normalizedParent
+            }
+            segmentCache[normalizedParent] = resolvedSegments
+            resolvedSegments
+        } finally {
+            visiting.remove(normalizedParent)
+        }
+    }
+
+    return routes.map { route ->
+        route.copy(
+            parentSegments = resolveParentSegments(route.parentName),
+        )
+    }
+}
+
 private fun buildSidebarNodes(
     sceneId: String,
     routes: List<KCloudRouteEntry>,
 ): List<KCloudSidebarNode> {
     val rootNodes = mutableListOf<MutableSidebarNode>()
-    val branchIndex = linkedMapOf<String, MutableSidebarNode>()
+    val nodeIndex = linkedMapOf<String, MutableSidebarNode>()
 
     routes.forEach { route ->
         var currentChildren = rootNodes
-        val parentTrail = mutableListOf<String>()
+        val nodeTrail = mutableListOf<String>()
 
-        route.parentSegments.forEach { segment ->
-            parentTrail += segment
-            val nodeId = "group/$sceneId/${parentTrail.joinToString("/")}"
-            val branch = branchIndex.getOrPut(nodeId) {
+        fun findOrCreateNode(name: String): MutableSidebarNode {
+            nodeTrail += name
+            val nodeId = "group/$sceneId/${nodeTrail.joinToString("/")}"
+            return nodeIndex.getOrPut(nodeId) {
                 MutableSidebarNode(
                     id = nodeId,
-                    name = segment,
+                    name = name,
                     icon = route.icon,
                     sort = route.sort,
                 ).also { node ->
                     currentChildren += node
                 }
             }
-            branch.sort = minOf(branch.sort, route.sort)
-            currentChildren = branch.children
         }
 
-        currentChildren += MutableSidebarNode(
-            id = route.routePath,
-            name = route.title,
-            icon = route.icon,
-            sort = route.sort,
-            routePath = route.routePath,
-        )
+        route.parentSegments.forEach { segment ->
+            val parentNode = findOrCreateNode(segment)
+            parentNode.sort = minOf(parentNode.sort, route.sort)
+            currentChildren = parentNode.children
+        }
+
+        val routeNode = findOrCreateNode(route.title)
+        routeNode.sort = minOf(routeNode.sort, route.sort)
+        routeNode.icon = route.icon
+        routeNode.routePath = route.routePath
     }
 
     return rootNodes.toImmutableNodes()
@@ -224,9 +282,9 @@ private fun MutableList<MutableSidebarNode>.toImmutableNodes(): List<KCloudSideb
 private data class MutableSidebarNode(
     val id: String,
     val name: String,
-    val icon: ImageVector,
+    var icon: ImageVector,
     var sort: Int,
-    val routePath: String? = null,
+    var routePath: String? = null,
     val children: MutableList<MutableSidebarNode> = mutableListOf(),
 )
 
@@ -239,8 +297,8 @@ private data class KCloudSceneMeta(
 
 private fun Route.resolveSceneMeta(): KCloudSceneMeta {
     val scene = placement.scene
-    val sceneId = scene.id.trim()
-    if (sceneId.isBlank()) {
+    val sceneName = scene.name.trim()
+    if (sceneName.isBlank()) {
         return KCloudSceneMeta(
             id = UNASSIGNED_SCENE_ID,
             name = UNASSIGNED_SCENE_NAME,
@@ -249,17 +307,15 @@ private fun Route.resolveSceneMeta(): KCloudSceneMeta {
         )
     }
     return KCloudSceneMeta(
-        id = sceneId,
-        name = scene.name.trim().ifBlank { sceneId },
+        id = sceneName,
+        name = sceneName,
         iconName = scene.icon.ifBlank { "Apps" },
         sort = scene.order,
     )
 }
 
-private fun Route.resolveMenuPath(): List<String> {
-    return placement.menuPath
-        .map { segment -> segment.trim() }
-        .filter { segment -> segment.isNotEmpty() }
+private fun Route.resolveParentName(): String {
+    return value.trim()
 }
 
 internal fun resolveKCloudIcon(

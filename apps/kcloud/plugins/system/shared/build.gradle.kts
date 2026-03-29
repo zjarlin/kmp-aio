@@ -4,9 +4,16 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
 }
+val libs = versionCatalogs.named("libs")
+val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
 
 kotlin {
     sourceSets {
-        commonMain.dependencies {}
+        commonMain {
+            kotlin.srcDir(generatedApiSourceDir)
+            dependencies {
+                implementation(libs.findLibrary("site-addzero-network-starter").get())
+            }
+        }
     }
 }

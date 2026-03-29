@@ -30,7 +30,7 @@ class KCloudRouteAggregationTest {
     @Test
     fun systemSceneSidebarKeepsRequestedOrder() {
         val catalog = KCloudRouteCatalog()
-        val systemScene = catalog.findScene("system")
+        val systemScene = catalog.findScene("系统")
 
         assertNotNull(systemScene)
         assertEquals(RouteKeys.RBAC_USER_SCREEN, systemScene.defaultRoutePath)
@@ -50,7 +50,7 @@ class KCloudRouteAggregationTest {
             listOf("系统", "配置中心", "渲染目标"),
             catalog.breadcrumbNamesFor(RouteKeys.CONFIG_CENTER_TARGETS_SCREEN),
         )
-        assertEquals("system", catalog.sceneIdFor(RouteKeys.CONFIG_CENTER_TARGETS_SCREEN))
+        assertEquals("系统", catalog.sceneIdFor(RouteKeys.CONFIG_CENTER_TARGETS_SCREEN))
     }
 
     @Test
@@ -79,42 +79,88 @@ class KCloudRouteAggregationTest {
         val catalog = KCloudRouteCatalog(
             routeMeta = listOf(
                 Route(
+                    value = "Root",
                     title = "Overview",
                     routePath = "custom/overview",
                     icon = "Apps",
                     order = 10.0,
                     placement = RoutePlacement(
                         scene = RouteScene(
-                            id = "custom",
                             name = "Custom",
                             icon = "Apps",
                             order = 10,
                         ),
-                        menuPath = arrayOf("Root"),
                     ),
                 ),
                 Route(
+                    value = "Root",
                     title = "Start Here",
                     routePath = "custom/start",
                     icon = "Apps",
                     order = 99.0,
                     placement = RoutePlacement(
                         scene = RouteScene(
-                            id = "custom",
                             name = "Custom",
                             icon = "Apps",
                             order = 10,
                         ),
-                        menuPath = arrayOf("Root"),
                         defaultInScene = true,
                     ),
                 ),
             ),
         )
 
-        val customScene = catalog.findScene("custom")
+        val customScene = catalog.findScene("Custom")
 
         assertNotNull(customScene)
         assertEquals("custom/start", customScene.defaultRoutePath)
+    }
+
+    @Test
+    fun valueBuildsVirtualNodesAndInferredAncestors() {
+        val catalog = KCloudRouteCatalog(
+            routeMeta = listOf(
+                Route(
+                    value = "管理中心",
+                    title = "配置中心",
+                    routePath = "custom/config-center",
+                    icon = "Settings",
+                    order = 10.0,
+                    placement = RoutePlacement(
+                        scene = RouteScene(
+                            name = "Custom",
+                            icon = "Apps",
+                            order = 10,
+                        ),
+                    ),
+                ),
+                Route(
+                    value = "配置中心",
+                    title = "渲染目标",
+                    routePath = "custom/render-targets",
+                    icon = "Tune",
+                    order = 20.0,
+                    placement = RoutePlacement(
+                        scene = RouteScene(
+                            name = "Custom",
+                            icon = "Apps",
+                            order = 10,
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        val customScene = catalog.findScene("Custom")
+
+        assertNotNull(customScene)
+        assertEquals(listOf("管理中心"), customScene.menuNodes.map { it.name })
+        assertEquals(listOf("配置中心"), customScene.menuNodes.single().children.map { it.name })
+        assertEquals("custom/config-center", customScene.menuNodes.single().children.single().routePath)
+        assertEquals(listOf("渲染目标"), customScene.menuNodes.single().children.single().children.map { it.name })
+        assertEquals(
+            listOf("Custom", "管理中心", "配置中心", "渲染目标"),
+            catalog.breadcrumbNamesFor("custom/render-targets"),
+        )
     }
 }

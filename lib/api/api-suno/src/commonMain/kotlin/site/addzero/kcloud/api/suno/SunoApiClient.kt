@@ -2,7 +2,6 @@ package site.addzero.kcloud.api.suno
 
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.*
-import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.post
@@ -18,9 +17,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import site.addzero.core.network.AddZeroHttpClientFactory
 import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.minutes
-import io.ktor.serialization.kotlinx.json.json
 
 internal expect fun buildSunoApi(
     baseUrl: String,
@@ -35,8 +33,10 @@ https://sunoapi.org/zh-CN/api-key
 class SunoApiClient(
     private val apiToken: String = "",
     baseUrl: String = DEFAULT_BASE_URL,
+    private val httpClient: HttpClient = resolveAddZeroHttpClientFactory().get(HTTP_CLIENT_PROFILE),
 ) {
     companion object {
+        const val HTTP_CLIENT_PROFILE = "suno-api"
         const val DEFAULT_BASE_URL = "https://api.sunoapi.org/api/v1"
         const val FILE_UPLOAD_BASE_URL = "https://sunoapiorg.redpandaai.co"
         const val TOKEN_DASHBOARD_URL = "https://sunoapi.org/zh-CN/dashboard"
@@ -49,25 +49,6 @@ class SunoApiClient(
     }
 
     private val normalizedBaseUrl = baseUrl.ifBlank { DEFAULT_BASE_URL }
-    private val httpClient = HttpClient {
-        install(HttpTimeout) {
-            requestTimeoutMillis = 5.minutes.inWholeMilliseconds
-            connectTimeoutMillis = 30_000L
-            socketTimeoutMillis = 5.minutes.inWholeMilliseconds
-        }
-        install(ContentNegotiation) {
-            json(
-                Json(responseJson) {
-                    encodeDefaults = true
-                    explicitNulls = false
-                }
-            )
-        }
-        defaultRequest {
-            headers.remove(HttpHeaders.Accept)
-            headers.append(HttpHeaders.Accept, ContentType.Application.Json.toString())
-        }
-    }
 
     private fun debug(message: String) {
         println("[SunoApiClient] $message")
@@ -544,4 +525,8 @@ class SunoApiClient(
         }
         return payload
     }
+}
+
+private fun resolveAddZeroHttpClientFactory(): AddZeroHttpClientFactory {
+    return AddZeroHttpClientFactory.shared()
 }

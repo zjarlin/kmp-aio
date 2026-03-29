@@ -4,15 +4,19 @@ import io.ktor.server.config.*
 import org.koin.core.Koin
 import org.koin.dsl.koinApplication
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
+import site.addzero.kcloud.plugins.rbac.RbacRoleService
 import site.addzero.kcloud.plugins.rbac.UserProfileService
 import site.addzero.kcloud.plugins.system.aichat.AiChatService
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseService
+import site.addzero.kcloud.system.api.RbacRoleMutationRequest
 import site.addzero.kcloud.system.api.UserProfileUpdateRequest
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class KCloudSystemFeatureServiceTest {
     @Test
@@ -36,6 +40,44 @@ class KCloudSystemFeatureServiceTest {
         assertEquals("张小云", reloaded.displayName)
         assertEquals("cloud@example.com", reloaded.email)
         assertEquals("ZX", reloaded.avatarLabel)
+    }
+
+    @Test
+    fun rbacRoleServiceSupportsBootstrapAndCrud() = withServerKoin { koin ->
+        val service = koin.get<RbacRoleService>()
+
+        val initial = service.listRoles()
+        val builtInRole = initial.first { role -> role.roleCode == "SUPER_ADMIN" }
+        val created = service.createRole(
+            RbacRoleMutationRequest(
+                roleCode = "auditor",
+                name = "审计员",
+                description = "负责巡检与审计记录查看",
+                enabled = true,
+            ),
+        )
+        val updated = service.updateRole(
+            created.id,
+            RbacRoleMutationRequest(
+                roleCode = "security_auditor",
+                name = "安全审计员",
+                description = "负责审计、巡检与问题复盘",
+                enabled = false,
+            ),
+        )
+        val listed = service.listRoles()
+
+        assertTrue(initial.size >= 3)
+        assertTrue(builtInRole.builtIn)
+        assertEquals("SECURITY_AUDITOR", updated.roleCode)
+        assertEquals("安全审计员", updated.name)
+        assertFalse(updated.enabled)
+        assertTrue(listed.any { role -> role.id == created.id })
+        assertFailsWith<IllegalArgumentException> {
+            service.deleteRole(builtInRole.id)
+        }
+        assertTrue(service.deleteRole(created.id).ok)
+        assertFalse(service.listRoles().any { role -> role.id == created.id })
     }
 
     @Test
@@ -93,6 +135,7 @@ private inline fun withServerKoin(
         withConfiguration<KCloudServerStarterKoinApplication>()
         properties(
             mapOf(
+                JIMMER_APPLICATION_CONFIG_PROPERTY to config,
                 KCLOUD_APPLICATION_CONFIG_PROPERTY to config,
                 VIBEPOCKET_APPLICATION_CONFIG_PROPERTY to config,
             ),

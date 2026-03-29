@@ -12,6 +12,8 @@ import site.addzero.configcenter.runtime.ConfigCenterBootstrap
 import site.addzero.configcenter.runtime.ConfigCenterBootstrapOptions
 import site.addzero.configcenter.runtime.JvmConfigCenterGateway
 import site.addzero.configcenter.runtime.KtorConfigBridge
+import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
+import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
@@ -65,6 +67,7 @@ fun Application.module(
         }
         properties(
             mapOf(
+                JIMMER_APPLICATION_CONFIG_PROPERTY to config,
                 KCLOUD_APPLICATION_CONFIG_PROPERTY to config,
                 VIBEPOCKET_APPLICATION_CONFIG_PROPERTY to config,
             ),
@@ -127,6 +130,7 @@ fun ktorApplication(
     val config = loadEmbeddedConfig(configPath)
     val configCenterBridge = createConfigCenterBridge()
     embeddedApplicationConfigOverride = config
+    System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
 
@@ -210,6 +214,7 @@ fun startEmbeddedDesktopServer(
             )
             embeddedDesktopKoinConfigurer = null
             embeddedApplicationConfigOverride = null
+            System.clearProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
             System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
             System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
         }

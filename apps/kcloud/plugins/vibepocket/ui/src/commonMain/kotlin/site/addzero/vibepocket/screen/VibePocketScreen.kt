@@ -17,18 +17,17 @@ import site.addzero.kcloud.settings.SettingsPage
 import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 
 @Route(
+    value = "创作中心",
     title = "音乐工作台",
     routePath = "vibepocket/music-studio",
     icon = "PlayArrow",
     order = 30.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "music-creation",
             name = "音乐创作",
             icon = "PlayArrow",
             order = 200,
         ),
-        menuPath = ["创作中心"],
         defaultInScene = true,
     ),
 )
@@ -46,18 +45,17 @@ fun MusicStudioScreen() {
 }
 
 @Route(
+    value = "创作中心",
     title = "创作资产",
     routePath = "vibepocket/creative-assets",
     icon = "Dashboard",
     order = 40.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "music-creation",
             name = "音乐创作",
             icon = "PlayArrow",
             order = 200,
         ),
-        menuPath = ["创作中心"],
     ),
 )
 @Composable
@@ -74,18 +72,17 @@ fun CreativeAssetsScreen() {
 }
 
 @Route(
+    value = "系统设置",
     title = "设置",
     routePath = "vibepocket/settings",
     icon = "Settings",
     order = 90.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "music-creation",
             name = "音乐创作",
             icon = "PlayArrow",
             order = 200,
         ),
-        menuPath = ["系统设置"],
     ),
 )
 @Composable

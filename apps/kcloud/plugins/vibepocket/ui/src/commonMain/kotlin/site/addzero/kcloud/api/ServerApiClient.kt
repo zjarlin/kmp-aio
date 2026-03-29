@@ -1,9 +1,7 @@
 package site.addzero.kcloud.api
 
-import io.ktor.client.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.Json
+import io.ktor.client.HttpClient
+import site.addzero.core.network.AddZeroHttpClientFactory
 
 internal expect fun buildConfigApi(
     baseUrl: String,
@@ -39,19 +37,10 @@ internal expect fun buildSunoTaskResourceApi(
  * 统一的后端 API 客户端
  */
 object ServerApiClient {
+    private const val httpClientProfile = "kcloud-vibepocket"
     private const val defaultBaseUrl = "http://localhost:18080/"
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
-
-    private val httpClient = HttpClient {
-        expectSuccess = true
-        install(ContentNegotiation) {
-            json(json)
-        }
-    }
+    private val httpClientFactory: AddZeroHttpClientFactory
+        get() = AddZeroHttpClientFactory.shared()
 
     @Volatile
     private var baseUrl: String = defaultBaseUrl
@@ -63,22 +52,22 @@ object ServerApiClient {
     }
 
     val configApi: ConfigApi
-        get() = buildConfigApi(resolveBaseUrl(), httpClient)
+        get() = buildConfigApi(resolveBaseUrl(), httpClientFactory.get(httpClientProfile))
 
     val favoriteApi: FavoriteApi
-        get() = buildFavoriteApi(resolveBaseUrl(), httpClient)
+        get() = buildFavoriteApi(resolveBaseUrl(), httpClientFactory.get(httpClientProfile))
 
     val personaApi: PersonaApi
-        get() = buildPersonaApi(resolveBaseUrl(), httpClient)
+        get() = buildPersonaApi(resolveBaseUrl(), httpClientFactory.get(httpClientProfile))
 
     val historyApi: HistoryApi
-        get() = buildHistoryApi(resolveBaseUrl(), httpClient)
+        get() = buildHistoryApi(resolveBaseUrl(), httpClientFactory.get(httpClientProfile))
 
     val musicApi: MusicSearchApi
-        get() = buildMusicSearchApi(resolveBaseUrl(), httpClient)
+        get() = buildMusicSearchApi(resolveBaseUrl(), httpClientFactory.get(httpClientProfile))
 
     val sunoTaskResourceApi: SunoTaskResourceApi
-        get() = buildSunoTaskResourceApi(resolveBaseUrl(), httpClient)
+        get() = buildSunoTaskResourceApi(resolveBaseUrl(), httpClientFactory.get(httpClientProfile))
 
     suspend fun getConfig(key: String): String? {
         return try {

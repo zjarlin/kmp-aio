@@ -17,6 +17,7 @@ import site.addzero.kcloud.music.matchesKeyword
 import site.addzero.kcloud.music.reconcileTaskResourcesWithSuno
 import site.addzero.kcloud.music.refreshSunoTaskSnapshotById
 import site.addzero.kcloud.music.replaceTaskResource
+import site.addzero.kcloud.music.toTaskResourceItem
 
 @Factory
 class CreativeAssetsViewModel {
@@ -92,6 +93,7 @@ class CreativeAssetsViewModel {
             errorMessage = null
             try {
                 val loaded = ServerApiClient.sunoTaskResourceApi.list()
+                    .map { response -> response.toTaskResourceItem() }
                 val runtimeConfig = runCatching { SunoWorkflowService.loadConfig() }
                     .getOrDefault(SunoRuntimeConfig())
                 items = if (runtimeConfig.hasToken) {

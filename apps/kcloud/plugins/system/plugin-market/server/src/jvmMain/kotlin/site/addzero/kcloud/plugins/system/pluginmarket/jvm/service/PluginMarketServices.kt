@@ -105,7 +105,9 @@ class PluginPackageServiceImpl(
             createdAt = existing.createdAt
             updatedAt = support.now()
         }
-        return support.sqlClient.save(entity).modifiedEntity.toDto()
+        val saved = support.sqlClient.save(entity).modifiedEntity
+        support.syncEnabledMarker(saved)
+        return saved.toDto()
     }
 
     override suspend fun deleteCheck(id: String): PluginDeleteCheckResultDto {
@@ -121,8 +123,11 @@ class PluginPackageServiceImpl(
     }
 
     override suspend fun delete(id: String) {
-        support.packageOrThrow(id)
+        val pluginPackage = support.packageOrThrow(id)
         support.inTransaction {
+            if (pluginPackage.managedByDb) {
+                support.uninstallManagedModule(pluginPackage)
+            }
             support.deletePackageCascade(id)
         }
     }
@@ -310,7 +315,6 @@ class PluginPresetServiceImpl(
                     order = 50.0,
                     placement = RoutePlacement(
                         scene = RouteScene(
-                            id = "${pluginPackage.pluginId}",
                             name = "${pluginPackage.name}",
                             icon = "Apps",
                             order = 500,
@@ -644,6 +648,7 @@ class PluginDeploymentServiceImpl(
             targetFile.parent?.createDirectories()
             targetFile.writeText(file.content)
         }
+        support.syncEnabledMarker(pluginPackage)
         val integration = support.renderManagedBlocks(
             support.listPackages().filter { it.enabled },
         )

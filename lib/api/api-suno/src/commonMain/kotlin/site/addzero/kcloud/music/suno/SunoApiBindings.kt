@@ -1,10 +1,28 @@
 package site.addzero.kcloud.music.suno
 
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
 import org.koin.core.annotation.Factory
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Property
+import org.koin.core.annotation.Single
+import site.addzero.core.network.AddZeroHttpClientProfileSpi
+import site.addzero.core.network.AddZeroHttpClientRequestContribution
 import site.addzero.kcloud.api.suno.SunoApiClient
+
+@Single
+class SunoHttpClientProfileSpi : AddZeroHttpClientProfileSpi {
+    override val profile: String = SunoApiClient.HTTP_CLIENT_PROFILE
+
+    override fun requestContribution(): AddZeroHttpClientRequestContribution {
+        return AddZeroHttpClientRequestContribution(
+            headers = mapOf(
+                HttpHeaders.Accept to ContentType.Application.Json.toString(),
+            ),
+        )
+    }
+}
 
 @Module
 @Configuration("vibepocket")

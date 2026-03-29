@@ -23,18 +23,17 @@ import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.client.McuWidgetInstanceState
 
 @Route(
+    value = "开发工具",
     title = "在线开发",
     routePath = "mcu/online-dev",
     icon = "Build",
     order = 15.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "device",
             name = "设备",
             icon = "Build",
             order = 0,
         ),
-        menuPath = ["开发工具"],
     ),
 )
 @Composable
@@ -532,6 +531,8 @@ private fun McuWidgetBindingField(
             binding.fieldKind == McuWidgetFieldKind.NUMBER &&
             binding.min != null &&
             binding.max != null -> {
+            val minValue = binding.min!!.toFloat()
+            val maxValue = binding.max!!.toFloat()
             val sliderValue = value.toFloatOrNull() ?: binding.defaultValue.toFloatOrNull() ?: 0f
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -547,7 +548,7 @@ private fun McuWidgetBindingField(
                     onValueChange = { nextValue ->
                         onValueChange(nextValue.toInt().toString())
                     },
-                    valueRange = binding.min.toFloat()..binding.max.toFloat(),
+                    valueRange = minValue..maxValue,
                 )
             }
         }

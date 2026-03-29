@@ -33,6 +33,4 @@ class PostgresDriver : DatabaseDriverSpi {
         }
 
     override fun dialect(): Dialect = PostgresDialect()
-
-    override fun schemaFile(): String = "schema-postgres.sql"
 }

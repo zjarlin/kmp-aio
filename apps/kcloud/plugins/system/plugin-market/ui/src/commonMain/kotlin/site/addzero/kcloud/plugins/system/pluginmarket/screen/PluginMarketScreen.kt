@@ -17,6 +17,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.mp.KoinPlatform
+import site.addzero.annotation.Route
+import site.addzero.annotation.RoutePlacement
+import site.addzero.annotation.RouteScene
 import site.addzero.component.button.AddButton
 import site.addzero.component.button.AddIconButton
 import site.addzero.component.search_bar.AddSearchBar
@@ -28,6 +31,20 @@ import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeploymentSta
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDiscoveryItemDto
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPresetKind
 
+@Route(
+    value = "插件市场",
+    title = "插件源码市场",
+    routePath = "system/plugin-market/packages",
+    icon = "Apps",
+    order = 15.0,
+    placement = RoutePlacement(
+        scene = RouteScene(
+            name = "系统",
+            icon = "AdminPanelSettings",
+            order = 100,
+        ),
+    ),
+)
 @Composable
 fun PluginMarketPackagesScreen() {
     val state = rememberPluginMarketWorkbenchState()

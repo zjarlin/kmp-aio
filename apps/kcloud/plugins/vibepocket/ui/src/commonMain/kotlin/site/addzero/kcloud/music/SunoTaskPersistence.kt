@@ -5,6 +5,9 @@ import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoTrack
 import site.addzero.kcloud.model.*
+import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse as ApiSunoTaskResourceResponse
+import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest as ApiSunoTaskResourceSaveRequest
+import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceTrackResponse as ApiSunoTaskResourceTrackResponse
 
 private val sunoTaskPersistenceJson = Json {
     encodeDefaults = true
@@ -31,7 +34,7 @@ internal suspend fun saveSunoTaskArchive(
             requestJson = requestJson,
             detail = detail,
         ),
-    )
+    ).toTaskResourceItem()
 }
 
 internal suspend fun persistSunoHistoryIfSuccess(detail: SunoTaskDetail?) {
@@ -88,15 +91,40 @@ internal fun buildSunoTaskResourceSaveRequest(
     fallbackType: String,
     requestJson: String?,
     detail: SunoTaskDetail?,
-): SunoTaskResourceSaveRequest {
-    return SunoTaskResourceSaveRequest(
+): ApiSunoTaskResourceSaveRequest {
+    return ApiSunoTaskResourceSaveRequest(
         taskId = taskId,
         type = detail?.type?.takeIf { it.isNotBlank() } ?: fallbackType,
         status = detail?.status?.takeIf { it.isNotBlank() } ?: "PENDING",
         requestJson = requestJson?.takeIf { it.isNotBlank() },
-        tracks = detail?.response?.sunoData.orEmpty().map(SunoTrack::toTaskResourceTrack),
+        tracks = detail?.response?.sunoData.orEmpty().map(SunoTrack::toTaskResourceTrackResponse),
         detailJson = detail?.let { sunoTaskPersistenceJson.encodeToString(it) },
         errorMessage = detail?.errorMessage ?: detail?.errorCode,
+    )
+}
+
+internal fun ApiSunoTaskResourceResponse.toTaskResourceItem(): SunoTaskResourceItem {
+    return SunoTaskResourceItem(
+        id = id,
+        taskId = taskId,
+        type = type,
+        status = status,
+        requestJson = requestJson,
+        tracks = tracks.map { track ->
+            SunoTaskResourceTrack(
+                id = track.id,
+                audioUrl = track.audioUrl,
+                streamAudioUrl = track.streamAudioUrl,
+                title = track.title,
+                tags = track.tags,
+                imageUrl = track.imageUrl,
+                duration = track.duration,
+            )
+        },
+        detailJson = detailJson,
+        errorMessage = errorMessage,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
     )
 }
 
@@ -124,8 +152,8 @@ private fun SunoTrack.toHistoryTrack(): MusicHistoryTrack {
     )
 }
 
-private fun SunoTrack.toTaskResourceTrack(): SunoTaskResourceTrack {
-    return SunoTaskResourceTrack(
+private fun SunoTrack.toTaskResourceTrackResponse(): ApiSunoTaskResourceTrackResponse {
+    return ApiSunoTaskResourceTrackResponse(
         id = id,
         audioUrl = audioUrl,
         streamAudioUrl = streamAudioUrl,

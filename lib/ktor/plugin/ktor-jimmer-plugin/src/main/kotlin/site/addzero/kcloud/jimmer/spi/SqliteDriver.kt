@@ -17,6 +17,4 @@ class SqliteDriver : DatabaseDriverSpi {
         SQLiteDataSource().apply { url = props.url }
 
     override fun dialect(): Dialect = SQLiteDialect()
-
-    override fun schemaFile(): String = "schema-sqlite.sql"
 }

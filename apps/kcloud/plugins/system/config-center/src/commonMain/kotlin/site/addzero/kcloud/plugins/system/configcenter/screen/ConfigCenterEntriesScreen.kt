@@ -18,18 +18,17 @@ import site.addzero.configcenter.spec.ConfigStorageMode
 import site.addzero.configcenter.spec.ConfigValueType
 
 @Route(
+    value = "配置中心",
     title = "配置项",
     routePath = "system/config-center/entries",
     icon = "Settings",
     order = 80.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            id = "system",
             name = "系统",
             icon = "AdminPanelSettings",
             order = 100,
         ),
-        menuPath = ["配置中心"],
     ),
 )
 @Composable
