@@ -21,6 +21,7 @@ import site.addzero.kcloud.plugins.system.rbac.UserCenterWorkbenchState
     routePath = "system/user-center/profile",
     icon = "Person",
     order = 10.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

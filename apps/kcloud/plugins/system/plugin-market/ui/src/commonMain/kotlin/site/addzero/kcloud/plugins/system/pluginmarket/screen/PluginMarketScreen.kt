@@ -40,6 +40,7 @@ import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPresetKind
     routePath = "system/plugin-market/packages",
     icon = "Apps",
     order = 15.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

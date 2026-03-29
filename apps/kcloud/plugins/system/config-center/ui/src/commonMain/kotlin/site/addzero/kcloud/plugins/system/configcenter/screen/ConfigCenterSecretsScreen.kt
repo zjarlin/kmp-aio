@@ -20,6 +20,7 @@ import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueType
     routePath = "system/config-center/secrets",
     icon = "Key",
     order = 81.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

@@ -19,6 +19,7 @@ import site.addzero.annotation.RouteScene
     routePath = "system/config-center/access",
     icon = "Shield",
     order = 82.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

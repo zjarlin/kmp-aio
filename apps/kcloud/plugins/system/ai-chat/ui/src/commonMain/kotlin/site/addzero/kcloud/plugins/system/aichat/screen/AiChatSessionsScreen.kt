@@ -22,6 +22,7 @@ import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
     routePath = "system/ai-chat/sessions",
     icon = "SmartToy",
     order = 30.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

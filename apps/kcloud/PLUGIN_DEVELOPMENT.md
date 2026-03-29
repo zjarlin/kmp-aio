@@ -63,6 +63,7 @@ apps/kcloud/plugins/
 - 入口函数名必须以 `Screen` 结尾
 - 页面入口必须放在插件自己的 `screen` 包下
 - 每个页面入口都必须声明 `@Route(...)`
+- 如果页面当前不该进入壳层导航，直接在 `@Route` 上设 `enabled = false`
 
 示例：
 
@@ -78,6 +79,7 @@ import site.addzero.annotation.Route
     routePath = "examples/plugin-overview",
     icon = "Extension",
     order = 10.0,
+    enabled = true,
 )
 @Composable
 fun PluginOverviewScreen() {
@@ -152,6 +154,17 @@ dependencies {
 ```
 
 `routeModuleKey` 必须保持稳定。它是生成路由归属关系的一部分契约。
+
+当页面只需要“保留代码但先不上线”时，不要去碰自动 include 逻辑，也不要手工维护菜单树，直接把对应页面改成：
+
+```kotlin
+@Route(
+    ...,
+    enabled = false,
+)
+```
+
+这样页面会继续参与源码编译，但不会进入 `RouteKeys`、`RouteTable`、顶部场景切换和左侧导航。
 
 ### 4. 可选：Ktorfit API 聚合
 

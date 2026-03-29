@@ -22,6 +22,7 @@ import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseWorkbenchSt
     routePath = "system/knowledge-base/spaces",
     icon = "MenuBook",
     order = 40.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

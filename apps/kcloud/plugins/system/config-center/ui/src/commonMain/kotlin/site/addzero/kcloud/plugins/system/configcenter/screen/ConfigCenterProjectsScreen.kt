@@ -20,6 +20,7 @@ import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterConfigTyp
     routePath = "system/config-center/projects",
     icon = "Hub",
     order = 80.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",

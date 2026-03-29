@@ -22,6 +22,7 @@ import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
     routePath = "vibepocket/music-studio",
     icon = "PlayArrow",
     order = 30.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "音乐创作",
@@ -50,6 +51,7 @@ fun MusicStudioScreen() {
     routePath = "vibepocket/creative-assets",
     icon = "Dashboard",
     order = 40.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "音乐创作",
@@ -77,6 +79,7 @@ fun CreativeAssetsScreen() {
     routePath = "vibepocket/settings",
     icon = "Settings",
     order = 90.0,
+    enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "音乐创作",
