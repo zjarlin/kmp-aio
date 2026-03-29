@@ -4,8 +4,10 @@ import org.koin.core.annotation.Single
 import site.addzero.kbox.core.model.KboxInstallerArchiveRecord
 import site.addzero.kbox.core.model.KboxInstallerCandidate
 import site.addzero.kbox.core.model.KboxInstallerCollectResult
+import site.addzero.kbox.core.model.KboxInstallerDeleteResult
 import site.addzero.kbox.core.model.KboxSettings
 import site.addzero.kbox.core.support.KboxDefaults
+import site.addzero.kbox.core.support.deleteEmptyParentDirectories
 import site.addzero.kbox.core.support.moveFileReplacing
 import site.addzero.kbox.core.support.walkRegularFiles
 import java.io.File
@@ -67,6 +69,10 @@ class KboxInstallerService(
                 return@forEach
             }
             moveFileReplacing(sourceFile, destinationFile)
+            deleteEmptyParentDirectories(
+                startDirectory = sourceFile.parentFile,
+                stopDirectories = emptySet(),
+            )
             archived += KboxInstallerArchiveRecord(
                 sourcePath = candidate.sourcePath,
                 destinationPath = destinationFile.absolutePath,
@@ -80,6 +86,33 @@ class KboxInstallerService(
         historyStore.appendInstallerHistory(archived)
         return KboxInstallerCollectResult(
             archived = archived,
+            skipped = skipped,
+        )
+    }
+
+    fun deleteFiles(
+        sourcePaths: List<String>,
+    ): KboxInstallerDeleteResult {
+        val deleted = mutableListOf<String>()
+        val skipped = mutableListOf<String>()
+        sourcePaths.distinct().forEach { sourcePath ->
+            val file = File(sourcePath)
+            if (!file.isFile) {
+                skipped += "文件不存在：$sourcePath"
+                return@forEach
+            }
+            if (!file.delete()) {
+                skipped += "删除失败：$sourcePath"
+                return@forEach
+            }
+            deleteEmptyParentDirectories(
+                startDirectory = file.parentFile,
+                stopDirectories = emptySet(),
+            )
+            deleted += sourcePath
+        }
+        return KboxInstallerDeleteResult(
+            deleted = deleted,
             skipped = skipped,
         )
     }

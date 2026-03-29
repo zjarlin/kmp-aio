@@ -98,3 +98,23 @@ internal fun normalizeSegments(
     return normalized.split('/')
         .filter { it.isNotBlank() }
 }
+
+internal fun deleteEmptyParentDirectories(
+    startDirectory: File?,
+    stopDirectories: Set<String>,
+) {
+    var current = startDirectory?.absoluteFile
+    while (current != null && current.exists()) {
+        if (stopDirectories.contains(current.absolutePath)) {
+            break
+        }
+        val children = current.listFiles().orEmpty()
+        if (children.isNotEmpty()) {
+            break
+        }
+        if (!current.delete()) {
+            break
+        }
+        current = current.parentFile?.absoluteFile
+    }
+}

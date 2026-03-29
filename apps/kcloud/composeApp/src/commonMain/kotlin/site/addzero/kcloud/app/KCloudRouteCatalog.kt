@@ -1,11 +1,9 @@
 package site.addzero.kcloud.app
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Help
-import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import org.koin.core.annotation.Single
 import site.addzero.annotation.Route
+import site.addzero.compose.icons.IconMap
 import site.addzero.generated.RouteKeys
 import kotlin.math.roundToInt
 
@@ -319,28 +317,16 @@ private fun Route.resolveParentName(): String {
 internal fun resolveKCloudIcon(
     iconName: String?,
 ): ImageVector {
-    return when (iconName) {
-        "AdminPanelSettings" -> Icons.Rounded.AdminPanelSettings
-        "BugReport" -> Icons.Rounded.BugReport
-        "Build" -> Icons.Rounded.Build
-        "Dashboard" -> Icons.Rounded.Dashboard
-        "Download" -> Icons.Rounded.Download
-        "Help" -> Icons.AutoMirrored.Rounded.Help
-        "Info" -> Icons.Rounded.Info
-        "MenuBook" -> Icons.Rounded.MenuBook
-        "Person" -> Icons.Rounded.Person
-        "PlayArrow" -> Icons.Rounded.PlayArrow
-        "PowerSettingsNew" -> Icons.Rounded.PowerSettingsNew
-        "Refresh" -> Icons.Rounded.Refresh
-        "Search" -> Icons.Rounded.Search
-        "Settings" -> Icons.Rounded.Settings
-        "SmartToy" -> Icons.Rounded.SmartToy
-        "Stop" -> Icons.Rounded.Stop
-        "Sync" -> Icons.Rounded.Sync
-        "Tune" -> Icons.Rounded.Tune
-        "Upload" -> Icons.Rounded.Upload
-        else -> Icons.Rounded.Apps
-    }
+    val normalizedIconName = iconName?.trim()
+        .takeUnless { it.isNullOrEmpty() }
+        ?: DEFAULT_KCLOUD_ICON_NAME
+    return KCLOUD_ICON_TYPE_PRIORITY.firstNotNullOfOrNull { iconType ->
+        IconMap.allIcons.firstOrNull { icon ->
+            icon.iconKey == normalizedIconName && icon.iconType == iconType
+        }?.vector
+    } ?: IconMap.allIcons.firstOrNull { icon ->
+        icon.iconKey == DEFAULT_KCLOUD_ICON_NAME && icon.iconType == DEFAULT_KCLOUD_ICON_TYPE
+    }?.vector ?: error("compose-icon-map 缺少默认图标 $DEFAULT_KCLOUD_ICON_NAME")
 }
 
 private fun Double.toRouteSort(): Int {
@@ -349,3 +335,11 @@ private fun Double.toRouteSort(): Int {
 
 private const val UNASSIGNED_SCENE_ID = "unassigned"
 private const val UNASSIGNED_SCENE_NAME = "未分配场景"
+private const val DEFAULT_KCLOUD_ICON_NAME = "Apps"
+private const val DEFAULT_KCLOUD_ICON_TYPE = "Filled"
+private val KCLOUD_ICON_TYPE_PRIORITY = listOf(
+    "Filled",
+    "AutoMirroredFilled",
+    "Outlined",
+    "AutoMirroredOutlined",
+)

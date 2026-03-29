@@ -11,6 +11,7 @@ import site.addzero.kbox.core.support.KboxDefaults
 import java.util.Locale
 
 data class KboxSettingsDraft(
+    val localAppDataOverride: String = "",
     val installerScanRootsText: String = "",
     val largeFileScanRootsText: String = "",
     val largeFileThresholdGbText: String = "1.00",
@@ -34,6 +35,7 @@ data class KboxSettingsDraft(
 fun KboxSettings.toDraft(): KboxSettingsDraft {
     val normalized = KboxDefaults.normalize(this)
     return KboxSettingsDraft(
+        localAppDataOverride = normalized.localAppDataOverride,
         installerScanRootsText = normalized.installerScanRoots.joinToString("\n"),
         largeFileScanRootsText = normalized.largeFileScanRoots.joinToString("\n"),
         largeFileThresholdGbText = String.format(
@@ -62,6 +64,7 @@ fun KboxSettings.toDraft(): KboxSettingsDraft {
 fun KboxSettingsDraft.toSettings(): KboxSettings {
     val defaults = KboxDefaults.defaultSettings()
     return KboxSettings(
+        localAppDataOverride = localAppDataOverride.trim(),
         installerScanRoots = installerScanRootsText.toPathLines().ifEmpty { defaults.installerScanRoots },
         largeFileScanRoots = largeFileScanRootsText.toPathLines().ifEmpty { defaults.largeFileScanRoots },
         installerRules = defaults.installerRules,
@@ -98,7 +101,7 @@ private fun KboxSettingsDraft.parseThresholdBytes(): Long {
 
 private fun String.toPathLines(): List<String> {
     return lineSequence()
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
+        .map { line -> line.trim() }
+        .filter { line -> line.isNotEmpty() }
         .toList()
 }

@@ -26,6 +26,7 @@ kotlin {
         implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
         implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
         implementation(libs.findLibrary("site-addzero-network-starter").get())
+        implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
 
