@@ -16,7 +16,8 @@ interface HistoryApi {
  * 路径: /api/suno/history
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.HistoryResponse>
  */
-    @GET("/api/suno/history")    suspend fun getHistory(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.HistoryResponse>
+    @GET("/api/suno/history")
+    suspend fun getHistory(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.HistoryResponse>
 
 /**
  * saveHistory
@@ -26,7 +27,9 @@ interface HistoryApi {
  *   - request: site.addzero.kcloud.vibepocket.routes.HistorySaveRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.vibepocket.routes.HistoryResponse
  */
-    @POST("/api/suno/history")    suspend fun saveHistory(
+    @POST("/api/suno/history")
+    @Headers("Content-Type: application/json")
+    suspend fun saveHistory(
         @Body request: site.addzero.kcloud.vibepocket.routes.HistorySaveRequest
     ): site.addzero.kcloud.vibepocket.routes.HistoryResponse
 

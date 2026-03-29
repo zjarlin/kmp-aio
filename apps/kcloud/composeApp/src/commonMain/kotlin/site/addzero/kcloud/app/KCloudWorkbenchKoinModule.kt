@@ -2,19 +2,22 @@ package site.addzero.kcloud.app
 
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.app.render.KCloudContentRenderer
-import site.addzero.kcloud.app.render.KCloudHeaderRenderer
-import site.addzero.kcloud.app.render.KCloudSidebarRenderer
+import site.addzero.core.network.HttpClientFactory
+import site.addzero.kcloud.app.render.KCloudContentRender
+import site.addzero.kcloud.app.render.KCloudHeaderRender
+import site.addzero.kcloud.app.render.SidebarRenderImpl
 import site.addzero.kcloud.feature.ShellSettingsService
-import site.addzero.workbenchshell.spi.content.WorkbenchContentRenderer
-import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
-import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
+import site.addzero.workbenchshell.spi.content.ContentRender
+import site.addzero.workbenchshell.spi.header.HeaderRender
+import site.addzero.workbenchshell.spi.sidebar.SidebarRenderer
 
 @Module
 class KCloudWorkbenchKoinModule {
     @Single
-    fun provideRouteCatalog(): KCloudRouteCatalog {
-        return KCloudRouteCatalog()
+    // Compose root explicitly owns this boundary bean because the external default module
+    // is not reliably aggregated into the desktop Koin application in the current setup.
+    fun provideHttpClientFactory(): HttpClientFactory {
+        return HttpClientFactory()
     }
 
     @Single
@@ -23,20 +26,23 @@ class KCloudWorkbenchKoinModule {
     }
 
     @Single
+    fun provideRouteCatalog(): KCloudRouteCatalog {
+        return KCloudRouteCatalog()
+    }
+
+    @Single
     fun provideShellState(
         routeCatalog: KCloudRouteCatalog,
     ): KCloudShellState {
-        return KCloudShellState(
-            routeCatalog = routeCatalog,
-        )
+        return KCloudShellState(routeCatalog)
     }
 
     @Single
     fun provideSidebarRenderer(
         routeCatalog: KCloudRouteCatalog,
         shellState: KCloudShellState,
-    ): WorkbenchSidebarRenderer {
-        return KCloudSidebarRenderer(
+    ): SidebarRenderer {
+        return SidebarRenderImpl(
             routeCatalog = routeCatalog,
             shellState = shellState,
         )
@@ -46,8 +52,8 @@ class KCloudWorkbenchKoinModule {
     fun provideHeaderRenderer(
         routeCatalog: KCloudRouteCatalog,
         shellState: KCloudShellState,
-    ): WorkbenchHeaderRenderer {
-        return KCloudHeaderRenderer(
+    ): HeaderRender {
+        return KCloudHeaderRender(
             routeCatalog = routeCatalog,
             shellState = shellState,
         )
@@ -57,8 +63,8 @@ class KCloudWorkbenchKoinModule {
     fun provideContentRenderer(
         routeCatalog: KCloudRouteCatalog,
         shellState: KCloudShellState,
-    ): WorkbenchContentRenderer {
-        return KCloudContentRenderer(
+    ): ContentRender {
+        return KCloudContentRender(
             routeCatalog = routeCatalog,
             shellState = shellState,
         )

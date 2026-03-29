@@ -5,63 +5,48 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
 import site.addzero.appsidebar.AppSidebarScaffoldShell
-import site.addzero.workbenchshell.*
 
 @Single
 class SidebarShowcaseState(
-    private val screenTree: ScreenTree,
-    private val sceneSlots: List<SidebarShowcaseSlot>,
+    private val catalog: SidebarShowcaseCatalog,
 ) {
-    val scenes: List<ScreenNode> = screenTree.roots
-        .filter { node -> node.children.isNotEmpty() }
-
-    private val sceneById: Map<String, ScreenNode> = scenes.associateBy { scene -> scene.id }
-    private val slotBySceneId: Map<String, SidebarShowcaseSlot> = sceneSlots.associateBy { slot ->
-        slot.config.sceneId
-    }
+    val scenes: List<SidebarShowcaseSceneDefinition> = catalog.scenes
 
     init {
         require(scenes.isNotEmpty()) {
-            "liquiddemo 至少需要一个场景 Screen。"
+            "liquiddemo 至少需要一个场景定义。"
         }
     }
 
-    var selectedSceneId by mutableStateOf(scenes.first().id)
+    var selectedSceneId by mutableStateOf(catalog.defaultSceneId)
         private set
 
-    var selectedScreenId by mutableStateOf(initialLeafIdFor(scenes.first().id))
+    var selectedLeafId by mutableStateOf(initialLeafIdFor(catalog.defaultSceneId))
         private set
 
     var detailVisible by mutableStateOf(true)
         private set
 
-    var isDarkTheme by mutableStateOf(sceneSlots.firstOrNull()?.config?.isDarkTheme ?: true)
+    var isDarkTheme by mutableStateOf(scenes.firstOrNull()?.config?.isDarkTheme ?: true)
         private set
 
     var isChinese by mutableStateOf(true)
         private set
 
-    val activeSceneNode: ScreenNode
-        get() = sceneById[selectedSceneId] ?: scenes.first()
-
-    val activeSlot: SidebarShowcaseSlot
-        get() = slotBySceneId[selectedSceneId]
-            ?: DefaultSidebarShowcaseSlot(
-                sceneId = activeSceneNode.id,
-                sceneName = activeSceneNode.name,
-            )
+    val activeScene: SidebarShowcaseSceneDefinition
+        get() = catalog.findScene(selectedSceneId) ?: scenes.first()
 
     val currentShell: AppSidebarScaffoldShell
-        get() = activeSlot.config.shell
+        get() = activeScene.config.shell
 
-    val sceneChildren: List<ScreenNode>
-        get() = activeSceneNode.children
+    val sceneLeaves: List<SidebarShowcaseLeaf>
+        get() = activeScene.leaves
 
-    val activeLeafNode: ScreenNode
+    val activeLeafNode: SidebarShowcaseLeaf
         get() = resolveActiveLeafNode()
 
     val breadcrumb: List<String>
-        get() = screenTree.breadcrumbNamesFor(activeLeafNode.id)
+        get() = catalog.breadcrumbNamesFor(activeLeafNode.id)
 
     val languageToggleLabel: String
         get() = if (isChinese) "中文" else "EN"
@@ -70,15 +55,16 @@ class SidebarShowcaseState(
         get() = "github.com/addzero"
 
     fun selectScene(sceneId: String) {
-        val scene = sceneById[sceneId] ?: return
+        val scene = catalog.findScene(sceneId) ?: return
         selectedSceneId = scene.id
-        selectedScreenId = initialLeafIdFor(scene.id)
+        selectedLeafId = initialLeafIdFor(scene.id)
     }
 
-    fun selectScreen(screenId: String) {
-        val leaf = screenTree.findLeaf(screenId) ?: return
-        selectedScreenId = leaf.id
-        selectedSceneId = leaf.ancestorIds.firstOrNull() ?: leaf.id
+    fun selectLeaf(leafId: String) {
+        val leaf = catalog.findLeaf(leafId) ?: return
+        val scene = catalog.findSceneForLeaf(leaf.id) ?: return
+        selectedLeafId = leaf.id
+        selectedSceneId = scene.id
     }
 
     fun toggleDetailVisibility() {
@@ -101,33 +87,29 @@ class SidebarShowcaseState(
     }
 
     fun openNotifications() {
-        println("notifications=${activeSlot.config.notificationCount}")
+        println("notifications=${activeScene.config.notificationCount}")
     }
 
     fun openUserProfile() {
-        println("user=${activeSlot.config.userLabel}")
+        println("user=${activeScene.config.userLabel}")
     }
 
     private fun initialLeafIdFor(sceneId: String): String {
-        val preferredLeafId = slotBySceneId[sceneId]?.config?.initialLeafId
-        val preferredLeaf = preferredLeafId?.let(screenTree::findLeaf)
-        if (preferredLeaf != null && preferredLeaf.belongsToScene(sceneId)) {
-            return preferredLeaf.id
+        val scene = catalog.findScene(sceneId) ?: return catalog.defaultLeafId
+        val preferredLeafId = scene.config.initialLeafId
+        if (preferredLeafId.isNotBlank() && scene.leaves.any { leaf -> leaf.id == preferredLeafId }) {
+            return preferredLeafId
         }
-        return screenTree.visibleLeafNodesUnder(sceneId).firstOrNull()?.id
-            ?: screenTree.defaultLeafId
+        return scene.leaves.firstOrNull()?.id ?: catalog.defaultLeafId
     }
 
-    private fun resolveActiveLeafNode(): ScreenNode {
-        val selectedLeaf = screenTree.findLeaf(selectedScreenId)
-        if (selectedLeaf != null && selectedLeaf.belongsToScene(selectedSceneId)) {
+    private fun resolveActiveLeafNode(): SidebarShowcaseLeaf {
+        val selectedLeaf = catalog.findLeaf(selectedLeafId)
+        val selectedScene = selectedLeaf?.let { leaf -> catalog.findSceneForLeaf(leaf.id) }
+        if (selectedLeaf != null && selectedScene?.id == selectedSceneId) {
             return selectedLeaf
         }
-        return screenTree.findLeaf(initialLeafIdFor(selectedSceneId))
-            ?: screenTree.visibleLeafNodes.first()
-    }
-
-    private fun ScreenNode.belongsToScene(sceneId: String): Boolean {
-        return ancestorIds.firstOrNull() == sceneId || id == sceneId
+        return catalog.findLeaf(initialLeafIdFor(selectedSceneId))
+            ?: activeScene.leaves.first()
     }
 }

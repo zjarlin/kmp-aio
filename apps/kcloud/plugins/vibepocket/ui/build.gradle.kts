@@ -44,7 +44,6 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":apps:kcloud:plugins:vibepocket"))
             implementation(project(":lib:compose:media-playlist-player"))
-            implementation(project(":lib:compose:workbench-shell"))
             implementation(project(":lib:api:api-music-spi"))
             implementation(project(":lib:api:api-suno"))
             implementation(project(":lib:api:api-netease"))

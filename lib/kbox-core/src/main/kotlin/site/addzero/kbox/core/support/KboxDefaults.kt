@@ -28,6 +28,7 @@ object KboxDefaults {
     fun normalize(settings: KboxSettings): KboxSettings {
         val defaults = defaultSettings()
         return settings.copy(
+            localAppDataOverride = settings.localAppDataOverride.trim(),
             installerScanRoots = settings.installerScanRoots
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }

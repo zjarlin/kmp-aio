@@ -68,7 +68,7 @@ i18n {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:compose:workbench-shell"))
+            implementation(project(":lib:compose:scaffold-spi"))
         }
     }
 }

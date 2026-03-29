@@ -153,6 +153,41 @@ dependencies {
 
 Keep `routeModuleKey` stable. It is part of the generated route ownership contract.
 
+### 4. Optional: Ktorfit API Aggregation
+
+If the plugin defines multiple Ktorfit service interfaces and you want one generated aggregation entry instead of manually assembling factories one by one, you can combine:
+
+- `site.addzero.buildlogic.kmp.kmp-ktorfit`
+- `site.addzero.ksp.apiprovider`
+
+The Gradle plugin entry is defined in:
+
+- `/Users/zjarlin/IdeaProjects/addzero-lib-jvm/lib/ksp/metadata/apiprovider-gradle-plugin/build.gradle.kts`
+
+Its purpose is straightforward:
+
+- scan Ktorfit HTTP service interfaces
+- run the `apiprovider-processor`
+- generate a shared aggregation class `site.addzero.generated.api.ApiProvider`
+
+Current generator behavior:
+
+- generated package: `site.addzero.generated.api`
+- generated object name: `ApiProvider`
+- each detected Ktorfit interface becomes one property on `ApiProvider`
+- the property is created through the corresponding generated `ktorfit.createXxxApi()` entry
+
+Typical plugin wiring:
+
+```kotlin
+plugins {
+    id("site.addzero.buildlogic.kmp.kmp-ktorfit")
+    id("site.addzero.ksp.apiprovider")
+}
+```
+
+Use this only when the plugin truly has a cluster of related Ktorfit APIs that benefit from one aggregation surface. If there is only one or two APIs, do not introduce another generated layer without need.
+
 ## Server Plugin Contract
 
 Server aggregation is optional. Only add it when the plugin has backend APIs, storage, or local service behavior.

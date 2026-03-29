@@ -1,4 +1,12 @@
+import site.addzero.gradle.GitDependencysExtension
+
 pluginManagement {
+    val localBuildLogicDir = file("checkouts/build-logic")
+    if (localBuildLogicDir.resolve("src/main/kotlin").isDirectory) {
+        includeBuild(localBuildLogicDir) {
+            name = "build-logic"
+        }
+    }
     val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
     if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
         includeBuild(localAddzeroLibJvmDir) {
@@ -8,6 +16,7 @@ pluginManagement {
 }
 
 val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir.resolve("checkouts/build-logic/gradle/libs.versions.toml")
 
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -20,12 +29,25 @@ plugins {
 }
 
 if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+    extensions.configure<GitDependencysExtension>("implementationRemoteGit") {
+        enableZlibs.set(false)
+    }
+}
+
+if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     includeBuild(localAddzeroLibJvmDir) {
         name = "addzero-lib-jvm"
     }
 }
 
 dependencyResolutionManagement {
+    if (localAddzeroBuildLogicCatalogFile.isFile) {
+        versionCatalogs {
+            create("libs") {
+                from(files(localAddzeroBuildLogicCatalogFile))
+            }
+        }
+    }
     repositories {
         mavenLocal()
         google()

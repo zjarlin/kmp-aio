@@ -15,10 +15,6 @@ val jdkVersion = libs.findVersion("jdk17").get().requiredVersion.toInt()
 val desktopJavaLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(jdkVersion))
 }
-// 运行时依赖当前会解析到已发布的 Compose 组件，其中包含 Java 24 字节码，桌面启动需用更高版本 JDK。
-val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
-    languageVersion.set(JavaLanguageVersion.of(24))
-}
 
 kotlin {
     sourceSets {
@@ -48,12 +44,12 @@ kotlin.jvm().mainRun {
 
 tasks.named<JavaExec>("runJvm") {
     mainClass.set(desktopMainClass)
-    javaLauncher.set(desktopRuntimeJavaLauncher)
+    javaLauncher.set(desktopJavaLauncher)
 }
 
 tasks.withType<JavaExec>().configureEach {
     if (name == "jvmRun" || name == "runJvm") {
-        javaLauncher.set(desktopRuntimeJavaLauncher)
+        javaLauncher.set(desktopJavaLauncher)
     }
 }
 

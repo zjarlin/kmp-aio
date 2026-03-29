@@ -60,6 +60,7 @@ data class KboxSshConfig(
 
 @Serializable
 data class KboxSettings(
+    val localAppDataOverride: String = "",
     val installerScanRoots: List<String> = emptyList(),
     val largeFileScanRoots: List<String> = emptyList(),
     val installerRules: List<KboxInstallerRule> = emptyList(),

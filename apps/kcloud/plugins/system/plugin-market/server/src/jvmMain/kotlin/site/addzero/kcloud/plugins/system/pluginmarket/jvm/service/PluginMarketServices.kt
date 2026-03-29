@@ -480,7 +480,7 @@ class PluginPresetServiceImpl(
             kotlin {
                 sourceSets {
                     commonMain.dependencies {
-                        implementation(project(":lib:compose:workbench-shell"))
+                        implementation(project(":lib:compose:scaffold-spi"))
                         implementation(libs.findLibrary("site-addzero-route-core").get())
                     }
                     jvmMain.dependencies {

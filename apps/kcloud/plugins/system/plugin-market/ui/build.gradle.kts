@@ -40,7 +40,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":apps:kcloud:plugins:system:plugin-market:shared"))
-            implementation(project(":lib:compose:workbench-shell"))
+            implementation(project(":lib:compose:scaffold-spi"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

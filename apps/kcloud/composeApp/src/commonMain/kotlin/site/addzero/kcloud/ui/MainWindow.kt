@@ -15,16 +15,16 @@ import site.addzero.kcloud.app.menu.KCloudUserMenu
 import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.kcloud.feature.ShellThemeMode
 import site.addzero.kcloud.ui.theme.KCloudTheme
-import site.addzero.workbenchshell.spi.content.WorkbenchContentRenderer
-import site.addzero.workbenchshell.spi.header.WorkbenchHeaderRenderer
-import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
+import site.addzero.workbenchshell.spi.content.ContentRender
+import site.addzero.workbenchshell.spi.header.HeaderRender
+import site.addzero.workbenchshell.spi.sidebar.SidebarRenderer
 
 @Composable
 fun MainWindow(
     shellSettingsService: ShellSettingsService = koinInject(),
-    sidebarRenderer: WorkbenchSidebarRenderer = koinInject(),
-    headerRenderer: WorkbenchHeaderRenderer = koinInject(),
-    contentRenderer: WorkbenchContentRenderer = koinInject(),
+    sidebarRenderer: SidebarRenderer = koinInject(),
+    headerRenderer: HeaderRender = koinInject(),
+    contentRenderer: ContentRender = koinInject(),
 ) {
     val themeMode by shellSettingsService.themeMode.collectAsState()
     val darkTheme = when (themeMode) {

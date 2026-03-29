@@ -41,7 +41,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":apps:kcloud:plugins:mcu-console"))
-            implementation(project(":lib:compose:workbench-shell"))
+            implementation(project(":lib:compose:scaffold-spi"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

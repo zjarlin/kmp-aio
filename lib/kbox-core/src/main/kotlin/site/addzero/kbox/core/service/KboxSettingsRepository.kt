@@ -10,11 +10,15 @@ import site.addzero.kbox.core.support.KboxDefaults
 class KboxSettingsRepository(
     private val json: Json,
     private val pathService: KboxPathService,
+    private val migrationService: KboxAppDataMigrationService,
 ) {
     fun load(): KboxSettings {
         val settingsFile = pathService.settingsFile()
         if (!settingsFile.isFile) {
-            return save(KboxDefaults.defaultSettings())
+            val defaults = KboxDefaults.defaultSettings().copy(
+                localAppDataOverride = pathService.currentAppDataOverride(),
+            )
+            return save(defaults)
         }
         val decoded = json.decodeFromString<KboxSettings>(settingsFile.readText())
         return KboxDefaults.normalize(decoded)
@@ -24,9 +28,15 @@ class KboxSettingsRepository(
         settings: KboxSettings,
     ): KboxSettings {
         val normalized = KboxDefaults.normalize(settings)
-        val settingsFile = pathService.settingsFile()
+        val currentOverride = pathService.currentAppDataOverride()
+        val targetOverride = normalized.localAppDataOverride
+        if (currentOverride != targetOverride) {
+            migrationService.migrate(targetOverride)
+        }
+        val settingsFile = pathService.settingsFileForOverride(targetOverride)
         settingsFile.parentFile?.mkdirs()
         settingsFile.writeText(json.encodeToString(normalized))
+        pathService.writeAppDataOverride(targetOverride)
         return normalized
     }
 }

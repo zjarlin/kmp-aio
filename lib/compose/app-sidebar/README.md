@@ -123,4 +123,4 @@ AdminWorkbenchScaffold(
 - `rememberAppSidebarState` / `rememberWorkbenchScaffoldState` 都基于 Compose `rememberSaveable`
 - 左侧栏默认支持拖拽调宽，同时保留默认比例
 - 如果业务需要受控选中态，直接读写 `AppSidebarState.selectedId`
-- 工作台如果已经使用 `Screen` / `ScreenNode`，优先直接接 [`ScreenSidebar`](/Users/zjarlin/IdeaProjects/kmp-aio/lib/compose/workbench-shell/src/commonMain/kotlin/site/addzero/workbenchshell/ScreenSidebar.kt)
+- 如果业务已经形成自己的导航树模型，优先在业务模块内部渲染侧栏，不要再把具体菜单实现抽回通用壳层模块

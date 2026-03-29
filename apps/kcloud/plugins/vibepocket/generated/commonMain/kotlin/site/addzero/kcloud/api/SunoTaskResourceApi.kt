@@ -16,7 +16,8 @@ interface SunoTaskResourceApi {
  * 路径: /api/suno/resources
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse>
  */
-    @GET("/api/suno/resources")    suspend fun list(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse>
+    @GET("/api/suno/resources")
+    suspend fun list(): kotlin.collections.List<site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse>
 
 /**
  * get
@@ -26,7 +27,8 @@ interface SunoTaskResourceApi {
  *   - taskId: kotlin.String (PathVariable)
  * 返回类型: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
  */
-    @GET("/api/suno/resources/{taskId}")    suspend fun get(
+    @GET("/api/suno/resources/{taskId}")
+    suspend fun get(
         @Path("taskId") taskId: kotlin.String
     ): site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
 
@@ -38,7 +40,9 @@ interface SunoTaskResourceApi {
  *   - request: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
  */
-    @POST("/api/suno/resources")    suspend fun save(
+    @POST("/api/suno/resources")
+    @Headers("Content-Type: application/json")
+    suspend fun save(
         @Body request: site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest
     ): site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse
 

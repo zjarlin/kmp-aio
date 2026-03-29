@@ -21,7 +21,8 @@ interface McuSessionApi {
  * 路径: /api/mcu/ports
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
  */
-    @GET("/api/mcu/ports")    suspend fun listMcuPorts(): site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
+    @GET("/api/mcu/ports")
+    suspend fun listMcuPorts(): site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
 
 /**
  * getMcuSession
@@ -29,7 +30,8 @@ interface McuSessionApi {
  * 路径: /api/mcu/session
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
  */
-    @GET("/api/mcu/session")    suspend fun getMcuSession(): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
+    @GET("/api/mcu/session")
+    suspend fun getMcuSession(): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 
 /**
  * readMcuEvents
@@ -39,7 +41,8 @@ interface McuSessionApi {
  *   - afterSeq: kotlin.Long? (RequestParam)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
  */
-    @GET("/api/mcu/events")    suspend fun readMcuEvents(
+    @GET("/api/mcu/events")
+    suspend fun readMcuEvents(
         @Query("afterSeq") afterSeq: kotlin.Long?
     ): site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
 
@@ -51,7 +54,9 @@ interface McuSessionApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
  */
-    @POST("/api/mcu/session/open")    suspend fun openMcuSession(
+    @POST("/api/mcu/session/open")
+    @Headers("Content-Type: application/json")
+    suspend fun openMcuSession(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 
@@ -61,7 +66,8 @@ interface McuSessionApi {
  * 路径: /api/mcu/session/close
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
  */
-    @POST("/api/mcu/session/close")    suspend fun closeMcuSession(): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
+    @POST("/api/mcu/session/close")
+    suspend fun closeMcuSession(): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 
 /**
  * resetMcuSession
@@ -71,7 +77,9 @@ interface McuSessionApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuResetRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
  */
-    @POST("/api/mcu/session/reset")    suspend fun resetMcuSession(
+    @POST("/api/mcu/session/reset")
+    @Headers("Content-Type: application/json")
+    suspend fun resetMcuSession(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 
@@ -83,7 +91,9 @@ interface McuSessionApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
  */
-    @POST("/api/mcu/session/signals")    suspend fun updateMcuSignals(
+    @POST("/api/mcu/session/signals")
+    @Headers("Content-Type: application/json")
+    suspend fun updateMcuSignals(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 
@@ -95,7 +105,9 @@ interface McuSessionApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
  */
-    @POST("/api/mcu/session/lines")    suspend fun readMcuRecentLines(
+    @POST("/api/mcu/session/lines")
+    @Headers("Content-Type: application/json")
+    suspend fun readMcuRecentLines(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
 

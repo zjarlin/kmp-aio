@@ -4,19 +4,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import org.koin.core.annotation.Single
 import site.addzero.annotation.Route
 import site.addzero.generated.RouteKeys
 import kotlin.math.roundToInt
 
-class KCloudRouteCatalog(
-    routeMeta: List<Route> = RouteKeys.allMeta,
-) {
+@Single
+class KCloudRouteCatalog (val routeMeta:List<Route> =RouteKeys.allMeta){
     val scenes: List<KCloudRouteScene> = buildScenes(
         routeMeta = routeMeta,
     )
-
     val routeEntries: List<KCloudRouteEntry> = scenes.flatMap { scene -> scene.routes }
-
     private val scenesById: Map<String, KCloudRouteScene> = scenes.associateBy { scene -> scene.id }
     private val routesByPath: Map<String, KCloudRouteEntry> = routeEntries.associateBy { route -> route.routePath }
 

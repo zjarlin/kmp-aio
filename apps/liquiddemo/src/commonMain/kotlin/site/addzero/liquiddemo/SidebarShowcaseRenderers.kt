@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -18,7 +19,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.koin.core.annotation.Single
 import site.addzero.appsidebar.*
-import site.addzero.workbenchshell.ScreenSidebar
 
 @Single
 class SidebarShowcaseWorkbenchRenderer(
@@ -64,7 +64,7 @@ class SidebarShowcaseAdminWorkbenchRenderer(
     override fun Render(
         modifier: Modifier,
     ) {
-        val activeSlot = state.activeSlot
+        val activeScene = state.activeScene
         val detailPanel: (@Composable BoxScope.() -> Unit)? = if (state.detailVisible) {
             { SidebarShowcaseDetail(state = state) }
         } else {
@@ -74,7 +74,7 @@ class SidebarShowcaseAdminWorkbenchRenderer(
             modifier = modifier.fillMaxSize(),
             breadcrumb = state.breadcrumb,
             pageTitle = state.activeLeafNode.name,
-            pageSubtitle = activeSlot.config.subtitle,
+            pageSubtitle = activeScene.config.subtitle,
             contentPadding = PaddingValues(18.dp),
             detailPadding = PaddingValues(18.dp),
             sidebar = {
@@ -97,9 +97,9 @@ class SidebarShowcaseAdminWorkbenchRenderer(
             onLanguageClick = state::toggleLanguage,
             isDarkTheme = state.isDarkTheme,
             onThemeToggle = state::toggleTheme,
-            notificationCount = activeSlot.config.notificationCount,
+            notificationCount = activeScene.config.notificationCount,
             onNotificationsClick = state::openNotifications,
-            userLabel = activeSlot.config.userLabel,
+            userLabel = activeScene.config.userLabel,
             onUserClick = state::openUserProfile,
         )
     }
@@ -109,13 +109,50 @@ class SidebarShowcaseAdminWorkbenchRenderer(
 private fun SidebarShowcaseSidebar(
     state: SidebarShowcaseState,
 ) {
-    ScreenSidebar(
-        title = "",
-        items = state.sceneChildren,
-        selectedId = state.activeLeafNode.id,
-        onLeafClick = { node -> state.selectScreen(node.id) },
-        subtitle = null,
-    )
+    val activeScene = state.activeScene
+    val isAdminShell = state.currentShell == AppSidebarScaffoldShell.AdminWorkbench
+    val mutedColor = if (isAdminShell) {
+        ShowcaseRendererTokens.adminTextMuted
+    } else {
+        ShowcaseRendererTokens.textMuted
+    }
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SidebarShowcaseSidebarInfo(activeScene.config.headerInfo)
+        Column(
+            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = "页面导航",
+                style = MaterialTheme.typography.labelLarge,
+                color = mutedColor,
+            )
+            activeScene.leaves.forEach { leaf ->
+                val selected = leaf.id == state.activeLeafNode.id
+                if (selected) {
+                    Button(
+                        onClick = { state.selectLeaf(leaf.id) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Text(leaf.name)
+                    }
+                } else {
+                    OutlinedButton(
+                        onClick = { state.selectLeaf(leaf.id) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                    ) {
+                        Text(leaf.name)
+                    }
+                }
+            }
+        }
+        SidebarShowcaseSidebarInfo(activeScene.config.footerInfo)
+    }
 }
 
 @Composable
@@ -166,7 +203,7 @@ private fun SidebarShowcaseContent(
         ProvideShowcasePageTone(
             tone = if (isAdminShell) ShowcasePageTone.Light else ShowcasePageTone.Dark,
         ) {
-            state.activeLeafNode.content?.invoke()
+            state.activeLeafNode.content()
         }
     }
 }
@@ -175,7 +212,7 @@ private fun SidebarShowcaseContent(
 private fun SidebarShowcaseDetail(
     state: SidebarShowcaseState,
 ) {
-    val activeSlot = state.activeSlot
+    val activeScene = state.activeScene
     val isAdminShell = state.currentShell == AppSidebarScaffoldShell.AdminWorkbench
     val panelShape = RoundedCornerShape(if (isAdminShell) 0.dp else 26.dp)
     Box(
@@ -214,9 +251,10 @@ private fun SidebarShowcaseDetail(
             ProvideShowcasePageTone(
                 tone = if (isAdminShell) ShowcasePageTone.Light else ShowcasePageTone.Dark,
             ) {
-                with(activeSlot) {
-                    Detail(state.activeLeafNode)
-                }
+                SidebarShowcaseDetailContent(
+                    scene = activeScene,
+                    leaf = state.activeLeafNode,
+                )
             }
         }
     }
@@ -227,7 +265,7 @@ private fun SidebarShowcaseHeaderTitle(
     state: SidebarShowcaseState,
     modifier: Modifier = Modifier,
 ) {
-    val activeSlot = state.activeSlot
+    val activeScene = state.activeScene
     val isAdminShell = state.currentShell == AppSidebarScaffoldShell.AdminWorkbench
     val mutedColor = if (isAdminShell) {
         ShowcaseRendererTokens.adminTextMuted
@@ -262,7 +300,7 @@ private fun SidebarShowcaseHeaderTitle(
                 style = MaterialTheme.typography.titleLarge,
                 color = primaryColor,
             )
-            activeSlot.config.subtitle.takeIf(String::isNotBlank)?.let { subtitle ->
+            activeScene.config.subtitle.takeIf(String::isNotBlank)?.let { subtitle ->
                 Text(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
@@ -307,14 +345,11 @@ private fun SidebarShowcaseSceneTabs(
 private fun RowScope.SidebarShowcaseHeaderActions(
     state: SidebarShowcaseState,
 ) {
-    val activeSlot = state.activeSlot
     Row(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        with(activeSlot) {
-            PageActions()
-        }
+        SidebarShowcasePageActions(state.activeScene.config)
         if (!state.detailVisible) {
             SidebarShowcaseDetailToggleButton(state = state)
         }
@@ -353,6 +388,49 @@ private fun SidebarShowcaseDetailToggleButton(state: SidebarShowcaseState) {
             text = if (state.detailVisible) "隐藏概览" else "显示概览",
         )
     }
+}
+
+@Composable
+private fun ColumnScope.SidebarShowcaseSidebarInfo(
+    info: SidebarShowcaseInfoConfig,
+) {
+    if (info.title.isBlank() && info.value.isBlank()) {
+        return
+    }
+    ShowcaseSidebarInfo(
+        title = info.title,
+        value = info.value,
+    )
+}
+
+@Composable
+private fun RowScope.SidebarShowcasePageActions(
+    config: SidebarShowcaseSceneConfig,
+) {
+    if (config.pagePrimaryActionLabel.isNotBlank()) {
+        Button(onClick = {}) {
+            Text(config.pagePrimaryActionLabel)
+        }
+    }
+    if (config.pageSecondaryActionLabel.isNotBlank()) {
+        OutlinedButton(onClick = {}) {
+            Text(config.pageSecondaryActionLabel)
+        }
+    }
+}
+
+@Composable
+private fun ColumnScope.SidebarShowcaseDetailContent(
+    scene: SidebarShowcaseSceneDefinition,
+    leaf: SidebarShowcaseLeaf,
+) {
+    val detail = scene.details[leaf.id] ?: return
+    ShowcaseInspector(
+        title = detail.title,
+        summary = detail.summary,
+        facts = detail.facts.map { fact -> fact.label to fact.value },
+        tasks = detail.tasks,
+    )
 }
 
 private object ShowcaseRendererTokens {

@@ -26,7 +26,6 @@ package site.addzero.kcloud//package site.addzero.vibepocket
 //import site.addzero.vibepocket.render.VibePocketShellState
 //import site.addzero.vibepocket.screens.WelcomeScreenWrapper
 //import site.addzero.vibepocket.ui.StudioSectionCard
-//import site.addzero.workbenchshell.RenderWorkbenchScaffold
 //
 //@Composable
 //fun App() {
