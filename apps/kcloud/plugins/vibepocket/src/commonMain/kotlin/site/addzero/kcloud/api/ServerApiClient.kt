@@ -39,6 +39,8 @@ internal expect fun buildSunoTaskResourceApi(
  * 统一的后端 API 客户端
  */
 object ServerApiClient {
+    private const val defaultBaseUrl = "http://localhost:18080/"
+
     private val json = Json {
         ignoreUnknownKeys = true
         coerceInputValues = true
@@ -51,14 +53,32 @@ object ServerApiClient {
         }
     }
 
-    private const val BASE_URL = "http://localhost:8080/"
+    @Volatile
+    private var baseUrl: String = defaultBaseUrl
 
-    val configApi: ConfigApi = buildConfigApi(BASE_URL, httpClient)
-    val favoriteApi: FavoriteApi = buildFavoriteApi(BASE_URL, httpClient)
-    val personaApi: PersonaApi = buildPersonaApi(BASE_URL, httpClient)
-    val historyApi: HistoryApi = buildHistoryApi(BASE_URL, httpClient)
-    val musicApi: MusicSearchApi = buildMusicSearchApi(BASE_URL, httpClient)
-    val sunoTaskResourceApi: SunoTaskResourceApi = buildSunoTaskResourceApi(BASE_URL, httpClient)
+    fun configureBaseUrl(
+        value: String,
+    ) {
+        baseUrl = value.ifBlank { defaultBaseUrl }
+    }
+
+    val configApi: ConfigApi
+        get() = buildConfigApi(resolveBaseUrl(), httpClient)
+
+    val favoriteApi: FavoriteApi
+        get() = buildFavoriteApi(resolveBaseUrl(), httpClient)
+
+    val personaApi: PersonaApi
+        get() = buildPersonaApi(resolveBaseUrl(), httpClient)
+
+    val historyApi: HistoryApi
+        get() = buildHistoryApi(resolveBaseUrl(), httpClient)
+
+    val musicApi: MusicSearchApi
+        get() = buildMusicSearchApi(resolveBaseUrl(), httpClient)
+
+    val sunoTaskResourceApi: SunoTaskResourceApi
+        get() = buildSunoTaskResourceApi(resolveBaseUrl(), httpClient)
 
     suspend fun getConfig(key: String): String? {
         return try {
@@ -66,5 +86,9 @@ object ServerApiClient {
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun resolveBaseUrl(): String {
+        return baseUrl.ifBlank { defaultBaseUrl }
     }
 }

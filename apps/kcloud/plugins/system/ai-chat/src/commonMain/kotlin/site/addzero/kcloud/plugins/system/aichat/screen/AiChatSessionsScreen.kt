@@ -23,14 +23,24 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import site.addzero.annotation.Route
+import site.addzero.annotation.RoutePlacement
+import site.addzero.annotation.RouteScene
 import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 
 @Route(
-    value = "AI对话",
     title = "对话会话",
     routePath = "system/ai-chat/sessions",
     icon = "SmartToy",
     order = 30.0,
+    placement = RoutePlacement(
+        scene = RouteScene(
+            id = "system",
+            name = "系统",
+            icon = "AdminPanelSettings",
+            order = 100,
+        ),
+        menuPath = ["AI对话"],
+    ),
 )
 @Composable
 fun AiChatSessionsScreen() {

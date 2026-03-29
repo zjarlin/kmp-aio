@@ -2,6 +2,7 @@ package site.addzero.kcloud
 
 import org.koin.core.annotation.KoinApplication
 import site.addzero.configcenter.ktor.ConfigCenterKtorKoinModule
+import site.addzero.kcloud.jimmer.di.JimmerKoinModule
 import site.addzero.kcloud.plugins.mcuconsole.McuConsoleServerKoinModule
 import site.addzero.kcloud.plugins.rbac.RbacKoinModule
 import site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule
@@ -14,6 +15,7 @@ import site.addzero.vibepocket.VibePocketKoinModule
     modules = [
         // <managed:plugin-market-server-koin:start>
         site.addzero.vibepocket.VibePocketKoinModule::class,
+        site.addzero.kcloud.jimmer.di.JimmerKoinModule::class,
         site.addzero.kcloud.plugins.mcuconsole.McuConsoleServerKoinModule::class,
         site.addzero.kcloud.plugins.rbac.RbacKoinModule::class,
         site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule::class,

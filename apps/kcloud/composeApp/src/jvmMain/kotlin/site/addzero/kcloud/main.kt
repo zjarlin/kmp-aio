@@ -17,6 +17,9 @@ import org.jetbrains.skiko.SkiaLayer
 import org.jetbrains.skiko.disableTitleBar
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
+import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
+import site.addzero.kcloud.system.api.KCloudSystemApiClient
+import site.addzero.vibepocket.api.ServerApiClient
 import java.awt.Container
 import javax.swing.JComponent
 
@@ -26,37 +29,48 @@ private val macCaptionBarLeadingInset = 84.dp
 fun main() {
     configureDesktopRuntime()
     application {
-    val embeddedServer = remember {
-        startEmbeddedDesktopServer(
-            configureKoin = {
-                withConfiguration<KCloudDesktopSupplementKoinApplication>()
-            },
-        )
-    }
-
-    DisposableEffect(embeddedServer) {
-        onDispose {
-            embeddedServer.close()
+        val embeddedServer = remember {
+            startEmbeddedDesktopServer(
+                configureKoin = {
+                    withConfiguration<KCloudDesktopSupplementKoinApplication>()
+                },
+            )
         }
-    }
+        DisposableEffect(embeddedServer.baseUrl) {
+            configureLocalApiClients(embeddedServer.baseUrl)
+            onDispose {}
+        }
 
-    val windowState = rememberWindowState(
-        width = 1440.dp,
-        height = 920.dp,
-    )
+        DisposableEffect(embeddedServer) {
+            onDispose {
+                embeddedServer.close()
+            }
+        }
 
-    Window(
-        onCloseRequest = ::exitApplication,
-        title = "kcloud",
-        state = windowState,
-    ) {
-        ProvideKCloudWindowFrame(
+        val windowState = rememberWindowState(
+            width = 1440.dp,
+            height = 920.dp,
+        )
+
+        Window(
+            onCloseRequest = ::exitApplication,
+            title = "kcloud",
             state = windowState,
         ) {
-            App()
+            ProvideKCloudWindowFrame(
+                state = windowState,
+            ) {
+                App()
+            }
         }
     }
 }
+private fun configureLocalApiClients(
+    baseUrl: String,
+) {
+    ServerApiClient.configureBaseUrl(baseUrl)
+    KCloudSystemApiClient.configureBaseUrl(baseUrl)
+    McuConsoleApiClient.configureBaseUrl(baseUrl)
 }
 
 @Composable

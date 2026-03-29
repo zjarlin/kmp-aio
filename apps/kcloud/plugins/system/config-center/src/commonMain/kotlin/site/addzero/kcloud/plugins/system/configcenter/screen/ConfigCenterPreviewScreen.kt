@@ -16,15 +16,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.annotation.Route
+import site.addzero.annotation.RoutePlacement
+import site.addzero.annotation.RouteScene
 import site.addzero.component.button.AddButton
 import site.addzero.component.button.AddIconButton
 
 @Route(
-    value = "配置中心",
     title = "预览发布",
     routePath = "system/config-center/preview",
     icon = "Download",
     order = 82.0,
+    placement = RoutePlacement(
+        scene = RouteScene(
+            id = "system",
+            name = "系统",
+            icon = "AdminPanelSettings",
+            order = 100,
+        ),
+        menuPath = ["配置中心"],
+    ),
 )
 @Composable
 fun ConfigCenterPreviewScreen() {

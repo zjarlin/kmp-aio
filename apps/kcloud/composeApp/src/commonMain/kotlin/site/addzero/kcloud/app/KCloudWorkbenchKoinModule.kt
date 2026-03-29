@@ -16,9 +16,7 @@ import site.addzero.workbenchshell.spi.sidebar.WorkbenchSidebarRenderer
 class KCloudWorkbenchKoinModule {
     @Single
     fun provideRouteCatalog(): KCloudRouteCatalog {
-        return KCloudRouteCatalog(
-            sceneDefinitions = KCloudSceneRegistry.all,
-        )
+        return KCloudRouteCatalog()
     }
 
     @Single

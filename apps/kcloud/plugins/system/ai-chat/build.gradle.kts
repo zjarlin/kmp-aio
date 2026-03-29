@@ -29,6 +29,7 @@ ksp {
     arg("sharedSourceDir", sharedSourceDir)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
+    arg("routeModuleKey", project.path)
 }
 
 dependencies {
@@ -51,5 +52,16 @@ kotlin {
             implementation(libs.findLibrary("spring2ktor-server-core").get())
             compileOnly(libs.findLibrary("org-springframework-spring-web").get())
         }
+    }
+}
+
+tasks.matching { task ->
+    task.name == "kspKotlinJvm"
+}.configureEach {
+    doFirst {
+        delete(layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbolLookups"))
+        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbols").get().asFile.mkdirs()
+        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/sourceToOutputs").get().asFile.mkdirs()
+        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/classpath").get().asFile.mkdirs()
     }
 }

@@ -330,6 +330,7 @@ private inline fun withEmbeddedDesktopDatasource(
                 "datasources.sqlite.enabled" to "true",
                 "datasources.sqlite.url" to "jdbc:sqlite:${tempDatabase.absolutePath}",
                 "datasources.sqlite.driver" to "org.sqlite.JDBC",
+                "flyway.baseline-on-migrate" to "true",
             ),
         )
     } finally {

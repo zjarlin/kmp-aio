@@ -17,8 +17,10 @@ import site.addzero.configcenter.runtime.KtorConfigBridge
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
+import java.net.ServerSocket
 
 private const val DEFAULT_EMBEDDED_ENV = "dev"
+private const val DEFAULT_EMBEDDED_DESKTOP_PORT = 18080
 private const val DESKTOP_APP_DIRECTORY_NAME = "KCloud"
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
@@ -28,6 +30,12 @@ private const val VIBEPOCKET_APPLICATION_CONFIG_PROPERTY = "vibepocket.applicati
 private var embeddedApplicationConfigOverride: ApplicationConfig? = null
 @Volatile
 private var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
+@Volatile
+private var embeddedDesktopBaseUrl: String = "http://localhost:$DEFAULT_EMBEDDED_DESKTOP_PORT/"
+
+interface EmbeddedDesktopServerHandle : AutoCloseable {
+    val baseUrl: String
+}
 
 /**
  * Server 入口。
@@ -123,17 +131,19 @@ fun ktorApplication(
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
 
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
-    val finalHost = host
+    val requestedHost = host
         ?: System.getenv("SERVER_HOST")
         ?: configCenterBridge?.getString("ktor.deployment.host")
         ?: config.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
-    val finalPort = port
+    val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
         ?: configCenterBridge?.getInt("ktor.deployment.port", 8080)
         ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
-        ?: 8080
+        ?: DEFAULT_EMBEDDED_DESKTOP_PORT
+    val finalPort = resolveEmbeddedDesktopPort(requestedPort)
+    embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
 
     val environment = applicationEnvironment {
         this.config = config
@@ -144,12 +154,33 @@ fun ktorApplication(
         environment = environment,
         configure = {
             connectors += EngineConnectorBuilder().apply {
-                this.host = finalHost
+                this.host = requestedHost
                 this.port = finalPort
             }
         },
         module = Application::module,
     )
+}
+
+private fun resolveEmbeddedDesktopPort(
+    requestedPort: Int,
+): Int {
+    if (isLoopbackPortAvailable(requestedPort)) {
+        return requestedPort
+    }
+    return ServerSocket(0).use { socket ->
+        socket.localPort
+    }
+}
+
+private fun isLoopbackPortAvailable(
+    port: Int,
+): Boolean {
+    return runCatching {
+        ServerSocket(port).use { socket ->
+            socket.reuseAddress = true
+        }
+    }.isSuccess
 }
 
 /**
@@ -160,23 +191,28 @@ fun startEmbeddedDesktopServer(
     host: String? = null,
     port: Int? = null,
     configureKoin: (CoreKoinApplication.() -> Unit)? = null,
-): AutoCloseable {
+): EmbeddedDesktopServerHandle {
     embeddedDesktopKoinConfigurer = configureKoin
     val server = ktorApplication(
         configPath = configPath,
         host = host,
         port = port,
     ).start(wait = false)
+    val baseUrl = embeddedDesktopBaseUrl
 
-    return AutoCloseable {
-        server.stop(
-            gracePeriodMillis = 1_000,
-            timeoutMillis = 5_000,
-        )
-        embeddedDesktopKoinConfigurer = null
-        embeddedApplicationConfigOverride = null
-        System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
-        System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
+    return object : EmbeddedDesktopServerHandle {
+        override val baseUrl: String = baseUrl
+
+        override fun close() {
+            server.stop(
+                gracePeriodMillis = 1_000,
+                timeoutMillis = 5_000,
+            )
+            embeddedDesktopKoinConfigurer = null
+            embeddedApplicationConfigOverride = null
+            System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
+            System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
+        }
     }
 }
 

@@ -333,13 +333,23 @@ class PluginPresetServiceImpl(
                 import androidx.compose.ui.Modifier
                 import androidx.compose.ui.unit.dp
                 import site.addzero.annotation.Route
+                import site.addzero.annotation.RoutePlacement
+                import site.addzero.annotation.RouteScene
 
                 @Route(
-                    value = "${pluginPackage.name}",
                     title = "$title",
                     routePath = "$routePath",
                     icon = "Apps",
                     order = 50.0,
+                    placement = RoutePlacement(
+                        scene = RouteScene(
+                            id = "${pluginPackage.pluginId}",
+                            name = "${pluginPackage.name}",
+                            icon = "Apps",
+                            order = 500,
+                        ),
+                        defaultInScene = true,
+                    ),
                 )
                 @Composable
                 fun ${classPrefix}Screen() {
@@ -435,6 +445,7 @@ class PluginPresetServiceImpl(
                 arg("sharedSourceDir", sharedSourceDir)
                 arg("routeGenPkg", "site.addzero.generated")
                 arg("routeOwnerModule", routeOwnerModuleDir)
+                arg("routeModuleKey", project.path)
             }
 
             dependencies {

@@ -7,7 +7,6 @@ import site.addzero.kcloud.plugins.rbac.RbacKoinModule
 import site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule
 import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterComposeKoinModule
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule
-import site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketComposeKoinModule
 import site.addzero.vibepocket.VibePocketKoinModule
 
 @KoinApplication(
@@ -19,7 +18,6 @@ import site.addzero.vibepocket.VibePocketKoinModule
         site.addzero.kcloud.plugins.rbac.RbacKoinModule::class,
         site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule::class,
         site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule::class,
-        site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketComposeKoinModule::class,
         site.addzero.vibepocket.VibePocketKoinModule::class,
         // <managed:plugin-market-compose-koin:end>
     ],

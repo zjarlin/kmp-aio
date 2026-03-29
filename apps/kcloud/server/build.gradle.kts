@@ -19,6 +19,7 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             // Starter 模块（引入即生效）
+            implementation(project(":apps:kcloud:plugins:system:shared"))
             implementation(project(":lib:config-center:spec"))
             implementation(project(":lib:config-center:ktor"))
             implementation(project(":lib:config-center:runtime-jvm"))

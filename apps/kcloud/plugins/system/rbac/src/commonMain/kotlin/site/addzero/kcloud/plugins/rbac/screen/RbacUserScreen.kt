@@ -14,13 +14,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import site.addzero.annotation.Route
+import site.addzero.annotation.RoutePlacement
+import site.addzero.annotation.RouteScene
 
 @Route(
-    value = "权限中心",
     title = "RBAC权限管理",
     routePath = "system/rbac",
     icon = "AdminPanelSettings",
     order = 20.0,
+    placement = RoutePlacement(
+        scene = RouteScene(
+            id = "system",
+            name = "系统",
+            icon = "AdminPanelSettings",
+            order = 100,
+        ),
+        menuPath = ["权限中心"],
+        defaultInScene = true,
+    ),
 )
 @Composable
 fun RbacUserScreen() {

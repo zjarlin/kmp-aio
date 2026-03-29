@@ -35,6 +35,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.annotation.Route
+import site.addzero.annotation.RoutePlacement
+import site.addzero.annotation.RouteScene
 import site.addzero.component.button.AddIconButton
 import site.addzero.kcloud.plugins.mcuconsole.McuAtomicCommandDefinition
 import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
@@ -46,11 +48,19 @@ import site.addzero.kcloud.plugins.mcuconsole.McuWidgetTemplateKind
 import site.addzero.kcloud.plugins.mcuconsole.client.McuWidgetInstanceState
 
 @Route(
-    value = "开发工具",
     title = "在线开发",
     routePath = "mcu/online-dev",
     icon = "Build",
     order = 15.0,
+    placement = RoutePlacement(
+        scene = RouteScene(
+            id = "device",
+            name = "设备",
+            icon = "Build",
+            order = 0,
+        ),
+        menuPath = ["开发工具"],
+    ),
 )
 @Composable
 fun McuOnlineDevScreen() {
