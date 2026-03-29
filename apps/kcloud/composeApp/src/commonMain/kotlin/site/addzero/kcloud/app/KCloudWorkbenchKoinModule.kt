@@ -2,6 +2,9 @@ package site.addzero.kcloud.app
 
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import site.addzero.core.network.ApiClientSpi
+import site.addzero.core.network.ApiClients
+import site.addzero.core.network.HttpClientFactory
 import site.addzero.generated.RouteKeys
 import site.addzero.kcloud.app.render.KCloudContentRender
 import site.addzero.kcloud.app.render.KCloudHeaderRender
@@ -13,6 +16,22 @@ import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
 @Module
 class KCloudWorkbenchKoinModule {
+    @Single
+    fun provideHttpClientFactory(): HttpClientFactory {
+        return HttpClientFactory()
+    }
+
+    @Single
+    fun provideApiClients(
+        apiClientSpis: List<ApiClientSpi>,
+        httpClientFactory: HttpClientFactory,
+    ): ApiClients {
+        return ApiClients(
+            apiClientSpis = apiClientSpis,
+            httpClientFactory = httpClientFactory,
+        )
+    }
+
     @Single
     fun provideRouteCatalog(): KCloudRouteCatalog {
         return KCloudRouteCatalog(RouteKeys.allMeta)
