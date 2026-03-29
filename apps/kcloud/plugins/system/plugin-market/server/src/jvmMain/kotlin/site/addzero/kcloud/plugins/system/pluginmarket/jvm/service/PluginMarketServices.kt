@@ -2,8 +2,7 @@ package site.addzero.kcloud.plugins.system.pluginmarket.jvm.service
 
 import org.babyfish.jimmer.kt.new
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.runtime.ConfigCenterCompatService
-import site.addzero.configcenter.spec.*
+import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterCompatService
 import site.addzero.kcloud.plugins.system.pluginmarket.jvm.entity.*
 import site.addzero.kcloud.plugins.system.pluginmarket.model.*
 import site.addzero.kcloud.plugins.system.pluginmarket.service.*
@@ -582,33 +581,27 @@ class PluginDiscoveryServiceImpl(
     ],
 )
 class PluginMarketConfigServiceImpl(
-    private val gateway: ConfigCenterGateway,
     private val compatService: ConfigCenterCompatService,
 ) : PluginMarketConfigService {
     override suspend fun read(): PluginMarketConfigDto {
         ensureDefaults()
-        val entries = gateway.listEntries(
-            ConfigQuery(
-                namespace = CONFIG_NAMESPACE,
-                includeDisabled = true,
-            ),
-        ).associateBy { it.key }
+        val entries = compatService.listLegacyValues(CONFIG_NAMESPACE)
         return PluginMarketConfigDto(
-            exportRootDir = entries["export.rootDir"]?.value ?: "apps/kcloud/plugins",
-            gradleCommand = entries["gradle.command"]?.value ?: "./gradlew",
-            gradleTasks = entries["gradle.tasks"]?.value
+            exportRootDir = entries["export.rootDir"] ?: "apps/kcloud/plugins",
+            gradleCommand = entries["gradle.command"] ?: "./gradlew",
+            gradleTasks = entries["gradle.tasks"]
                 ?.split(" ")
                 ?.map(String::trim)
                 ?.filter(String::isNotBlank)
                 ?: defaultGradleTasks(),
-            javaHome = entries["java.home"]?.value,
-            environmentLines = entries["environment.lines"]?.value
+            javaHome = entries["java.home"],
+            environmentLines = entries["environment.lines"]
                 ?.lineSequence()
                 ?.map(String::trim)
                 ?.filter(String::isNotBlank)
                 ?.toList()
                 ?: emptyList(),
-            autoBuildEnabled = entries["autoBuild.enabled"]?.value?.toBooleanStrictOrNull() ?: false,
+            autoBuildEnabled = entries["autoBuild.enabled"]?.toBooleanStrictOrNull() ?: false,
         )
     }
 
@@ -632,40 +625,18 @@ class PluginMarketConfigServiceImpl(
     }
 
     private suspend fun saveIfMissing(key: String, value: String, description: String) {
-        val exists = gateway.listEntries(
-            ConfigQuery(namespace = CONFIG_NAMESPACE, includeDisabled = true),
-        ).any { it.key == key }
-        if (!exists) {
+        if (compatService.getLegacyValue(CONFIG_NAMESPACE, key) == null) {
             saveValue(key, value, description)
         }
     }
 
     private suspend fun saveValue(key: String, value: String, description: String) {
-        val existing = gateway.listEntries(
-            ConfigQuery(namespace = CONFIG_NAMESPACE, includeDisabled = true),
-        ).firstOrNull { it.key == key }
-        val mutation = ConfigMutationRequest(
-            id = existing?.id,
-            key = key,
+        compatService.saveLegacyValue(
             namespace = CONFIG_NAMESPACE,
-            domain = ConfigDomain.SYSTEM,
-            profile = "default",
-            valueType = ConfigValueType.STRING,
-            storageMode = ConfigStorageMode.REPO_PLAIN,
+            key = key,
             value = value,
             description = description,
-            tags = listOf("plugin-market"),
-            enabled = true,
         )
-        if (existing == null) {
-            gateway.addEnv(mutation)
-            compatService.saveLegacyValue(CONFIG_NAMESPACE, key, value, description)
-        } else {
-            gateway.updateEnv(
-                existing.id,
-                mutation,
-            )
-        }
     }
 
     private fun defaultGradleTasks(): List<String> {

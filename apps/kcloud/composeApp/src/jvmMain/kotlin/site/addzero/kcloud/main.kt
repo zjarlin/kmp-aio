@@ -15,6 +15,7 @@ import site.addzero.appsidebar.WorkbenchWindowFrame
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatApiClient
+import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterApiClient
 import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeBaseApiClient
 import site.addzero.kcloud.plugins.system.rbac.api.RbacApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
@@ -70,6 +71,7 @@ private fun configureLocalApiClients(
     McuConsoleApiClient.configureBaseUrl(baseUrl)
     RbacApiClient.configureBaseUrl(baseUrl)
     AiChatApiClient.configureBaseUrl(baseUrl)
+    ConfigCenterApiClient.configureBaseUrl(baseUrl)
     KnowledgeBaseApiClient.configureBaseUrl(baseUrl)
 }
 

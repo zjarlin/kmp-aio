@@ -188,6 +188,60 @@ plugins {
 
 Use this only when the plugin truly has a cluster of related Ktorfit APIs that benefit from one aggregation surface. If there is only one or two APIs, do not introduce another generated layer without need.
 
+### 5. KCloud API Client Wrapper Pattern
+
+Inside `kcloud`, there is another repeated pattern beyond plain `ApiProvider`:
+
+- `object XxxApiClient`
+- `configureBaseUrl(...)`
+- one shared `HttpClientFactory` profile
+- one or more lazily exposed Ktorfit APIs such as `xxxApi`
+
+Typical examples already present in the repo:
+
+- `ServerApiClient`
+- `RbacApiClient`
+- `AiChatApiClient`
+- `KnowledgeBaseApiClient`
+- `McuConsoleApiClient`
+
+These wrappers are strong KSP generation candidates because most of the code is mechanical:
+
+- hold `baseUrl`
+- pick one `HttpClientFactory` profile
+- call `Ktorfit.Builder().baseUrl(...).httpClient(...).build()`
+- expose `createXxxApi()` / `create<SomeApi>()` results as properties
+
+For future generator work, treat the wrapper as the real generation target, not the remote service call site.
+
+Good generation targets:
+
+- wrappers whose body is mostly `baseUrl + profile + Ktorfit.createXxxApi()`
+- wrappers that only expose API properties and no extra domain policy
+
+Do not force generation when the wrapper also owns real behavior, for example:
+
+- fallback policy
+- cross-request caching
+- batching
+- state recovery
+- non-trivial helper methods
+
+Current status of `site.addzero.ksp.apiprovider`:
+
+- it can already generate plain `site.addzero.generated.api.ApiProvider`
+- it does **not** yet generate `object XxxApiClient` wrappers
+- it does **not** yet cover `configureBaseUrl(...)`, `HttpClientFactory` profile selection, or cached grouped APIs
+
+So if you want to remove hand-written client wrappers in KCloud, the next processor step is:
+
+1. keep scanning Ktorfit interfaces
+2. add typed options for wrapper name, base URL, and HTTP client profile
+3. generate `XxxApiClient` wrapper objects instead of only a global `ApiProvider`
+4. support grouped multi-API wrappers where needed
+
+Use this rule when evaluating whether a class should still be hand-written: if it is only a thin Ktorfit wrapper, prefer making it a future KSP target instead of keeping manual boilerplate.
+
 ## Server Plugin Contract
 
 Server aggregation is optional. Only add it when the plugin has backend APIs, storage, or local service behavior.

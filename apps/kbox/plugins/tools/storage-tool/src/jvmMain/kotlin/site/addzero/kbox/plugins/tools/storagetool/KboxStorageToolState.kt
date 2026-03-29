@@ -293,12 +293,16 @@ class KboxStorageToolState(
     ) {
         runAction("目录已打开") {
             withContext(Dispatchers.IO) {
-                val parentFile = File(absolutePath).absoluteFile.parentFile
-                    ?: error("目标没有父目录：$absolutePath")
+                val targetFile = File(absolutePath).absoluteFile
+                val openFile = if (targetFile.isDirectory) {
+                    targetFile
+                } else {
+                    targetFile.parentFile ?: error("目标没有父目录：$absolutePath")
+                }
                 check(Desktop.isDesktopSupported()) {
                     "当前环境不支持打开目录"
                 }
-                Desktop.getDesktop().open(parentFile)
+                Desktop.getDesktop().open(openFile)
             }
         }
     }
@@ -512,6 +516,18 @@ class KboxStorageToolState(
     ) {
         selectedComposeFile = composeFile
         loadSelectedComposeFileContent()
+    }
+
+    fun updateComposeYamlText(
+        value: String,
+    ) {
+        composeYamlText = value
+    }
+
+    fun updateComposeEnvText(
+        value: String,
+    ) {
+        composeEnvText = value
     }
 
     fun updateDraft(

@@ -8,12 +8,9 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.routing.*
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.configcenter.runtime.ConfigCenterBootstrap
-import site.addzero.configcenter.runtime.ConfigCenterBootstrapOptions
-import site.addzero.configcenter.runtime.JvmConfigCenterGateway
-import site.addzero.configcenter.runtime.KtorConfigBridge
 import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
+import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterBootstrapBridge
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
@@ -87,7 +84,7 @@ fun serverApplication(
     embeddedApplicationConfigOverride = null
     embeddedDesktopKoinConfigurer = null
     val config = loadServerConfig(configPath)
-    val configCenterBridge = createConfigCenterBridge()
+    val configCenterBridge = createConfigCenterBridge(config)
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
@@ -128,7 +125,7 @@ fun ktorApplication(
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val config = loadEmbeddedConfig(configPath)
-    val configCenterBridge = createConfigCenterBridge()
+    val configCenterBridge = createConfigCenterBridge(config)
     embeddedApplicationConfigOverride = config
     System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
@@ -153,7 +150,7 @@ fun ktorApplication(
         this.config = config
     }
 
-    return embeddedServer(
+    val embeddedServer = embeddedServer(
         factory = Netty,
         environment = environment,
         configure = {
@@ -164,6 +161,7 @@ fun ktorApplication(
         },
         module = Application::module,
     )
+    return embeddedServer
 }
 
 private fun resolveEmbeddedDesktopPort(
@@ -256,14 +254,14 @@ private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
     )
 }
 
-private fun createConfigCenterBridge(): KtorConfigBridge? {
-    val options = ConfigCenterBootstrapOptions(appId = "kcloud")
+private fun createConfigCenterBridge(
+    config: ApplicationConfig,
+): ConfigCenterBootstrapBridge? {
     return runCatching {
-        val bootstrap = ConfigCenterBootstrap(options)
-        val gateway = JvmConfigCenterGateway.createDefault(options)
-        KtorConfigBridge(
-            gateway = gateway,
-            bootstrap = bootstrap,
+        ConfigCenterBootstrapBridge(
+            applicationConfig = config,
+            namespace = "kcloud",
+            profile = DEFAULT_EMBEDDED_ENV,
         )
     }.getOrNull()
 }

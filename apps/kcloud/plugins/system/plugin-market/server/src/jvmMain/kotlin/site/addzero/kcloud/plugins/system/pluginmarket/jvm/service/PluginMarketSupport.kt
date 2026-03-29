@@ -234,7 +234,7 @@ class PluginMarketSupport(
         val fixedComposeDeps = listOf(
             """implementation(project(":apps:kcloud:plugins:mcu-console:ui"))""",
             """implementation(project(":apps:kcloud:plugins:system:ai-chat:ui"))""",
-            """implementation(project(":apps:kcloud:plugins:system:config-center"))""",
+            """implementation(project(":apps:kcloud:plugins:system:config-center:ui"))""",
             """implementation(project(":apps:kcloud:plugins:system:knowledge-base:ui"))""",
             """implementation(project(":apps:kcloud:plugins:system:rbac:ui"))""",
             """implementation(project(":apps:kcloud:plugins:system:plugin-market:ui"))""",
@@ -243,6 +243,7 @@ class PluginMarketSupport(
         val fixedServerDeps = listOf(
             """implementation(project(":apps:kcloud:plugins:mcu-console:server"))""",
             """implementation(project(":apps:kcloud:plugins:system:ai-chat:server"))""",
+            """implementation(project(":apps:kcloud:plugins:system:config-center:server"))""",
             """implementation(project(":apps:kcloud:plugins:system:knowledge-base:server"))""",
             """implementation(project(":apps:kcloud:plugins:system:rbac:server"))""",
             """implementation(project(":apps:kcloud:plugins:system:plugin-market:server"))""",
@@ -251,7 +252,7 @@ class PluginMarketSupport(
         val fixedRouteTasks = listOf(
             """:apps:kcloud:plugins:mcu-console:ui:compileKotlinJvm""",
             """:apps:kcloud:plugins:system:ai-chat:ui:compileKotlinJvm""",
-            """:apps:kcloud:plugins:system:config-center:compileKotlinJvm""",
+            """:apps:kcloud:plugins:system:config-center:ui:compileKotlinJvm""",
             """:apps:kcloud:plugins:system:knowledge-base:ui:compileKotlinJvm""",
             """:apps:kcloud:plugins:system:plugin-market:ui:compileKotlinJvm""",
             """:apps:kcloud:plugins:system:rbac:ui:compileKotlinJvm""",
@@ -274,7 +275,7 @@ class PluginMarketSupport(
             "site.addzero.kcloud.server.KCloudServerScanKoinModule::class",
             "site.addzero.kcloud.jimmer.di.JimmerKoinModule::class",
             "site.addzero.kcloud.plugins.mcuconsole.McuConsoleServerKoinModule::class",
-            "site.addzero.configcenter.ktor.ConfigCenterKtorKoinModule::class",
+            "site.addzero.kcloud.plugins.system.configcenter.ConfigCenterServerKoinModule::class",
             "site.addzero.starter.banner.BannerStarterKoinModule::class",
             "site.addzero.starter.flyway.FlywayStarterKoinModule::class",
             "site.addzero.starter.openapi.OpenApiStarterKoinModule::class",
@@ -282,7 +283,7 @@ class PluginMarketSupport(
             "site.addzero.starter.statuspages.StatusPagesStarterKoinModule::class",
         )
         val fixedRouteImports = listOf(
-            "site.addzero.configcenter.ktor.configCenterRoutes",
+            "site.addzero.kcloud.plugins.system.configcenter.configCenterRoutes",
             "site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes",
             "site.addzero.kcloud.plugins.system.rbac.rbacRoutes",
             "site.addzero.kcloud.plugins.system.aichat.aiChatRoutes",
@@ -372,7 +373,7 @@ class PluginMarketSupport(
 
             import io.ktor.server.routing.Route
             // <managed:$SERVER_ROUTE_IMPORT_BLOCK:start>
-            import site.addzero.configcenter.ktor.configCenterRoutes
+            import site.addzero.kcloud.plugins.system.configcenter.configCenterRoutes
             import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
             import site.addzero.kcloud.plugins.system.rbac.rbacRoutes
             import site.addzero.kcloud.plugins.system.aichat.aiChatRoutes

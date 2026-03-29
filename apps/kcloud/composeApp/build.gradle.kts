@@ -21,10 +21,8 @@ kotlin {
     dependencies {
         implementation(project(":lib:compose:scaffold-spi"))
         implementation(project(":apps:kcloud:shared"))
-        implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
-        implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
-        implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
-        implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
+        // KCloud 插件 UI/root 模块由 cmp-kcloud-aio 自动扫描并注入到 commonMain，
+        // 这里仅保留 composeApp 自身的基础依赖。
         implementation(libs.findLibrary("site-addzero-network-starter").get())
         implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
@@ -34,17 +32,9 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:server"))
-            implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
-            implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
-            implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
-            implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
         }
         jvmTest.dependencies {
             implementation(project(":apps:kcloud:server"))
-            implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
-            implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
-            implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
-            implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
             implementation(project(":apps:kcloud:plugins:vibepocket:server"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
         }

@@ -5,24 +5,8 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val sharedSourceDir = project(":apps:kbox:shared")
-    .extensions
-    .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
-    .sourceSets
-    .getByName("commonMain")
-    .kotlin
-    .srcDirs
-    .first()
-    .absolutePath
-val routeOwnerModuleDir = project(":apps:kbox:composeApp")
-    .extensions
-    .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
-    .sourceSets
-    .getByName("jvmMain")
-    .kotlin
-    .srcDirs
-    .first()
-    .absolutePath
+val sharedSourceDir = rootProject.file("apps/kbox/shared/src/commonMain/kotlin").absolutePath
+val routeOwnerModuleDir = rootProject.file("apps/kbox/composeApp/src/jvmMain/kotlin").absolutePath
 
 ksp {
     arg("sharedSourceDir", sharedSourceDir)

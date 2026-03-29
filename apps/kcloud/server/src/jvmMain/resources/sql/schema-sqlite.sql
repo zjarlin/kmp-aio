@@ -186,6 +186,143 @@ CREATE INDEX IF NOT EXISTS idx_plugin_deployment_artifact_job
 CREATE INDEX IF NOT EXISTS idx_plugin_import_record_package
     ON plugin_import_record(package_id, imported_at DESC);
 
+CREATE TABLE IF NOT EXISTS config_center_project (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_key TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT
+);
+
+CREATE TABLE IF NOT EXISTS config_center_environment (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    environment_key TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    personal_config_enabled INTEGER NOT NULL DEFAULT 0,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    UNIQUE(project_id, slug),
+    FOREIGN KEY(project_id) REFERENCES config_center_project(id)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    config_key TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    environment_id INTEGER NOT NULL,
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    config_type TEXT NOT NULL,
+    description TEXT,
+    locked INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    source_config_id INTEGER,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    UNIQUE(environment_id, slug),
+    FOREIGN KEY(project_id) REFERENCES config_center_project(id),
+    FOREIGN KEY(environment_id) REFERENCES config_center_environment(id),
+    FOREIGN KEY(source_config_id) REFERENCES config_center_config(id)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_secret (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    secret_key TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    config_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    masked_value TEXT NOT NULL DEFAULT '',
+    note TEXT,
+    value_type TEXT NOT NULL DEFAULT 'STRING',
+    sensitive INTEGER NOT NULL DEFAULT 1,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    version INTEGER NOT NULL DEFAULT 1,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    UNIQUE(config_id, name),
+    FOREIGN KEY(project_id) REFERENCES config_center_project(id),
+    FOREIGN KEY(config_id) REFERENCES config_center_config(id)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_secret_version (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    secret_id INTEGER NOT NULL,
+    version INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    masked_value TEXT NOT NULL DEFAULT '',
+    note TEXT,
+    actor TEXT NOT NULL DEFAULT 'system',
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    UNIQUE(secret_id, version),
+    FOREIGN KEY(secret_id) REFERENCES config_center_secret(id)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_service_token (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_key TEXT NOT NULL UNIQUE,
+    project_id INTEGER NOT NULL,
+    config_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    token_prefix TEXT NOT NULL,
+    write_access INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    active INTEGER NOT NULL DEFAULT 1,
+    last_used_time TEXT,
+    expire_time TEXT,
+    revoke_time TEXT,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    FOREIGN KEY(project_id) REFERENCES config_center_project(id),
+    FOREIGN KEY(config_id) REFERENCES config_center_config(id)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    config_id INTEGER,
+    action TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    resource_key TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    detail_json TEXT,
+    actor TEXT NOT NULL DEFAULT 'system',
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    FOREIGN KEY(project_id) REFERENCES config_center_project(id),
+    FOREIGN KEY(config_id) REFERENCES config_center_config(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_environment_project
+    ON config_center_environment(project_id, sort_order, slug);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_config_project
+    ON config_center_config(project_id, environment_id, config_type);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_secret_project
+    ON config_center_secret(project_id, config_id, enabled, deleted);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_secret_version_secret
+    ON config_center_secret_version(secret_id, version DESC);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_service_token_config
+    ON config_center_service_token(config_id, active, create_time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_activity_project
+    ON config_center_activity_log(project_id, create_time DESC);
+
 CREATE TABLE IF NOT EXISTS user_profile (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     account_key TEXT NOT NULL UNIQUE,

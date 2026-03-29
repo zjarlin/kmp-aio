@@ -20,9 +20,9 @@ object RouteKeys {
     const val MUSIC_STUDIO_SCREEN = "vibepocket/music-studio"
     const val KNOWLEDGE_BASE_SPACES_SCREEN = "system/knowledge-base/spaces"
     const val CREATIVE_ASSETS_SCREEN = "vibepocket/creative-assets"
-    const val CONFIG_CENTER_ENTRIES_SCREEN = "system/config-center/entries"
-    const val CONFIG_CENTER_TARGETS_SCREEN = "system/config-center/targets"
-    const val CONFIG_CENTER_PREVIEW_SCREEN = "system/config-center/preview"
+    const val CONFIG_CENTER_PROJECTS_SCREEN = "system/config-center/projects"
+    const val CONFIG_CENTER_SECRETS_SCREEN = "system/config-center/secrets"
+    const val CONFIG_CENTER_ACCESS_SCREEN = "system/config-center/access"
     const val SETTINGS_SCREEN = "vibepocket/settings"
 
     /**
@@ -40,9 +40,9 @@ object RouteKeys {
         Route(value = "创作中心", title = "音乐工作台", routePath = "vibepocket/music-studio", icon = "PlayArrow", order = 30.0, placement = RoutePlacement(scene = RouteScene(name = "音乐创作", icon = "PlayArrow", order = 200), defaultInScene = true), qualifiedName = "site.addzero.vibepocket.screen.MusicStudioScreen", simpleName = "MusicStudioScreen"),
         Route(value = "知识库", title = "知识空间", routePath = "system/knowledge-base/spaces", icon = "MenuBook", order = 40.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.knowledgebase.screen.KnowledgeBaseSpacesScreen", simpleName = "KnowledgeBaseSpacesScreen"),
         Route(value = "创作中心", title = "创作资产", routePath = "vibepocket/creative-assets", icon = "Dashboard", order = 40.0, placement = RoutePlacement(scene = RouteScene(name = "音乐创作", icon = "PlayArrow", order = 200), defaultInScene = false), qualifiedName = "site.addzero.vibepocket.screen.CreativeAssetsScreen", simpleName = "CreativeAssetsScreen"),
-        Route(value = "配置中心", title = "配置项", routePath = "system/config-center/entries", icon = "Settings", order = 80.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterEntriesScreen", simpleName = "ConfigCenterEntriesScreen"),
-        Route(value = "配置中心", title = "渲染目标", routePath = "system/config-center/targets", icon = "Tune", order = 81.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterTargetsScreen", simpleName = "ConfigCenterTargetsScreen"),
-        Route(value = "配置中心", title = "预览发布", routePath = "system/config-center/preview", icon = "Download", order = 82.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterPreviewScreen", simpleName = "ConfigCenterPreviewScreen"),
+        Route(value = "配置中心", title = "项目与环境", routePath = "system/config-center/projects", icon = "Hub", order = 80.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterProjectsScreen", simpleName = "ConfigCenterProjectsScreen"),
+        Route(value = "配置中心", title = "Secret 管理", routePath = "system/config-center/secrets", icon = "Key", order = 81.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterSecretsScreen", simpleName = "ConfigCenterSecretsScreen"),
+        Route(value = "配置中心", title = "令牌与审计", routePath = "system/config-center/access", icon = "Shield", order = 82.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterAccessScreen", simpleName = "ConfigCenterAccessScreen"),
         Route(value = "系统设置", title = "设置", routePath = "vibepocket/settings", icon = "Settings", order = 90.0, placement = RoutePlacement(scene = RouteScene(name = "音乐创作", icon = "PlayArrow", order = 200), defaultInScene = false), qualifiedName = "site.addzero.vibepocket.screen.SettingsScreen", simpleName = "SettingsScreen")
     )
 }

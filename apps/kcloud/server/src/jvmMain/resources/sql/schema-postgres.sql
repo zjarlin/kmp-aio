@@ -181,6 +181,132 @@ CREATE INDEX IF NOT EXISTS idx_plugin_deployment_artifact_job
 CREATE INDEX IF NOT EXISTS idx_plugin_import_record_package
     ON plugin_import_record(package_id, imported_at DESC);
 
+CREATE TABLE IF NOT EXISTS config_center_project (
+    id BIGSERIAL PRIMARY KEY,
+    project_key TEXT NOT NULL UNIQUE,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS config_center_environment (
+    id BIGSERIAL PRIMARY KEY,
+    environment_key TEXT NOT NULL UNIQUE,
+    project_id BIGINT NOT NULL REFERENCES config_center_project(id),
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    is_default BOOLEAN NOT NULL DEFAULT FALSE,
+    personal_config_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP,
+    UNIQUE(project_id, slug)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_config (
+    id BIGSERIAL PRIMARY KEY,
+    config_key TEXT NOT NULL UNIQUE,
+    project_id BIGINT NOT NULL REFERENCES config_center_project(id),
+    environment_id BIGINT NOT NULL REFERENCES config_center_environment(id),
+    slug TEXT NOT NULL,
+    name TEXT NOT NULL,
+    config_type TEXT NOT NULL,
+    description TEXT,
+    locked BOOLEAN NOT NULL DEFAULT FALSE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    source_config_id BIGINT REFERENCES config_center_config(id),
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP,
+    UNIQUE(environment_id, slug)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_secret (
+    id BIGSERIAL PRIMARY KEY,
+    secret_key TEXT NOT NULL UNIQUE,
+    project_id BIGINT NOT NULL REFERENCES config_center_project(id),
+    config_id BIGINT NOT NULL REFERENCES config_center_config(id),
+    name TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    masked_value TEXT NOT NULL DEFAULT '',
+    note TEXT,
+    value_type TEXT NOT NULL DEFAULT 'STRING',
+    sensitive BOOLEAN NOT NULL DEFAULT TRUE,
+    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+    deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    version INTEGER NOT NULL DEFAULT 1,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP,
+    UNIQUE(config_id, name)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_secret_version (
+    id BIGSERIAL PRIMARY KEY,
+    secret_id BIGINT NOT NULL REFERENCES config_center_secret(id),
+    version INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    value_text TEXT NOT NULL,
+    masked_value TEXT NOT NULL DEFAULT '',
+    note TEXT,
+    actor TEXT NOT NULL DEFAULT 'system',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP,
+    UNIQUE(secret_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS config_center_service_token (
+    id BIGSERIAL PRIMARY KEY,
+    token_key TEXT NOT NULL UNIQUE,
+    project_id BIGINT NOT NULL REFERENCES config_center_project(id),
+    config_id BIGINT NOT NULL REFERENCES config_center_config(id),
+    name TEXT NOT NULL,
+    token_hash TEXT NOT NULL,
+    token_prefix TEXT NOT NULL,
+    write_access BOOLEAN NOT NULL DEFAULT FALSE,
+    description TEXT,
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    last_used_time TIMESTAMP,
+    expire_time TIMESTAMP,
+    revoke_time TIMESTAMP,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS config_center_activity_log (
+    id BIGSERIAL PRIMARY KEY,
+    project_id BIGINT NOT NULL REFERENCES config_center_project(id),
+    config_id BIGINT REFERENCES config_center_config(id),
+    action TEXT NOT NULL,
+    resource_type TEXT NOT NULL,
+    resource_key TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    detail_json TEXT,
+    actor TEXT NOT NULL DEFAULT 'system',
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_environment_project
+    ON config_center_environment(project_id, sort_order, slug);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_config_project
+    ON config_center_config(project_id, environment_id, config_type);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_secret_project
+    ON config_center_secret(project_id, config_id, enabled, deleted);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_secret_version_secret
+    ON config_center_secret_version(secret_id, version DESC);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_service_token_config
+    ON config_center_service_token(config_id, active, create_time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_activity_project
+    ON config_center_activity_log(project_id, create_time DESC);
+
 CREATE TABLE IF NOT EXISTS user_profile (
     id BIGSERIAL PRIMARY KEY,
     account_key TEXT NOT NULL UNIQUE,

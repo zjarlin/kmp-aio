@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
-import site.addzero.configcenter.runtime.ConfigCenterCompatService
+import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterCompatService
 import site.addzero.kcloud.api.suno.SunoApiClient
 import site.addzero.kcloud.api.suno.SunoGenerateRequest
 import site.addzero.kcloud.vibepocket.dto.GenerateRequest

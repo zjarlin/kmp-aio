@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.configcenter.runtime.ConfigCenterCompatService
+import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterCompatService
 import site.addzero.kcloud.vibepocket.dto.OkResponse
 import site.addzero.kcloud.vibepocket.model.AppConfig
 import site.addzero.kcloud.vibepocket.model.AppConfigDraft

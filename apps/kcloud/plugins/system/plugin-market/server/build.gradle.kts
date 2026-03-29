@@ -15,8 +15,7 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:system:plugin-market:shared"))
-            implementation(project(":lib:config-center:runtime-jvm"))
-            implementation(project(":lib:config-center:spec"))
+            implementation(project(":apps:kcloud:plugins:system:config-center:server"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())

@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import org.koin.core.annotation.Single
 import site.addzero.generated.RouteTable
 import site.addzero.kcloud.app.KCloudNavRoute
 import site.addzero.kcloud.app.KCloudRouteCatalog
@@ -19,6 +20,7 @@ import site.addzero.kcloud.app.KCloudRouteEntry
 import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.workbenchshell.spi.content.ContentRender
 
+@Single
 class KCloudContentRender(
     private val routeCatalog: KCloudRouteCatalog,
     private val shellState: KCloudShellState,

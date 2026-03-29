@@ -58,6 +58,13 @@ private class KCloudServerSchemaBootstrapper : JimmerDatasourceBootstrapSpi {
             "ai_chat_message" to listOf("create_time", "update_time"),
             "knowledge_space" to listOf("create_time", "update_time"),
             "knowledge_document" to listOf("create_time", "update_time"),
+            "config_center_project" to listOf("create_time", "update_time"),
+            "config_center_environment" to listOf("create_time", "update_time"),
+            "config_center_config" to listOf("create_time", "update_time"),
+            "config_center_secret" to listOf("create_time", "update_time"),
+            "config_center_secret_version" to listOf("create_time", "update_time"),
+            "config_center_service_token" to listOf("create_time", "update_time"),
+            "config_center_activity_log" to listOf("create_time", "update_time"),
         )
         context.dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->

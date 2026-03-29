@@ -20,7 +20,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":apps:coding-playground:shared"))
-            implementation(project(":lib:api:api-netease"))
+            implementation("site.addzero:api-netease:2026.02.17")
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
         }

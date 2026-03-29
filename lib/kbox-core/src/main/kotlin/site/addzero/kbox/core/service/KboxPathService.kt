@@ -11,6 +11,7 @@ import site.addzero.kbox.core.model.KboxInstallerRule
 import site.addzero.kbox.core.support.normalizeSegments
 import site.addzero.kbox.core.support.sanitizeFileName
 import site.addzero.kbox.core.support.stableShortHash
+import site.addzero.util.PathUtil
 import java.io.File
 
 @Single
@@ -23,28 +24,10 @@ open class KboxPathService {
     }
 
     open fun defaultAppDataDir(): File {
-        val userHome = File(requiredSystemProperty("user.home"))
-        val osName = System.getProperty("os.name").orEmpty()
-        return when {
-            osName.contains("Mac", ignoreCase = true) -> {
-                File(userHome, "Library/Application Support/$KBOX_APP_NAME")
-            }
-
-            osName.contains("Windows", ignoreCase = true) -> {
-                val baseDir = System.getenv("LOCALAPPDATA")
-                    ?.takeIf { it.isNotBlank() }
-                    ?: System.getenv("APPDATA")?.takeIf { it.isNotBlank() }
-                    ?: userHome.absolutePath
-                File(baseDir, KBOX_APP_NAME)
-            }
-
-            else -> {
-                val baseDir = System.getenv("XDG_DATA_HOME")
-                    ?.takeIf { it.isNotBlank() }
-                    ?: File(userHome, ".local/share").absolutePath
-                File(baseDir, KBOX_APP_NAME)
-            }
-        }
+        return PathUtil.appDataDir(
+            appName = KBOX_APP_NAME,
+            createDirectories = false,
+        )
     }
 
     open fun appDataDir(): File {
@@ -176,7 +159,7 @@ open class KboxPathService {
     fun packagesDir(
         appDataDir: File,
     ): File {
-        return File(appDataDir, "packages").apply { mkdirs() }
+        return childDirectory(appDataDir, "packages")
     }
 
     fun historyDir(): File {
@@ -186,7 +169,7 @@ open class KboxPathService {
     fun historyDir(
         appDataDir: File,
     ): File {
-        return File(appDataDir, "history").apply { mkdirs() }
+        return childDirectory(appDataDir, "history")
     }
 
     fun configDir(): File {
@@ -196,7 +179,7 @@ open class KboxPathService {
     fun configDir(
         appDataDir: File,
     ): File {
-        return File(appDataDir, "config").apply { mkdirs() }
+        return childDirectory(appDataDir, "config")
     }
 
     fun dotfilesDir(): File {
@@ -206,7 +189,7 @@ open class KboxPathService {
     fun dotfilesDir(
         appDataDir: File,
     ): File {
-        return File(appDataDir, "dotfiles").apply { mkdirs() }
+        return childDirectory(appDataDir, "dotfiles")
     }
 
     fun dotfilesBackupDir(): File {
@@ -216,7 +199,7 @@ open class KboxPathService {
     fun dotfilesBackupDir(
         appDataDir: File,
     ): File {
-        return File(dotfilesDir(appDataDir), "_backup").apply { mkdirs() }
+        return childDirectory(dotfilesDir(appDataDir), "_backup")
     }
 
     fun packageProfilesDir(): File {
@@ -226,7 +209,7 @@ open class KboxPathService {
     fun packageProfilesDir(
         appDataDir: File,
     ): File {
-        return File(appDataDir, "package-profiles").apply { mkdirs() }
+        return childDirectory(appDataDir, "package-profiles")
     }
 
     private fun buildDestinationFileName(
@@ -258,7 +241,7 @@ open class KboxPathService {
 
     private fun appDataLocatorFile(): File {
         return File(
-            requiredSystemProperty("user.home"),
+            PathUtil.userHomeDir().path,
             ".kbox-app-data.json",
         )
     }
@@ -270,10 +253,11 @@ open class KboxPathService {
         if (trimmed.isBlank()) {
             return ""
         }
+        val userHome = PathUtil.userHomeDir()
         val expanded = if (trimmed == "~") {
-            requiredSystemProperty("user.home")
+            userHome.path
         } else if (trimmed.startsWith("~/")) {
-            File(requiredSystemProperty("user.home"), trimmed.removePrefix("~/")).path
+            File(userHome, trimmed.removePrefix("~/")).path
         } else {
             trimmed
         }
@@ -282,6 +266,17 @@ open class KboxPathService {
         }.getOrElse {
             File(expanded).absoluteFile.path
         }
+    }
+
+    private fun childDirectory(
+        parent: File,
+        vararg names: String,
+    ): File {
+        return PathUtil.child(
+            parent,
+            *names,
+            createDirectories = true,
+        )
     }
 
     private fun requiredSystemProperty(

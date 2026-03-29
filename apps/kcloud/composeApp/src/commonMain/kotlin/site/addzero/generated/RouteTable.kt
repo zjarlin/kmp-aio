@@ -22,9 +22,9 @@ object RouteTable {
         RouteKeys.MUSIC_STUDIO_SCREEN to @Composable { site.addzero.vibepocket.screen.MusicStudioScreen() },
         RouteKeys.KNOWLEDGE_BASE_SPACES_SCREEN to @Composable { site.addzero.kcloud.plugins.system.knowledgebase.screen.KnowledgeBaseSpacesScreen() },
         RouteKeys.CREATIVE_ASSETS_SCREEN to @Composable { site.addzero.vibepocket.screen.CreativeAssetsScreen() },
-        RouteKeys.CONFIG_CENTER_ENTRIES_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterEntriesScreen() },
-        RouteKeys.CONFIG_CENTER_TARGETS_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterTargetsScreen() },
-        RouteKeys.CONFIG_CENTER_PREVIEW_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterPreviewScreen() },
+        RouteKeys.CONFIG_CENTER_PROJECTS_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterProjectsScreen() },
+        RouteKeys.CONFIG_CENTER_SECRETS_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterSecretsScreen() },
+        RouteKeys.CONFIG_CENTER_ACCESS_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterAccessScreen() },
         RouteKeys.SETTINGS_SCREEN to @Composable { site.addzero.vibepocket.screen.SettingsScreen() }
     )
 
