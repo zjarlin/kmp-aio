@@ -22,7 +22,10 @@ fun main() {
             title = "Kotlin 声明式代码生成台",
             state = WindowState(width = 1420.dp, height = 920.dp),
         ) {
-            PlaygroundApp(runtime.state)
+            PlaygroundApp(
+                state = runtime.state,
+                neteaseDemoState = runtime.neteaseDemoState,
+            )
         }
     }
 }

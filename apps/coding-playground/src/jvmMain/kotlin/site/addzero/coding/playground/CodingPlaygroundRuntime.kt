@@ -7,6 +7,7 @@ import org.koin.plugin.module.dsl.withConfiguration
 class CodingPlaygroundRuntime(
     private val koinApplication: KoinApplication,
     val state: PlaygroundWorkbenchState,
+    val neteaseDemoState: NeteaseDemoState,
     private val httpServer: PlaygroundHttpServer?,
     private val httpServerEnabled: Boolean,
 ) {
@@ -36,6 +37,7 @@ fun createCodingPlaygroundRuntime(
     return CodingPlaygroundRuntime(
         koinApplication = koinApplication,
         state = koin.get(),
+        neteaseDemoState = koin.get(),
         httpServer = if (httpServerEnabled) koin.get() else null,
         httpServerEnabled = httpServerEnabled,
     )

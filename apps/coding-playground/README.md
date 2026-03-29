@@ -30,6 +30,10 @@
 - KSP companion：
   生成源码统一引用 `GeneratedManagedDeclaration`
   目标工程可通过处理器生成 `GeneratedCodeIndex`
+- 集成示例：
+  Inspector 面板新增 `网易云 Demo` 标签页，直接调用 `:lib:api:api-netease` 的
+  `MusicSearchClient.musicApi.search(...)` 与 `getLyric(...)`
+  用来演示业务应用如何直接消费共享 API 库
 
 ## 关键 API
 
@@ -51,6 +55,8 @@
 ```bash
 ./gradlew :apps:coding-playground:runJvm
 ```
+
+启动后打开右侧 Inspector，切换到 `网易云 Demo` 标签页即可直接试搜歌和看歌词。
 
 单独验证编译：
 

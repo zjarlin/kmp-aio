@@ -6,10 +6,10 @@ import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatMessage
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatSession
 import site.addzero.kcloud.plugins.system.aichat.model.by
-import site.addzero.kcloud.system.api.AiChatConversationDto
-import site.addzero.kcloud.system.api.AiChatDeleteResult
-import site.addzero.kcloud.system.api.AiChatMessageDto
-import site.addzero.kcloud.system.api.AiChatSessionDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatConversationDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatDeleteResult
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
 import java.util.*
 
 private const val DEFAULT_SESSION_TITLE = "新会话"

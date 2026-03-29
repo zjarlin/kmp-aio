@@ -59,6 +59,26 @@ suspend fun updatePluginPackage(
 }
 
 /**
+ * 启用插件包。
+ */
+@PostMapping("/api/kcloud/plugin-market/packages/{id}/enable")
+suspend fun enablePluginPackage(
+    @PathVariable id: String,
+): PluginPackageDto {
+    return packageService().enable(id)
+}
+
+/**
+ * 停用插件包。
+ */
+@PostMapping("/api/kcloud/plugin-market/packages/{id}/disable")
+suspend fun disablePluginPackage(
+    @PathVariable id: String,
+): PluginPackageDto {
+    return packageService().disable(id)
+}
+
+/**
  * 读取插件包删除前检查信息。
  */
 @GetMapping("/api/kcloud/plugin-market/packages/{id}/delete-check")
@@ -76,6 +96,16 @@ suspend fun deletePluginPackage(
     @PathVariable id: String,
 ) {
     packageService().delete(id)
+}
+
+/**
+ * 显式卸载数据库托管插件包。
+ */
+@PostMapping("/api/kcloud/plugin-market/packages/{id}/uninstall")
+suspend fun uninstallPluginPackage(
+    @PathVariable id: String,
+) {
+    packageService().uninstall(id)
 }
 
 private fun packageService(): PluginPackageService = KoinPlatform.getKoin().get()

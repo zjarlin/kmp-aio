@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import site.addzero.coding.playground.NeteaseDemoState
 import site.addzero.coding.playground.PlaygroundWorkbenchState
 import site.addzero.coding.playground.shared.dto.*
 import site.addzero.component.search_bar.AddSearchBar
@@ -30,6 +31,7 @@ private enum class InspectorTab(val title: String) {
     CONFLICTS("冲突列表"),
     KSP_INDEX("KSP 索引"),
     VALIDATION("校验结果"),
+    NETEASE_DEMO("网易云 Demo"),
 }
 
 private enum class PresetCreateMode(val title: String) {
@@ -59,7 +61,10 @@ private data class ExplorerNode(
 )
 
 @Composable
-fun PlaygroundApp(state: PlaygroundWorkbenchState) {
+fun PlaygroundApp(
+    state: PlaygroundWorkbenchState,
+    neteaseDemoState: NeteaseDemoState,
+) {
     val scope = rememberCoroutineScope()
     var inspectorTab by remember { mutableStateOf(InspectorTab.SOURCE_PREVIEW) }
     var pendingDelete by remember { mutableStateOf<PendingDelete?>(null) }
@@ -183,6 +188,7 @@ fun PlaygroundApp(state: PlaygroundWorkbenchState) {
                         InspectorPane(
                             selectedTab = inspectorTab,
                             onSelectTab = { inspectorTab = it },
+                            neteaseDemoState = neteaseDemoState,
                             sourcePreview = state.sourcePreview?.content,
                             kspPreview = state.kspPreview?.content,
                             outputPath = state.sourcePreview?.outputPath,
@@ -1434,6 +1440,7 @@ private fun FunctionEditorCard(
 private fun InspectorPane(
     selectedTab: InspectorTab,
     onSelectTab: (InspectorTab) -> Unit,
+    neteaseDemoState: NeteaseDemoState,
     sourcePreview: String?,
     kspPreview: String?,
     outputPath: String?,
@@ -1488,6 +1495,8 @@ private fun InspectorPane(
                     )
 
                     InspectorTab.VALIDATION -> ValidationPanel(validationIssues)
+
+                    InspectorTab.NETEASE_DEMO -> NeteaseDemoPanel(neteaseDemoState)
                 }
             }
         }

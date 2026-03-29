@@ -17,7 +17,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import site.addzero.core.network.AddZeroHttpClientFactory
+import site.addzero.core.network.HttpClientFactory
 import kotlin.math.roundToInt
 
 internal expect fun buildSunoApi(
@@ -33,7 +33,7 @@ https://sunoapi.org/zh-CN/api-key
 class SunoApiClient(
     private val apiToken: String = "",
     baseUrl: String = DEFAULT_BASE_URL,
-    private val httpClient: HttpClient = resolveAddZeroHttpClientFactory().get(HTTP_CLIENT_PROFILE),
+    private val httpClient: HttpClient = resolveHttpClientFactory().get(HTTP_CLIENT_PROFILE),
 ) {
     companion object {
         const val HTTP_CLIENT_PROFILE = "suno-api"
@@ -527,6 +527,6 @@ class SunoApiClient(
     }
 }
 
-private fun resolveAddZeroHttpClientFactory(): AddZeroHttpClientFactory {
-    return AddZeroHttpClientFactory.shared()
+private fun resolveHttpClientFactory(): HttpClientFactory {
+    return HttpClientFactory.shared()
 }

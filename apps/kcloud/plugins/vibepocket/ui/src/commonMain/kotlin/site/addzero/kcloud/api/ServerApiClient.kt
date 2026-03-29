@@ -1,7 +1,7 @@
 package site.addzero.kcloud.api
 
 import io.ktor.client.HttpClient
-import site.addzero.core.network.AddZeroHttpClientFactory
+import site.addzero.core.network.HttpClientFactory
 
 internal expect fun buildConfigApi(
     baseUrl: String,
@@ -39,8 +39,8 @@ internal expect fun buildSunoTaskResourceApi(
 object ServerApiClient {
     private const val httpClientProfile = "kcloud-vibepocket"
     private const val defaultBaseUrl = "http://localhost:18080/"
-    private val httpClientFactory: AddZeroHttpClientFactory
-        get() = AddZeroHttpClientFactory.shared()
+    private val httpClientFactory: HttpClientFactory
+        get() = HttpClientFactory.shared()
 
     @Volatile
     private var baseUrl: String = defaultBaseUrl

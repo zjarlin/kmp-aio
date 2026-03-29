@@ -13,11 +13,11 @@ object RouteTable {
     val allRoutes: Map<String, @Composable () -> Unit> = mapOf(
         RouteKeys.MCU_CONTROL_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuControlScreen() },
         RouteKeys.MCU_FLASH_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuFlashScreen() },
-        RouteKeys.USER_CENTER_PROFILE_SCREEN to @Composable { site.addzero.kcloud.plugins.rbac.screen.UserCenterProfileScreen() },
+        RouteKeys.USER_CENTER_PROFILE_SCREEN to @Composable { site.addzero.kcloud.plugins.system.rbac.screen.UserCenterProfileScreen() },
         RouteKeys.MCU_ONLINE_DEV_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuOnlineDevScreen() },
         RouteKeys.PLUGIN_MARKET_PACKAGES_SCREEN to @Composable { site.addzero.kcloud.plugins.system.pluginmarket.screen.PluginMarketPackagesScreen() },
         RouteKeys.MCU_DEBUG_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen() },
-        RouteKeys.RBAC_USER_SCREEN to @Composable { site.addzero.kcloud.plugins.rbac.screen.RbacUserScreen() },
+        RouteKeys.RBAC_USER_SCREEN to @Composable { site.addzero.kcloud.plugins.system.rbac.screen.RbacUserScreen() },
         RouteKeys.AI_CHAT_SESSIONS_SCREEN to @Composable { site.addzero.kcloud.plugins.system.aichat.screen.AiChatSessionsScreen() },
         RouteKeys.MUSIC_STUDIO_SCREEN to @Composable { site.addzero.vibepocket.screen.MusicStudioScreen() },
         RouteKeys.KNOWLEDGE_BASE_SPACES_SCREEN to @Composable { site.addzero.kcloud.plugins.system.knowledgebase.screen.KnowledgeBaseSpacesScreen() },

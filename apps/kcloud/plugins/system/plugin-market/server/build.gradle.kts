@@ -14,13 +14,17 @@ dependencies {
 kotlin {
     sourceSets {
         jvmMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:system:plugin-market"))
+            api(project(":apps:kcloud:plugins:system:plugin-market:shared"))
             implementation(project(":lib:config-center:runtime-jvm"))
             implementation(project(":lib:config-center:spec"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())
             compileOnly(libs.findLibrary("org-springframework-spring-web").get())
+        }
+        jvmTest.dependencies {
+            implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
     }
 }

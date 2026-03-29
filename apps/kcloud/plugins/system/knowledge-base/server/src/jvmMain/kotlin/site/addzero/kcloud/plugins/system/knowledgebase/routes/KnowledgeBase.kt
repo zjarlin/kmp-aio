@@ -3,7 +3,7 @@ package site.addzero.kcloud.plugins.system.knowledgebase.routes
 import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.*
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseService
-import site.addzero.kcloud.system.api.*
+import site.addzero.kcloud.plugins.system.knowledgebase.api.*
 
 /**
  * 知识库服务端路由定义，同时作为客户端 API 生成源。

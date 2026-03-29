@@ -5,8 +5,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.system.api.KnowledgeDocumentDto
-import site.addzero.kcloud.system.api.KnowledgeSpaceDto
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
 
 @Single
 class KnowledgeBaseWorkbenchState(

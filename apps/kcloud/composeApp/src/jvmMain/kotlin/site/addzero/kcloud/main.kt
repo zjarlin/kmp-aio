@@ -15,7 +15,6 @@ import site.addzero.appsidebar.WorkbenchWindowFrame
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
-import site.addzero.kcloud.system.api.KCloudSystemApiClient
 import java.awt.Container
 import javax.swing.JComponent
 
@@ -28,7 +27,7 @@ fun main() {
         val embeddedServer = remember {
             startEmbeddedDesktopServer(
                 configureKoin = {
-                    withConfiguration<KCloudDesktopSupplementKoinApplication>()
+                    withConfiguration<KCloudComposeKoinApplication>()
                 },
             )
         }
@@ -65,7 +64,6 @@ private fun configureLocalApiClients(
     baseUrl: String,
 ) {
     ServerApiClient.configureBaseUrl(baseUrl)
-    KCloudSystemApiClient.configureBaseUrl(baseUrl)
     McuConsoleApiClient.configureBaseUrl(baseUrl)
 }
 

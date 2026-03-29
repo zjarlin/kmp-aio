@@ -39,7 +39,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:system:plugin-market"))
+            api(project(":apps:kcloud:plugins:system:plugin-market:shared"))
             implementation(project(":lib:compose:workbench-shell"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())

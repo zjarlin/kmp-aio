@@ -1,6 +1,6 @@
 package site.addzero.system.model.dto
 
-import site.addzero.system.dto.PageQuery
+import site.addzero.system.model.common.PageQuery
 import java.time.Instant
 
 /**

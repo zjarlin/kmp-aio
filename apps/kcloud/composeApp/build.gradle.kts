@@ -16,7 +16,10 @@ kotlin {
     dependencies {
         implementation(project(":lib:compose:workbench-shell"))
         implementation(project(":apps:kcloud:shared"))
-        implementation(project(":apps:kcloud:plugins:system:shared"))
+        implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
+        implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
+        implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
+        implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
 
@@ -24,11 +27,17 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:server"))
-            implementation(project(":apps:kcloud:plugins:system:shared"))
+            implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
+            implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
+            implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
+            implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
         }
         jvmTest.dependencies {
             implementation(project(":apps:kcloud:server"))
-            implementation(project(":apps:kcloud:plugins:system:shared"))
+            implementation(project(":apps:kcloud:plugins:system:rbac:shared"))
+            implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
+            implementation(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
+            implementation(project(":apps:kcloud:plugins:system:plugin-market:shared"))
             implementation(project(":apps:kcloud:plugins:vibepocket:server"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
         }

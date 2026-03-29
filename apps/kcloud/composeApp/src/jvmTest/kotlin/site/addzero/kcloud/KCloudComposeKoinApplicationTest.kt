@@ -5,7 +5,7 @@ import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.app.KCloudRouteCatalog
 import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
-import site.addzero.kcloud.plugins.rbac.UserCenterWorkbenchState
+import site.addzero.kcloud.plugins.system.rbac.UserCenterWorkbenchState
 import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterWorkbenchState
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseWorkbenchState

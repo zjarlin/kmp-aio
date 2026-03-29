@@ -5,8 +5,8 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.system.api.AiChatMessageDto
-import site.addzero.kcloud.system.api.AiChatSessionDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
 
 @Single
 class AiChatWorkbenchState(

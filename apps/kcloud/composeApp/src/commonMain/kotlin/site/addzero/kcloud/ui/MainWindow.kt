@@ -32,7 +32,6 @@ fun MainWindow(
         ShellThemeMode.DARK -> true
         ShellThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-
     KCloudTheme(
         darkTheme = darkTheme,
     ) {

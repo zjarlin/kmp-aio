@@ -1,6 +1,6 @@
 package site.addzero.system.spi
 
-import site.addzero.system.dto.UserRoleDTO
+import site.addzero.system.spi.rbac.dto.UserRoleDTO
 
 /**
  * 用户角色绑定服务SPI

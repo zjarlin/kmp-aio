@@ -3,7 +3,7 @@ package site.addzero.kcloud.plugins.system.aichat.routes
 import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.*
 import site.addzero.kcloud.plugins.system.aichat.AiChatService
-import site.addzero.kcloud.system.api.*
+import site.addzero.kcloud.plugins.system.aichat.api.*
 
 /**
  * AI 对话服务端路由定义，同时作为客户端 API 生成源。

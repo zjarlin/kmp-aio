@@ -27,8 +27,11 @@ import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketWorkbenchState
+import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginActivationState
+import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeploymentJobDto
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeploymentStatus
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDiscoveryItemDto
+import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPackageDto
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPresetKind
 
 @Route(
@@ -55,6 +58,12 @@ fun PluginMarketPackagesScreen() {
         state.refreshAll()
         state.selectedPackageId?.let { state.selectPackage(it) }
     }
+
+    DeletePackageConfirmDialog(
+        state = state,
+        onDismiss = { state.cancelDeletePackage() },
+        onConfirm = { scope.launch { state.confirmDeleteSelectedPackage() } },
+    )
 
     Row(
         modifier = Modifier.fillMaxSize().padding(12.dp),
@@ -83,10 +92,12 @@ fun PluginMarketPackagesScreen() {
                     state = state,
                     modifier = Modifier.weight(0.9f).fillMaxHeight(),
                     onSave = { scope.launch { state.savePackage() } },
-                    onDelete = { scope.launch { state.deleteSelectedPackage() } },
                     onImport = { scope.launch { state.importSelectedDiscovery() } },
+                    onEnable = { scope.launch { state.enableSelectedPackage() } },
+                    onDisable = { scope.launch { state.disableSelectedPackage() } },
                     onDeploy = { scope.launch { state.deploySelectedPackage() } },
                     onBuild = { scope.launch { state.runBuildForSelectedPackage() } },
+                    onDelete = { scope.launch { state.prepareDeleteSelectedPackage() } },
                 )
                 PluginSourceEditorPanel(
                     state = state,
@@ -188,22 +199,40 @@ private fun PluginPackageEditorPanel(
     state: PluginMarketWorkbenchState,
     modifier: Modifier,
     onSave: () -> Unit,
-    onDelete: () -> Unit,
     onImport: () -> Unit,
+    onEnable: () -> Unit,
+    onDisable: () -> Unit,
     onDeploy: () -> Unit,
     onBuild: () -> Unit,
+    onDelete: () -> Unit,
 ) {
+    val selectedPackage = state.selectedPackage
+    val selectedDiscovery = state.selectedDiscovery
     PluginMarketPanel(
         title = "插件包",
         modifier = modifier,
         actions = {
-            AddIconButton(text = "保存", imageVector = Icons.Default.Save, onClick = onSave)
-            AddIconButton(text = "删除", imageVector = Icons.Default.Delete, onClick = onDelete)
-            AddIconButton(text = "导入发现项", imageVector = Icons.Default.CloudDownload, onClick = onImport)
-            AddIconButton(text = "导出部署", imageVector = Icons.Default.Upload, onClick = onDeploy)
-            AddIconButton(text = "验证构建", imageVector = Icons.Default.Build, onClick = onBuild)
+            if (selectedPackage != null) {
+                AddIconButton(text = "保存元数据", imageVector = Icons.Default.Save, onClick = onSave)
+                AddIconButton(text = "导出安装", imageVector = Icons.Default.Upload, onClick = onDeploy)
+                if (selectedPackage.activationState == PluginActivationState.DISABLED || !selectedPackage.enabled) {
+                    AddIconButton(text = "启用", imageVector = Icons.Default.PlayCircle, onClick = onEnable)
+                } else if (selectedPackage.activationState == PluginActivationState.ENABLED) {
+                    AddIconButton(text = "停用", imageVector = Icons.Default.PauseCircle, onClick = onDisable)
+                } else {
+                    AddIconButton(text = "启用", imageVector = Icons.Default.PlayCircle, onClick = onEnable)
+                }
+                AddIconButton(text = "验证构建", imageVector = Icons.Default.Build, onClick = onBuild)
+                AddIconButton(text = "卸载", imageVector = Icons.Default.Delete, onClick = onDelete)
+            } else {
+                AddIconButton(text = "新建托管插件", imageVector = Icons.Default.Save, onClick = onSave)
+                if (selectedDiscovery != null) {
+                    AddIconButton(text = "导入发现项", imageVector = Icons.Default.CloudDownload, onClick = onImport)
+                }
+            }
         },
     ) {
+        PackageStateSummary(state = state)
         CompactTextField(
             label = "插件名称",
             value = state.packageName,
@@ -280,28 +309,82 @@ private fun PluginPackageEditorPanel(
             modifier = Modifier.fillMaxWidth().weight(1f),
             minLines = 4,
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+        Text(
+            text = state.statusMessage,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (state.statusIsError) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        )
+    }
+}
+
+@Composable
+private fun PackageStateSummary(
+    state: PluginMarketWorkbenchState,
+) {
+    val selectedPackage = state.selectedPackage
+    val selectedDiscovery = state.selectedDiscovery
+    val latestJob = selectedPackage?.let { plugin ->
+        state.jobs
+            .filter { it.packageId == plugin.id }
+            .maxByOrNull { it.updatedAt }
+    }
+    val entries = when {
+        selectedPackage != null -> listOf(
+            "当前对象" to "${selectedPackage.name} (${selectedPackage.pluginId})",
+            "安装状态" to if (selectedPackage.moduleInstalled) "模块目录已存在" else "模块目录未落盘",
+            "接线状态" to selectedPackage.activationState.toChineseLabel(),
+            "部署开关" to if (selectedPackage.enabled) "允许参与主应用自动聚合" else "已从主应用自动聚合中停用",
+            "托管方式" to if (selectedPackage.managedByDb) "数据库托管" else "只读发现",
+            "模块目录" to selectedPackage.moduleDir,
+            "最近任务" to latestJob?.status?.toChineseLabel().orEmpty().ifBlank { "还没有执行导出或构建" },
+        )
+        selectedDiscovery != null -> listOf(
+            "当前对象" to "磁盘发现项",
+            "插件 ID" to selectedDiscovery.pluginId,
+            "Gradle 路径" to selectedDiscovery.gradlePath,
+            "模块目录" to selectedDiscovery.moduleDir,
+        )
+        else -> listOf(
+            "当前对象" to "新建插件包",
+            "说明" to "先填写元数据，再执行“导出安装”生成模块目录并接入主应用",
+        )
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = state.statusMessage,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (state.statusIsError) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("启用")
-                Switch(
-                    checked = state.packageEnabled,
-                    onCheckedChange = { state.packageEnabled = it },
+            entries.forEach { (label, value) ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "$label：",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
+            if (selectedPackage != null) {
+                Text(
+                    text = selectedPackage.runtimeHint(latestJob),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -579,10 +662,28 @@ private fun PresetSelector(
 }
 
 private fun buildPluginTree(state: PluginMarketWorkbenchState): List<PluginTreeNode> {
-    val packageNodes = state.packages.map { plugin ->
+    val keyword = state.searchKeyword.trim()
+    fun matchesKeyword(vararg values: String?): Boolean {
+        if (keyword.isBlank()) {
+            return true
+        }
+        return values.any { value -> value?.contains(keyword, ignoreCase = true) == true }
+    }
+
+    val packageNodes = state.packages
+        .filter { plugin ->
+            matchesKeyword(
+                plugin.name,
+                plugin.pluginId,
+                plugin.pluginGroup,
+                plugin.moduleDir,
+                plugin.activationState.toChineseLabel(),
+            )
+        }
+        .map { plugin ->
         PluginTreeNode(
             id = "package/${plugin.id}",
-            label = "${plugin.name} (${plugin.pluginId})",
+            label = "${plugin.name} (${plugin.pluginId}) · ${plugin.treeStatusLabel()}",
             kind = "package",
             packageId = plugin.id,
             children = state.currentFiles
@@ -597,7 +698,16 @@ private fun buildPluginTree(state: PluginMarketWorkbenchState): List<PluginTreeN
                 },
         )
     }
-    val discoveryNodes = state.discoveries.map { discovery ->
+    val discoveryNodes = state.discoveries
+        .filter { discovery ->
+            matchesKeyword(
+                discovery.pluginId,
+                discovery.pluginGroup,
+                discovery.moduleDir,
+                discovery.gradlePath,
+            )
+        }
+        .map { discovery ->
         PluginTreeNode(
             id = "discovery/${discovery.discoveryId}",
             label = discoveryLabel(discovery),
@@ -605,7 +715,15 @@ private fun buildPluginTree(state: PluginMarketWorkbenchState): List<PluginTreeN
             discoveryId = discovery.discoveryId,
         )
     }
-    val jobNodes = state.jobs.map { job ->
+    val jobNodes = state.jobs
+        .filter { job ->
+            matchesKeyword(
+                job.exportedModuleDir,
+                job.status.toChineseLabel(),
+                job.summaryText,
+            )
+        }
+        .map { job ->
         PluginTreeNode(
             id = "job/${job.id}",
             label = "${job.exportedModuleDir.substringAfterLast('/')} · ${job.status.toChineseLabel()}",
@@ -635,6 +753,54 @@ private fun buildPluginTree(state: PluginMarketWorkbenchState): List<PluginTreeN
     )
 }
 
+@Composable
+private fun DeletePackageConfirmDialog(
+    state: PluginMarketWorkbenchState,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val deleteCheck = state.deleteCheckResult ?: return
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("确认卸载插件包") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("将执行数据库托管插件卸载。")
+                deleteCheck.warnings.forEach { warning ->
+                    Text("提示：$warning", style = MaterialTheme.typography.bodySmall)
+                }
+                deleteCheck.blockers.forEach { blocker ->
+                    Text(
+                        text = "阻断：$blocker",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                if (!deleteCheck.canDelete) {
+                    Text(
+                        text = "当前存在阻断项，不能继续卸载。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = deleteCheck.canDelete,
+            ) {
+                Text("确认卸载")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("取消")
+            }
+        },
+    )
+}
+
 private fun discoveryLabel(discovery: PluginDiscoveryItemDto): String {
     val issueMark = if (discovery.issues.isEmpty()) "" else " · ${discovery.issues.size} 个问题"
     return "${discovery.pluginId}$issueMark"
@@ -656,5 +822,34 @@ private fun PluginDeploymentStatus.toChineseLabel(): String {
         PluginDeploymentStatus.SUCCESS -> "成功"
         PluginDeploymentStatus.FAILED -> "失败"
         PluginDeploymentStatus.RESTART_REQUIRED -> "待重启生效"
+    }
+}
+
+private fun PluginActivationState.toChineseLabel(): String {
+    return when (this) {
+        PluginActivationState.NOT_INSTALLED -> "未安装"
+        PluginActivationState.ENABLED -> "已安装且启用"
+        PluginActivationState.DISABLED -> "已安装但停用"
+    }
+}
+
+private fun PluginPackageDto.treeStatusLabel(): String {
+    return when {
+        !moduleInstalled -> "未安装"
+        disabledByMarker -> "已停用"
+        else -> "已启用"
+    }
+}
+
+private fun PluginPackageDto.runtimeHint(
+    latestJob: PluginDeploymentJobDto?,
+): String {
+    return when {
+        !moduleInstalled && enabled -> "当前模块目录还不存在。先执行“导出安装”，主应用下次构建时才会发现这个插件。"
+        !moduleInstalled && !enabled -> "当前模块目录还不存在，并且部署开关处于停用状态。若要接入主应用，先启用再执行“导出安装”。"
+        disabledByMarker -> "当前插件目录已存在，但受管禁用标记也已存在。下次构建并重启后，主应用不会聚合它。"
+        latestJob?.status == PluginDeploymentStatus.RESTART_REQUIRED -> "最近一次验证构建已经通过。重启 KCloud 后，菜单和服务端路由才会按当前源码状态生效。"
+        latestJob?.status == PluginDeploymentStatus.FAILED -> "最近一次验证构建失败。先看底部构建日志，再修正源码或接线问题。"
+        else -> "当前插件已处于自动聚合路径中。重新构建并重启后，主应用会按当前源码装配菜单与服务端路由。"
     }
 }

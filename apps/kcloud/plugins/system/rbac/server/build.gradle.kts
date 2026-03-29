@@ -5,10 +5,11 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val generatedApiOutputDir = project(":apps:kcloud:plugins:system:shared")
-    .projectDir
-    .resolve("generated/commonMain/kotlin/site/addzero/kcloud/system/api")
+val generatedApiOutputDir = rootDir
+    .resolve("apps/kcloud/plugins/system/rbac/shared")
+    .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/system/rbac/api")
     .absolutePath
+val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jvmMain/kotlin")
 
 dependencies {
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
@@ -17,14 +18,17 @@ dependencies {
 }
 
 ksp {
-    arg("apiClientPackageName", "site.addzero.kcloud.system.api")
+    arg("apiClientPackageName", "site.addzero.kcloud.plugins.system.rbac.api")
     arg("apiClientOutputDir", generatedApiOutputDir)
 }
 
 kotlin {
     sourceSets {
+        jvmMain {
+            kotlin.srcDir(generatedJvmRouteSourceDir)
+        }
         jvmMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:system:shared"))
+            api(project(":apps:kcloud:plugins:system:rbac:shared"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())

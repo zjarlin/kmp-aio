@@ -1,6 +1,6 @@
 package site.addzero.system.spi.notification
 
-import site.addzero.system.dto.PageResult
+import site.addzero.system.model.common.PageResult
 import site.addzero.system.model.dto.BroadcastRequest
 import site.addzero.system.model.dto.MessageTemplateDTO
 import site.addzero.system.model.dto.NotificationDTO

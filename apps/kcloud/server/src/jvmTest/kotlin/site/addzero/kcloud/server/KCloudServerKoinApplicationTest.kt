@@ -5,7 +5,7 @@ import org.koin.dsl.koinApplication
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashService
-import site.addzero.kcloud.plugins.rbac.UserProfileService
+import site.addzero.kcloud.plugins.system.rbac.UserProfileService
 import site.addzero.kcloud.plugins.system.aichat.AiChatService
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseService
 import site.addzero.kcloud.vibepocket.service.MusicCatalogService

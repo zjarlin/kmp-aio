@@ -6,9 +6,9 @@ import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.system.knowledgebase.model.KnowledgeDocument
 import site.addzero.kcloud.plugins.system.knowledgebase.model.KnowledgeSpace
 import site.addzero.kcloud.plugins.system.knowledgebase.model.by
-import site.addzero.kcloud.system.api.KnowledgeDeleteResult
-import site.addzero.kcloud.system.api.KnowledgeDocumentDto
-import site.addzero.kcloud.system.api.KnowledgeSpaceDto
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDeleteResult
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
 import java.util.*
 
 @Single

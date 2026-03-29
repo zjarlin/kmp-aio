@@ -74,11 +74,11 @@ class PluginPackageServiceImpl(
                     plugin.name.contains(query, ignoreCase = true) ||
                     plugin.moduleDir.contains(query, ignoreCase = true)
             }
-            .map { it.toDto() }
+            .map { support.toDto(it) }
     }
 
     override suspend fun get(id: String): PluginPackageDto {
-        return support.packageOrThrow(id).toDto()
+        return support.toDto(support.packageOrThrow(id))
     }
 
     override suspend fun aggregate(id: String): PluginPackageAggregateDto {
@@ -107,7 +107,55 @@ class PluginPackageServiceImpl(
         }
         val saved = support.sqlClient.save(entity).modifiedEntity
         support.syncEnabledMarker(saved)
-        return saved.toDto()
+        return support.toDto(saved)
+    }
+
+    override suspend fun enable(id: String): PluginPackageDto {
+        val existing = support.packageOrThrow(id)
+        if (existing.enabled) {
+            support.syncEnabledMarker(existing)
+            return support.toDto(existing)
+        }
+        return update(
+            id,
+            UpdatePluginPackageRequest(
+                name = existing.name,
+                pluginGroup = existing.pluginGroup,
+                description = existing.description,
+                version = existing.version,
+                basePackage = existing.basePackage,
+                moduleDir = existing.moduleDir,
+                enabled = true,
+                composeKoinModuleClass = existing.composeKoinModuleClass,
+                serverKoinModuleClass = existing.serverKoinModuleClass,
+                routeRegistrarImport = existing.routeRegistrarImport,
+                routeRegistrarCall = existing.routeRegistrarCall,
+            ),
+        )
+    }
+
+    override suspend fun disable(id: String): PluginPackageDto {
+        val existing = support.packageOrThrow(id)
+        if (!existing.enabled) {
+            support.syncEnabledMarker(existing)
+            return support.toDto(existing)
+        }
+        return update(
+            id,
+            UpdatePluginPackageRequest(
+                name = existing.name,
+                pluginGroup = existing.pluginGroup,
+                description = existing.description,
+                version = existing.version,
+                basePackage = existing.basePackage,
+                moduleDir = existing.moduleDir,
+                enabled = false,
+                composeKoinModuleClass = existing.composeKoinModuleClass,
+                serverKoinModuleClass = existing.serverKoinModuleClass,
+                routeRegistrarImport = existing.routeRegistrarImport,
+                routeRegistrarCall = existing.routeRegistrarCall,
+            ),
+        )
     }
 
     override suspend fun deleteCheck(id: String): PluginDeleteCheckResultDto {
@@ -130,6 +178,10 @@ class PluginPackageServiceImpl(
             }
             support.deletePackageCascade(id)
         }
+    }
+
+    override suspend fun uninstall(id: String) {
+        delete(id)
     }
 
     private fun defaultModuleDir(request: CreatePluginPackageRequest): String {
@@ -216,7 +268,7 @@ class PluginPresetServiceImpl(
     override suspend fun applyPreset(packageId: String, presetKind: PluginPresetKind): PluginPackageAggregateDto {
         val pluginPackage = support.packageOrThrow(packageId)
         val now = support.now()
-        val packageDto = pluginPackage.toDto()
+        val packageDto = support.toDto(pluginPackage)
         val existingPaths = support.listFiles(packageId).associateBy { it.relativePath }
         presetFiles(packageDto, presetKind).forEachIndexed { index, (path, content, group) ->
             val file = existingPaths[path]

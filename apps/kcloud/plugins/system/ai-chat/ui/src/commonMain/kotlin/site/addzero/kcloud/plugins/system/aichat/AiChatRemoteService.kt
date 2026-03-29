@@ -1,18 +1,18 @@
 package site.addzero.kcloud.plugins.system.aichat
 
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.system.api.*
+import site.addzero.kcloud.plugins.system.aichat.api.*
 
 @Single
 class AiChatRemoteService {
     suspend fun listSessions(): List<AiChatSessionDto> {
-        return KCloudSystemApiClient.aiChatApi.listAiChatSessions()
+        return AiChatApiClient.aiChatApi.listAiChatSessions()
     }
 
     suspend fun createSession(
         title: String,
     ): AiChatSessionDto {
-        return KCloudSystemApiClient.aiChatApi.createAiChatSession(
+        return AiChatApiClient.aiChatApi.createAiChatSession(
             AiChatSessionCreateRequest(title = title),
         )
     }
@@ -20,20 +20,20 @@ class AiChatRemoteService {
     suspend fun deleteSession(
         sessionId: Long,
     ) {
-        KCloudSystemApiClient.aiChatApi.deleteAiChatSession(sessionId)
+        AiChatApiClient.aiChatApi.deleteAiChatSession(sessionId)
     }
 
     suspend fun listMessages(
         sessionId: Long,
     ): List<AiChatMessageDto> {
-        return KCloudSystemApiClient.aiChatApi.listAiChatMessages(sessionId)
+        return AiChatApiClient.aiChatApi.listAiChatMessages(sessionId)
     }
 
     suspend fun sendMessage(
         sessionId: Long,
         content: String,
     ): AiChatConversationDto {
-        return KCloudSystemApiClient.aiChatApi.sendAiChatMessage(
+        return AiChatApiClient.aiChatApi.sendAiChatMessage(
             sessionId = sessionId,
             request = AiChatMessageCreateRequest(content = content),
         )

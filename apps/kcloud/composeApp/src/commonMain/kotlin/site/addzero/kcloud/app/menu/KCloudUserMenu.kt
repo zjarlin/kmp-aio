@@ -7,43 +7,92 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import org.koin.compose.koinInject
 import site.addzero.appsidebar.WorkbenchUserButton
-import site.addzero.kcloud.app.resolveKCloudIcon
+import site.addzero.kcloud.app.KCloudRouteCatalog
+import site.addzero.kcloud.app.KCloudSidebarNode
+import site.addzero.kcloud.app.KCloudShellState
+import site.addzero.kcloud.plugins.system.rbac.UserCenterWorkbenchState
 
 @Composable
 fun KCloudUserMenu(
-    state: KCloudUserMenuState = koinInject(),
+    shellState: KCloudShellState = koinInject(),
+    routeCatalog: KCloudRouteCatalog = koinInject(),
+    profileState: UserCenterWorkbenchState = koinInject(),
 ) {
-    LaunchedEffect(state) {
-        state.ensureLoaded()
+    LaunchedEffect(profileState) {
+        profileState.ensureLoaded()
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+    val items = remember(routeCatalog) {
+        routeCatalog.findScene(SYSTEM_SCENE_ID)?.menuNodes.orEmpty()
+    }
+    val displayName = profileState.displayName.ifBlank { "用户" }
+    val avatarInitials = remember(profileState.avatarLabel, displayName) {
+        profileState.avatarLabel.ifBlank { displayName }.toAvatarInitials()
     }
 
     Box {
         WorkbenchUserButton(
-            label = state.displayName,
-            avatarInitials = state.avatarInitials,
-            onClick = state::toggle,
+            label = displayName,
+            avatarInitials = avatarInitials,
+            onClick = { expanded = !expanded },
         )
 
         DropdownMenu(
-            expanded = state.expanded,
-            onDismissRequest = state::dismiss,
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
         ) {
-            state.items.forEach { item ->
+            items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(item.label) },
+                    text = { Text(item.name) },
                     leadingIcon = {
                         Icon(
-                            imageVector = resolveKCloudIcon(item.iconName),
+                            imageVector = item.icon,
                             contentDescription = null,
                         )
                     },
                     onClick = {
-                        state.navigateTo(item.routePath)
+                        val routePath = item.firstLeafRoutePath() ?: return@DropdownMenuItem
+                        expanded = false
+                        shellState.selectRoute(routePath)
                     },
                 )
             }
         }
     }
 }
+
+private fun KCloudSidebarNode.firstLeafRoutePath(): String? {
+    routePath?.let { route ->
+        return route
+    }
+    return children.firstNotNullOfOrNull { child ->
+        child.firstLeafRoutePath()
+    }
+}
+
+private fun String.toAvatarInitials(): String {
+    val trimmed = trim()
+    if (trimmed.isBlank()) {
+        return "U"
+    }
+    val segments = trimmed.substringBefore("@")
+        .split('.', '-', '_', ' ')
+        .filter(String::isNotBlank)
+    if (segments.isEmpty()) {
+        return trimmed.take(2).uppercase()
+    }
+    return segments.take(2)
+        .joinToString(separator = "") { part ->
+            part.take(1).uppercase()
+        }
+        .ifBlank { "U" }
+}
+
+private const val SYSTEM_SCENE_ID = "系统"

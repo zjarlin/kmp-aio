@@ -1,13 +1,13 @@
 package site.addzero.kcloud.plugins.mcuconsole.api.external
 
 import de.jensklingenberg.ktorfit.Ktorfit
-import site.addzero.core.network.AddZeroHttpClientFactory
+import site.addzero.core.network.HttpClientFactory
 
 actual object McuConsoleApiClient {
     private const val httpClientProfile = "kcloud-mcu-console"
     private const val defaultBaseUrl = "http://localhost:18080/"
-    private val httpClientFactory: AddZeroHttpClientFactory
-        get() = AddZeroHttpClientFactory.shared()
+    private val httpClientFactory: HttpClientFactory
+        get() = HttpClientFactory.shared()
 
     @Volatile
     private var cachedBaseUrl: String = defaultBaseUrl

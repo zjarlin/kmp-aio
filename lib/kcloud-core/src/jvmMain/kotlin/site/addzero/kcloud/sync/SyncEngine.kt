@@ -6,11 +6,11 @@ import site.addzero.kcloud.model.Conflict
 import site.addzero.kcloud.model.ConflictStrategy
 import site.addzero.kcloud.state.AppStateManager
 import site.addzero.kcloud.state.SyncStatus
-import site.addzero.kcloud.sync.api.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import site.addzero.system.spi.*
 import kotlin.math.roundToInt
 
 /**

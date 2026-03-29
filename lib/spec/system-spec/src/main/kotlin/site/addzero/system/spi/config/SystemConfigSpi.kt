@@ -1,6 +1,6 @@
 package site.addzero.system.spi.config
 
-import site.addzero.system.dto.PageResult
+import site.addzero.system.model.common.PageResult
 import site.addzero.system.model.dto.ConfigDTO
 import site.addzero.system.model.dto.ConfigQuery
 

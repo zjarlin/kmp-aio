@@ -23,6 +23,7 @@ private const val DESKTOP_KOIN_BLOCK = "plugin-market-desktop-koin"
 private const val SERVER_KOIN_BLOCK = "plugin-market-server-koin"
 private const val SERVER_ROUTE_IMPORT_BLOCK = "plugin-market-server-route-imports"
 private const val SERVER_ROUTE_BLOCK = "plugin-market-server-routes"
+private val INFRA_MODULE_NAMES = setOf("ui", "server", "shared")
 
 @Single
 class PluginMarketSupport(
@@ -121,7 +122,7 @@ class PluginMarketSupport(
     fun buildAggregate(packageId: String): PluginPackageAggregateDto {
         val pluginPackage = packageOrThrow(packageId)
         return PluginPackageAggregateDto(
-            pluginPackage = pluginPackage.toDto(),
+            pluginPackage = toDto(pluginPackage),
             files = listFiles(packageId).map { it.toDto() },
             presetBindings = listPresetBindings(packageId).map { it.toDto() },
             jobs = listJobs(packageId).map { it.toDto() },
@@ -142,6 +143,21 @@ class PluginMarketSupport(
     fun moduleRoot(pluginPackage: PluginPackage): Path = Paths.get(pluginPackage.moduleDir).normalize()
 
     fun disabledMarkerPath(pluginPackage: PluginPackage): Path = moduleRoot(pluginPackage).resolve(DISABLED_MARKER_FILE)
+
+    fun isModuleInstalled(pluginPackage: PluginPackage): Boolean = moduleRoot(pluginPackage).exists()
+
+    fun isDisabledByMarker(pluginPackage: PluginPackage): Boolean = disabledMarkerPath(pluginPackage).isRegularFile()
+
+    fun activationStateOf(pluginPackage: PluginPackage): PluginActivationState {
+        if (!isModuleInstalled(pluginPackage)) {
+            return PluginActivationState.NOT_INSTALLED
+        }
+        return if (isDisabledByMarker(pluginPackage)) {
+            PluginActivationState.DISABLED
+        } else {
+            PluginActivationState.ENABLED
+        }
+    }
 
     fun syncEnabledMarker(pluginPackage: PluginPackage) {
         val moduleRoot = moduleRoot(pluginPackage)
@@ -192,46 +208,11 @@ class PluginMarketSupport(
         if (!pluginsRoot.exists()) {
             return emptyList()
         }
-        val managedDirs = listPackages().associateBy { Paths.get(it.moduleDir).normalize().toString() }
-        return pluginsRoot.walk()
-            .filter { path -> path != pluginsRoot && path.isDirectory() && Files.exists(path.resolve("build.gradle.kts")) }
-            .map { moduleDir ->
-                val relative = moduleDir.relativeTo(pluginsRoot).toString().replace("\\", "/")
-                val parts = relative.split("/").filter { it.isNotBlank() }
-                val pluginId = parts.lastOrNull().orEmpty()
-                val pluginGroup = parts.dropLast(1).joinToString("/").ifBlank { null }
-                val moduleDirString = moduleDir.normalize().toString()
-                val composeKoinModuleClass = detectKoinModuleClass(moduleDir, "ComposeKoinModule")
-                val serverKoinModuleClass = detectKoinModuleClass(moduleDir, "ServerKoinModule")
-                val routeRegistrarCall = detectRouteRegistrarCall(moduleDir)
-                val routeRegistrarImport = routeRegistrarCall?.let { detectRouteRegistrarImport(moduleDir, it) }
-                val packageName = detectFirstPackage(moduleDir)
-                val issues = buildList {
-                    if (composeKoinModuleClass == null) add("未找到 Compose Koin 模块类")
-                    if (routeRegistrarCall == null) add("未找到 Route 注册函数")
-                }
-                PluginDiscoveryItemDto(
-                    discoveryId = relative,
-                    pluginId = pluginId,
-                    pluginGroup = pluginGroup,
-                    moduleDir = moduleDirString,
-                    gradlePath = ":apps:kcloud:plugins:${parts.joinToString(":")}",
-                    packageName = packageName,
-                    composeKoinModuleClass = composeKoinModuleClass,
-                    serverKoinModuleClass = serverKoinModuleClass,
-                    routeRegistrarImport = routeRegistrarImport,
-                    routeRegistrarCall = routeRegistrarCall,
-                    managedByDb = managedDirs.containsKey(moduleDirString),
-                    issues = issues,
-                )
-            }
-            .filter { item ->
-                searchQuery.isNullOrBlank() ||
-                    item.pluginId.contains(searchQuery, ignoreCase = true) ||
-                    item.moduleDir.contains(searchQuery, ignoreCase = true)
-            }
-            .sortedWith(compareBy<PluginDiscoveryItemDto> { it.pluginGroup.orEmpty() }.thenBy { it.pluginId })
-            .toList()
+        return discoverPluginModulesUnder(
+            pluginsRoot = pluginsRoot,
+            managedModuleDirs = listPackages().map { Paths.get(it.moduleDir).normalize().toString() }.toSet(),
+            searchQuery = searchQuery,
+        )
     }
 
     fun collectImportableFiles(moduleDir: Path): List<Pair<String, String>> {
@@ -282,7 +263,7 @@ class PluginMarketSupport(
             "site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule::class",
             "site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule::class",
             "site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketComposeKoinModule::class",
-            "site.addzero.kcloud.plugins.rbac.RbacKoinModule::class",
+            "site.addzero.kcloud.plugins.system.rbac.RbacKoinModule::class",
             "site.addzero.kcloud.vibepocket.VibePocketComposeKoinModule::class",
             "site.addzero.kcloud.app.KCloudWorkbenchKoinModule::class",
         )
@@ -303,7 +284,7 @@ class PluginMarketSupport(
         val fixedRouteImports = listOf(
             "site.addzero.configcenter.ktor.configCenterRoutes",
             "site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes",
-            "site.addzero.kcloud.plugins.rbac.rbacRoutes",
+            "site.addzero.kcloud.plugins.system.rbac.rbacRoutes",
             "site.addzero.kcloud.plugins.system.aichat.aiChatRoutes",
             "site.addzero.kcloud.plugins.system.knowledgebase.knowledgeBaseRoutes",
             "site.addzero.kcloud.plugins.system.pluginmarket.pluginMarketRoutes",
@@ -369,52 +350,6 @@ class PluginMarketSupport(
         )
     }
 
-    private fun detectKoinModuleClass(moduleDir: Path, suffix: String): String? {
-        return moduleDir.walk()
-            .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
-            .firstNotNullOfOrNull { file ->
-                val content = file.readText()
-                val packageName = Regex("""package\s+([A-Za-z0-9_.]+)""").find(content)?.groupValues?.get(1)
-                val className = Regex("""class\s+([A-Za-z0-9_]+$suffix)""").find(content)?.groupValues?.get(1)
-                if (packageName != null && className != null) "$packageName.$className" else null
-            }
-    }
-
-    private fun detectRouteRegistrarCall(moduleDir: Path): String? {
-        return moduleDir.walk()
-            .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
-            .firstNotNullOfOrNull { file ->
-                Regex("""fun\s+Route\.([A-Za-z0-9_]+)\(""")
-                    .find(file.readText())
-                    ?.groupValues
-                    ?.get(1)
-                    ?.plus("()")
-            }
-    }
-
-    private fun detectRouteRegistrarImport(moduleDir: Path, call: String): String? {
-        val functionName = call.removeSuffix("()")
-        return moduleDir.walk()
-            .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
-            .firstNotNullOfOrNull { file ->
-                val content = file.readText()
-                val packageName = Regex("""package\s+([A-Za-z0-9_.]+)""").find(content)?.groupValues?.get(1)
-                val found = Regex("""fun\s+Route\.($functionName)\(""").find(content)
-                if (packageName != null && found != null) "$packageName.$functionName" else null
-            }
-    }
-
-    private fun detectFirstPackage(moduleDir: Path): String? {
-        return moduleDir.walk()
-            .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
-            .firstNotNullOfOrNull { file ->
-                Regex("""package\s+([A-Za-z0-9_.]+)""")
-                    .find(file.readText())
-                    ?.groupValues
-                    ?.get(1)
-            }
-    }
-
     private fun isTextFile(relativePath: String): Boolean {
         return listOf(".kt", ".kts", ".md", ".txt", ".yaml", ".yml", ".json", ".properties", ".conf")
             .any { relativePath.endsWith(it) }
@@ -439,7 +374,7 @@ class PluginMarketSupport(
             // <managed:$SERVER_ROUTE_IMPORT_BLOCK:start>
             import site.addzero.configcenter.ktor.configCenterRoutes
             import site.addzero.kcloud.plugins.mcuconsole.mcuConsoleRoutes
-            import site.addzero.kcloud.plugins.rbac.rbacRoutes
+            import site.addzero.kcloud.plugins.system.rbac.rbacRoutes
             import site.addzero.kcloud.plugins.system.aichat.aiChatRoutes
             import site.addzero.kcloud.plugins.system.knowledgebase.knowledgeBaseRoutes
             import site.addzero.kcloud.plugins.system.pluginmarket.pluginMarketRoutes
@@ -506,24 +441,128 @@ data class ManagedIntegrationResult(
     val diffText: String,
 )
 
-internal fun PluginPackage.toDto(): PluginPackageDto {
+internal fun discoverPluginModulesUnder(
+    pluginsRoot: Path,
+    managedModuleDirs: Set<String>,
+    searchQuery: String? = null,
+): List<PluginDiscoveryItemDto> {
+    if (!pluginsRoot.exists()) {
+        return emptyList()
+    }
+    return pluginsRoot.walk()
+        .filter { path -> path != pluginsRoot && path.isDirectory() && Files.exists(path.resolve("build.gradle.kts")) }
+        .filterNot(::isPluginInfrastructureModule)
+        .map { moduleDir ->
+            val relative = moduleDir.relativeTo(pluginsRoot).toString().replace("\\", "/")
+            val parts = relative.split("/").filter { it.isNotBlank() }
+            val pluginId = parts.lastOrNull().orEmpty()
+            val pluginGroup = parts.dropLast(1).joinToString("/").ifBlank { null }
+            val moduleDirString = moduleDir.normalize().toString()
+            val composeKoinModuleClass = detectKoinModuleClass(moduleDir, "ComposeKoinModule")
+            val serverKoinModuleClass = detectKoinModuleClass(moduleDir, "ServerKoinModule")
+            val routeRegistrarCall = detectRouteRegistrarCall(moduleDir)
+            val routeRegistrarImport = routeRegistrarCall?.let { detectRouteRegistrarImport(moduleDir, it) }
+            val packageName = detectFirstPackage(moduleDir)
+            val issues = buildList {
+                if (composeKoinModuleClass == null) add("未找到 Compose Koin 模块类")
+                if (routeRegistrarCall == null) add("未找到 Route 注册函数")
+            }
+            PluginDiscoveryItemDto(
+                discoveryId = relative,
+                pluginId = pluginId,
+                pluginGroup = pluginGroup,
+                moduleDir = moduleDirString,
+                gradlePath = ":apps:kcloud:plugins:${parts.joinToString(":")}",
+                packageName = packageName,
+                composeKoinModuleClass = composeKoinModuleClass,
+                serverKoinModuleClass = serverKoinModuleClass,
+                routeRegistrarImport = routeRegistrarImport,
+                routeRegistrarCall = routeRegistrarCall,
+                managedByDb = moduleDirString in managedModuleDirs,
+                issues = issues,
+            )
+        }
+        .filter { item ->
+            searchQuery.isNullOrBlank() ||
+                item.pluginId.contains(searchQuery, ignoreCase = true) ||
+                item.moduleDir.contains(searchQuery, ignoreCase = true)
+        }
+        .sortedWith(compareBy<PluginDiscoveryItemDto> { it.pluginGroup.orEmpty() }.thenBy { it.pluginId })
+        .toList()
+}
+
+private fun isPluginInfrastructureModule(moduleDir: Path): Boolean {
+    return moduleDir.name in INFRA_MODULE_NAMES &&
+        moduleDir.parent?.resolve("build.gradle.kts")?.let(Files::exists) == true
+}
+
+private fun detectKoinModuleClass(moduleDir: Path, suffix: String): String? {
+    return moduleDir.walk()
+        .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
+        .firstNotNullOfOrNull { file ->
+            val content = file.readText()
+            val packageName = Regex("""package\s+([A-Za-z0-9_.]+)""").find(content)?.groupValues?.get(1)
+            val className = Regex("""class\s+([A-Za-z0-9_]+$suffix)""").find(content)?.groupValues?.get(1)
+            if (packageName != null && className != null) "$packageName.$className" else null
+        }
+}
+
+private fun detectRouteRegistrarCall(moduleDir: Path): String? {
+    return moduleDir.walk()
+        .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
+        .firstNotNullOfOrNull { file ->
+            Regex("""fun\s+Route\.([A-Za-z0-9_]+)\(""")
+                .find(file.readText())
+                ?.groupValues
+                ?.get(1)
+                ?.plus("()")
+        }
+}
+
+private fun detectRouteRegistrarImport(moduleDir: Path, call: String): String? {
+    val functionName = call.removeSuffix("()")
+    return moduleDir.walk()
+        .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
+        .firstNotNullOfOrNull { file ->
+            val content = file.readText()
+            val packageName = Regex("""package\s+([A-Za-z0-9_.]+)""").find(content)?.groupValues?.get(1)
+            val found = Regex("""fun\s+Route\.($functionName)\(""").find(content)
+            if (packageName != null && found != null) "$packageName.$functionName" else null
+        }
+}
+
+private fun detectFirstPackage(moduleDir: Path): String? {
+    return moduleDir.walk()
+        .filter { Files.isRegularFile(it) && it.name.endsWith(".kt") }
+        .firstNotNullOfOrNull { file ->
+            Regex("""package\s+([A-Za-z0-9_.]+)""")
+                .find(file.readText())
+                ?.groupValues
+                ?.get(1)
+        }
+}
+
+internal fun PluginMarketSupport.toDto(pluginPackage: PluginPackage): PluginPackageDto {
     return PluginPackageDto(
-        id = id,
-        pluginId = pluginId,
-        name = name,
-        pluginGroup = pluginGroup,
-        description = description,
-        version = version,
-        enabled = enabled,
-        moduleDir = moduleDir,
-        basePackage = basePackage,
-        managedByDb = managedByDb,
-        composeKoinModuleClass = composeKoinModuleClass,
-        serverKoinModuleClass = serverKoinModuleClass,
-        routeRegistrarImport = routeRegistrarImport,
-        routeRegistrarCall = routeRegistrarCall,
-        createdAt = createdAt.toString(),
-        updatedAt = updatedAt.toString(),
+        id = pluginPackage.id,
+        pluginId = pluginPackage.pluginId,
+        name = pluginPackage.name,
+        pluginGroup = pluginPackage.pluginGroup,
+        description = pluginPackage.description,
+        version = pluginPackage.version,
+        enabled = pluginPackage.enabled,
+        moduleDir = pluginPackage.moduleDir,
+        basePackage = pluginPackage.basePackage,
+        managedByDb = pluginPackage.managedByDb,
+        composeKoinModuleClass = pluginPackage.composeKoinModuleClass,
+        serverKoinModuleClass = pluginPackage.serverKoinModuleClass,
+        routeRegistrarImport = pluginPackage.routeRegistrarImport,
+        routeRegistrarCall = pluginPackage.routeRegistrarCall,
+        activationState = activationStateOf(pluginPackage),
+        moduleInstalled = isModuleInstalled(pluginPackage),
+        disabledByMarker = isDisabledByMarker(pluginPackage),
+        createdAt = pluginPackage.createdAt.toString(),
+        updatedAt = pluginPackage.updatedAt.toString(),
     )
 }
 

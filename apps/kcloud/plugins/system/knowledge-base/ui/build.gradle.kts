@@ -39,7 +39,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:system:shared"))
+            api(project(":apps:kcloud:plugins:system:knowledge-base:shared"))
             implementation(libs.findLibrary("site-addzero-route-core").get())
         }
     }

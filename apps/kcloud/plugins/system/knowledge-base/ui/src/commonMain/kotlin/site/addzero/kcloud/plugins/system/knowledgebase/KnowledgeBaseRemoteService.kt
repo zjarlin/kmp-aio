@@ -1,19 +1,19 @@
 package site.addzero.kcloud.plugins.system.knowledgebase
 
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.system.api.*
+import site.addzero.kcloud.plugins.system.knowledgebase.api.*
 
 @Single
 class KnowledgeBaseRemoteService {
     suspend fun listSpaces(): List<KnowledgeSpaceDto> {
-        return KCloudSystemApiClient.knowledgeBaseApi.listKnowledgeSpaces()
+        return KnowledgeBaseApiClient.knowledgeBaseApi.listKnowledgeSpaces()
     }
 
     suspend fun createSpace(
         name: String,
         description: String,
     ): KnowledgeSpaceDto {
-        return KCloudSystemApiClient.knowledgeBaseApi.createKnowledgeSpace(
+        return KnowledgeBaseApiClient.knowledgeBaseApi.createKnowledgeSpace(
             KnowledgeSpaceMutationRequest(
                 name = name,
                 description = description.ifBlank { null },
@@ -26,7 +26,7 @@ class KnowledgeBaseRemoteService {
         name: String,
         description: String,
     ): KnowledgeSpaceDto {
-        return KCloudSystemApiClient.knowledgeBaseApi.updateKnowledgeSpace(
+        return KnowledgeBaseApiClient.knowledgeBaseApi.updateKnowledgeSpace(
             spaceId = spaceId,
             request = KnowledgeSpaceMutationRequest(
                 name = name,
@@ -38,13 +38,13 @@ class KnowledgeBaseRemoteService {
     suspend fun deleteSpace(
         spaceId: Long,
     ) {
-        KCloudSystemApiClient.knowledgeBaseApi.deleteKnowledgeSpace(spaceId)
+        KnowledgeBaseApiClient.knowledgeBaseApi.deleteKnowledgeSpace(spaceId)
     }
 
     suspend fun listDocuments(
         spaceId: Long,
     ): List<KnowledgeDocumentDto> {
-        return KCloudSystemApiClient.knowledgeBaseApi.listKnowledgeDocuments(spaceId)
+        return KnowledgeBaseApiClient.knowledgeBaseApi.listKnowledgeDocuments(spaceId)
     }
 
     suspend fun createDocument(
@@ -52,7 +52,7 @@ class KnowledgeBaseRemoteService {
         title: String,
         content: String,
     ): KnowledgeDocumentDto {
-        return KCloudSystemApiClient.knowledgeBaseApi.createKnowledgeDocument(
+        return KnowledgeBaseApiClient.knowledgeBaseApi.createKnowledgeDocument(
             spaceId = spaceId,
             request = KnowledgeDocumentMutationRequest(title = title, content = content),
         )
@@ -63,7 +63,7 @@ class KnowledgeBaseRemoteService {
         title: String,
         content: String,
     ): KnowledgeDocumentDto {
-        return KCloudSystemApiClient.knowledgeBaseApi.updateKnowledgeDocument(
+        return KnowledgeBaseApiClient.knowledgeBaseApi.updateKnowledgeDocument(
             documentId = documentId,
             request = KnowledgeDocumentMutationRequest(title = title, content = content),
         )
@@ -72,6 +72,6 @@ class KnowledgeBaseRemoteService {
     suspend fun deleteDocument(
         documentId: Long,
     ) {
-        KCloudSystemApiClient.knowledgeBaseApi.deleteKnowledgeDocument(documentId)
+        KnowledgeBaseApiClient.knowledgeBaseApi.deleteKnowledgeDocument(documentId)
     }
 }

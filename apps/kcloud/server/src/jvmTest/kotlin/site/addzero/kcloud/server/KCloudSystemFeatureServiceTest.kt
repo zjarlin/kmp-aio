@@ -5,12 +5,12 @@ import org.koin.core.Koin
 import org.koin.dsl.koinApplication
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
-import site.addzero.kcloud.plugins.rbac.RbacRoleService
-import site.addzero.kcloud.plugins.rbac.UserProfileService
+import site.addzero.kcloud.plugins.system.rbac.RbacRoleService
+import site.addzero.kcloud.plugins.system.rbac.UserProfileService
 import site.addzero.kcloud.plugins.system.aichat.AiChatService
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseService
-import site.addzero.kcloud.system.api.RbacRoleMutationRequest
-import site.addzero.kcloud.system.api.UserProfileUpdateRequest
+import site.addzero.kcloud.plugins.system.rbac.api.RbacRoleMutationRequest
+import site.addzero.kcloud.plugins.system.rbac.api.UserProfileUpdateRequest
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals

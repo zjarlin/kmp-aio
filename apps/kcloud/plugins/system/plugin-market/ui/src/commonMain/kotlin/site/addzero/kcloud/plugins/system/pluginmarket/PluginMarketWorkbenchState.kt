@@ -32,6 +32,7 @@ class PluginMarketWorkbenchState(
     var diffText by mutableStateOf("")
     var logsText by mutableStateOf("")
     var isBusy by mutableStateOf(false)
+    var deleteCheckResult by mutableStateOf<PluginDeleteCheckResultDto?>(null)
 
     var packageName by mutableStateOf("")
     var packagePluginId by mutableStateOf("")
@@ -53,6 +54,12 @@ class PluginMarketWorkbenchState(
 
     var config by mutableStateOf(PluginMarketConfigDto())
         private set
+
+    val selectedPackage: PluginPackageDto?
+        get() = packages.firstOrNull { it.id == selectedPackageId }
+
+    val selectedDiscovery: PluginDiscoveryItemDto?
+        get() = discoveries.firstOrNull { it.discoveryId == selectedDiscoveryId }
 
     fun updateConfig(transform: (PluginMarketConfigDto) -> PluginMarketConfigDto) {
         config = transform(config)
@@ -221,16 +228,68 @@ class PluginMarketWorkbenchState(
         }
     }
 
-    suspend fun deleteSelectedPackage() {
+    suspend fun prepareDeleteSelectedPackage() {
         val id = selectedPackageId ?: return
         isBusy = true
         try {
-            packageService.delete(id)
+            deleteCheckResult = packageService.deleteCheck(id)
+        } catch (error: Throwable) {
+            updateStatus(error.message ?: "读取卸载检查失败", true)
+            throw error
+        } finally {
+            isBusy = false
+        }
+    }
+
+    fun cancelDeletePackage() {
+        deleteCheckResult = null
+    }
+
+    suspend fun confirmDeleteSelectedPackage() {
+        val check = deleteCheckResult ?: return
+        isBusy = true
+        try {
+            packageService.uninstall(check.id)
+            deleteCheckResult = null
             beginCreatePackage()
             refreshAll()
-            updateStatus("已删除插件包")
+            updateStatus("已卸载插件包")
         } catch (error: Throwable) {
-            updateStatus(error.message ?: "删除插件包失败", true)
+            updateStatus(error.message ?: "卸载插件包失败", true)
+            throw error
+        } finally {
+            isBusy = false
+        }
+    }
+
+    suspend fun enableSelectedPackage() {
+        val current = selectedPackage ?: return
+        isBusy = true
+        try {
+            val updated = packageService.enable(current.id)
+            refreshAll()
+            selectedPackageId = updated.id
+            selectPackage(updated.id)
+            updateStatus("已启用插件包，重新构建并重启 KCloud 后生效")
+        } catch (error: Throwable) {
+            updateStatus(error.message ?: "启用插件包失败", true)
+            throw error
+        } finally {
+            isBusy = false
+        }
+    }
+
+    suspend fun disableSelectedPackage() {
+        val current = selectedPackage ?: return
+        isBusy = true
+        try {
+            val updated = packageService.disable(current.id)
+            refreshAll()
+            selectedPackageId = updated.id
+            selectPackage(updated.id)
+            updateStatus("已停用插件包，受管禁用标记已写入，重新构建并重启 KCloud 后生效")
+        } catch (error: Throwable) {
+            updateStatus(error.message ?: "停用插件包失败", true)
             throw error
         } finally {
             isBusy = false
@@ -309,11 +368,12 @@ class PluginMarketWorkbenchState(
                     runBuild = runBuild,
                 ),
             )
-            jobs.prepend(job)
+            refreshAll()
+            selectedPackageId = packageId
+            selectPackage(packageId)
             selectedJobId = job.id
             selectJob(job.id)
-            refreshCurrentPackageFiles()
-            updateStatus("已导出插件模块")
+            updateStatus("已导出并接线插件模块")
         } catch (error: Throwable) {
             updateStatus(error.message ?: "导出插件模块失败", true)
             throw error
@@ -327,7 +387,7 @@ class PluginMarketWorkbenchState(
         isBusy = true
         try {
             val job = deploymentService.runBuild(RunPluginBuildRequest(packageId))
-            jobs.prepend(job)
+            refreshAll()
             selectedJobId = job.id
             selectJob(job.id)
             updateStatus("已触发验证构建")

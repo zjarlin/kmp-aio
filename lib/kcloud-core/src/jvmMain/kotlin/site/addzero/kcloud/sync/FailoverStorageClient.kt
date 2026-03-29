@@ -2,9 +2,9 @@ package site.addzero.kcloud.sync
 
 import site.addzero.kcloud.event.EventBus
 import site.addzero.kcloud.event.UIEvent
-import site.addzero.kcloud.sync.api.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import site.addzero.system.spi.*
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
