@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.mcuconsole
 
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import site.addzero.esp32_host_computer.generated.modbus.rtu.registerGeneratedModbusRtuRoutes
 import site.addzero.kcloud.plugins.mcuconsole.routes.*
 import site.addzero.springktor.runtime.optionalRequestParam
 import site.addzero.springktor.runtime.requireRequestBody
@@ -34,15 +35,6 @@ fun Route.mcuConsoleRoutes() {
     get("/api/mcu/events") {
         call.respond(readMcuEvents(call.optionalRequestParam("afterSeq")))
     }
-    post("/api/mcu/script/execute") {
-        call.respond(executeMcuScript(call.requireRequestBody()))
-    }
-    post("/api/mcu/script/stop") {
-        call.respond(stopMcuScript(call.requireRequestBody()))
-    }
-    get("/api/mcu/script/status") {
-        call.respond(getMcuScriptStatus())
-    }
     get("/api/mcu/flash/profiles") {
         call.respond(listMcuFlashProfiles())
     }
@@ -61,4 +53,5 @@ fun Route.mcuConsoleRoutes() {
     get("/api/mcu/runtime/status") {
         call.respond(getMcuRuntimeStatus())
     }
+    registerGeneratedModbusRtuRoutes()
 }

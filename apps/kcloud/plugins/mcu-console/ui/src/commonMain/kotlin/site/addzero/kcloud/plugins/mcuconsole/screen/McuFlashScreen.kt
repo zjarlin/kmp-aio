@@ -7,10 +7,8 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -34,13 +32,13 @@ import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
 @Composable
 fun McuFlashScreen() {
     val state = rememberMcuWorkbenchState()
-    val scope = rememberCoroutineScope()
+    val runAction = rememberMcuActionRunner()
 
     McuWorkbenchFrame(
         state = state,
         actions = listOf(
             McuToolbarAction("刷新资源", Icons.Default.Search) {
-                scope.launch {
+                runAction {
                     state.refreshPorts()
                     state.refreshFlashProfiles()
                     state.refreshRuntimeBundles()
@@ -52,7 +50,7 @@ fun McuFlashScreen() {
                 icon = Icons.Default.Build,
                 enabled = state.session.isOpen && state.selectedRuntimeBundle != null,
             ) {
-                scope.launch {
+                runAction {
                     state.ensureRuntime(forceReflash = true)
                 }
             },
@@ -61,7 +59,7 @@ fun McuFlashScreen() {
                 icon = Icons.Default.Search,
                 enabled = state.canDownloadFirmwareOnline,
             ) {
-                scope.launch {
+                runAction {
                     state.downloadFirmwareOnline(flashAfterDownload = false)
                 }
             },
@@ -70,7 +68,7 @@ fun McuFlashScreen() {
                 icon = Icons.Default.Upload,
                 enabled = state.canDownloadFirmwareOnline,
             ) {
-                scope.launch {
+                runAction {
                     state.downloadFirmwareOnline(flashAfterDownload = true)
                 }
             },
@@ -79,12 +77,12 @@ fun McuFlashScreen() {
                 icon = Icons.Default.Upload,
                 enabled = state.canStartFlash,
             ) {
-                scope.launch {
+                runAction {
                     state.startFlash()
                 }
             },
             McuToolbarAction("刷新状态", Icons.Default.Refresh) {
-                scope.launch {
+                runAction {
                     state.refreshFlashStatus()
                     state.refreshRuntimeStatus()
                     state.loadRecentEvents()

@@ -2,16 +2,16 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import site.addzero.kcloud.plugins.mcuconsole.*
-import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortConnection
-import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
+import site.addzero.kcloud.plugins.mcuconsole.FakeSerialPortGateway
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashRuntimeKind
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureState
+import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import java.io.File
 import kotlin.io.path.createTempDirectory
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class McuRuntimeServicesTest {
@@ -22,30 +22,37 @@ class McuRuntimeServicesTest {
     private val codec = McuVmProtocolCodec(json)
 
     @Test
-    fun `runtime bundle catalog reads builtin manifests`() {
+    fun `runtime bundle catalog reads builtin micropython manifest`() {
         val catalog = McuRuntimeBundleCatalog(json)
 
         val bundles = catalog.listBundles()
+        val bundle = bundles.items.single()
 
-        assertEquals("rhai-default-generic", bundles.defaultBundleId)
-        assertTrue(bundles.items.any { it.bundleId == "rhai-default-generic" })
-        assertTrue(bundles.items.any { it.bundleId == "micropython-default-generic" })
-        assertTrue(bundles.items.first { it.bundleId == "rhai-default-generic" }.widgetTemplates.isNotEmpty())
+        assertEquals("micropython-default-generic", bundles.defaultBundleId)
+        assertEquals("micropython-default-generic", bundle.bundleId)
+        assertEquals(McuFlashRuntimeKind.MICROPYTHON, bundle.runtimeKind)
+        assertTrue(bundle.scriptExamples.isNotEmpty())
+        assertTrue(bundle.widgetTemplates.isNotEmpty())
     }
 
     @Test
-    fun `runtime asset extractor rejects builtin placeholder bundle`() {
+    fun `runtime asset extractor expands builtin micropython bundle`() {
         val previousDir = System.getProperty("kcloud.mcu.runtime.dir")
         val targetDir = createTempDirectory(prefix = "mcu-runtime-assets-").toFile()
         try {
             System.setProperty("kcloud.mcu.runtime.dir", targetDir.absolutePath)
             val extractor = McuRuntimeAssetExtractor(McuRuntimeBundleCatalog(json))
 
-            val error = assertFailsWith<IllegalArgumentException> {
-                extractor.extractBundle("rhai-default-generic")
+            val extracted = extractor.extractBundle("micropython-default-generic")
+            val prefixText = extracted.artifactFile.inputStream().use { input ->
+                input.readNBytes(128).decodeToString()
             }
 
-            assertTrue(error.message?.contains("占位固件") == true)
+            assertTrue(extracted.outputDir.exists())
+            assertTrue(extracted.artifactFile.exists())
+            assertTrue(extracted.artifactFile.name == "micropython-default-generic.bin")
+            assertTrue(extracted.artifactFile.length() > 0L)
+            assertTrue(!prefixText.contains("MICROPYTHON_DEFAULT_GENERIC_RUNTIME_BUNDLE"))
         } finally {
             restoreProperty("kcloud.mcu.runtime.dir", previousDir)
             targetDir.deleteRecursively()
@@ -53,24 +60,22 @@ class McuRuntimeServicesTest {
     }
 
     @Test
-    fun `runtime asset extractor reuses external real artifact`() {
+    fun `runtime asset extractor reuses external micropython artifact`() {
         val previousDir = System.getProperty("kcloud.mcu.runtime.dir")
         val targetDir = createTempDirectory(prefix = "mcu-runtime-assets-").toFile()
         try {
             System.setProperty("kcloud.mcu.runtime.dir", targetDir.absolutePath)
             installRealArtifact(
                 targetDir = targetDir,
-                bundleId = "rhai-default-generic",
-                relativePath = "artifacts/rhai-default-generic.bin",
+                bundleId = "micropython-default-generic",
+                relativePath = "artifacts/micropython-default-generic.bin",
                 bytes = byteArrayOf(0x11, 0x22, 0x33),
             )
             val extractor = McuRuntimeAssetExtractor(McuRuntimeBundleCatalog(json))
 
-            val extracted = extractor.extractBundle("rhai-default-generic")
+            val extracted = extractor.extractBundle("micropython-default-generic")
 
             assertTrue(extracted.outputDir.exists())
-            assertTrue(extracted.artifactFile.exists())
-            assertTrue(extracted.artifactFile.absolutePath.contains("rhai-default-generic"))
             assertEquals(
                 listOf(0x11.toByte(), 0x22.toByte(), 0x33.toByte()),
                 extracted.artifactFile.readBytes().toList(),
@@ -78,36 +83,6 @@ class McuRuntimeServicesTest {
         } finally {
             restoreProperty("kcloud.mcu.runtime.dir", previousDir)
             targetDir.deleteRecursively()
-        }
-    }
-
-    @Test
-    fun `ensure runtime stays ready when device already responds`() = runBlocking {
-        val gateway = FakeSerialPortGateway(runtimeInstalledInitially = true)
-        val sessionService = newSessionService(gateway)
-        val service = newRuntimeEnsureService(gateway, sessionService)
-
-        sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
-        val status = service.ensureRuntime(McuRuntimeEnsureRequest(bundleId = "rhai-default-generic"))
-
-        assertEquals(McuRuntimeEnsureState.READY, status.state)
-        assertTrue(status.lastMessage?.contains("runtime-ready") == true)
-    }
-
-    @Test
-    fun `ensure runtime flashes bundle then reconnects and probes ready`() = runBlocking {
-        val gateway = FakeSerialPortGateway(runtimeInstalledInitially = false)
-        val sessionService = newSessionService(gateway)
-        withInstalledRealArtifact("rhai-default-generic", "artifacts/rhai-default-generic.bin", byteArrayOf(1, 2, 3, 4)) {
-            val service = newRuntimeEnsureService(gateway, sessionService)
-
-            sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
-            val status = service.ensureRuntime(McuRuntimeEnsureRequest(bundleId = "rhai-default-generic"))
-
-            assertEquals(McuRuntimeEnsureState.READY, status.state)
-            assertNotNull(status.artifactPath)
-            assertTrue(gateway.runtimeInstalled)
-            assertTrue(gateway.openedConnections.any { connection -> connection.textWrites.contains("START_FLASH\r\n") })
         }
     }
 
@@ -130,7 +105,11 @@ class McuRuntimeServicesTest {
     fun `ensure runtime flashes micropython bundle without vm probe`() = runBlocking {
         val gateway = FakeSerialPortGateway(runtimeInstalledInitially = false)
         val sessionService = newSessionService(gateway)
-        withInstalledRealArtifact("micropython-default-generic", "artifacts/micropython-default-generic.bin", byteArrayOf(9, 8, 7)) {
+        withInstalledRealArtifact(
+            bundleId = "micropython-default-generic",
+            relativePath = "artifacts/micropython-default-generic.bin",
+            bytes = byteArrayOf(9, 8, 7),
+        ) {
             val service = newRuntimeEnsureService(gateway, sessionService)
 
             sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
@@ -149,67 +128,43 @@ class McuRuntimeServicesTest {
     }
 
     @Test
-    fun `ensure runtime auto downloads micropython firmware when builtin artifact is placeholder`() = runBlocking {
+    fun `ensure runtime enters error when micropython flash command fails`() = runBlocking {
+        val esptoolKey = "kcloud.mcu.esptool.cmd"
+        val previousEsptool = System.getProperty(esptoolKey)
         val gateway = FakeSerialPortGateway(runtimeInstalledInitially = false)
         val sessionService = newSessionService(gateway)
-        val commandRunner = SuccessfulCommandRunner { commandLine, _ ->
-            when {
-                commandLine.contains("curl -fsSL") -> McuFlashCommandResult(
-                    exitCode = 0,
-                    stdout = """
-                        <html>
-                        <body>
-                        <a href="/resources/firmware/ESP32_GENERIC-20251209-v1.27.0.bin">stable</a>
-                        </body>
-                        </html>
-                    """.trimIndent(),
-                )
+        val commandRunner = SuccessfulCommandRunner { _, _ ->
+            McuFlashCommandResult(exitCode = 1, stderr = "flash failed")
+        }
+        try {
+            System.setProperty(esptoolKey, "python3 -m esptool")
+            withInstalledRealArtifact(
+                bundleId = "micropython-default-generic",
+                relativePath = "artifacts/micropython-default-generic.bin",
+                bytes = byteArrayOf(1, 2),
+            ) {
+                val service = newRuntimeEnsureService(gateway, sessionService, commandRunner)
 
-                commandLine.contains("curl -fL") -> {
-                    val outputPath = commandLine.substringAfter("-o '").substringBefore("' ")
-                    File(outputPath).apply {
-                        parentFile?.mkdirs()
-                        writeBytes(byteArrayOf(0x5, 0x6, 0x7))
-                    }
-                    McuFlashCommandResult(exitCode = 0, stdout = "downloaded")
+                sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
+                runCatching {
+                    service.ensureRuntime(
+                        McuRuntimeEnsureRequest(
+                            bundleId = "micropython-default-generic",
+                            forceReflash = true,
+                        ),
+                    )
                 }
 
-                else -> McuFlashCommandResult(exitCode = 0, stdout = commandLine)
+                assertEquals(McuRuntimeEnsureState.ERROR, service.getStatus().state)
+                assertTrue(service.getStatus().lastMessage?.contains("flash failed") == true)
             }
-        }
-        val service = newRuntimeEnsureService(gateway, sessionService, commandRunner)
-
-        sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
-        val status = service.ensureRuntime(
-            McuRuntimeEnsureRequest(
-                bundleId = "micropython-default-generic",
-                forceReflash = true,
-            ),
-        )
-
-        assertEquals(McuRuntimeEnsureState.READY, status.state)
-        assertTrue(status.artifactPath?.endsWith("ESP32_GENERIC-20251209-v1.27.0.bin") == true)
-        assertTrue(gateway.openedConnections.none { connection -> connection.textWrites.contains("START_FLASH\r\n") })
-    }
-
-    @Test
-    fun `ensure runtime enters error when flash fails`() = runBlocking {
-        val gateway = FailingFlashGateway()
-        val sessionService = newSessionService(gateway)
-        withInstalledRealArtifact("rhai-default-generic", "artifacts/rhai-default-generic.bin", byteArrayOf(1, 2)) {
-            val service = newRuntimeEnsureService(gateway, sessionService)
-
-            sessionService.openSession(McuSessionOpenRequest(portPath = "COM9"))
-            runCatching {
-                service.ensureRuntime(McuRuntimeEnsureRequest(bundleId = "rhai-default-generic"))
-            }
-
-            assertEquals(McuRuntimeEnsureState.ERROR, service.getStatus().state)
+        } finally {
+            restoreProperty(esptoolKey, previousEsptool)
         }
     }
 
     private fun newSessionService(
-        gateway: SerialPortGateway,
+        gateway: FakeSerialPortGateway,
     ): McuConsoleSessionService {
         return McuConsoleSessionService(
             gateway = gateway,
@@ -218,7 +173,7 @@ class McuRuntimeServicesTest {
     }
 
     private fun newRuntimeEnsureService(
-        gateway: SerialPortGateway,
+        gateway: FakeSerialPortGateway,
         sessionService: McuConsoleSessionService,
         commandRunner: McuFlashCommandRunner = SuccessfulCommandRunner(),
     ): McuRuntimeEnsureService {
@@ -271,64 +226,6 @@ private class SuccessfulCommandRunner(
         workingDirectory: java.io.File?,
     ): McuFlashCommandResult {
         return onRun(commandLine, workingDirectory)
-    }
-}
-
-private class FailingFlashGateway : SerialPortGateway {
-    override fun listPorts(): List<McuPortSummary> {
-        return listOf(
-            McuPortSummary(
-                portPath = "COM9",
-                portName = "Failing Port",
-                systemPortName = "COM9",
-            ),
-        )
-    }
-
-    override fun openConnection(
-        portPath: String,
-        baudRate: Int,
-    ): SerialPortConnection {
-        return FailingFlashConnection(portPath, baudRate)
-    }
-}
-
-private class FailingFlashConnection(
-    override val portPath: String,
-    override val baudRate: Int,
-) : SerialPortConnection {
-    override val portName: String = "Failing-$portPath"
-    override val isOpen: Boolean = true
-
-    override fun writeUtf8(
-        text: String,
-    ) {
-    }
-
-    override fun writeBytes(
-        bytes: ByteArray,
-        length: Int,
-    ) {
-    }
-
-    override fun read(
-        buffer: ByteArray,
-        timeoutMs: Int,
-    ): Int {
-        return 0
-    }
-
-    override fun setDtr(
-        enabled: Boolean,
-    ) {
-    }
-
-    override fun setRts(
-        enabled: Boolean,
-    ) {
-    }
-
-    override fun close() {
     }
 }
 

@@ -46,7 +46,7 @@ class McuRuntimeBundleCatalog(
         return index.defaultBundleId
             .takeIf { it.isNotBlank() && manifests.any { manifest -> manifest.bundleId == it } }
             ?: manifests.firstOrNull()?.bundleId
-            ?: "rhai-default-generic"
+            ?: "micropython-default-generic"
     }
 
     private fun loadIndex(): RuntimeBundleIndex {
@@ -72,7 +72,7 @@ class McuRuntimeBundleCatalog(
 
 @Serializable
 private data class RuntimeBundleIndex(
-    val defaultBundleId: String = "rhai-default-generic",
+    val defaultBundleId: String = "micropython-default-generic",
     val bundleIds: List<String> = emptyList(),
 )
 
@@ -80,7 +80,7 @@ private data class RuntimeBundleIndex(
 data class McuRuntimeBundleManifest(
     val bundleId: String = "",
     val title: String = "",
-    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.RHAI_VM,
+    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.MICROPYTHON,
     val mcuFamily: String = "generic",
     val defaultFlashProfileId: String = "",
     val defaultBaudRate: Int = 115200,

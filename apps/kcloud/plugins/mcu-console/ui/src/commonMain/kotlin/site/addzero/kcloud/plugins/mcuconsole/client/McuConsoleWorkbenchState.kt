@@ -28,8 +28,32 @@ class McuConsoleWorkbenchState(
         private set
     var selectedAtomicCommandId by mutableStateOf<String?>(null)
         private set
+    var selectedTransportKind by mutableStateOf(McuTransportKind.SERIAL)
+        private set
+    var activeSessionTransportKind by mutableStateOf(McuTransportKind.SERIAL)
+        private set
     var baudRateText by mutableStateOf("115200")
-    var scriptLanguage by mutableStateOf("rhai")
+    var modbusRtuUnitIdText by mutableStateOf("1")
+    var modbusRtuTimeoutMsText by mutableStateOf("1000")
+    var modbusTcpHostText by mutableStateOf("192.168.1.10")
+    var modbusTcpPortText by mutableStateOf("502")
+    var modbusTcpUnitIdText by mutableStateOf("1")
+    var modbusTcpTimeoutMsText by mutableStateOf("1000")
+    var bluetoothMode by mutableStateOf(McuBluetoothMode.BLE)
+    var bluetoothDeviceNameText by mutableStateOf("")
+    var bluetoothDeviceAddressText by mutableStateOf("")
+    var bluetoothServiceUuidText by mutableStateOf("")
+    var bluetoothWriteCharacteristicUuidText by mutableStateOf("")
+    var bluetoothNotifyCharacteristicUuidText by mutableStateOf("")
+    var mqttBrokerUrlText by mutableStateOf("tcp://127.0.0.1:1883")
+    var mqttClientIdText by mutableStateOf("kcloud-mcu-client")
+    var mqttUsernameText by mutableStateOf("")
+    var mqttPasswordText by mutableStateOf("")
+    var mqttPublishTopicText by mutableStateOf("devices/mcu/tx")
+    var mqttSubscribeTopicText by mutableStateOf("devices/mcu/rx")
+    var mqttQosText by mutableStateOf("0")
+    var mqttKeepAliveSecondsText by mutableStateOf("60")
+    var scriptLanguage by mutableStateOf("micropython")
     var session by mutableStateOf(McuSessionSnapshot())
         private set
     var scriptStatus by mutableStateOf(McuScriptStatusResponse())
@@ -44,10 +68,12 @@ class McuConsoleWorkbenchState(
         private set
     var scriptText by mutableStateOf(
         """
-        gpio_set(2, true);
-        delay_ms(300);
-        gpio_set(2, false);
-        delay_ms(300);
+        from machine import Pin
+        from time import sleep_ms
+        led = Pin(2, Pin.OUT)
+        led.value(1)
+        sleep_ms(300)
+        led.value(0)
         """.trimIndent(),
     )
     var firmwarePathText by mutableStateOf("")
@@ -108,11 +134,60 @@ class McuConsoleWorkbenchState(
 
     val isRuntimeReady: Boolean
         get() = runtimeStatus.state == McuRuntimeEnsureState.READY &&
-            runtimeStatus.runtimeKind == McuFlashRuntimeKind.RHAI_VM &&
             runtimeStatus.bundleId == selectedRuntimeBundleId
 
     val canUseWidgets: Boolean
-        get() = hasActiveSession && isRuntimeReady && !isSubmitting
+        get() = hasActiveSession &&
+            activeSessionTransportKind == McuTransportKind.SERIAL &&
+            isRuntimeReady &&
+            !isSubmitting
+
+    val supportsSelectedTransportConnection: Boolean
+        get() = selectedTransportKind == McuTransportKind.SERIAL ||
+            selectedTransportKind == McuTransportKind.MODBUS_RTU
+
+    val canOpenSelectedTransportSession: Boolean
+        get() = !isSubmitting &&
+            !session.isOpen &&
+            when (selectedTransportKind) {
+                McuTransportKind.SERIAL -> selectedPortPath != null && baudRateText.toIntOrNull() != null
+                McuTransportKind.MODBUS_RTU -> selectedPortPath != null &&
+                    baudRateText.toIntOrNull() != null &&
+                    modbusRtuUnitIdText.toIntOrNull() != null &&
+                    modbusRtuTimeoutMsText.toIntOrNull() != null
+                McuTransportKind.MODBUS_TCP,
+                McuTransportKind.BLUETOOTH,
+                McuTransportKind.MQTT,
+                -> false
+            }
+
+    val openSessionActionLabel: String
+        get() = when (selectedTransportKind) {
+            McuTransportKind.SERIAL -> "打开串口会话"
+            McuTransportKind.MODBUS_RTU -> "打开 RTU 会话"
+            McuTransportKind.MODBUS_TCP -> "Modbus TCP 未接通"
+            McuTransportKind.BLUETOOTH -> "蓝牙未接通"
+            McuTransportKind.MQTT -> "MQTT 未接通"
+        }
+
+    val canEnsureRuntime: Boolean
+        get() = session.isOpen &&
+            activeSessionTransportKind == McuTransportKind.SERIAL &&
+            selectedRuntimeBundle != null
+
+    val canControlSerialLines: Boolean
+        get() = session.isOpen &&
+            (activeSessionTransportKind == McuTransportKind.SERIAL ||
+                activeSessionTransportKind == McuTransportKind.MODBUS_RTU)
+
+    val selectedTransportNotice: String
+        get() = when (selectedTransportKind) {
+            McuTransportKind.SERIAL -> "直接打开本机串口，并复用现有 MCU VM 运行时链路。"
+            McuTransportKind.MODBUS_RTU -> "复用当前串口链路，先完成 RTU 参数配置；后端暂时只接了串口打开，不自动切换到专用 Modbus 会话。"
+            McuTransportKind.MODBUS_TCP -> "当前版本先支持界面配置。TCP 主机连接和命令通道尚未接到后端。"
+            McuTransportKind.BLUETOOTH -> "当前版本先支持界面配置。蓝牙扫描、配对和 GATT/经典串口连接尚未实现。"
+            McuTransportKind.MQTT -> "当前版本先支持界面配置。Broker 建连、订阅和消息桥接尚未实现。"
+        }
 
     val canStartFlash: Boolean
         get() {
@@ -139,6 +214,12 @@ class McuConsoleWorkbenchState(
         portPath: String?,
     ) {
         selectedPortPath = portPath
+    }
+
+    fun selectTransport(
+        kind: McuTransportKind,
+    ) {
+        selectedTransportKind = kind
     }
 
     fun selectFlashProfile(
@@ -367,7 +448,7 @@ class McuConsoleWorkbenchState(
         try {
             val loadedBundles = remoteService.listRuntimeBundles()
             runtimeBundles = loadedBundles
-            val fallback = loadedBundles.firstOrNull { it.bundleId == "rhai-default-generic" }
+            val fallback = loadedBundles.firstOrNull { it.bundleId == "micropython-default-generic" }
                 ?: loadedBundles.firstOrNull()
             val nextBundle = loadedBundles.firstOrNull { it.bundleId == selectedRuntimeBundleId } ?: fallback
             nextBundle?.let { bundle ->
@@ -397,7 +478,6 @@ class McuConsoleWorkbenchState(
         refreshFlashProfiles()
         refreshRuntimeBundles()
         refreshSession()
-        refreshScriptStatus()
         refreshFlashStatus()
         refreshRuntimeStatus()
         if (events.isEmpty()) {
@@ -408,35 +488,47 @@ class McuConsoleWorkbenchState(
     }
 
     suspend fun openSession() {
-        val portPath = selectedPortPath?.takeIf { it.isNotBlank() }
-            ?: run {
-                updateFeedback("请先选择串口", true)
-                return
+        when (selectedTransportKind) {
+            McuTransportKind.SERIAL -> {
+                openSerialBackedSession(
+                    transportKind = McuTransportKind.SERIAL,
+                    initializeRuntime = true,
+                    successMessage = null,
+                )
             }
-        val baudRate = baudRateText.toIntOrNull()
-            ?: run {
-                updateFeedback("波特率无效", true)
-                return
+
+            McuTransportKind.MODBUS_RTU -> {
+                val unitId = requirePositiveInt(modbusRtuUnitIdText, "Modbus RTU UnitId")
+                    ?: return
+                val timeoutMs = requirePositiveInt(modbusRtuTimeoutMsText, "Modbus RTU 超时")
+                    ?: return
+                openSerialBackedSession(
+                    transportKind = McuTransportKind.MODBUS_RTU,
+                    initializeRuntime = false,
+                    successMessage = "已按 Modbus RTU 配置打开串口链路，UnitId=$unitId，超时=${timeoutMs}ms",
+                )
             }
-        isSubmitting = true
-        try {
-            session = remoteService.openSession(
-                McuSessionOpenRequest(
-                    portPath = portPath,
-                    baudRate = baudRate,
-                ),
-            )
-            loadRuntimeBundlesIfNeeded()
-            ensureRuntimeInternal(forceReflash = false, showSubmitting = false)
-            loadRecentEvents()
-            refreshScriptStatus()
-            refreshFlashStatus()
-            val message = runtimeStatus.lastMessage ?: "串口已打开"
-            updateFeedback(message, runtimeStatus.state == McuRuntimeEnsureState.ERROR)
-        } catch (throwable: Throwable) {
-            reportError(throwable)
-        } finally {
-            isSubmitting = false
+
+            McuTransportKind.MODBUS_TCP -> {
+                if (!validateModbusTcpConfig()) {
+                    return
+                }
+                updateFeedback("Modbus TCP 配置已保存，连接执行尚未实现", true)
+            }
+
+            McuTransportKind.BLUETOOTH -> {
+                if (!validateBluetoothConfig()) {
+                    return
+                }
+                updateFeedback("蓝牙配置已保存，连接执行尚未实现", true)
+            }
+
+            McuTransportKind.MQTT -> {
+                if (!validateMqttConfig()) {
+                    return
+                }
+                updateFeedback("MQTT 配置已保存，连接执行尚未实现", true)
+            }
         }
     }
 
@@ -444,7 +536,8 @@ class McuConsoleWorkbenchState(
         runSubmitting("串口已关闭") {
             session = remoteService.closeSession()
             runtimeStatus = McuRuntimeStatusResponse()
-            refreshScriptStatus()
+            scriptStatus = McuScriptStatusResponse()
+            activeSessionTransportKind = McuTransportKind.SERIAL
         }
     }
 
@@ -807,7 +900,7 @@ class McuConsoleWorkbenchState(
     private fun reportError(
         throwable: Throwable,
     ) {
-        val message = throwable.message?.takeIf { it.isNotBlank() } ?: throwable::class.simpleName ?: "操作失败"
+        val message = throwable.userFacingMessage()
         updateFeedback(message, true)
     }
 
@@ -817,6 +910,160 @@ class McuConsoleWorkbenchState(
     ) {
         feedbackMessage = message
         feedbackIsError = isError
+    }
+
+    fun transportSummaryRows(
+        kind: McuTransportKind = selectedTransportKind,
+    ): List<Pair<String, String>> {
+        return when (kind) {
+            McuTransportKind.SERIAL -> listOf(
+                "模式" to kind.displayName(),
+                "串口" to (selectedPortPath.orEmpty()),
+                "波特率" to baudRateText,
+                "状态" to "已接通",
+            )
+
+            McuTransportKind.MODBUS_RTU -> listOf(
+                "模式" to kind.displayName(),
+                "串口" to (selectedPortPath.orEmpty()),
+                "波特率" to baudRateText,
+                "UnitId" to modbusRtuUnitIdText,
+                "超时" to "${modbusRtuTimeoutMsText}ms",
+                "状态" to "复用串口链路",
+            )
+
+            McuTransportKind.MODBUS_TCP -> listOf(
+                "模式" to kind.displayName(),
+                "主机" to modbusTcpHostText,
+                "端口" to modbusTcpPortText,
+                "UnitId" to modbusTcpUnitIdText,
+                "超时" to "${modbusTcpTimeoutMsText}ms",
+                "状态" to "仅配置，未接通",
+            )
+
+            McuTransportKind.BLUETOOTH -> listOf(
+                "模式" to kind.displayName(),
+                "蓝牙类型" to bluetoothMode.displayName(),
+                "设备名" to bluetoothDeviceNameText,
+                "地址" to bluetoothDeviceAddressText,
+                "服务 UUID" to bluetoothServiceUuidText,
+                "状态" to "仅配置，未接通",
+            )
+
+            McuTransportKind.MQTT -> listOf(
+                "模式" to kind.displayName(),
+                "Broker" to mqttBrokerUrlText,
+                "ClientId" to mqttClientIdText,
+                "发布 Topic" to mqttPublishTopicText,
+                "订阅 Topic" to mqttSubscribeTopicText,
+                "QoS" to mqttQosText,
+                "状态" to "仅配置，未接通",
+            )
+        }
+    }
+
+    private suspend fun openSerialBackedSession(
+        transportKind: McuTransportKind,
+        initializeRuntime: Boolean,
+        successMessage: String?,
+    ) {
+        val portPath = selectedPortPath?.takeIf { it.isNotBlank() }
+            ?: run {
+                updateFeedback("请先选择串口", true)
+                return
+            }
+        val baudRate = baudRateText.toIntOrNull()
+            ?: run {
+                updateFeedback("波特率无效", true)
+                return
+            }
+        isSubmitting = true
+        try {
+            session = remoteService.openSession(
+                McuSessionOpenRequest(
+                    portPath = portPath,
+                    baudRate = baudRate,
+                ),
+            )
+            activeSessionTransportKind = transportKind
+            if (initializeRuntime) {
+                loadRuntimeBundlesIfNeeded()
+                ensureRuntimeInternal(forceReflash = false, showSubmitting = false)
+                val message = successMessage ?: runtimeStatus.lastMessage ?: "串口已打开"
+                updateFeedback(message, runtimeStatus.state == McuRuntimeEnsureState.ERROR)
+            } else {
+                runtimeStatus = McuRuntimeStatusResponse(
+                    lastMessage = "当前会话未自动执行运行时探测",
+                )
+                updateFeedback(successMessage ?: "串口已打开", false)
+            }
+            loadRecentEvents()
+            refreshFlashStatus()
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        } finally {
+            isSubmitting = false
+        }
+    }
+
+    private fun validateModbusTcpConfig(): Boolean {
+        val host = modbusTcpHostText.trim()
+        if (host.isBlank()) {
+            updateFeedback("Modbus TCP 主机不能为空", true)
+            return false
+        }
+        if (requirePositiveInt(modbusTcpPortText, "Modbus TCP 端口") == null) {
+            return false
+        }
+        if (requirePositiveInt(modbusTcpUnitIdText, "Modbus TCP UnitId") == null) {
+            return false
+        }
+        if (requirePositiveInt(modbusTcpTimeoutMsText, "Modbus TCP 超时") == null) {
+            return false
+        }
+        return true
+    }
+
+    private fun validateBluetoothConfig(): Boolean {
+        if (bluetoothDeviceNameText.isBlank() && bluetoothDeviceAddressText.isBlank()) {
+            updateFeedback("蓝牙设备名或地址至少填写一项", true)
+            return false
+        }
+        return true
+    }
+
+    private fun validateMqttConfig(): Boolean {
+        if (mqttBrokerUrlText.isBlank()) {
+            updateFeedback("MQTT Broker 地址不能为空", true)
+            return false
+        }
+        if (mqttClientIdText.isBlank()) {
+            updateFeedback("MQTT ClientId 不能为空", true)
+            return false
+        }
+        if (requirePositiveInt(mqttQosText, "MQTT QoS") == null) {
+            return false
+        }
+        if (requirePositiveInt(mqttKeepAliveSecondsText, "MQTT KeepAlive") == null) {
+            return false
+        }
+        return true
+    }
+
+    private fun requirePositiveInt(
+        value: String,
+        label: String,
+    ): Int? {
+        val parsed = value.toIntOrNull()
+            ?: run {
+                updateFeedback("$label 无效", true)
+                return null
+            }
+        if (parsed <= 0) {
+            updateFeedback("$label 必须大于 0", true)
+            return null
+        }
+        return parsed
     }
 }
 
@@ -838,9 +1085,23 @@ data class McuWidgetInstanceState(
 )
 
 private fun McuRuntimeBundleSummary.defaultLanguage(): String {
-    return when (runtimeKind) {
-        McuFlashRuntimeKind.MICROPYTHON -> "micropython"
-        McuFlashRuntimeKind.RHAI_VM -> "rhai"
+    return "micropython"
+}
+
+fun McuTransportKind.displayName(): String {
+    return when (this) {
+        McuTransportKind.SERIAL -> "串口"
+        McuTransportKind.MODBUS_RTU -> "Modbus RTU"
+        McuTransportKind.MODBUS_TCP -> "Modbus TCP"
+        McuTransportKind.BLUETOOTH -> "蓝牙"
+        McuTransportKind.MQTT -> "MQTT"
+    }
+}
+
+fun McuBluetoothMode.displayName(): String {
+    return when (this) {
+        McuBluetoothMode.BLE -> "BLE"
+        McuBluetoothMode.CLASSIC -> "经典蓝牙"
     }
 }
 
@@ -848,4 +1109,29 @@ private fun String.escapeScriptText(): String {
     return replace("\\", "\\\\")
         .replace("\"", "\\\"")
         .replace("\n", "\\n")
+}
+
+private fun Throwable.userFacingMessage(): String {
+    return generateSequence(this) { it.cause }
+        .mapNotNull { cause ->
+            cause.message
+                ?.trim()
+                ?.takeIf { it.isNotEmpty() }
+                ?.takeUnless(String::looksLikeInternalImplementationName)
+                ?: cause::class.simpleName
+                    ?.takeUnless(String::looksLikeInternalImplementationName)
+        }
+        .firstOrNull()
+        ?: "操作失败"
+}
+
+private fun String.looksLikeInternalImplementationName(): Boolean {
+    val value = trim()
+    if (value.isEmpty()) {
+        return false
+    }
+    if ("ApiImpl" in value) {
+        return true
+    }
+    return value.contains('/') && value.contains('$') && !value.contains(' ')
 }

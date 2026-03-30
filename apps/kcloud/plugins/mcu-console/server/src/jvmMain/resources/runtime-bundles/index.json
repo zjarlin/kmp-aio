@@ -1,7 +1,6 @@
 {
-  "defaultBundleId": "rhai-default-generic",
+  "defaultBundleId": "micropython-default-generic",
   "bundleIds": [
-    "rhai-default-generic",
     "micropython-default-generic"
   ]
 }

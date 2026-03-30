@@ -12,20 +12,25 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import org.koin.compose.koinInject
 import site.addzero.component.button.AddIconButton
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
+import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 
 @Composable
 internal fun rememberMcuWorkbenchState(): McuConsoleWorkbenchState {
@@ -40,8 +45,10 @@ internal fun rememberMcuWorkbenchState(): McuConsoleWorkbenchState {
             if (state.hasActiveSession) {
                 state.pollEvents()
                 state.refreshSession()
-                state.refreshScriptStatus()
-                state.refreshRuntimeStatus()
+                if (state.activeSessionTransportKind == McuTransportKind.SERIAL) {
+                    state.refreshScriptStatus()
+                    state.refreshRuntimeStatus()
+                }
             }
             state.refreshFlashStatus()
             delay(
@@ -55,6 +62,30 @@ internal fun rememberMcuWorkbenchState(): McuConsoleWorkbenchState {
     }
 
     return state
+}
+
+@Composable
+internal fun rememberMcuActionRunner(): (suspend () -> Unit) -> Unit {
+    val scope = rememberCoroutineScope()
+    return remember(scope) {
+        { block ->
+            if (scope.isActive) {
+                runCatching {
+                    scope.launch {
+                        block()
+                    }
+                }.onFailure { throwable ->
+                    if (throwable is CancellationException) {
+                        return@onFailure
+                    }
+                    if (throwable.message?.contains("left the composition", ignoreCase = true) == true) {
+                        return@onFailure
+                    }
+                    throw throwable
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -575,6 +606,83 @@ internal fun McuCompactInput(
             fontFamily = FontFamily.Monospace,
         ),
     )
+}
+
+@Composable
+internal fun <T> McuChoiceChipRow(
+    items: List<T>,
+    selectedItem: T,
+    labelOf: (T) -> String,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items.forEach { item ->
+            val selected = item == selectedItem
+            Surface(
+                modifier = Modifier.clickable { onSelect(item) },
+                shape = RoundedCornerShape(999.dp),
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                },
+                contentColor = if (selected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+            ) {
+                Text(
+                    text = labelOf(item),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = if (labelOf(item).contains("UUID") || labelOf(item).contains("TCP")) {
+                        FontFamily.Monospace
+                    } else {
+                        FontFamily.Default
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun McuTransportSelector(
+    selectedKind: McuTransportKind,
+    onSelect: (McuTransportKind) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    McuChoiceChipRow(
+        items = McuTransportKind.entries,
+        selectedItem = selectedKind,
+        labelOf = { kind -> kind.displayName() },
+        onSelect = onSelect,
+        modifier = modifier,
+    )
+}
+
+@Composable
+internal fun McuInfoNotice(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
 internal data class McuToolbarAction(

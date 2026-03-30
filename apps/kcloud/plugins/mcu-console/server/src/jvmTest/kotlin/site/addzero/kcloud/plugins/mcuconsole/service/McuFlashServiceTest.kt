@@ -23,39 +23,6 @@ class McuFlashServiceTest {
     )
 
     @Test
-    fun `flash sends bytes and reports success`() = runBlocking {
-        val sessionService = McuConsoleSessionService(
-            gateway = gateway,
-            protocolCodec = codec,
-        )
-        val flashService = McuFlashService(
-            gateway = gateway,
-            sessionService = sessionService,
-            profileCatalog = McuFlashProfileCatalog(),
-            commandRunner = FakeMcuFlashCommandRunner(),
-        )
-        val firmware = File.createTempFile("mcu-console", ".bin").apply {
-            writeBytes(byteArrayOf(1, 2, 3, 4))
-            deleteOnExit()
-        }
-
-        val status = flashService.flash(
-            McuFlashRequest(
-                portPath = "COM9",
-                baudRate = 9600,
-                firmwarePath = firmware.absolutePath,
-            ),
-        )
-        val connection = gateway.openedConnections.last()
-
-        assertEquals(McuFlashRunState.SUCCESS, status.state)
-        assertEquals(4, status.bytesSent)
-        assertEquals(listOf<Byte>(1, 2, 3, 4), connection.byteWrites)
-        assertTrue(connection.textWrites.contains("START_FLASH\r\n"))
-        assertTrue(connection.textWrites.contains("DONE\r\n"))
-    }
-
-    @Test
     fun `command profile executes template and reports success`() = runBlocking {
         withEsptoolCommand("python3 -m esptool") {
             val sessionService = McuConsoleSessionService(
@@ -122,13 +89,12 @@ class McuFlashServiceTest {
     }
 
     @Test
-    fun `profiles expose default rhai and micropython entries`() {
+    fun `profiles expose only micropython entry`() {
         val profiles = McuFlashProfileCatalog().listProfiles()
 
-        assertEquals(2, profiles.items.size)
-        assertTrue(profiles.items.any { it.id == "rhai-generic-serial" })
+        assertEquals(1, profiles.items.size)
         assertTrue(profiles.items.any { it.id == "micropython-generic-command" })
-        assertEquals("rhai-generic-serial", profiles.defaultProfileId)
+        assertEquals("micropython-generic-command", profiles.defaultProfileId)
     }
 
     @Test
@@ -182,30 +148,6 @@ class McuFlashServiceTest {
         assertTrue(response.downloadPath?.endsWith("ESP32_GENERIC-20251209-v1.27.0.bin") == true)
         assertTrue(commandRunner.commands.any { it.contains("curl -fsSL") })
         assertTrue(commandRunner.commands.any { it.contains("curl -fL") })
-    }
-
-    @Test
-    fun `download firmware requires explicit url for rhai profile`() = runBlocking {
-        val sessionService = McuConsoleSessionService(
-            gateway = gateway,
-            protocolCodec = codec,
-        )
-        val flashService = McuFlashService(
-            gateway = gateway,
-            sessionService = sessionService,
-            profileCatalog = McuFlashProfileCatalog(),
-            commandRunner = FakeMcuFlashCommandRunner(),
-        )
-
-        val error = assertFailsWith<IllegalArgumentException> {
-            flashService.downloadFirmware(
-                McuFlashDownloadRequest(
-                    profileId = "rhai-generic-serial",
-                ),
-            )
-        }
-
-        assertEquals("当前烧录能力包没有默认在线固件，请填写下载地址", error.message)
     }
 
     @Test

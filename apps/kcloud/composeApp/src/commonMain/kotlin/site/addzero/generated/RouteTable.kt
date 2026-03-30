@@ -13,7 +13,6 @@ object RouteTable {
     val allRoutes: Map<String, @Composable () -> Unit> = mapOf(
         RouteKeys.MCU_CONTROL_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuControlScreen() },
         RouteKeys.MCU_FLASH_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuFlashScreen() },
-        RouteKeys.MCU_ONLINE_DEV_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuOnlineDevScreen() },
         RouteKeys.MCU_DEBUG_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen() }
     )
 

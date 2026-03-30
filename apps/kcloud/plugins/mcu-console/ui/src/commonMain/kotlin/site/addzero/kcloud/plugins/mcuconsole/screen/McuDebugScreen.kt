@@ -5,10 +5,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -30,15 +28,14 @@ import site.addzero.annotation.RouteScene
 @Composable
 fun McuDebugScreen() {
     val state = rememberMcuWorkbenchState()
-    val scope = rememberCoroutineScope()
+    val runAction = rememberMcuActionRunner()
 
     McuWorkbenchFrame(
         state = state,
         actions = listOf(
             McuToolbarAction("刷新", Icons.Default.Refresh) {
-                scope.launch {
+                runAction {
                     state.loadRecentEvents()
-                    state.refreshScriptStatus()
                     state.refreshRuntimeStatus()
                 }
             },
@@ -60,9 +57,8 @@ fun McuDebugScreen() {
                         "串口" to (state.session.portPath ?: state.selectedPortPath.orEmpty()),
                         "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
                         "运行时" to state.runtimeStatus.state.name,
-                        "Frame" to state.scriptStatus.lastFrameType.orEmpty(),
-                        "Payload" to state.scriptStatus.lastPayload?.toString().orEmpty(),
-                        "消息" to (state.scriptStatus.lastMessage ?: state.runtimeStatus.lastMessage.orEmpty()),
+                        "烧录" to state.flashStatus.state.name,
+                        "消息" to state.runtimeStatus.lastMessage.orEmpty(),
                     ),
                 )
             }

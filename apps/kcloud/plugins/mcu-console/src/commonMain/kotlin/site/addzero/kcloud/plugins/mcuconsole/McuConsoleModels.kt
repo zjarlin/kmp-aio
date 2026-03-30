@@ -20,6 +20,65 @@ data class McuPortsResponse(
 )
 
 @Serializable
+enum class McuTransportKind {
+    SERIAL,
+    MODBUS_RTU,
+    MODBUS_TCP,
+    BLUETOOTH,
+    MQTT,
+}
+
+@Serializable
+enum class McuBluetoothMode {
+    BLE,
+    CLASSIC,
+}
+
+@Serializable
+data class McuSerialTransportConfig(
+    val portPath: String? = null,
+    val baudRate: Int = 115200,
+)
+
+@Serializable
+data class McuModbusRtuTransportConfig(
+    val portPath: String? = null,
+    val baudRate: Int = 115200,
+    val unitId: Int = 1,
+    val timeoutMs: Int = 1000,
+)
+
+@Serializable
+data class McuModbusTcpTransportConfig(
+    val host: String = "",
+    val port: Int = 502,
+    val unitId: Int = 1,
+    val timeoutMs: Int = 1000,
+)
+
+@Serializable
+data class McuBluetoothTransportConfig(
+    val mode: McuBluetoothMode = McuBluetoothMode.BLE,
+    val deviceName: String = "",
+    val deviceAddress: String = "",
+    val serviceUuid: String = "",
+    val writeCharacteristicUuid: String = "",
+    val notifyCharacteristicUuid: String = "",
+)
+
+@Serializable
+data class McuMqttTransportConfig(
+    val brokerUrl: String = "",
+    val clientId: String = "",
+    val username: String = "",
+    val password: String = "",
+    val publishTopic: String = "",
+    val subscribeTopic: String = "",
+    val qos: Int = 0,
+    val keepAliveSeconds: Int = 60,
+)
+
+@Serializable
 data class McuSessionOpenRequest(
     val portPath: String = "",
     val baudRate: Int = 115200,
@@ -90,7 +149,7 @@ enum class McuScriptRunState {
 
 @Serializable
 data class McuScriptExecuteRequest(
-    val language: String = "rhai",
+    val language: String = "micropython",
     val script: String = "",
     val timeoutMs: Int = 5000,
 )
@@ -105,7 +164,7 @@ data class McuScriptStatusResponse(
     val state: McuScriptRunState = McuScriptRunState.IDLE,
     val activeRequestId: String? = null,
     val lastRequestId: String? = null,
-    val language: String = "rhai",
+    val language: String = "micropython",
     val lastMessage: String? = null,
     val lastFrameType: String? = null,
     val lastPayload: JsonElement? = null,
@@ -122,7 +181,6 @@ enum class McuFlashRunState {
 
 @Serializable
 enum class McuFlashRuntimeKind {
-    RHAI_VM,
     MICROPYTHON,
 }
 
@@ -136,8 +194,8 @@ enum class McuFlashStrategyKind {
 data class McuFlashProfileSummary(
     val id: String = "",
     val title: String = "",
-    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.RHAI_VM,
-    val strategyKind: McuFlashStrategyKind = McuFlashStrategyKind.SERIAL_ACK_STREAM,
+    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.MICROPYTHON,
+    val strategyKind: McuFlashStrategyKind = McuFlashStrategyKind.COMMAND_TEMPLATE,
     val mcuFamily: String = "generic",
     val description: String = "",
     val artifactLabel: String = "固件路径",
@@ -224,7 +282,7 @@ data class McuScriptExample(
     val id: String = "",
     val title: String = "",
     val description: String = "",
-    val language: String = "rhai",
+    val language: String = "micropython",
     val script: String = "",
 )
 
@@ -275,7 +333,7 @@ data class McuWidgetTemplate(
 data class McuRuntimeBundleSummary(
     val bundleId: String = "",
     val title: String = "",
-    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.RHAI_VM,
+    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.MICROPYTHON,
     val mcuFamily: String = "generic",
     val defaultFlashProfileId: String = "",
     val defaultBaudRate: Int = 115200,
@@ -329,7 +387,7 @@ data class McuVmIncomingFrame(
 
 @Serializable
 data class McuVmExecutePayload(
-    val language: String = "rhai",
+    val language: String = "micropython",
     val script: String = "",
     val timeoutMs: Int = 5000,
 )

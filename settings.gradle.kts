@@ -72,6 +72,9 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     remapExternalProject(":lib:ksp:route", "lib/ksp/route")
     remapExternalProject(":lib:ksp:route:route-core", "lib/ksp/route/route-core")
     remapExternalProject(":lib:ksp:route:route-processor", "lib/ksp/route/route-processor")
+    remapExternalProject(":lib:ksp:metadata:modbus:modbus-runtime", "lib/ksp/metadata/modbus/modbus-runtime")
+    remapExternalProject(":lib:ksp:metadata:modbus:modbus-ksp-core", "lib/ksp/metadata/modbus/modbus-ksp-core")
+    remapExternalProject(":lib:ksp:metadata:modbus:modbus-ksp-rtu", "lib/ksp/metadata/modbus/modbus-ksp-rtu")
 
     gradle.beforeProject {
         configurations.configureEach {
@@ -92,6 +95,10 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
                     .using(project(":lib:ksp:route:route-core"))
                 substitute(module("site.addzero:route-processor"))
                     .using(project(":lib:ksp:route:route-processor"))
+                substitute(module("site.addzero:modbus-runtime"))
+                    .using(project(":lib:ksp:metadata:modbus:modbus-runtime"))
+                substitute(module("site.addzero:modbus-ksp-rtu"))
+                    .using(project(":lib:ksp:metadata:modbus:modbus-ksp-rtu"))
             }
         }
     }

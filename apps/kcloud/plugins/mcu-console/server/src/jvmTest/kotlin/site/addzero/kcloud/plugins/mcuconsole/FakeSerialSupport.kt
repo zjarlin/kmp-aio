@@ -78,13 +78,13 @@ internal class FakeSerialPortConnection(
 
             gateway.runtimeInstalled && text.contains("\"command\":\"vm.ping\"") -> {
                 enqueueIncomingText(
-                    """{"requestId":"${requestId.orEmpty()}","type":"ack","success":true,"message":"runtime-ready","payload":{"runtime":"rhai"}}""" + "\n",
+                    """{"requestId":"${requestId.orEmpty()}","type":"ack","success":true,"message":"runtime-ready","payload":{"runtime":"micropython"}}""" + "\n",
                 )
             }
 
             gateway.runtimeInstalled && text.contains("\"command\":\"vm.status\"") -> {
                 enqueueIncomingText(
-                    """{"requestId":"${requestId.orEmpty()}","type":"status","success":true,"message":"runtime-ready","payload":{"state":"IDLE","runtime":"rhai"}}""" + "\n",
+                    """{"requestId":"${requestId.orEmpty()}","type":"status","success":true,"message":"runtime-ready","payload":{"state":"IDLE","runtime":"micropython"}}""" + "\n",
                 )
             }
 

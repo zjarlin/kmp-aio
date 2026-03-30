@@ -8,19 +8,6 @@ import site.addzero.kcloud.plugins.mcuconsole.McuFlashStrategyKind
 class McuFlashProfileCatalog {
     private val profiles = listOf(
         McuFlashProfileSummary(
-            id = "rhai-generic-serial",
-            title = "Rhai VM / 板级固件",
-            runtimeKind = McuFlashRuntimeKind.RHAI_VM,
-            strategyKind = McuFlashStrategyKind.SERIAL_ACK_STREAM,
-            mcuFamily = "custom",
-            description = "刷写你自己编译的 Rhai 板级固件，设备侧需实现 START_FLASH / ACK / DONE 串口引导协议",
-            artifactLabel = "Rhai 固件路径",
-            artifactHint = "/abs/path/<board>-rhai.bin",
-            defaultBaudRate = 115200,
-            supportsOnlineDownload = true,
-            downloadUrlHint = "https://firmware.example.com/<board>/rhai.bin",
-        ),
-        McuFlashProfileSummary(
             id = "micropython-generic-command",
             title = "MicroPython / ESP32 官方固件",
             runtimeKind = McuFlashRuntimeKind.MICROPYTHON,

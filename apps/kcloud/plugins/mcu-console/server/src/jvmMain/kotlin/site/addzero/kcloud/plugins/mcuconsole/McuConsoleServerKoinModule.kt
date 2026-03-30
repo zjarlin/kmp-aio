@@ -3,10 +3,16 @@ package site.addzero.kcloud.plugins.mcuconsole
 import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import site.addzero.device.driver.modbus.rtu.J2modModbusRtuExecutor
+import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigRegistry
+import site.addzero.device.driver.modbus.rtu.ModbusRtuExecutor
+import site.addzero.esp32_host_computer.generated.modbus.rtu.AutomicModbusApiGeneratedRtuConfigProvider
+import site.addzero.esp32_host_computer.generated.modbus.rtu.AutomicModbusApiGeneratedRtuGateway
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.JSerialCommSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import site.addzero.kcloud.plugins.mcuconsole.service.*
+import site.addzero.kcloud.plugins.mcuconsole.service.modbus.AutomicModbusService
 
 @Module
 class McuConsoleServerKoinModule {
@@ -105,6 +111,45 @@ class McuConsoleServerKoinModule {
             flashService = flashService,
             sessionService = sessionService,
             protocolCodec = protocolCodec,
+        )
+    }
+
+    @Single
+    fun provideAutomicModbusConfigProvider(): AutomicModbusApiGeneratedRtuConfigProvider {
+        return AutomicModbusApiGeneratedRtuConfigProvider()
+    }
+
+    @Single
+    fun provideModbusRtuExecutor(): ModbusRtuExecutor {
+        return J2modModbusRtuExecutor()
+    }
+
+    @Single
+    fun provideModbusRtuConfigRegistry(
+        configProvider: AutomicModbusApiGeneratedRtuConfigProvider,
+    ): ModbusRtuConfigRegistry {
+        return ModbusRtuConfigRegistry(listOf(configProvider))
+    }
+
+    @Single
+    fun provideAutomicModbusGateway(
+        configRegistry: ModbusRtuConfigRegistry,
+        executor: ModbusRtuExecutor,
+    ): AutomicModbusApiGeneratedRtuGateway {
+        return AutomicModbusApiGeneratedRtuGateway(
+            configRegistry = configRegistry,
+            executor = executor,
+        )
+    }
+
+    @Single
+    fun provideAutomicModbusService(
+        sessionService: McuConsoleSessionService,
+        gateway: AutomicModbusApiGeneratedRtuGateway,
+    ): AutomicModbusService {
+        return AutomicModbusService(
+            sessionService = sessionService,
+            gateway = gateway,
         )
     }
 }
