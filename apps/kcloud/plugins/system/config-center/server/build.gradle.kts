@@ -29,6 +29,7 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:system:config-center"))
+            implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())

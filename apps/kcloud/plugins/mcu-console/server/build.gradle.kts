@@ -21,16 +21,16 @@ val localJimmerExternalProcessorPom = file(
         "/.m2/repository/site/addzero/jimmer-entity-external-processor/$localAddzeroLibJvmVersion/" +
         "jimmer-entity-external-processor-$localAddzeroLibJvmVersion.pom",
 )
-val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console")
+val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:shared")
     .projectDir
     .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external")
     .absolutePath
 val generatedIsoPackage = "site.addzero.kcloud.plugins.mcuconsole"
-val generatedIsoOutputDir = project(":apps:kcloud:plugins:mcu-console")
+val generatedIsoOutputDir = project(":apps:kcloud:plugins:mcu-console:shared")
     .projectDir
     .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole")
     .absolutePath
-val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console")
+val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared")
     .projectDir
     .resolve("src/commonMain/kotlin")
     .absolutePath
@@ -80,7 +80,7 @@ kotlin {
             kotlin.srcDir(generatedJvmRouteSourceDir)
         }
         jvmMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:mcu-console"))
+            api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation(project(":lib:ksp:metadata:modbus:modbus-runtime"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("com-hivemq-hivemq-mqtt-client").get())

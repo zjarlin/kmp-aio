@@ -3,13 +3,18 @@ package site.addzero.kcloud.plugins.mcuconsole.screen
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -203,7 +208,6 @@ internal fun McuPortBrowser(
     state: McuConsoleWorkbenchState,
     onRefresh: () -> Unit,
 ) {
-    val runAction = rememberMcuActionRunner()
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -221,60 +225,42 @@ internal fun McuPortBrowser(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Box(
-            modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f, fill = true)
+                .heightIn(min = 190.dp),
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(
-                    items = state.filteredPorts,
-                    key = { port -> port.portPath },
-                ) { port ->
-                    McuPortRow(
-                        port = port,
-                        selected = state.selectedPortPath == port.portPath,
-                        onClick = { state.selectPort(port.portPath) },
-                    )
+            if (state.filteredPorts.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = "当前筛选条件下没有串口",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
-            }
-        }
-        state.selectedPort?.let { selectedPort ->
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    McuCompactInput(
-                        value = state.selectedPortRemarkDraft,
-                        onValueChange = { value ->
-                            state.updateSelectedPortRemarkDraft(value)
-                        },
-                        label = "备注",
-                        supportingText = selectedPort.remarkBindingHint(),
-                    )
-                    McuSummaryTable(
-                        rows = listOf(
-                            "绑定键" to selectedPort.displayRemarkBindingKey(),
-                            "串口" to selectedPort.portPath,
-                            "厂商" to selectedPort.manufacturer,
-                        ),
-                    )
-                    FilledTonalButton(
-                        onClick = {
-                            runAction {
-                                state.saveSelectedPortRemark()
-                            }
-                        },
-                        enabled = !state.isSubmitting,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text("保存当前串口备注")
+                    items(
+                        items = state.filteredPorts,
+                        key = { port -> port.portPath },
+                    ) { port ->
+                        McuPortRow(
+                            port = port,
+                            selected = state.selectedPortPath == port.portPath,
+                            onClick = { state.selectPort(port.portPath) },
+                        )
                     }
                 }
             }
@@ -431,18 +417,6 @@ private fun McuPortSummary.displayRemarkBindingKey(): String {
         return "VID:PID=${vendorIdValue.toString(16)}:${productIdValue.toString(16)}"
     }
     return deviceKey.ifBlank { "未提供稳定键" }
-}
-
-private fun McuPortSummary.remarkBindingHint(): String {
-    if (serialNumber.isNotBlank()) {
-        return "当前备注绑定到设备序列号，换 Type-C 口也会跟随。"
-    }
-    val vendorIdValue = vendorId
-    val productIdValue = productId
-    if (vendorIdValue != null && productIdValue != null) {
-        return "当前设备未提供序列号，备注会按 VID/PID 与设备描述绑定。"
-    }
-    return "当前设备缺少稳定硬件标识，备注只能按端口描述绑定。"
 }
 
 @Composable
@@ -745,6 +719,136 @@ internal fun McuEventFeed(
 }
 
 @Composable
+internal fun McuTerminalFeed(
+    events: List<McuEventEnvelope>,
+    modifier: Modifier = Modifier,
+    autoScrollToLatest: Boolean = false,
+) {
+    if (events.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "等待设备输出",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(events.size, autoScrollToLatest) {
+        if (autoScrollToLatest && events.isNotEmpty()) {
+            listState.scrollToItem(events.lastIndex)
+        }
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        state = listState,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+    ) {
+        items(
+            items = events,
+            key = { event -> event.seq },
+        ) { event ->
+            McuTerminalEventRow(event = event)
+        }
+    }
+}
+
+@Composable
+private fun McuTerminalEventRow(
+    event: McuEventEnvelope,
+) {
+    var expanded by rememberSaveable(event.seq) {
+        mutableStateOf(event.kind == McuEventKind.ERROR)
+    }
+    val accent = event.terminalAccentColor()
+    val timeText = event.timestamp.substringAfter('T').substringBefore('.')
+    val preview = event.raw?.takeIf { it.isNotBlank() } ?: event.message
+    val rawText = event.raw?.takeIf { it.isNotBlank() && it != preview }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
+        color = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .animateContentSize()
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(4.dp)
+                        .height(18.dp)
+                        .background(accent, RoundedCornerShape(999.dp)),
+                )
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                )
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = accent.copy(alpha = 0.14f),
+                    contentColor = accent,
+                ) {
+                    Text(
+                        text = event.kind.displayName(),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+                Text(
+                    text = preview,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = if (expanded) Int.MAX_VALUE else 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "#${event.seq}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+            if (expanded && rawText != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.34f),
+                ) {
+                    Text(
+                        text = rawText,
+                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun McuEventCard(
     event: McuEventEnvelope,
 ) {
@@ -864,6 +968,19 @@ private fun McuEventKind.displayName(): String {
 }
 
 @Composable
+private fun McuEventEnvelope.terminalAccentColor(): Color {
+    return when (kind) {
+        McuEventKind.ERROR -> MaterialTheme.colorScheme.error
+        McuEventKind.TX_TEXT -> MaterialTheme.colorScheme.secondary
+        McuEventKind.TX_FRAME -> MaterialTheme.colorScheme.primary
+        McuEventKind.RX_FRAME -> MaterialTheme.colorScheme.tertiary
+        McuEventKind.FLASH -> MaterialTheme.colorScheme.secondary
+        McuEventKind.LOG -> MaterialTheme.colorScheme.outline
+        McuEventKind.SYSTEM -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+}
+
+@Composable
 internal fun McuCompactInput(
     value: String,
     onValueChange: (String) -> Unit,
@@ -910,7 +1027,9 @@ internal fun <T> McuChoiceChipRow(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items.forEach { item ->

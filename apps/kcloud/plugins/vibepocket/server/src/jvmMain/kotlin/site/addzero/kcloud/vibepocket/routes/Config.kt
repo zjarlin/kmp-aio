@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestBody
 import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterCompatService
 import site.addzero.kcloud.vibepocket.dto.OkResponse
 import site.addzero.kcloud.vibepocket.model.AppConfig
-import site.addzero.kcloud.vibepocket.model.AppConfigDraft
 
 private const val VIBEPOCKET_CONFIG_NAMESPACE = "vibepocket"
 private const val VIBEPOCKET_APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
@@ -20,20 +19,6 @@ private fun KSqlClient.readLegacyConfig(key: String): String? {
     return createQuery(AppConfig::class) {
         select(table)
     }.execute().firstOrNull { it.key == key }?.value
-}
-
-private fun KSqlClient.writeLegacyConfig(
-    key: String,
-    value: String,
-    description: String? = null,
-) {
-    save(
-        AppConfigDraft.`$`.produce {
-            this.key = key
-            this.value = value
-            this.description = description
-        },
-    )
 }
 
 @GetMapping("/api/config/runtime")
@@ -45,12 +30,7 @@ suspend fun getRuntimeInfo(): ConfigRuntimeInfo {
 suspend fun getConfig(
     @PathVariable key: String,
 ): ConfigResponse {
-    val value = compatService().getOrImportLegacyValue(
-        namespace = VIBEPOCKET_CONFIG_NAMESPACE,
-        key = key,
-    ) {
-        legacySqlClient().readLegacyConfig(key)
-    }
+    val value = readConfigValue(key)
     return ConfigResponse(key = key, value = value)
 }
 
@@ -58,11 +38,10 @@ suspend fun getConfig(
 suspend fun updateConfig(
     @RequestBody entry: ConfigEntry,
 ): OkResponse {
-    compatService().saveLegacyValue(
+    compatService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = entry.key,
         value = entry.value,
-        description = entry.description,
     )
     return OkResponse()
 }
@@ -70,14 +49,7 @@ suspend fun updateConfig(
 @GetMapping("/api/config/storage")
 suspend fun getStorageConfig(): StorageConfig {
     fun readValue(key: String): String? {
-        return runBlocking {
-            compatService().getOrImportLegacyValue(
-                namespace = VIBEPOCKET_CONFIG_NAMESPACE,
-                key = key,
-            ) {
-                legacySqlClient().readLegacyConfig(key)
-            }
-        }
+        return runBlocking { readConfigValue(key) }
     }
 
     return StorageConfig(
@@ -96,7 +68,7 @@ suspend fun getStorageConfig(): StorageConfig {
 suspend fun saveStorageConfig(
     @RequestBody config: StorageConfig,
 ): OkResponse {
-    compatService().saveLegacyValue(
+    compatService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = "storage.type",
         value = config.type,
@@ -112,11 +84,29 @@ suspend fun saveStorageConfig(
 }
 
 private suspend fun saveStorageValue(key: String, value: String) {
-    compatService().saveLegacyValue(
+    compatService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
         value = value,
     )
+}
+
+private suspend fun readConfigValue(
+    key: String,
+): String? {
+    compatService().readValue(
+        namespace = VIBEPOCKET_CONFIG_NAMESPACE,
+        key = key,
+    )?.let { value ->
+        return value
+    }
+    val legacyValue = legacySqlClient().readLegacyConfig(key) ?: return null
+    compatService().writeValue(
+        namespace = VIBEPOCKET_CONFIG_NAMESPACE,
+        key = key,
+        value = legacyValue,
+    )
+    return legacyValue
 }
 
 private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {

@@ -201,3 +201,17 @@ CREATE TABLE IF NOT EXISTS sync_conflict_meta (
     FOREIGN KEY(file_id) REFERENCES source_file_meta(id) ON DELETE RESTRICT,
     FOREIGN KEY(artifact_id) REFERENCES managed_artifact_meta(id) ON DELETE RESTRICT
 );
+
+CREATE TABLE IF NOT EXISTS config_center_value (
+    id TEXT PRIMARY KEY,
+    namespace TEXT NOT NULL,
+    active_profile TEXT NOT NULL,
+    config_key TEXT NOT NULL,
+    config_value TEXT NOT NULL,
+    create_time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(namespace, active_profile, config_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_value_namespace_active
+    ON config_center_value(namespace, active_profile);

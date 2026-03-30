@@ -4,21 +4,25 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.navigation3.runtime.NavBackStack
+import site.addzero.generated.RouteKeys
 import site.addzero.kcloud.feature.ShellTrayPanelController
 import site.addzero.kcloud.feature.ShellWindowController
 
 class KCloudShellState(
     private val routeCatalog: KCloudRouteCatalog,
 ) : ShellWindowController, ShellTrayPanelController {
+    private val startupRoutePath = routeCatalog.findRoute(RouteKeys.MCU_CONTROL_SCREEN)?.routePath
+        ?: routeCatalog.defaultRoutePath
+
     val backStack = NavBackStack(
         KCloudNavRoute(
-            routePath = routeCatalog.defaultRoutePath,
+            routePath = startupRoutePath,
         ),
     )
 
     val selectedRoute: KCloudNavRoute
         get() = backStack.lastOrNull()
-            ?: KCloudNavRoute(routePath = routeCatalog.defaultRoutePath)
+            ?: KCloudNavRoute(routePath = startupRoutePath)
 
     val selectedRoutePath: String
         get() = selectedRoute.routePath

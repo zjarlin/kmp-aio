@@ -140,23 +140,37 @@ private fun sqlClient(): KSqlClient {
     return KoinPlatform.getKoin().get()
 }
 
+private fun KSqlClient.readLegacyConfigValue(key: String): String? {
+    return createQuery(site.addzero.kcloud.vibepocket.model.AppConfig::class) {
+        select(table)
+    }.execute().firstOrNull { config -> config.key == key }?.value
+}
+
 private suspend fun KSqlClient.getConfig(key: String): String? {
-    return compatService().getOrImportLegacyValue(
+    compatService().readValue(
         namespace = "vibepocket",
         key = key,
+    )?.let { value ->
+        return value
+    }
+    val legacyValue = readLegacyConfigValue(key) ?: return null
+    compatService().writeValue(
+        namespace = "vibepocket",
+        key = key,
+        value = legacyValue,
     )
+    return legacyValue
 }
 
 private suspend fun KSqlClient.setConfig(
     key: String,
     value: String,
-    description: String? = null,
+    _description: String? = null,
 ) {
-    compatService().saveLegacyValue(
+    compatService().writeValue(
         namespace = "vibepocket",
         key = key,
         value = value,
-        description = description,
     )
 }
 

@@ -181,6 +181,17 @@ CREATE INDEX IF NOT EXISTS idx_plugin_deployment_artifact_job
 CREATE INDEX IF NOT EXISTS idx_plugin_import_record_package
     ON plugin_import_record(package_id, imported_at DESC);
 
+CREATE TABLE IF NOT EXISTS config_center_value (
+    id BIGSERIAL PRIMARY KEY,
+    namespace TEXT NOT NULL,
+    active_profile TEXT NOT NULL,
+    config_key TEXT NOT NULL,
+    config_value TEXT NOT NULL,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP,
+    UNIQUE(namespace, active_profile, config_key)
+);
+
 CREATE TABLE IF NOT EXISTS config_center_project (
     id BIGSERIAL PRIMARY KEY,
     project_key TEXT NOT NULL UNIQUE,
@@ -306,6 +317,9 @@ CREATE INDEX IF NOT EXISTS idx_config_center_service_token_config
 
 CREATE INDEX IF NOT EXISTS idx_config_center_activity_project
     ON config_center_activity_log(project_id, create_time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_value_lookup
+    ON config_center_value(namespace, active_profile, config_key);
 
 CREATE TABLE IF NOT EXISTS user_profile (
     id BIGSERIAL PRIMARY KEY,

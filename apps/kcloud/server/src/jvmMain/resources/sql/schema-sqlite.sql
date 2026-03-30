@@ -186,6 +186,17 @@ CREATE INDEX IF NOT EXISTS idx_plugin_deployment_artifact_job
 CREATE INDEX IF NOT EXISTS idx_plugin_import_record_package
     ON plugin_import_record(package_id, imported_at DESC);
 
+CREATE TABLE IF NOT EXISTS config_center_value (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    namespace TEXT NOT NULL,
+    active_profile TEXT NOT NULL,
+    config_key TEXT NOT NULL,
+    config_value TEXT NOT NULL,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT,
+    UNIQUE(namespace, active_profile, config_key)
+);
+
 CREATE TABLE IF NOT EXISTS config_center_project (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_key TEXT NOT NULL UNIQUE,
@@ -353,6 +364,9 @@ CREATE INDEX IF NOT EXISTS idx_mcu_device_profile_last_seen_at
 
 CREATE INDEX IF NOT EXISTS idx_mcu_transport_profile_last_used_at
     ON mcu_transport_profile(last_used_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_config_center_value_lookup
+    ON config_center_value(namespace, active_profile, config_key);
 
 CREATE INDEX IF NOT EXISTS idx_config_center_environment_project
     ON config_center_environment(project_id, sort_order, slug);

@@ -3,6 +3,7 @@ package site.addzero.coding.playground
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.coding.playground.server.config.defaultPlaygroundHttpServerEnabled
 
 class CodingPlaygroundRuntime(
     private val koinApplication: KoinApplication,
@@ -28,7 +29,7 @@ class CodingPlaygroundRuntime(
 }
 
 fun createCodingPlaygroundRuntime(
-    httpServerEnabled: Boolean = System.getProperty("coding.playground.http.enabled")?.toBooleanStrictOrNull() ?: false,
+    httpServerEnabled: Boolean = defaultPlaygroundHttpServerEnabled(),
 ): CodingPlaygroundRuntime {
     val koinApplication = startKoin {
         withConfiguration<CodingPlaygroundKoinApplication>()

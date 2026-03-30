@@ -24,6 +24,7 @@ ksp {
 
 dependencies {
     implementation(project(":apps:coding-playground:shared"))
+    implementation(project(":lib:ktor:starter:starter-spi"))
 
     implementation(libs.io.ktor.ktor.server.core)
     implementation("site.addzero:spring2ktor-server-core:2026.03.13")

@@ -1279,20 +1279,52 @@ class McuConsoleWorkbenchState(
             updateFeedback("串口命令不能为空", true)
             return
         }
-        if (!canSendDirectSerialText) {
-            updateFeedback("请先打开串口会话", true)
+        sendSerialPayload(
+            text = command,
+            appendLineEnding = serialCommandAppendLineEnding,
+            successMessage = "串口命令已发送",
+        )
+    }
+
+    suspend fun openReplSession() {
+        selectTransport(McuTransportKind.SERIAL)
+        if (session.isOpen && activeSessionTransportKind == McuTransportKind.SERIAL) {
+            updateFeedback("串口终端已连接", false)
             return
         }
-        runSubmitting("串口命令已发送") {
-            remoteService.sendSerialText(
-                McuSerialTextSendRequest(
-                    text = command,
-                    appendLineEnding = serialCommandAppendLineEnding,
-                    lineEnding = serialCommandLineEnding,
-                ),
-            )
-            pollEvents()
-        }
+        openSession()
+    }
+
+    suspend fun sendReplText(
+        text: String = serialCommandText,
+        appendLineEnding: Boolean = true,
+        clearInput: Boolean = true,
+        successMessage: String = "终端输入已发送",
+    ) {
+        sendSerialPayload(
+            text = text,
+            appendLineEnding = appendLineEnding,
+            successMessage = successMessage,
+            clearInput = clearInput,
+        )
+    }
+
+    suspend fun sendReplNewLine() {
+        sendReplText(
+            text = "",
+            appendLineEnding = true,
+            clearInput = true,
+            successMessage = "已发送空行",
+        )
+    }
+
+    suspend fun sendReplInterrupt() {
+        sendReplText(
+            text = "\u0003",
+            appendLineEnding = false,
+            clearInput = false,
+            successMessage = "已发送 Ctrl+C",
+        )
     }
 
     suspend fun sendPanelDisplayCommand() {
@@ -1964,14 +1996,41 @@ class McuConsoleWorkbenchState(
             return
         }
         serialCommandText = script
+        sendSerialPayload(
+            text = script,
+            appendLineEnding = true,
+            successMessage = successMessage,
+        )
+    }
+
+    /**
+     * REPL 允许空行和纯空格，因此这里保留原文，不做 trim。
+     */
+    private suspend fun sendSerialPayload(
+        text: String,
+        appendLineEnding: Boolean,
+        successMessage: String,
+        clearInput: Boolean = false,
+    ) {
+        if (!canSendDirectSerialText) {
+            updateFeedback("请先打开串口会话", true)
+            return
+        }
+        if (text.isEmpty() && !appendLineEnding) {
+            updateFeedback("发送内容不能为空", true)
+            return
+        }
         runSubmitting(successMessage) {
             remoteService.sendSerialText(
                 McuSerialTextSendRequest(
-                    text = script,
-                    appendLineEnding = true,
+                    text = text,
+                    appendLineEnding = appendLineEnding,
                     lineEnding = serialCommandLineEnding,
                 ),
             )
+            if (clearInput) {
+                serialCommandText = ""
+            }
             pollEvents()
         }
     }

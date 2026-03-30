@@ -10,8 +10,11 @@ import io.ktor.server.routing.*
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
+import site.addzero.starter.installEffectiveConfig
+import site.addzero.starter.normalizeConfigCenterActive
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
+import site.addzero.starter.withConfigCenterOverrides
 import java.io.File
 import java.net.ServerSocket
 import org.koin.core.KoinApplication as CoreKoinApplication
@@ -24,6 +27,7 @@ private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
 private const val KCLOUD_APPLICATION_CONFIG_PROPERTY = "kcloud.applicationConfig"
 private const val VIBEPOCKET_APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
+private const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
 @Volatile
 private var embeddedApplicationConfigOverride: ApplicationConfig? = null
 @Volatile
@@ -54,6 +58,7 @@ fun Application.module(
     overrideModules: List<KoinModule> = emptyList(),
 ) {
     val config = embeddedApplicationConfigOverride ?: environment.config
+    installEffectiveConfig(config)
     val desktopKoinConfigurer = embeddedDesktopKoinConfigurer
     installKoin {
         withConfiguration<KCloudServerStarterKoinApplication>()
@@ -83,19 +88,23 @@ fun serverApplication(
     embeddedApplicationConfigOverride = null
     embeddedDesktopKoinConfigurer = null
     val config = loadServerConfig(configPath)
+    val effectiveConfig = config.withConfigCenterOverrides(
+        namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+        active = resolveConfigCenterActive(config),
+    )
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: config.propertyOrNull("ktor.deployment.host")?.getString()
+        ?: effectiveConfig.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
+        ?: effectiveConfig.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: 8080
 
     val environment = applicationEnvironment {
-        this.config = config
+        this.config = effectiveConfig
     }
 
     return embeddedServer(
@@ -121,7 +130,11 @@ fun ktorApplication(
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val config = loadEmbeddedConfig(configPath)
-    embeddedApplicationConfigOverride = config
+    val effectiveConfig = config.withConfigCenterOverrides(
+        namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+        active = resolveConfigCenterActive(config),
+    )
+    embeddedApplicationConfigOverride = effectiveConfig
     System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
@@ -129,18 +142,18 @@ fun ktorApplication(
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val requestedHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: config.propertyOrNull("ktor.deployment.host")?.getString()
+        ?: effectiveConfig.propertyOrNull("ktor.deployment.host")?.getString()
         ?: "0.0.0.0"
 
     val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: config.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
+        ?: effectiveConfig.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
         ?: DEFAULT_EMBEDDED_DESKTOP_PORT
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
     embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
 
     val environment = applicationEnvironment {
-        this.config = config
+        this.config = effectiveConfig
     }
 
     val embeddedServer = embeddedServer(
@@ -244,6 +257,16 @@ private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
         serverRuntimeOverrides()
             .withFallback(resolved)
             .resolve()
+    )
+}
+
+private fun resolveConfigCenterActive(
+    config: ApplicationConfig,
+): String {
+    return normalizeConfigCenterActive(
+        config.propertyOrNull("ktor.environment")?.getString()
+            ?: System.getenv("KTOR_ENV")
+            ?: DEFAULT_EMBEDDED_ENV,
     )
 }
 

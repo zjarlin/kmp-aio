@@ -585,23 +585,22 @@ class PluginMarketConfigServiceImpl(
 ) : PluginMarketConfigService {
     override suspend fun read(): PluginMarketConfigDto {
         ensureDefaults()
-        val entries = compatService.listLegacyValues(CONFIG_NAMESPACE)
         return PluginMarketConfigDto(
-            exportRootDir = entries["export.rootDir"] ?: "apps/kcloud/plugins",
-            gradleCommand = entries["gradle.command"] ?: "./gradlew",
-            gradleTasks = entries["gradle.tasks"]
+            exportRootDir = readValue("export.rootDir") ?: "apps/kcloud/plugins",
+            gradleCommand = readValue("gradle.command") ?: "./gradlew",
+            gradleTasks = readValue("gradle.tasks")
                 ?.split(" ")
                 ?.map(String::trim)
                 ?.filter(String::isNotBlank)
                 ?: defaultGradleTasks(),
-            javaHome = entries["java.home"],
-            environmentLines = entries["environment.lines"]
+            javaHome = readValue("java.home"),
+            environmentLines = readValue("environment.lines")
                 ?.lineSequence()
                 ?.map(String::trim)
                 ?.filter(String::isNotBlank)
                 ?.toList()
                 ?: emptyList(),
-            autoBuildEnabled = entries["autoBuild.enabled"]?.toBooleanStrictOrNull() ?: false,
+            autoBuildEnabled = readValue("autoBuild.enabled")?.toBooleanStrictOrNull() ?: false,
         )
     }
 
@@ -625,18 +624,23 @@ class PluginMarketConfigServiceImpl(
     }
 
     private suspend fun saveIfMissing(key: String, value: String, description: String) {
-        if (compatService.getLegacyValue(CONFIG_NAMESPACE, key) == null) {
+        if (readValue(key) == null) {
             saveValue(key, value, description)
         }
     }
 
-    private suspend fun saveValue(key: String, value: String, description: String) {
-        compatService.saveLegacyValue(
+    private suspend fun saveValue(key: String, value: String, _description: String) {
+        compatService.writeValue(
             namespace = CONFIG_NAMESPACE,
             key = key,
             value = value,
-            description = description,
         )
+    }
+
+    private fun readValue(
+        key: String,
+    ): String? {
+        return compatService.readValue(CONFIG_NAMESPACE, key)
     }
 
     private fun defaultGradleTasks(): List<String> {

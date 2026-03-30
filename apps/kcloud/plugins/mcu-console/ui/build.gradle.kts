@@ -40,7 +40,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:mcu-console"))
+            api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation(project(":lib:compose:scaffold-spi"))
             implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())

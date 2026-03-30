@@ -6,56 +6,25 @@ import org.koin.core.annotation.Single
 class ConfigCenterCompatService(
     private val service: ConfigCenterService,
 ) {
-    suspend fun getLegacyValue(
+    fun readValue(
         namespace: String,
         key: String,
-        profile: String = "default",
+        active: String = "dev",
     ): String? {
-        return service.readCompatValue(namespace, key, profile).value
+        return service.readValue(namespace, key, active).value
     }
 
-    suspend fun listLegacyValues(
-        namespace: String,
-        profile: String = "default",
-    ): Map<String, String> {
-        return service.readCompatSnapshot(namespace, profile)
-    }
-
-    suspend fun getOrImportLegacyValue(
-        namespace: String,
-        key: String,
-        description: String? = null,
-        profile: String = "default",
-        legacyLoader: (() -> String?)? = null,
-    ): String? {
-        val existing = getLegacyValue(namespace, key, profile)
-        if (existing != null) {
-            return existing
-        }
-        val legacyValue = legacyLoader?.invoke() ?: return null
-        saveLegacyValue(
-            namespace = namespace,
-            key = key,
-            value = legacyValue,
-            description = description,
-            profile = profile,
-        )
-        return legacyValue
-    }
-
-    suspend fun saveLegacyValue(
+    fun writeValue(
         namespace: String,
         key: String,
         value: String,
-        description: String? = null,
-        profile: String = "default",
+        active: String = "dev",
     ) {
-        service.saveCompatValue(
+        service.writeValue(
             namespace = namespace,
             key = key,
             value = value,
-            description = description,
-            profile = profile,
+            active = active,
         )
     }
 }

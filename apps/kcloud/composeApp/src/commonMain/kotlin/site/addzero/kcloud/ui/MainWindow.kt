@@ -72,6 +72,7 @@ fun MainWindow(
                 onThemeToggle = toggleTheme,
             ),
             slots = adminWorkbenchSlots(
+                showContentHeader = false,
                 titleContent = {
                     headerRenderer.Render(
                         modifier = Modifier.fillMaxWidth(),

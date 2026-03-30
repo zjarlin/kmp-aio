@@ -5,7 +5,8 @@ import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 
 class JSerialCommSerialPortGateway : SerialPortGateway {
     override fun listPorts(): List<McuPortSummary> {
-        return SerialPort.getCommPorts().map { port ->
+        val commPorts = SerialPort.getCommPorts()
+        return commPorts.map { port ->
             val serialNumber = port.serialNumber.normalizedPortMeta()
             val manufacturer = port.manufacturer.normalizedPortMeta()
             val portLocation = port.portLocation.normalizedPortMeta().orEmpty()
@@ -44,7 +45,8 @@ class JSerialCommSerialPortGateway : SerialPortGateway {
         port.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED)
         port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 200, 0)
         check(port.openPort()) { "打开串口失败: $portPath" }
-        return JSerialCommSerialPortConnection(port, portPath, baudRate)
+        val jSerialCommSerialPortConnection = JSerialCommSerialPortConnection(port, portPath, baudRate)
+        return jSerialCommSerialPortConnection
     }
 }
 

@@ -195,7 +195,7 @@ class McuConsoleSessionService(
     fun sendSerialText(
         request: McuSerialTextSendRequest,
     ): McuSerialTextSendResponse {
-        require(request.text.isNotBlank()) { "text is required" }
+        require(request.text.isNotEmpty() || request.appendLineEnding) { "text is required" }
         val payload = request.text.normalizeLineEndings(request.lineEnding)
             .let { normalized ->
                 if (request.appendLineEnding) {

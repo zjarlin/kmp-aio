@@ -42,7 +42,7 @@ class KCloudContentRender(
             NavDisplay(
                 backStack = shellState.backStack,
                 modifier = Modifier.weight(1f).fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 14.dp),
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
                 onBack = shellState::popNavigation,
                 entryProvider = { route ->
                     NavEntry(route) { key ->
@@ -52,12 +52,6 @@ class KCloudContentRender(
                         )
                     }
                 },
-            )
-            ShellStatusBar(
-                currentScene = selectedScene?.name ?: "未分组",
-                currentTitle = selectedRoute?.title ?: "未选择页面",
-                pageCount = selectedScene.routeCount(),
-                modifier = Modifier.height(60.dp),
             )
         }
     }
@@ -85,42 +79,6 @@ private fun ScreenContentEntry(
         modifier = Modifier.fillMaxSize(),
     ) {
         content()
-    }
-}
-
-@Composable
-private fun ShellStatusBar(
-    currentScene: String,
-    currentTitle: String,
-    pageCount: Int,
-    modifier: Modifier = Modifier,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    val darkThemeEnabled = colorScheme.background.luminance() < 0.5f
-
-    Row(
-        modifier = modifier.fillMaxWidth()
-            .statusBarFrame()
-            .background(
-                if (darkThemeEnabled) {
-                    colorScheme.surface.copy(alpha = 0.78f)
-                } else {
-                    colorScheme.surfaceVariant.copy(alpha = 0.36f)
-                },
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "$currentScene / $currentTitle",
-            style = MaterialTheme.typography.titleSmall,
-            color = colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = "当前场景 $pageCount 个页面",
-            style = MaterialTheme.typography.bodySmall,
-            color = colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
-        )
     }
 }
 
