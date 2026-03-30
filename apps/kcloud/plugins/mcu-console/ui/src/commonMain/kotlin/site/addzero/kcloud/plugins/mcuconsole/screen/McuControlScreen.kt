@@ -812,7 +812,7 @@ private fun McuSessionStatusPanel(
                     "消息" to state.runtimeStatus.lastMessage.orEmpty(),
                     "最后错误" to state.session.lastError.orEmpty(),
                 ),
-            ),
+            )
         }
     }
 }

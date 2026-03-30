@@ -11,7 +11,11 @@ object RouteTable {
      * 所有路由映射
      */
     val allRoutes: Map<String, @Composable () -> Unit> = mapOf(
-        RouteKeys.MCU_CONTROL_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuControlScreen() }
+        RouteKeys.MCU_CONTROL_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuControlScreen() },
+        RouteKeys.MCU_FLASH_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuFlashScreen() },
+        RouteKeys.MCU_MODBUS_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuModbusScreen() },
+        RouteKeys.MCU_ONLINE_DEV_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuOnlineDevScreen() },
+        RouteKeys.MCU_DEBUG_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen() }
     )
 
     /**
