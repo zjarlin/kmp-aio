@@ -39,6 +39,8 @@ data class McuConsoleUiState(
     val bluetooth: McuConsoleBluetoothState = McuConsoleBluetoothState(),
     val serialConsole: McuConsoleSerialConsoleState = McuConsoleSerialConsoleState(),
     val panelControl: McuConsolePanelControlState = McuConsolePanelControlState(),
+    val probe: McuConsoleProbeState = McuConsoleProbeState(),
+    val customSerialActions: List<McuCustomSerialActionState> = defaultCustomSerialActions(),
     val scriptEditor: McuConsoleScriptEditorState = McuConsoleScriptEditorState(),
     val flashEditor: McuConsoleFlashEditorState = McuConsoleFlashEditorState(),
     val feedback: McuConsoleFeedbackState = McuConsoleFeedbackState(),
@@ -96,6 +98,19 @@ data class McuConsolePanelControlState(
     val displayValueText: String = "9527",
     val beepTimesText: String = "2",
     val ledIndexText: String = "0",
+)
+
+data class McuConsoleProbeState(
+    val pinMapFilesText: String = "boot.py,main.py,panel_control.py",
+    val gpioSnapshotPinsText: String = "12,14,15,16,17,18,25,26,27,32,33",
+    val i2cSdaText: String = "21",
+    val i2cSclText: String = "22",
+)
+
+data class McuCustomSerialActionState(
+    val id: String,
+    val labelText: String,
+    val scriptText: String,
 )
 
 data class McuConsoleScriptEditorState(
@@ -166,4 +181,49 @@ internal fun McuTransportKind.defaultDraftName(): String {
         McuTransportKind.BLUETOOTH -> "蓝牙连接"
         McuTransportKind.MQTT -> "MQTT 连接"
     }
+}
+
+internal fun defaultCustomSerialActions(): List<McuCustomSerialActionState> {
+    return listOf(
+        McuCustomSerialActionState(
+            id = "rgb-red",
+            labelText = "RGB 红灯",
+            scriptText = """
+                from machine import Pin
+                from neopixel import NeoPixel
+                rgb = NeoPixel(Pin(25, Pin.OUT), 5)
+                for i in range(5):
+                    rgb[i] = (255, 0, 0)
+                rgb.write()
+            """.trimIndent(),
+        ),
+        McuCustomSerialActionState(
+            id = "rgb-off",
+            labelText = "RGB 熄灭",
+            scriptText = """
+                from machine import Pin
+                from neopixel import NeoPixel
+                rgb = NeoPixel(Pin(25, Pin.OUT), 5)
+                for i in range(5):
+                    rgb[i] = (0, 0, 0)
+                rgb.write()
+            """.trimIndent(),
+        ),
+        McuCustomSerialActionState(
+            id = "relay-on",
+            labelText = "继电器吸合",
+            scriptText = """
+                from machine import Pin
+                Pin(14, Pin.OUT).value(1)
+            """.trimIndent(),
+        ),
+        McuCustomSerialActionState(
+            id = "relay-off",
+            labelText = "继电器断开",
+            scriptText = """
+                from machine import Pin
+                Pin(14, Pin.OUT).value(0)
+            """.trimIndent(),
+        ),
+    )
 }

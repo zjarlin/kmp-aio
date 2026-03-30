@@ -5,7 +5,7 @@ import site.addzero.core.network.HttpClientFactory
 
 actual object McuConsoleApiClient {
     private const val httpClientProfile = "kcloud-mcu-console"
-    private const val defaultBaseUrl = "http://localhost:18080/"
+    private const val defaultBaseUrl = "http://localhost:18080"
     private val httpClientFactory: HttpClientFactory
         get() = HttpClientFactory.shared()
 
@@ -13,12 +13,12 @@ actual object McuConsoleApiClient {
     private var baseUrl: String = defaultBaseUrl
 
     actual fun configureBaseUrl(value: String) {
-        baseUrl = value.ifBlank { defaultBaseUrl }
+        baseUrl = value.normalizeBaseUrl()
     }
 
     private fun createKtorfit(): Ktorfit {
         return Ktorfit.Builder()
-            .baseUrl(baseUrl.ifBlank { defaultBaseUrl })
+            .baseUrl(baseUrl.normalizeBaseUrl())
             .httpClient(httpClientFactory.get(httpClientProfile))
             .build()
     }
@@ -43,4 +43,10 @@ actual object McuConsoleApiClient {
 
     actual val transportApi: McuTransportApi
         get() = createKtorfit().createMcuTransportApi()
+
+    private fun String.normalizeBaseUrl(): String {
+        return trim()
+            .ifBlank { defaultBaseUrl }
+            .trimEnd('/')
+    }
 }

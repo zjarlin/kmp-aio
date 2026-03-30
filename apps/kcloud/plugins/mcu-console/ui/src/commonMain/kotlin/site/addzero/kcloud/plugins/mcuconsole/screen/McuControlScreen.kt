@@ -561,6 +561,124 @@ fun McuControlScreen() {
                             }
                         }
                         item {
+                            McuInfoNotice(
+                                "板卡探测优先读取固件脚本里的已知引脚定义；GPIO 快照会临时把填写的引脚切成输入模式，适合做人工排查，不适合长时间挂着。",
+                            )
+                        }
+                        item {
+                            McuCompactInput(
+                                value = state.probePinMapFilesText,
+                                onValueChange = { state.probePinMapFilesText = it },
+                                label = "探测文件",
+                                supportingText = "逗号分隔，默认读取 boot.py / main.py / panel_control.py",
+                            )
+                        }
+                        item {
+                            FilledTonalButton(
+                                onClick = {
+                                    runAction {
+                                        state.probeKnownPinMap()
+                                    }
+                                },
+                                enabled = state.canSendDirectSerialText,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("探测已知引脚映射")
+                            }
+                        }
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                McuCompactInput(
+                                    value = state.probeI2cSdaText,
+                                    onValueChange = { state.probeI2cSdaText = it },
+                                    label = "I2C SDA",
+                                    modifier = Modifier.weight(1f),
+                                )
+                                McuCompactInput(
+                                    value = state.probeI2cSclText,
+                                    onValueChange = { state.probeI2cSclText = it },
+                                    label = "I2C SCL",
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                        item {
+                            FilledTonalButton(
+                                onClick = {
+                                    runAction {
+                                        state.probeI2cDevices()
+                                    }
+                                },
+                                enabled = state.canSendDirectSerialText,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("扫描 I2C 外设")
+                            }
+                        }
+                        item {
+                            McuCompactInput(
+                                value = state.probeGpioSnapshotPinsText,
+                                onValueChange = { state.probeGpioSnapshotPinsText = it },
+                                label = "GPIO 快照引脚",
+                                singleLine = false,
+                                supportingText = "逗号分隔。点击后会把这些脚临时切到输入模式并打印电平。",
+                            )
+                        }
+                        item {
+                            FilledTonalButton(
+                                onClick = {
+                                    runAction {
+                                        state.probeGpioSnapshot()
+                                    }
+                                },
+                                enabled = state.canSendDirectSerialText,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("读取 GPIO 电平快照")
+                            }
+                        }
+                        item {
+                            McuInfoNotice(
+                                "下面 4 个按钮槽位都可以自定义按钮名和 Python 脚本。点击按钮后，会把脚本直接写入当前串口会话。",
+                            )
+                        }
+                        state.customSerialActions.forEachIndexed { index, action ->
+                            item(key = action.id) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    Text("自定义按钮 ${index + 1}")
+                                    McuCompactInput(
+                                        value = action.labelText,
+                                        onValueChange = { state.updateCustomSerialActionLabel(index, it) },
+                                        label = "按钮名称",
+                                    )
+                                    McuCompactInput(
+                                        value = action.scriptText,
+                                        onValueChange = { state.updateCustomSerialActionScript(index, it) },
+                                        label = "按钮脚本",
+                                        singleLine = false,
+                                        supportingText = "支持多行 Python；点击下方按钮后会按当前换行设置直接发到串口。",
+                                    )
+                                    FilledTonalButton(
+                                        onClick = {
+                                            runAction {
+                                                state.runCustomSerialAction(index)
+                                            }
+                                        },
+                                        enabled = state.canSendDirectSerialText,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(action.labelText.ifBlank { "发送自定义脚本" })
+                                    }
+                                }
+                            }
+                        }
+                        item {
                             McuCompactInput(
                                 value = state.serialCommandText,
                                 onValueChange = { state.serialCommandText = it },

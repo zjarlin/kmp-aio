@@ -15,6 +15,7 @@ val localAddzeroLibJvmVersion = rootDir
     ?.trim()
     ?.takeIf(String::isNotBlank)
     ?: "2026.10329.10127"
+val hasLocalAddzeroLibJvm = rootDir.resolve("../addzero-lib-jvm/settings.gradle.kts").isFile
 val localJimmerExternalProcessorPom = file(
     System.getProperty("user.home") +
         "/.m2/repository/site/addzero/jimmer-entity-external-processor/$localAddzeroLibJvmVersion/" +
@@ -42,7 +43,9 @@ val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jv
 dependencies {
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
     add("kspJvm", project(":lib:ksp:metadata:modbus:modbus-ksp-rtu"))
-    if (localJimmerExternalProcessorPom.isFile) {
+    if (hasLocalAddzeroLibJvm) {
+        add("kspJvm", project(":lib:ksp:metadata:jimmer-entity-external-processor"))
+    } else if (localJimmerExternalProcessorPom.isFile) {
         add("kspJvm", "site.addzero:jimmer-entity-external-processor:$localAddzeroLibJvmVersion")
     }
     add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())

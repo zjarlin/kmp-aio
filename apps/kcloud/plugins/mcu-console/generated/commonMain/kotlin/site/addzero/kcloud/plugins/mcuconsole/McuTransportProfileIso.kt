@@ -1,10 +1,5 @@
-@file:OptIn(ExperimentalTime::class)
-
-
 package site.addzero.kcloud.plugins.mcuconsole
 
-import kotlin.time.Clock
-import kotlin.time.ExperimentalTime
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
@@ -13,8 +8,8 @@ import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
 
 @Serializable
 data class McuTransportProfileIso(
-    val id: Long] = TODO(),
-    @Contextual val createTime: Instant = Clock.System.now(),
+    val id: Long = 0L,
+    @Contextual val createTime: Instant = kotlinx.datetime.Clock.System.now(),
     @Contextual val updateTime: Instant? = null,
     val profileKey: String = "",
     val name: String = "",

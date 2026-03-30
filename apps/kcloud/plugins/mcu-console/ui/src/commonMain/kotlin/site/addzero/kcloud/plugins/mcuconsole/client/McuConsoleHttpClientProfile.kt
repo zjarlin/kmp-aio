@@ -9,6 +9,7 @@ import site.addzero.core.network.HttpClientRequestContribution
 @Single
 class McuConsoleHttpClientProfile : HttpClientProfileSpi {
     override val profile: String = "kcloud-mcu-console"
+    override val enableCurlLogging: Boolean = false
 
     override fun requestContribution(): HttpClientRequestContribution {
         return HttpClientRequestContribution(

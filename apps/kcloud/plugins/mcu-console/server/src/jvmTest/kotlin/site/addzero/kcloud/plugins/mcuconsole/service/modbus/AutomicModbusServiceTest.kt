@@ -109,6 +109,18 @@ private class RecordingModbusRtuExecutor : ModbusRtuExecutor {
     val writeAddresses = mutableListOf<Int>()
     val writePayloads = mutableListOf<List<Int>>()
 
+    override suspend fun readCoils(
+        config: ModbusRtuEndpointConfig,
+        address: Int,
+        quantity: Int,
+    ): List<Int> = error("not used")
+
+    override suspend fun readDiscreteInputs(
+        config: ModbusRtuEndpointConfig,
+        address: Int,
+        quantity: Int,
+    ): List<Int> = error("not used")
+
     override suspend fun readHoldingRegisters(
         config: ModbusRtuEndpointConfig,
         address: Int,
@@ -125,6 +137,12 @@ private class RecordingModbusRtuExecutor : ModbusRtuExecutor {
         config: ModbusRtuEndpointConfig,
         address: Int,
         value: Boolean,
+    ) = error("not used")
+
+    override suspend fun writeMultipleCoils(
+        config: ModbusRtuEndpointConfig,
+        address: Int,
+        values: List<Boolean>,
     ) = error("not used")
 
     override suspend fun writeSingleRegister(

@@ -431,6 +431,36 @@ class McuConsoleWorkbenchState(
             updatePanelControlState { copy(ledIndexText = value) }
         }
 
+    var customSerialActions: List<McuCustomSerialActionState>
+        get() = uiState.customSerialActions
+        private set(value) {
+            updateUiState { copy(customSerialActions = value) }
+        }
+
+    var probePinMapFilesText: String
+        get() = uiState.probe.pinMapFilesText
+        set(value) {
+            updateProbeState { copy(pinMapFilesText = value) }
+        }
+
+    var probeGpioSnapshotPinsText: String
+        get() = uiState.probe.gpioSnapshotPinsText
+        set(value) {
+            updateProbeState { copy(gpioSnapshotPinsText = value) }
+        }
+
+    var probeI2cSdaText: String
+        get() = uiState.probe.i2cSdaText
+        set(value) {
+            updateProbeState { copy(i2cSdaText = value) }
+        }
+
+    var probeI2cSclText: String
+        get() = uiState.probe.i2cSclText
+        set(value) {
+            updateProbeState { copy(i2cSclText = value) }
+        }
+
     var firmwarePathText: String
         get() = uiState.flashEditor.firmwarePathText
         set(value) {
@@ -535,6 +565,31 @@ class McuConsoleWorkbenchState(
     ) {
         updateUiState {
             copy(panelControl = panelControl.transform())
+        }
+    }
+
+    private inline fun updateProbeState(
+        transform: McuConsoleProbeState.() -> McuConsoleProbeState,
+    ) {
+        updateUiState {
+            copy(probe = probe.transform())
+        }
+    }
+
+    private inline fun updateCustomSerialAction(
+        index: Int,
+        transform: McuCustomSerialActionState.() -> McuCustomSerialActionState,
+    ) {
+        val current = customSerialActions
+        if (index !in current.indices) {
+            return
+        }
+        customSerialActions = current.mapIndexed { currentIndex, action ->
+            if (currentIndex == index) {
+                action.transform()
+            } else {
+                action
+            }
         }
     }
 
@@ -1304,6 +1359,86 @@ class McuConsoleWorkbenchState(
         )
     }
 
+    suspend fun probeKnownPinMap() {
+        val files = parseProbeFileNames(probePinMapFilesText)
+        if (files.isEmpty()) {
+            updateFeedback("至少填写一个探测文件名", true)
+            return
+        }
+        sendGeneratedSerialScript(
+            script = buildKnownPinMapProbeScript(files),
+            successMessage = "已发送已知引脚探测脚本",
+        )
+    }
+
+    suspend fun probeGpioSnapshot() {
+        val pins = parseProbePinList(probeGpioSnapshotPinsText, "GPIO 快照引脚")
+            ?: return
+        if (pins.isEmpty()) {
+            updateFeedback("至少填写一个 GPIO 引脚", true)
+            return
+        }
+        sendGeneratedSerialScript(
+            script = buildGpioSnapshotProbeScript(pins),
+            successMessage = "已发送 GPIO 快照探测脚本",
+        )
+    }
+
+    suspend fun probeI2cDevices() {
+        val sda = requireIntInRange(
+            value = probeI2cSdaText,
+            label = "I2C SDA",
+            min = 0,
+            max = 39,
+        ) ?: return
+        val scl = requireIntInRange(
+            value = probeI2cSclText,
+            label = "I2C SCL",
+            min = 0,
+            max = 39,
+        ) ?: return
+        sendGeneratedSerialScript(
+            script = buildI2cProbeScript(sda = sda, scl = scl),
+            successMessage = "已发送 I2C 扫描脚本",
+        )
+    }
+
+    fun updateCustomSerialActionLabel(
+        index: Int,
+        value: String,
+    ) {
+        updateCustomSerialAction(index) {
+            copy(labelText = value)
+        }
+    }
+
+    fun updateCustomSerialActionScript(
+        index: Int,
+        value: String,
+    ) {
+        updateCustomSerialAction(index) {
+            copy(scriptText = value)
+        }
+    }
+
+    suspend fun runCustomSerialAction(
+        index: Int,
+    ) {
+        val action = customSerialActions.getOrNull(index)
+            ?: return
+        val script = action.scriptText.trim()
+        if (script.isBlank()) {
+            updateFeedback("自定义脚本不能为空", true)
+            return
+        }
+        val successMessage = action.labelText.trim()
+            .ifBlank { "自定义脚本已发送" }
+        sendGeneratedSerialScript(
+            script = script,
+            successMessage = "$successMessage 已发送",
+        )
+    }
+
     suspend fun executeSelectedModbusAction() {
         val config = buildModbusRtuConfigForSubmit() ?: return
         when (selectedModbusAtomicAction) {
@@ -1814,6 +1949,20 @@ class McuConsoleWorkbenchState(
                 append('\n')
             }
         }.trimEnd()
+        sendGeneratedSerialScript(
+            script = script,
+            successMessage = successMessage,
+        )
+    }
+
+    private suspend fun sendGeneratedSerialScript(
+        script: String,
+        successMessage: String,
+    ) {
+        if (!canSendDirectSerialText) {
+            updateFeedback("请先打开串口会话", true)
+            return
+        }
         serialCommandText = script
         runSubmitting(successMessage) {
             remoteService.sendSerialText(
@@ -2301,6 +2450,41 @@ class McuConsoleWorkbenchState(
         return parsed
     }
 
+    private fun parseProbeFileNames(
+        raw: String,
+    ): List<String> {
+        return raw.split(',', '\n', ';')
+            .map { value -> value.trim() }
+            .filter { value -> value.isNotBlank() }
+            .distinct()
+    }
+
+    private fun parseProbePinList(
+        raw: String,
+        label: String,
+    ): List<Int>? {
+        val normalized = raw.split(',', '\n', ';', ' ')
+            .map { value -> value.trim() }
+            .filter { value -> value.isNotBlank() }
+        if (normalized.isEmpty()) {
+            return emptyList()
+        }
+        val pins = mutableListOf<Int>()
+        normalized.forEach { value ->
+            val parsed = value.toIntOrNull()
+                ?: run {
+                    updateFeedback("$label 存在无效值: $value", true)
+                    return null
+                }
+            if (parsed !in 0..39) {
+                updateFeedback("$label 必须在 0..39 之间", true)
+                return null
+            }
+            pins += parsed
+        }
+        return pins.distinct()
+    }
+
     private fun String.toPythonLiteralOrNumber(): String {
         val normalized = trim()
         return normalized.toIntOrNull()?.toString()
@@ -2465,6 +2649,71 @@ private fun McuPortSummary?.toDeviceDraft(
         lastPortPath = portPath.ifBlank { null },
         lastPortName = portName.ifBlank { null },
     )
+}
+
+private fun buildKnownPinMapProbeScript(
+    files: List<String>,
+): String {
+    val renderedFiles = files.joinToString(", ") { file ->
+        "\"${file.escapePythonString()}\""
+    }
+    return """
+        import os
+        FILES = [$renderedFiles]
+        print("=== PROBE KNOWN PIN MAP ===")
+        for name in FILES:
+            try:
+                lines = open(name).read().splitlines()
+            except Exception as e:
+                print("%s: missing (%s)" % (name, e))
+                continue
+            print("--- %s ---" % name)
+            for idx, line in enumerate(lines, 1):
+                text = line.strip()
+                lower = text.lower()
+                if (not text) or text.startswith("#"):
+                    continue
+                if "pin" in lower or "neopixel" in lower or "tm1637" in lower or "softi2c" in lower or "i2c(" in lower or "spi(" in lower or "uart(" in lower:
+                    print("%s:%d %s" % (name, idx, text))
+        print("=== FILES ===")
+        print(os.listdir())
+    """.trimIndent()
+}
+
+private fun buildGpioSnapshotProbeScript(
+    pins: List<Int>,
+): String {
+    val renderedPins = pins.joinToString(", ")
+    return """
+        from machine import Pin
+        PINS = [$renderedPins]
+        print("=== PROBE GPIO SNAPSHOT ===")
+        for pin in PINS:
+            try:
+                value = Pin(pin, Pin.IN).value()
+                print("GPIO%d=%d" % (pin, value))
+            except Exception as e:
+                print("GPIO%d ERR %s" % (pin, e))
+    """.trimIndent()
+}
+
+private fun buildI2cProbeScript(
+    sda: Int,
+    scl: Int,
+): String {
+    return """
+        from machine import Pin, SoftI2C
+        SDA_PIN = $sda
+        SCL_PIN = $scl
+        print("=== PROBE I2C SCAN ===")
+        print("SDA=%d SCL=%d" % (SDA_PIN, SCL_PIN))
+        try:
+            bus = SoftI2C(sda=Pin(SDA_PIN), scl=Pin(SCL_PIN), freq=100000)
+            devices = bus.scan()
+            print("I2C devices:", [hex(value) for value in devices])
+        except Exception as e:
+            print("I2C ERR %s" % e)
+    """.trimIndent()
 }
 
 private fun String.escapeScriptText(): String {
