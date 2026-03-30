@@ -64,6 +64,7 @@ ksp {
     arg("isomorphicGenDir", generatedIsoOutputDir)
     arg("isomorphicPackageName", generatedIsoPackage)
     arg("isomorphicClassSuffix", "Iso")
+    arg("isomorphicSerializableEnabled", "true")
     arg("entity2Iso.enabled", "true")
     arg("entity2Form.enabled", "false")
     arg("entity2Mcp.enabled", "false")

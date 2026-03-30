@@ -14,6 +14,7 @@ internal class FakeSerialPortGateway(
         ),
     ),
     runtimeInstalledInitially: Boolean = true,
+    internal val deviceInfoPayloadJson: String? = """{"runtime":"micropython","boardName":"ESP32 DevKit","chipModel":"ESP32-D0WDQ6","chipRevision":"v3","cpuModel":"Xtensa LX6","cpuCores":2,"cpuFrequencyHz":240000000,"xtalFrequencyHz":40000000,"macAddress":"AA:BB:CC:DD:EE:FF","sdkVersion":"ESP-IDF v5.2","firmwareVersion":"2026.03.30","flashSizeBytes":4194304,"heapFreeBytes":182736,"heapTotalBytes":327680}""",
 ) : SerialPortGateway {
     val openedConnections = mutableListOf<FakeSerialPortConnection>()
 
@@ -86,6 +87,14 @@ internal class FakeSerialPortConnection(
                 enqueueIncomingText(
                     """{"requestId":"${requestId.orEmpty()}","type":"status","success":true,"message":"runtime-ready","payload":{"state":"IDLE","runtime":"micropython"}}""" + "\n",
                 )
+            }
+
+            gateway.runtimeInstalled && text.contains("\"command\":\"vm.device.info\"") -> {
+                gateway.deviceInfoPayloadJson?.let { payload ->
+                    enqueueIncomingText(
+                        """{"requestId":"${requestId.orEmpty()}","type":"result","success":true,"message":"device-info","payload":$payload}""" + "\n",
+                    )
+                }
             }
 
             text == "START_FLASH\r\n" -> {

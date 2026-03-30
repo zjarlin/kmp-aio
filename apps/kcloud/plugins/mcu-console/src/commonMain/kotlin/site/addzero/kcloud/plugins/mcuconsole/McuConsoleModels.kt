@@ -527,6 +527,41 @@ data class McuRuntimeStatusResponse(
     val updatedAt: String? = null,
 )
 
+/**
+ * 设备信息主动轮询请求。
+ */
+@Serializable
+data class McuDeviceInfoPollRequest(
+    val timeoutMs: Int = 1200,
+)
+
+/**
+ * MCU 设备信息轮询结果。
+ */
+@Serializable
+data class McuDeviceInfoResponse(
+    val success: Boolean = false,
+    val requestId: String? = null,
+    val portPath: String? = null,
+    val runtime: String? = null,
+    val boardName: String? = null,
+    val chipModel: String? = null,
+    val chipRevision: String? = null,
+    val cpuModel: String? = null,
+    val cpuCores: Int? = null,
+    val cpuFrequencyHz: Int? = null,
+    val xtalFrequencyHz: Int? = null,
+    val macAddress: String? = null,
+    val sdkVersion: String? = null,
+    val firmwareVersion: String? = null,
+    val flashSizeBytes: Long? = null,
+    val heapFreeBytes: Long? = null,
+    val heapTotalBytes: Long? = null,
+    val lastMessage: String? = null,
+    val updatedAt: String? = null,
+    val rawPayload: JsonElement? = null,
+)
+
 @Serializable
 data class McuVmOutgoingFrame(
     val requestId: String = "",
@@ -555,6 +590,7 @@ object McuVmCommands {
     const val STOP = "vm.stop"
     const val STATUS = "vm.status"
     const val PING = "vm.ping"
+    const val DEVICE_INFO = "vm.device.info"
 }
 
 object McuVmFrameTypes {

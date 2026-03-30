@@ -124,6 +124,20 @@ class McuConsoleServerKoinModule {
         )
     }
 
+    /**
+     * 提供 MCU 设备信息轮询服务。
+     */
+    @Single
+    fun provideDeviceInfoService(
+        sessionService: McuConsoleSessionService,
+        protocolCodec: McuVmProtocolCodec,
+    ): McuDeviceInfoService {
+        return McuDeviceInfoService(
+            sessionService = sessionService,
+            protocolCodec = protocolCodec,
+        )
+    }
+
     @Single
     fun provideTransportProbeService(
         settingsService: McuConsoleSettingsService,

@@ -45,8 +45,9 @@ actual object McuConsoleApiClient {
         get() = createKtorfit().createMcuTransportApi()
 
     private fun String.normalizeBaseUrl(): String {
-        return trim()
+        val normalized = trim()
             .ifBlank { defaultBaseUrl }
             .trimEnd('/')
+        return "$normalized/"
     }
 }
