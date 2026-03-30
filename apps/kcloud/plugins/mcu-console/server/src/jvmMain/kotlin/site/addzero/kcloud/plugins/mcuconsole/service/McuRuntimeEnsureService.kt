@@ -33,15 +33,30 @@ class McuRuntimeEnsureService(
     ): McuRuntimeStatusResponse {
         val bundle = bundleCatalog.resolveSummary(request.bundleId)
         val currentSession = sessionService.getSessionSnapshot()
+        val currentStatus = getStatus()
         val portPath = currentSession.portPath?.takeIf { it.isNotBlank() }
             ?: throw IllegalStateException("请先打开串口会话")
         val baudRate = currentSession.baudRate.takeIf { it > 0 } ?: bundle.defaultBaudRate
+        val rememberedArtifactPath = currentStatus
+            .takeIf { it.bundleId == bundle.bundleId }
+            ?.artifactPath
+
+        if (bundle.runtimeKind == McuFlashRuntimeKind.MICROPYTHON && !request.forceReflash) {
+            updateStatus(
+                bundle = bundle,
+                state = McuRuntimeEnsureState.READY,
+                baudRate = baudRate,
+                artifactPath = rememberedArtifactPath,
+                message = "MicroPython 固件不支持 VM 在线探测；如需重刷请在烧录页手动触发",
+            )
+            return getStatus()
+        }
 
         updateStatus(
             bundle = bundle,
             state = McuRuntimeEnsureState.PROBING,
             baudRate = baudRate,
-            artifactPath = getStatus().artifactPath,
+            artifactPath = rememberedArtifactPath,
             message = "探测 ${bundle.title}",
         )
 
@@ -52,7 +67,7 @@ class McuRuntimeEnsureService(
                     bundle = bundle,
                     state = McuRuntimeEnsureState.READY,
                     baudRate = baudRate,
-                    artifactPath = getStatus().artifactPath,
+                    artifactPath = rememberedArtifactPath,
                     message = probeFrame.message ?: "运行时已就绪",
                 )
                 return getStatus()
@@ -63,12 +78,11 @@ class McuRuntimeEnsureService(
             bundle = bundle,
             state = McuRuntimeEnsureState.INITIALIZING,
             baudRate = baudRate,
-            artifactPath = getStatus().artifactPath,
+            artifactPath = rememberedArtifactPath,
             message = "刷写 ${bundle.title}",
         )
 
-        val extracted = assetExtractor.extractBundle(bundle.bundleId)
-        val artifactPath = extracted.artifactFile.absolutePath
+        val artifactPath = resolveArtifactPathForFlash(bundle)
 
         try {
             flashService.flash(
@@ -85,6 +99,16 @@ class McuRuntimeEnsureService(
                     baudRate = baudRate,
                 ),
             )
+            if (bundle.runtimeKind == McuFlashRuntimeKind.MICROPYTHON) {
+                updateStatus(
+                    bundle = bundle,
+                    state = McuRuntimeEnsureState.READY,
+                    baudRate = baudRate,
+                    artifactPath = artifactPath,
+                    message = "MicroPython 固件已刷写；请使用 REPL 或 mpremote 验证设备状态",
+                )
+                return getStatus()
+            }
             val probeFrame = probeRuntime()
             if (probeFrame != null) {
                 updateStatus(
@@ -113,6 +137,28 @@ class McuRuntimeEnsureService(
                 message = throwable.message ?: "运行时初始化失败",
             )
             throw throwable
+        }
+    }
+
+    private suspend fun resolveArtifactPathForFlash(
+        bundle: McuRuntimeBundleSummary,
+    ): String {
+        return try {
+            assetExtractor.extractBundle(bundle.bundleId).artifactFile.absolutePath
+        } catch (throwable: IllegalArgumentException) {
+            if (bundle.runtimeKind != McuFlashRuntimeKind.MICROPYTHON ||
+                !throwable.message.orEmpty().contains("占位固件")
+            ) {
+                throw throwable
+            }
+            val download = flashService.downloadFirmware(
+                McuFlashDownloadRequest(
+                    profileId = bundle.defaultFlashProfileId,
+                ),
+            )
+            download.downloadPath
+                ?.takeIf { it.isNotBlank() }
+                ?: throw IllegalStateException("MicroPython 在线下载成功，但未返回固件路径")
         }
     }
 

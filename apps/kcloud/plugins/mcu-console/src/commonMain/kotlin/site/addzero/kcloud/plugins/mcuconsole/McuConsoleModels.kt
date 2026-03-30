@@ -146,6 +146,9 @@ data class McuFlashProfileSummary(
     val commandTemplate: String? = null,
     val supportsCommandOverride: Boolean = false,
     val requiresPort: Boolean = true,
+    val supportsOnlineDownload: Boolean = false,
+    val defaultDownloadUrl: String? = null,
+    val downloadUrlHint: String = "",
 )
 
 @Serializable
@@ -161,6 +164,24 @@ data class McuFlashRequest(
     val portPath: String? = null,
     val baudRate: Int? = null,
     val commandTemplate: String? = null,
+)
+
+@Serializable
+data class McuFlashDownloadRequest(
+    val profileId: String = "",
+    val downloadUrl: String? = null,
+)
+
+@Serializable
+data class McuFlashDownloadResponse(
+    val profileId: String? = null,
+    val profileTitle: String? = null,
+    val runtimeKind: McuFlashRuntimeKind? = null,
+    val resolvedUrl: String? = null,
+    val downloadPath: String? = null,
+    val commandPreview: String? = null,
+    val lastMessage: String? = null,
+    val updatedAt: String? = null,
 )
 
 @Serializable

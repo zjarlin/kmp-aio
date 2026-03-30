@@ -1,8 +1,8 @@
 {
   "bundleId": "rhai-default-generic",
-  "title": "Rhai VM / 默认通用包",
+  "title": "Rhai VM / 外部板级固件",
   "runtimeKind": "RHAI_VM",
-  "mcuFamily": "generic",
+  "mcuFamily": "custom",
   "defaultFlashProfileId": "rhai-generic-serial",
   "defaultBaudRate": 115200,
   "artifactRelativePath": "artifacts/rhai-default-generic.bin",

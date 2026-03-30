@@ -57,6 +57,24 @@ fun McuFlashScreen() {
                 }
             },
             McuToolbarAction(
+                label = "在线下载",
+                icon = Icons.Default.Search,
+                enabled = state.canDownloadFirmwareOnline,
+            ) {
+                scope.launch {
+                    state.downloadFirmwareOnline(flashAfterDownload = false)
+                }
+            },
+            McuToolbarAction(
+                label = "在线下载并烧录",
+                icon = Icons.Default.Upload,
+                enabled = state.canDownloadFirmwareOnline,
+            ) {
+                scope.launch {
+                    state.downloadFirmwareOnline(flashAfterDownload = true)
+                }
+            },
+            McuToolbarAction(
                 label = "开始烧录",
                 icon = Icons.Default.Upload,
                 enabled = state.canStartFlash,
@@ -101,6 +119,16 @@ fun McuFlashScreen() {
                     supportingText = state.runtimeStatus.artifactPath
                         ?: state.selectedFlashProfile?.artifactHint,
                 )
+                if (state.selectedFlashProfile?.supportsOnlineDownload == true || state.firmwareDownloadUrlText.isNotBlank()) {
+                    McuCompactInput(
+                        value = state.firmwareDownloadUrlText,
+                        onValueChange = { state.firmwareDownloadUrlText = it },
+                        label = "downloadUrl",
+                        supportingText = state.selectedFlashProfile?.downloadUrlHint
+                            ?: state.selectedFlashProfile?.defaultDownloadUrl,
+                        singleLine = false,
+                    )
+                }
                 McuCompactInput(
                     value = state.baudRateText,
                     onValueChange = { state.baudRateText = it },
@@ -130,6 +158,7 @@ fun McuFlashScreen() {
                         "烧录状态" to state.flashStatus.state.name,
                         "进度" to "${state.flashStatus.bytesSent} / ${state.flashStatus.totalBytes}",
                         "固件" to (state.flashStatus.firmwarePath ?: state.runtimeStatus.artifactPath.orEmpty()),
+                        "下载源" to state.firmwareDownloadUrlText,
                         "命令" to state.flashStatus.commandPreview.orEmpty(),
                         "消息" to (state.flashStatus.lastMessage ?: state.runtimeStatus.lastMessage.orEmpty()),
                     ),

@@ -70,6 +70,12 @@ class McuConsoleRemoteService {
         return McuConsoleApiClient.flashApi.startMcuFlash(request)
     }
 
+    suspend fun downloadFlashFirmware(
+        request: McuFlashDownloadRequest,
+    ): McuFlashDownloadResponse {
+        return McuConsoleApiClient.flashApi.downloadMcuFlashFirmware(request)
+    }
+
     suspend fun getFlashStatus(): McuFlashStatusResponse {
         return McuConsoleApiClient.flashApi.getMcuFlashStatus()
     }

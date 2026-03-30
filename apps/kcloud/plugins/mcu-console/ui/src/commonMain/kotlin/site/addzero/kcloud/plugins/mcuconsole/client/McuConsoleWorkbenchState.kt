@@ -51,6 +51,7 @@ class McuConsoleWorkbenchState(
         """.trimIndent(),
     )
     var firmwarePathText by mutableStateOf("")
+    var firmwareDownloadUrlText by mutableStateOf("")
     var flashCommandTemplateText by mutableStateOf("")
     var timeoutMsText by mutableStateOf("5000")
     var feedbackMessage by mutableStateOf<String?>(null)
@@ -65,6 +66,7 @@ class McuConsoleWorkbenchState(
     private var lastSeenSeq: Long = 0
     private var widgetInstanceSequence = 0
     private var autoFilledFirmwarePath: String? = null
+    private var autoFilledFirmwareDownloadUrl: String? = null
 
     val filteredPorts: List<McuPortSummary>
         get() {
@@ -105,7 +107,9 @@ class McuConsoleWorkbenchState(
         get() = scriptStatus.state == McuScriptRunState.RUNNING || scriptStatus.state == McuScriptRunState.STOPPING
 
     val isRuntimeReady: Boolean
-        get() = runtimeStatus.state == McuRuntimeEnsureState.READY
+        get() = runtimeStatus.state == McuRuntimeEnsureState.READY &&
+            runtimeStatus.runtimeKind == McuFlashRuntimeKind.RHAI_VM &&
+            runtimeStatus.bundleId == selectedRuntimeBundleId
 
     val canUseWidgets: Boolean
         get() = hasActiveSession && isRuntimeReady && !isSubmitting
@@ -122,6 +126,15 @@ class McuConsoleWorkbenchState(
             return true
         }
 
+    val canDownloadFirmwareOnline: Boolean
+        get() {
+            val profile = selectedFlashProfile ?: return false
+            if (!profile.supportsOnlineDownload && firmwareDownloadUrlText.isBlank()) {
+                return false
+            }
+            return firmwareDownloadUrlText.isNotBlank() || !profile.defaultDownloadUrl.isNullOrBlank()
+        }
+
     fun selectPort(
         portPath: String?,
     ) {
@@ -135,6 +148,11 @@ class McuConsoleWorkbenchState(
         selectedFlashProfileId = profile.id
         baudRateText = profile.defaultBaudRate.toString()
         flashCommandTemplateText = profile.commandTemplate.orEmpty()
+        val suggestedDownloadUrl = profile.defaultDownloadUrl.orEmpty()
+        if (firmwareDownloadUrlText.isBlank() || firmwareDownloadUrlText == autoFilledFirmwareDownloadUrl) {
+            firmwareDownloadUrlText = suggestedDownloadUrl
+            autoFilledFirmwareDownloadUrl = suggestedDownloadUrl.ifBlank { null }
+        }
     }
 
     fun selectRuntimeBundle(
@@ -143,6 +161,19 @@ class McuConsoleWorkbenchState(
         val bundle = runtimeBundles.firstOrNull { it.bundleId == bundleId } ?: return
         val changed = selectedRuntimeBundleId != bundle.bundleId
         selectedRuntimeBundleId = bundle.bundleId
+        if (changed && runtimeStatus.bundleId != bundle.bundleId) {
+            runtimeStatus = McuRuntimeStatusResponse(
+                state = McuRuntimeEnsureState.IDLE,
+                bundleId = bundle.bundleId,
+                bundleTitle = bundle.title,
+                runtimeKind = bundle.runtimeKind,
+                mcuFamily = bundle.mcuFamily,
+                defaultFlashProfileId = bundle.defaultFlashProfileId,
+                baudRate = bundle.defaultBaudRate,
+                lastMessage = "已切换到 ${bundle.title}，尚未验证运行时",
+            )
+            updateFeedback(runtimeStatus.lastMessage, false)
+        }
         if (changed) {
             widgetInstances = emptyList()
             selectedScriptExampleId = null
@@ -528,40 +559,38 @@ class McuConsoleWorkbenchState(
     }
 
     suspend fun startFlash() {
-        val firmwarePath = firmwarePathText.trim()
-        if (firmwarePath.isBlank()) {
-            updateFeedback("固件路径不能为空", true)
-            return
+        runSubmitting("烧录完成") {
+            startFlashInternal()
         }
-        val baudRate = baudRateText.toIntOrNull()
+    }
+
+    suspend fun downloadFirmwareOnline(
+        flashAfterDownload: Boolean = false,
+    ) {
+        val profile = selectedFlashProfile
             ?: run {
-                updateFeedback("波特率无效", true)
+                updateFeedback("请先选择烧录能力包", true)
                 return
             }
-        if (selectedFlashProfile?.requiresPort == true &&
-            (selectedPortPath ?: session.portPath).isNullOrBlank()
+        runSubmitting(
+            if (flashAfterDownload) {
+                "在线下载并烧录完成"
+            } else {
+                "固件已下载"
+            },
         ) {
-            updateFeedback("请先选择串口", true)
-            return
-        }
-        runSubmitting("烧录完成") {
-            flashStatus = remoteService.startFlash(
-                McuFlashRequest(
-                    profileId = selectedFlashProfile?.id.orEmpty(),
-                    firmwarePath = firmwarePath,
-                    portPath = selectedPortPath ?: session.portPath,
-                    baudRate = baudRate,
-                    commandTemplate = flashCommandTemplateText
-                        .trim()
-                        .takeIf {
-                            selectedFlashProfile?.strategyKind == McuFlashStrategyKind.COMMAND_TEMPLATE &&
-                                it.isNotBlank()
-                        },
+            val response = remoteService.downloadFlashFirmware(
+                McuFlashDownloadRequest(
+                    profileId = profile.id,
+                    downloadUrl = firmwareDownloadUrlText.trim().takeIf { it.isNotBlank() },
                 ),
             )
-            refreshSession()
-            refreshRuntimeStatus()
-            loadRecentEvents()
+            applyFirmwareDownload(response)
+            if (flashAfterDownload) {
+                startFlashInternal()
+            } else {
+                loadRecentEvents()
+            }
         }
     }
 
@@ -615,7 +644,9 @@ class McuConsoleWorkbenchState(
         nextStatus: McuRuntimeStatusResponse,
     ) {
         runtimeStatus = nextStatus
-        nextStatus.bundleId?.takeIf { it.isNotBlank() }?.let { bundleId ->
+        nextStatus.bundleId
+            ?.takeIf { it.isNotBlank() && selectedRuntimeBundleId == null }
+            ?.let { bundleId ->
             if (runtimeBundles.any { it.bundleId == bundleId } && selectedRuntimeBundleId != bundleId) {
                 selectRuntimeBundle(bundleId)
             }
@@ -670,6 +701,64 @@ class McuConsoleWorkbenchState(
             } else {
                 widget
             }
+        }
+    }
+
+    private suspend fun startFlashInternal() {
+        val firmwarePath = firmwarePathText.trim()
+        if (firmwarePath.isBlank()) {
+            throw IllegalArgumentException("固件路径不能为空")
+        }
+        val baudRate = baudRateText.toIntOrNull()
+            ?: throw IllegalArgumentException("波特率无效")
+        if (selectedFlashProfile?.requiresPort == true &&
+            (selectedPortPath ?: session.portPath).isNullOrBlank()
+        ) {
+            throw IllegalArgumentException("请先选择串口")
+        }
+        flashStatus = remoteService.startFlash(
+            McuFlashRequest(
+                profileId = selectedFlashProfile?.id.orEmpty(),
+                firmwarePath = firmwarePath,
+                portPath = selectedPortPath ?: session.portPath,
+                baudRate = baudRate,
+                commandTemplate = flashCommandTemplateText
+                    .trim()
+                    .takeIf {
+                        selectedFlashProfile?.strategyKind == McuFlashStrategyKind.COMMAND_TEMPLATE &&
+                            it.isNotBlank()
+                    },
+            ),
+        )
+        refreshSession()
+        refreshRuntimeStatus()
+        loadRecentEvents()
+    }
+
+    private fun applyFirmwareDownload(
+        response: McuFlashDownloadResponse,
+    ) {
+        response.resolvedUrl
+            ?.takeIf { it.isNotBlank() }
+            ?.let { resolvedUrl ->
+                firmwareDownloadUrlText = resolvedUrl
+                autoFilledFirmwareDownloadUrl = resolvedUrl
+            }
+        response.downloadPath
+            ?.takeIf { it.isNotBlank() }
+            ?.let { downloadPath ->
+                firmwarePathText = downloadPath
+                autoFilledFirmwarePath = downloadPath
+            }
+        response.profileId
+            ?.takeIf { it.isNotBlank() && flashProfiles.any { profile -> profile.id == it } }
+            ?.let { profileId ->
+                if (selectedFlashProfileId != profileId) {
+                    selectFlashProfile(profileId)
+                }
+            }
+        response.lastMessage?.takeIf { it.isNotBlank() }?.let { message ->
+            updateFeedback(message, false)
         }
     }
 

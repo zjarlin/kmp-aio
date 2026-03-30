@@ -1,13 +1,13 @@
 {
   "bundleId": "micropython-default-generic",
-  "title": "MicroPython / 默认通用包",
+  "title": "MicroPython / ESP32 官方固件",
   "runtimeKind": "MICROPYTHON",
-  "mcuFamily": "generic",
+  "mcuFamily": "esp32",
   "defaultFlashProfileId": "micropython-generic-command",
   "defaultBaudRate": 115200,
-  "artifactRelativePath": "artifacts/micropython-default-generic.uf2",
+  "artifactRelativePath": "artifacts/micropython-default-generic.bin",
   "resourceFiles": [
-    "artifacts/micropython-default-generic.uf2"
+    "artifacts/micropython-default-generic.bin"
   ],
   "atomicCommands": [
     {

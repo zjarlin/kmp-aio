@@ -4,6 +4,8 @@ import de.jensklingenberg.ktorfit.http.*
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadRequest
 
 /**
  * 原始文件: site.addzero.kcloud.plugins.mcuconsole.routes.McuFlash.kt
@@ -38,5 +40,17 @@ interface McuFlashApi {
     @POST("/api/mcu/flash/start")    suspend fun startMcuFlash(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
+
+/**
+ * downloadMcuFlashFirmware
+ * HTTP方法: POST
+ * 路径: /api/mcu/flash/download
+ * 参数:
+ *   - request: site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadRequest (RequestBody)
+ * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadResponse
+ */
+    @POST("/api/mcu/flash/download")    suspend fun downloadMcuFlashFirmware(
+        @Body request: site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadRequest
+    ): site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadResponse
 
 }
