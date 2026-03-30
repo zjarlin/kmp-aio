@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -198,6 +199,7 @@ internal fun McuPortBrowser(
     state: McuConsoleWorkbenchState,
     onRefresh: () -> Unit,
 ) {
+    val runAction = rememberMcuActionRunner()
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -209,6 +211,46 @@ internal fun McuPortBrowser(
             placeholder = "串口 / 描述",
             modifier = Modifier.fillMaxWidth(),
         )
+        state.selectedPort?.let { selectedPort ->
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    McuCompactInput(
+                        value = state.selectedPortRemarkDraft,
+                        onValueChange = { value ->
+                            state.updateSelectedPortRemarkDraft(value)
+                        },
+                        label = "备注",
+                        supportingText = selectedPort.remarkBindingHint(),
+                    )
+                    McuSummaryTable(
+                        rows = listOf(
+                            "绑定键" to selectedPort.displayRemarkBindingKey(),
+                            "串口" to selectedPort.portPath,
+                            "厂商" to selectedPort.manufacturer,
+                        ),
+                    )
+                    FilledTonalButton(
+                        onClick = {
+                            runAction {
+                                state.saveSelectedPortRemark()
+                            }
+                        },
+                        enabled = !state.isSubmitting,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("保存当前串口备注")
+                    }
+                }
+            }
+        }
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -329,6 +371,17 @@ private fun McuPortRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            port.remark
+                .takeIf { it.isNotBlank() }
+                ?.let { remark ->
+                    Text(
+                        text = remark,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = contentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             Text(
                 text = port.portPath,
                 style = MaterialTheme.typography.bodyMedium,
@@ -337,7 +390,12 @@ private fun McuPortRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = listOf(port.portName, port.descriptiveName, port.description)
+                text = listOf(
+                    port.portName,
+                    port.descriptiveName,
+                    port.description,
+                    port.displayRemarkBindingKey(),
+                )
                     .filter { it.isNotBlank() }
                     .joinToString(" / ")
                     .ifBlank { "-" },
@@ -348,6 +406,30 @@ private fun McuPortRow(
             )
         }
     }
+}
+
+private fun McuPortSummary.displayRemarkBindingKey(): String {
+    serialNumber.takeIf { it.isNotBlank() }?.let { serial ->
+        return "SN:$serial"
+    }
+    val vendorIdValue = vendorId
+    val productIdValue = productId
+    if (vendorIdValue != null && productIdValue != null) {
+        return "VID:PID=${vendorIdValue.toString(16)}:${productIdValue.toString(16)}"
+    }
+    return deviceKey.ifBlank { "未提供稳定键" }
+}
+
+private fun McuPortSummary.remarkBindingHint(): String {
+    if (serialNumber.isNotBlank()) {
+        return "当前备注绑定到设备序列号，换 Type-C 口也会跟随。"
+    }
+    val vendorIdValue = vendorId
+    val productIdValue = productId
+    if (vendorIdValue != null && productIdValue != null) {
+        return "当前备注退化绑定到设备型号指纹；多块同型号且无序列号时可能共用备注。"
+    }
+    return "当前设备没有可靠序列号，只能退化绑定。若换口或多块同型设备并存，备注可能不够精确。"
 }
 
 @Composable

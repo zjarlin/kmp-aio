@@ -6,13 +6,31 @@ import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 class JSerialCommSerialPortGateway : SerialPortGateway {
     override fun listPorts(): List<McuPortSummary> {
         return SerialPort.getCommPorts().map { port ->
+            val serialNumber = port.serialNumber.normalizedPortMeta()
+            val manufacturer = port.manufacturer.normalizedPortMeta()
+            val portLocation = port.portLocation.normalizedPortMeta().orEmpty()
             McuPortSummary(
                 portPath = port.systemPortPath,
                 portName = port.portDescription?.takeIf { it.isNotBlank() } ?: port.systemPortName,
                 systemPortName = port.systemPortName.orEmpty(),
                 descriptiveName = port.descriptivePortName.orEmpty(),
                 description = port.portDescription.orEmpty(),
-                kind = port.portLocation.orEmpty(),
+                kind = portLocation,
+                portLocation = portLocation,
+                serialNumber = serialNumber.orEmpty(),
+                manufacturer = manufacturer.orEmpty(),
+                vendorId = port.vendorID.takeIf { it >= 0 },
+                productId = port.productID.takeIf { it >= 0 },
+                deviceKey = buildDeviceKey(
+                    serialNumber = serialNumber,
+                    vendorId = port.vendorID.takeIf { it >= 0 },
+                    productId = port.productID.takeIf { it >= 0 },
+                    manufacturer = manufacturer,
+                    description = port.portDescription.normalizedPortMeta()
+                        ?: port.descriptivePortName.normalizedPortMeta()
+                        ?: port.systemPortName.normalizedPortMeta(),
+                    portLocation = portLocation,
+                ),
             )
         }.sortedBy { it.portPath }
     }
@@ -28,6 +46,54 @@ class JSerialCommSerialPortGateway : SerialPortGateway {
         check(port.openPort()) { "打开串口失败: $portPath" }
         return JSerialCommSerialPortConnection(port, portPath, baudRate)
     }
+}
+
+private fun buildDeviceKey(
+    serialNumber: String?,
+    vendorId: Int?,
+    productId: Int?,
+    manufacturer: String?,
+    description: String?,
+    portLocation: String?,
+): String {
+    val normalizedSerial = serialNumber.normalizedPortMeta()
+    if (normalizedSerial != null) {
+        return "sn:$normalizedSerial"
+    }
+    if (vendorId != null && productId != null) {
+        return buildString {
+            append("usb:")
+            append(vendorId.toString(16))
+            append(':')
+            append(productId.toString(16))
+            manufacturer.normalizedPortMeta()?.let { value ->
+                append(":m=")
+                append(value)
+            }
+            description.normalizedPortMeta()?.let { value ->
+                append(":d=")
+                append(value)
+            }
+        }
+    }
+    description.normalizedPortMeta()?.let { value ->
+        return "desc:$value"
+    }
+    portLocation.normalizedPortMeta()?.let { value ->
+        return "loc:$value"
+    }
+    return ""
+}
+
+private fun String?.normalizedPortMeta(): String? {
+    val value = this?.trim().orEmpty()
+    if (value.isBlank()) {
+        return null
+    }
+    if (value.equals("unknown", ignoreCase = true)) {
+        return null
+    }
+    return value
 }
 
 private class JSerialCommSerialPortConnection(

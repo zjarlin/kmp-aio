@@ -11,6 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class McuConsoleSessionService(
     private val gateway: SerialPortGateway,
     private val protocolCodec: McuVmProtocolCodec,
+    private val portRemarkStore: McuPortRemarkStore = McuPortRemarkStore.inMemory(),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val frameListeners = CopyOnWriteArrayList<(McuVmIncomingFrame) -> Unit>()
@@ -23,7 +24,20 @@ class McuConsoleSessionService(
     private var snapshot = McuSessionSnapshot()
 
     fun listPorts(): McuPortsResponse {
-        return McuPortsResponse(items = gateway.listPorts())
+        return McuPortsResponse(
+            items = gateway.listPorts().map(::decoratePortSummary),
+        )
+    }
+
+    fun updatePortRemark(
+        request: McuPortRemarkUpdateRequest,
+    ): McuPortsResponse {
+        require(request.deviceKey.isNotBlank()) { "deviceKey is required" }
+        portRemarkStore.updateRemark(
+            deviceKey = request.deviceKey,
+            remark = request.remark,
+        )
+        return listPorts()
     }
 
     fun getSessionSnapshot(): McuSessionSnapshot {
@@ -312,5 +326,13 @@ class McuConsoleSessionService(
         synchronized(lock) {
             return activeConnection === connection
         }
+    }
+
+    private fun decoratePortSummary(
+        port: McuPortSummary,
+    ): McuPortSummary {
+        return port.copy(
+            remark = portRemarkStore.findRemark(port.deviceKey),
+        )
     }
 }

@@ -35,6 +35,7 @@ kotlin {
             implementation(project(":lib:ksp:metadata:modbus:modbus-runtime"))
             implementation(libs.findLibrary("com-hivemq-hivemq-mqtt-client").get())
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
+            implementation(libs.findLibrary("j2mod").get())
             implementation(libs.findLibrary("jserialcomm").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())
             compileOnly(libs.findLibrary("org-springframework-spring-web").get())
@@ -46,4 +47,15 @@ tasks.register("generateRouteApis") {
     group = "code generation"
     description = "Generate Ktorfit APIs from Spring-style route sources."
     dependsOn("kspKotlinJvm")
+}
+
+tasks.matching { task ->
+    task.name == "kspKotlinJvm"
+}.configureEach {
+    doFirst {
+        delete(layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbolLookups"))
+        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbols").get().asFile.mkdirs()
+        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/sourceToOutputs").get().asFile.mkdirs()
+        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/classpath").get().asFile.mkdirs()
+    }
 }

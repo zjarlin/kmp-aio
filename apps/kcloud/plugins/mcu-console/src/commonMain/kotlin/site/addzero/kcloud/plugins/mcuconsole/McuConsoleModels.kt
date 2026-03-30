@@ -12,11 +12,24 @@ data class McuPortSummary(
     val descriptiveName: String = "",
     val description: String = "",
     val kind: String = "",
+    val portLocation: String = "",
+    val serialNumber: String = "",
+    val manufacturer: String = "",
+    val vendorId: Int? = null,
+    val productId: Int? = null,
+    val deviceKey: String = "",
+    val remark: String = "",
 )
 
 @Serializable
 data class McuPortsResponse(
     val items: List<McuPortSummary> = emptyList(),
+)
+
+@Serializable
+data class McuPortRemarkUpdateRequest(
+    val deviceKey: String = "",
+    val remark: String = "",
 )
 
 @Serializable

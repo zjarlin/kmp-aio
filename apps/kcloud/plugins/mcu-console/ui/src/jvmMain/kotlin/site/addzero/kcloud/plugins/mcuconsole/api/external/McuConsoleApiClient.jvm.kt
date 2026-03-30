@@ -37,4 +37,7 @@ actual object McuConsoleApiClient {
 
     actual val modbusApi: McuModbusApi
         get() = createKtorfit().createMcuModbusApi()
+
+    actual val transportApi: McuTransportApi
+        get() = createKtorfit().createMcuTransportApi()
 }

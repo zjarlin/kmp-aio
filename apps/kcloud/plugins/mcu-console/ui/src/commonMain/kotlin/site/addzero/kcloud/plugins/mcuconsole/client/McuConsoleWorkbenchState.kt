@@ -20,6 +20,9 @@ class McuConsoleWorkbenchState(
     var portQuery by mutableStateOf("")
     var selectedPortPath by mutableStateOf<String?>(null)
         private set
+    var selectedPortDeviceKey by mutableStateOf<String?>(null)
+        private set
+    var selectedPortRemarkDraft by mutableStateOf("")
     var selectedFlashProfileId by mutableStateOf<String?>(null)
         private set
     var selectedRuntimeBundleId by mutableStateOf<String?>(null)
@@ -80,6 +83,8 @@ class McuConsoleWorkbenchState(
         private set
     var modbusLastExecution by mutableStateOf(McuModbusExecutionResult())
         private set
+    var transportProbes by mutableStateOf<Map<McuTransportKind, McuTransportProbeResponse>>(emptyMap())
+        private set
     var events by mutableStateOf<List<McuEventEnvelope>>(emptyList())
         private set
     var widgetInstances by mutableStateOf<List<McuWidgetInstanceState>>(emptyList())
@@ -125,12 +130,20 @@ class McuConsoleWorkbenchState(
                     port.systemPortName,
                     port.descriptiveName,
                     port.description,
+                    port.serialNumber,
+                    port.manufacturer,
+                    port.remark,
+                    port.deviceKey,
+                    port.portLocation,
                     port.kind,
                 ).any { value ->
                     value.contains(keyword, ignoreCase = true)
                 }
             }
         }
+
+    val selectedPort: McuPortSummary?
+        get() = ports.firstOrNull { it.portPath == selectedPortPath }
 
     val selectedFlashProfile: McuFlashProfileSummary?
         get() = flashProfiles.firstOrNull { it.id == selectedFlashProfileId }
@@ -166,26 +179,33 @@ class McuConsoleWorkbenchState(
 
     val canOpenSelectedTransportSession: Boolean
         get() = !isSubmitting &&
-            !session.isOpen &&
             when (selectedTransportKind) {
-                McuTransportKind.SERIAL -> selectedPortPath != null && baudRateText.toIntOrNull() != null
-                McuTransportKind.MODBUS_RTU -> selectedPortPath != null &&
+                McuTransportKind.SERIAL -> !session.isOpen &&
+                    selectedPortPath != null &&
+                    baudRateText.toIntOrNull() != null
+                McuTransportKind.MODBUS_RTU -> !session.isOpen &&
+                    selectedPortPath != null &&
                     baudRateText.toIntOrNull() != null &&
                     modbusRtuUnitIdText.toIntOrNull() != null &&
                     modbusRtuTimeoutMsText.toIntOrNull() != null
-                McuTransportKind.MODBUS_TCP,
-                McuTransportKind.BLUETOOTH,
-                McuTransportKind.MQTT,
-                -> false
+                McuTransportKind.MODBUS_TCP -> modbusTcpHostText.isNotBlank() &&
+                    modbusTcpPortText.toIntOrNull() != null &&
+                    modbusTcpUnitIdText.toIntOrNull() != null &&
+                    modbusTcpTimeoutMsText.toIntOrNull() != null
+                McuTransportKind.BLUETOOTH -> false
+                McuTransportKind.MQTT -> mqttBrokerUrlText.isNotBlank() &&
+                    mqttClientIdText.isNotBlank() &&
+                    mqttQosText.toIntOrNull() != null &&
+                    mqttKeepAliveSecondsText.toIntOrNull() != null
             }
 
     val openSessionActionLabel: String
         get() = when (selectedTransportKind) {
             McuTransportKind.SERIAL -> "打开串口会话"
             McuTransportKind.MODBUS_RTU -> "打开 RTU 会话"
-            McuTransportKind.MODBUS_TCP -> "Modbus TCP 未接通"
-            McuTransportKind.BLUETOOTH -> "蓝牙未接通"
-            McuTransportKind.MQTT -> "MQTT 未接通"
+            McuTransportKind.MODBUS_TCP -> "验证 Modbus TCP"
+            McuTransportKind.BLUETOOTH -> "蓝牙待实现"
+            McuTransportKind.MQTT -> "验证 MQTT"
         }
 
     val canEnsureRuntime: Boolean
@@ -202,9 +222,9 @@ class McuConsoleWorkbenchState(
         get() = when (selectedTransportKind) {
             McuTransportKind.SERIAL -> "直接打开本机串口，并复用现有 MCU VM 运行时链路。"
             McuTransportKind.MODBUS_RTU -> "这里仍只负责串口打开；Modbus 页面已经支持 RTU 参数配置和原子动作直连下发。"
-            McuTransportKind.MODBUS_TCP -> "当前版本先支持界面配置。TCP 主机连接和命令通道尚未接到后端。"
+            McuTransportKind.MODBUS_TCP -> "当前版本支持 Modbus TCP 连通性验证，但不会打开控制台串口会话，也不会自动执行寄存器读写。"
             McuTransportKind.BLUETOOTH -> "当前版本先支持界面配置。蓝牙扫描、配对和 GATT/经典串口连接尚未实现。"
-            McuTransportKind.MQTT -> "当前版本先支持界面配置。Broker 建连、订阅和消息桥接尚未实现。"
+            McuTransportKind.MQTT -> "当前版本支持 MQTT Broker 建连与认证验证，但不会维持长连接，也不会自动桥接消息。"
         }
 
     val canStartFlash: Boolean
@@ -238,6 +258,15 @@ class McuConsoleWorkbenchState(
         portPath: String?,
     ) {
         selectedPortPath = portPath
+        val selected = ports.firstOrNull { it.portPath == portPath }
+        selectedPortDeviceKey = selected?.deviceKey?.takeIf { it.isNotBlank() }
+        selectedPortRemarkDraft = selected?.remark.orEmpty()
+    }
+
+    fun updateSelectedPortRemarkDraft(
+        value: String,
+    ) {
+        selectedPortRemarkDraft = value
     }
 
     fun selectTransport(
@@ -377,13 +406,15 @@ class McuConsoleWorkbenchState(
         try {
             val loadedPorts = remoteService.listPorts()
             ports = loadedPorts
-            if (session.portPath != null && loadedPorts.any { it.portPath == session.portPath }) {
-                selectedPortPath = session.portPath
-            } else if (selectedPortPath != null && loadedPorts.any { it.portPath == selectedPortPath }) {
-                selectedPortPath = selectedPortPath
-            } else {
-                selectedPortPath = loadedPorts.firstOrNull()?.portPath
-            }
+            val nextSelectedPort = when {
+                session.portPath != null -> loadedPorts.firstOrNull { it.portPath == session.portPath }
+                selectedPortPath != null -> loadedPorts.firstOrNull { it.portPath == selectedPortPath }
+                selectedPortDeviceKey != null -> {
+                    loadedPorts.firstOrNull { it.deviceKey == selectedPortDeviceKey }
+                }
+                else -> null
+            } ?: loadedPorts.firstOrNull()
+            selectPort(nextSelectedPort?.portPath)
         } catch (throwable: Throwable) {
             reportError(throwable)
         } finally {
@@ -394,13 +425,49 @@ class McuConsoleWorkbenchState(
     suspend fun refreshSession() {
         try {
             session = remoteService.getSession()
-            session.portPath?.let { selectedPortPath = it }
+            session.portPath?.let { portPath ->
+                selectPort(portPath)
+            }
             if (session.baudRate > 0) {
                 baudRateText = session.baudRate.toString()
             }
             lastSeenSeq = max(lastSeenSeq, session.latestSeq)
         } catch (throwable: Throwable) {
             reportError(throwable)
+        }
+    }
+
+    suspend fun saveSelectedPortRemark() {
+        val selected = selectedPort
+            ?: run {
+                updateFeedback("请先选择串口，再保存备注", true)
+                return
+            }
+        val deviceKey = selected.deviceKey.trim()
+        if (deviceKey.isBlank()) {
+            updateFeedback("当前串口缺少稳定设备标识，无法可靠保存备注", true)
+            return
+        }
+        runSubmitting(
+            if (selectedPortRemarkDraft.isBlank()) {
+                "串口备注已清空"
+            } else {
+                "串口备注已保存"
+            },
+        ) {
+            val updatedPorts = remoteService.updatePortRemark(
+                McuPortRemarkUpdateRequest(
+                    deviceKey = deviceKey,
+                    remark = selectedPortRemarkDraft,
+                ),
+            )
+            ports = updatedPorts
+            val nextSelected = updatedPorts.firstOrNull { port ->
+                port.deviceKey == deviceKey
+            } ?: updatedPorts.firstOrNull { port ->
+                port.portPath == selected.portPath
+            }
+            selectPort(nextSelected?.portPath)
         }
     }
 
@@ -543,7 +610,7 @@ class McuConsoleWorkbenchState(
                 if (!validateModbusTcpConfig()) {
                     return
                 }
-                updateFeedback("Modbus TCP 配置已保存，连接执行尚未实现", true)
+                probeModbusTcpTransport()
             }
 
             McuTransportKind.BLUETOOTH -> {
@@ -557,7 +624,7 @@ class McuConsoleWorkbenchState(
                 if (!validateMqttConfig()) {
                     return
                 }
-                updateFeedback("MQTT 配置已保存，连接执行尚未实现", true)
+                probeMqttTransport()
             }
         }
     }
@@ -1173,7 +1240,8 @@ class McuConsoleWorkbenchState(
                 "端口" to modbusTcpPortText,
                 "UnitId" to modbusTcpUnitIdText,
                 "超时" to "${modbusTcpTimeoutMsText}ms",
-                "状态" to "仅配置，未接通",
+                "状态" to transportProbeStatus(kind),
+                "端点" to transportProbeEndpoint(kind),
             )
 
             McuTransportKind.BLUETOOTH -> listOf(
@@ -1192,7 +1260,8 @@ class McuConsoleWorkbenchState(
                 "发布 Topic" to mqttPublishTopicText,
                 "订阅 Topic" to mqttSubscribeTopicText,
                 "QoS" to mqttQosText,
-                "状态" to "仅配置，未接通",
+                "状态" to transportProbeStatus(kind),
+                "端点" to transportProbeEndpoint(kind),
             )
         }
     }
@@ -1345,6 +1414,76 @@ class McuConsoleWorkbenchState(
         } finally {
             isSubmitting = false
         }
+    }
+
+    private suspend fun probeModbusTcpTransport() {
+        isSubmitting = true
+        try {
+            val response = remoteService.probeModbusTcp(
+                McuModbusTcpProbeRequest(
+                    host = modbusTcpHostText.trim(),
+                    port = requirePositiveInt(modbusTcpPortText, "Modbus TCP 端口") ?: return,
+                    unitId = requirePositiveInt(modbusTcpUnitIdText, "Modbus TCP UnitId") ?: return,
+                    timeoutMs = requirePositiveInt(modbusTcpTimeoutMsText, "Modbus TCP 超时") ?: return,
+                ),
+            )
+            rememberTransportProbe(response)
+            updateFeedback(
+                response.lastMessage ?: if (response.success) "Modbus TCP 已验证" else "Modbus TCP 验证失败",
+                !response.success,
+            )
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        } finally {
+            isSubmitting = false
+        }
+    }
+
+    private suspend fun probeMqttTransport() {
+        isSubmitting = true
+        try {
+            val response = remoteService.probeMqtt(
+                McuMqttProbeRequest(
+                    brokerUrl = mqttBrokerUrlText.trim(),
+                    clientId = mqttClientIdText.trim(),
+                    username = mqttUsernameText.trim(),
+                    password = mqttPasswordText,
+                    keepAliveSeconds = requirePositiveInt(mqttKeepAliveSecondsText, "MQTT KeepAlive") ?: return,
+                ),
+            )
+            rememberTransportProbe(response)
+            updateFeedback(
+                response.lastMessage ?: if (response.success) "MQTT 已验证" else "MQTT 验证失败",
+                !response.success,
+            )
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        } finally {
+            isSubmitting = false
+        }
+    }
+
+    private fun rememberTransportProbe(
+        response: McuTransportProbeResponse,
+    ) {
+        transportProbes = transportProbes + (response.transportKind to response)
+    }
+
+    private fun transportProbeStatus(
+        kind: McuTransportKind,
+    ): String {
+        val response = transportProbes[kind] ?: return "未验证"
+        return if (response.success) {
+            "已验证"
+        } else {
+            "验证失败"
+        }
+    }
+
+    private fun transportProbeEndpoint(
+        kind: McuTransportKind,
+    ): String {
+        return transportProbes[kind]?.endpoint?.takeIf { it.isNotBlank() } ?: "-"
     }
 
     private fun validateModbusTcpConfig(): Boolean {

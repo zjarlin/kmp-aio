@@ -54,6 +54,13 @@ class McuConsoleServerKoinModule {
     }
 
     @Single
+    fun providePortRemarkStore(
+        json: Json,
+    ): McuPortRemarkStore {
+        return McuPortRemarkStore.persisted(json)
+    }
+
+    @Single
     fun provideRuntimeAssetExtractor(
         bundleCatalog: McuRuntimeBundleCatalog,
     ): McuRuntimeAssetExtractor {
@@ -64,10 +71,12 @@ class McuConsoleServerKoinModule {
     fun provideSessionService(
         gateway: SerialPortGateway,
         protocolCodec: McuVmProtocolCodec,
+        portRemarkStore: McuPortRemarkStore,
     ): McuConsoleSessionService {
         return McuConsoleSessionService(
             gateway = gateway,
             protocolCodec = protocolCodec,
+            portRemarkStore = portRemarkStore,
         )
     }
 

@@ -21,6 +21,17 @@ fun listMcuPorts(): McuPortsResponse {
 }
 
 /**
+ * 前端按钮: 串口浏览器“保存备注”。
+ * 作用: 按稳定设备标识保存或清空本地串口备注。
+ */
+@PostMapping("/api/mcu/ports/remark")
+fun updateMcuPortRemark(
+    @RequestBody request: McuPortRemarkUpdateRequest,
+): McuPortsResponse {
+    return sessionService().updatePortRemark(request)
+}
+
+/**
  * 前端按钮: 控制台“打开会话”、烧录页“刷新状态”、调试页“刷新”。
  * 作用: 读取当前活动串口会话快照。
  */

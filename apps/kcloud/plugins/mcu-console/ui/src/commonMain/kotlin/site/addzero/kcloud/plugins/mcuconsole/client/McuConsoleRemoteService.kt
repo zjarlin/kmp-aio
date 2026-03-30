@@ -10,6 +10,12 @@ class McuConsoleRemoteService {
 
     suspend fun getSession(): McuSessionSnapshot = McuConsoleApiClient.sessionApi.getMcuSession()
 
+    suspend fun updatePortRemark(
+        request: McuPortRemarkUpdateRequest,
+    ): List<McuPortSummary> {
+        return McuConsoleApiClient.sessionApi.updateMcuPortRemark(request).items
+    }
+
     suspend fun openSession(
         request: McuSessionOpenRequest,
     ): McuSessionSnapshot {
@@ -116,5 +122,17 @@ class McuConsoleRemoteService {
         request: McuModbusServoAngleRequest,
     ): McuModbusCommandResponse {
         return McuConsoleApiClient.modbusApi.servoAngle(request)
+    }
+
+    suspend fun probeModbusTcp(
+        request: McuModbusTcpProbeRequest,
+    ): McuTransportProbeResponse {
+        return McuConsoleApiClient.transportApi.probeMcuModbusTcpTransport(request)
+    }
+
+    suspend fun probeMqtt(
+        request: McuMqttProbeRequest,
+    ): McuTransportProbeResponse {
+        return McuConsoleApiClient.transportApi.probeMcuMqttTransport(request)
     }
 }

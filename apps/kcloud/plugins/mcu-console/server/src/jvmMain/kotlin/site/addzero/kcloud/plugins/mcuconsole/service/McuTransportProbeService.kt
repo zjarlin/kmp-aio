@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 
 import com.ghgande.j2mod.modbus.facade.ModbusTCPMaster
 import com.hivemq.client.mqtt.MqttClient
+import com.hivemq.client.mqtt.mqtt5.message.auth.Mqtt5SimpleAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusTcpProbeRequest
@@ -92,6 +93,13 @@ class McuTransportProbeService {
                 message = "MQTT KeepAlive 必须大于 0",
             )
         }
+        if ((request.username.isNotBlank() || request.password.isNotBlank()) && request.username.isBlank()) {
+            return@withContext failure(
+                transportKind = McuTransportKind.MQTT,
+                endpoint = broker.endpoint,
+                message = "MQTT 用户名不能为空",
+            )
+        }
 
         val clientBuilder = MqttClient.builder()
             .useMqttVersion5()
@@ -107,14 +115,12 @@ class McuTransportProbeService {
             val connectBuilder = client.connectWith()
                 .keepAlive(request.keepAliveSeconds)
             if (request.username.isNotBlank() || request.password.isNotBlank()) {
-                val authBuilder = connectBuilder.simpleAuth()
-                if (request.username.isNotBlank()) {
-                    authBuilder.username(request.username.trim())
-                }
+                val authBuilder = Mqtt5SimpleAuth.builder()
+                    .username(request.username.trim())
                 if (request.password.isNotBlank()) {
                     authBuilder.password(request.password.toByteArray(StandardCharsets.UTF_8))
                 }
-                authBuilder.applySimpleAuth()
+                connectBuilder.simpleAuth(authBuilder.build())
             }
             connectBuilder.send()
             success(
