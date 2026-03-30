@@ -93,4 +93,28 @@ class McuConsoleRemoteService {
     suspend fun getRuntimeStatus(): McuRuntimeStatusResponse {
         return McuConsoleApiClient.runtimeApi.getMcuRuntimeStatus()
     }
+
+    suspend fun gpioWrite(
+        request: McuModbusGpioWriteRequest,
+    ): McuModbusCommandResponse {
+        return McuConsoleApiClient.modbusApi.gpioWrite(request)
+    }
+
+    suspend fun gpioMode(
+        request: McuModbusGpioModeRequest,
+    ): McuModbusCommandResponse {
+        return McuConsoleApiClient.modbusApi.gpioMode(request)
+    }
+
+    suspend fun pwmDuty(
+        request: McuModbusPwmDutyRequest,
+    ): McuModbusCommandResponse {
+        return McuConsoleApiClient.modbusApi.pwmDuty(request)
+    }
+
+    suspend fun servoAngle(
+        request: McuModbusServoAngleRequest,
+    ): McuModbusCommandResponse {
+        return McuConsoleApiClient.modbusApi.servoAngle(request)
+    }
 }

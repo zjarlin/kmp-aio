@@ -30,11 +30,19 @@ class McuConsoleWorkbenchState(
         private set
     var selectedTransportKind by mutableStateOf(McuTransportKind.SERIAL)
         private set
+    var selectedModbusAtomicAction by mutableStateOf(McuModbusAtomicAction.GPIO_WRITE)
+        private set
     var activeSessionTransportKind by mutableStateOf(McuTransportKind.SERIAL)
         private set
+    var modbusConnectionNameText by mutableStateOf("RTU 主站")
     var baudRateText by mutableStateOf("115200")
     var modbusRtuUnitIdText by mutableStateOf("1")
     var modbusRtuTimeoutMsText by mutableStateOf("1000")
+    var modbusRtuDataBitsText by mutableStateOf("8")
+    var modbusRtuStopBitsText by mutableStateOf("1")
+    var modbusRtuParity by mutableStateOf(McuModbusSerialParity.NONE)
+    var modbusFrameFormat by mutableStateOf(McuModbusFrameFormat.RTU)
+    var modbusRtuRetriesText by mutableStateOf("2")
     var modbusTcpHostText by mutableStateOf("192.168.1.10")
     var modbusTcpPortText by mutableStateOf("502")
     var modbusTcpUnitIdText by mutableStateOf("1")
@@ -53,6 +61,14 @@ class McuConsoleWorkbenchState(
     var mqttSubscribeTopicText by mutableStateOf("devices/mcu/rx")
     var mqttQosText by mutableStateOf("0")
     var mqttKeepAliveSecondsText by mutableStateOf("60")
+    var modbusGpioWritePinText by mutableStateOf("2")
+    var modbusGpioWriteHigh by mutableStateOf(true)
+    var modbusGpioModePinText by mutableStateOf("2")
+    var modbusGpioMode by mutableStateOf(McuModbusGpioMode.OUTPUT)
+    var modbusPwmPinText by mutableStateOf("4")
+    var modbusPwmDutyText by mutableStateOf("32768")
+    var modbusServoPinText by mutableStateOf("12")
+    var modbusServoAngleText by mutableStateOf("90")
     var scriptLanguage by mutableStateOf("micropython")
     var session by mutableStateOf(McuSessionSnapshot())
         private set
@@ -61,6 +77,8 @@ class McuConsoleWorkbenchState(
     var flashStatus by mutableStateOf(McuFlashStatusResponse())
         private set
     var runtimeStatus by mutableStateOf(McuRuntimeStatusResponse())
+        private set
+    var modbusLastExecution by mutableStateOf(McuModbusExecutionResult())
         private set
     var events by mutableStateOf<List<McuEventEnvelope>>(emptyList())
         private set
@@ -183,7 +201,7 @@ class McuConsoleWorkbenchState(
     val selectedTransportNotice: String
         get() = when (selectedTransportKind) {
             McuTransportKind.SERIAL -> "直接打开本机串口，并复用现有 MCU VM 运行时链路。"
-            McuTransportKind.MODBUS_RTU -> "复用当前串口链路，先完成 RTU 参数配置；后端暂时只接了串口打开，不自动切换到专用 Modbus 会话。"
+            McuTransportKind.MODBUS_RTU -> "这里仍只负责串口打开；Modbus 页面已经支持 RTU 参数配置和原子动作直连下发。"
             McuTransportKind.MODBUS_TCP -> "当前版本先支持界面配置。TCP 主机连接和命令通道尚未接到后端。"
             McuTransportKind.BLUETOOTH -> "当前版本先支持界面配置。蓝牙扫描、配对和 GATT/经典串口连接尚未实现。"
             McuTransportKind.MQTT -> "当前版本先支持界面配置。Broker 建连、订阅和消息桥接尚未实现。"
@@ -210,6 +228,12 @@ class McuConsoleWorkbenchState(
             return firmwareDownloadUrlText.isNotBlank() || !profile.defaultDownloadUrl.isNullOrBlank()
         }
 
+    val canExecuteSelectedModbusAction: Boolean
+        get() = !isSubmitting &&
+            modbusFrameFormat == McuModbusFrameFormat.RTU &&
+            hasValidModbusRtuConfigForSubmit() &&
+            hasValidSelectedModbusActionForSubmit()
+
     fun selectPort(
         portPath: String?,
     ) {
@@ -220,6 +244,12 @@ class McuConsoleWorkbenchState(
         kind: McuTransportKind,
     ) {
         selectedTransportKind = kind
+    }
+
+    fun selectModbusAtomicAction(
+        action: McuModbusAtomicAction,
+    ) {
+        selectedModbusAtomicAction = action
     }
 
     fun selectFlashProfile(
@@ -571,6 +601,153 @@ class McuConsoleWorkbenchState(
         }
     }
 
+    suspend fun executeSelectedModbusAction() {
+        val config = buildModbusRtuConfigForSubmit() ?: return
+        when (selectedModbusAtomicAction) {
+            McuModbusAtomicAction.GPIO_WRITE -> {
+                val pin = requireIntInRange(
+                    value = modbusGpioWritePinText,
+                    label = "GPIO 引脚",
+                    min = 0,
+                    max = 255,
+                ) ?: return
+                val high = modbusGpioWriteHigh
+                runModbusOperation(
+                    action = McuModbusAtomicAction.GPIO_WRITE,
+                    config = config,
+                    parameters = listOf(
+                        "pin" to pin.toString(),
+                        "value" to if (high) "HIGH" else "LOW",
+                    ),
+                ) {
+                    remoteService.gpioWrite(
+                        McuModbusGpioWriteRequest(
+                            portPath = config.portPath,
+                            unitId = config.unitId,
+                            baudRate = config.baudRate,
+                            dataBits = config.dataBits,
+                            stopBits = config.stopBits,
+                            parity = config.parity,
+                            timeoutMs = config.timeoutMs,
+                            retries = config.retries,
+                            pin = pin,
+                            high = high,
+                        ),
+                    )
+                }
+            }
+
+            McuModbusAtomicAction.GPIO_MODE -> {
+                val pin = requireIntInRange(
+                    value = modbusGpioModePinText,
+                    label = "GPIO 引脚",
+                    min = 0,
+                    max = 255,
+                ) ?: return
+                val mode = modbusGpioMode
+                runModbusOperation(
+                    action = McuModbusAtomicAction.GPIO_MODE,
+                    config = config,
+                    parameters = listOf(
+                        "pin" to pin.toString(),
+                        "mode" to mode.displayName(),
+                    ),
+                ) {
+                    remoteService.gpioMode(
+                        McuModbusGpioModeRequest(
+                            portPath = config.portPath,
+                            unitId = config.unitId,
+                            baudRate = config.baudRate,
+                            dataBits = config.dataBits,
+                            stopBits = config.stopBits,
+                            parity = config.parity,
+                            timeoutMs = config.timeoutMs,
+                            retries = config.retries,
+                            pin = pin,
+                            mode = mode.code(),
+                        ),
+                    )
+                }
+            }
+
+            McuModbusAtomicAction.PWM_DUTY -> {
+                val pin = requireIntInRange(
+                    value = modbusPwmPinText,
+                    label = "PWM 引脚",
+                    min = 0,
+                    max = 255,
+                ) ?: return
+                val dutyU16 = requireIntInRange(
+                    value = modbusPwmDutyText,
+                    label = "PWM 占空比",
+                    min = 0,
+                    max = 65535,
+                ) ?: return
+                runModbusOperation(
+                    action = McuModbusAtomicAction.PWM_DUTY,
+                    config = config,
+                    parameters = listOf(
+                        "pin" to pin.toString(),
+                        "dutyU16" to dutyU16.toString(),
+                    ),
+                ) {
+                    remoteService.pwmDuty(
+                        McuModbusPwmDutyRequest(
+                            portPath = config.portPath,
+                            unitId = config.unitId,
+                            baudRate = config.baudRate,
+                            dataBits = config.dataBits,
+                            stopBits = config.stopBits,
+                            parity = config.parity,
+                            timeoutMs = config.timeoutMs,
+                            retries = config.retries,
+                            pin = pin,
+                            dutyU16 = dutyU16,
+                        ),
+                    )
+                }
+            }
+
+            McuModbusAtomicAction.SERVO_ANGLE -> {
+                val pin = requireIntInRange(
+                    value = modbusServoPinText,
+                    label = "舵机引脚",
+                    min = 0,
+                    max = 255,
+                ) ?: return
+                val angle = requireIntInRange(
+                    value = modbusServoAngleText,
+                    label = "舵机角度",
+                    min = 0,
+                    max = 180,
+                ) ?: return
+                runModbusOperation(
+                    action = McuModbusAtomicAction.SERVO_ANGLE,
+                    config = config,
+                    parameters = listOf(
+                        "pin" to pin.toString(),
+                        "angle" to angle.toString(),
+                    ),
+                ) {
+                    remoteService.servoAngle(
+                        McuModbusServoAngleRequest(
+                            portPath = config.portPath,
+                            unitId = config.unitId,
+                            baudRate = config.baudRate,
+                            dataBits = config.dataBits,
+                            stopBits = config.stopBits,
+                            parity = config.parity,
+                            timeoutMs = config.timeoutMs,
+                            retries = config.retries,
+                            pin = pin,
+                            angle = angle,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
     suspend fun executeScript() {
         val normalizedScript = scriptText.trim()
         if (normalizedScript.isBlank()) {
@@ -912,6 +1089,58 @@ class McuConsoleWorkbenchState(
         feedbackIsError = isError
     }
 
+    fun selectedModbusActionReferenceRows(): List<Pair<String, String>> {
+        return when (selectedModbusAtomicAction) {
+            McuModbusAtomicAction.GPIO_WRITE -> listOf(
+                "动作" to selectedModbusAtomicAction.displayName(),
+                "operationId" to "gpio-write",
+                "寄存器" to "1024",
+                "说明" to "写 GPIO 电平",
+            )
+
+            McuModbusAtomicAction.GPIO_MODE -> listOf(
+                "动作" to selectedModbusAtomicAction.displayName(),
+                "operationId" to "gpio-mode",
+                "寄存器" to "1026",
+                "说明" to "切换 GPIO 模式",
+            )
+
+            McuModbusAtomicAction.PWM_DUTY -> listOf(
+                "动作" to selectedModbusAtomicAction.displayName(),
+                "operationId" to "pwm-duty",
+                "寄存器" to "1028",
+                "说明" to "写 PWM duty_u16",
+            )
+
+            McuModbusAtomicAction.SERVO_ANGLE -> listOf(
+                "动作" to selectedModbusAtomicAction.displayName(),
+                "operationId" to "servo-angle",
+                "寄存器" to "1030",
+                "说明" to "写舵机目标角度",
+            )
+        }
+    }
+
+    fun modbusLastResultRows(): List<Pair<String, String>> {
+        val execution = modbusLastExecution
+        val response = execution.response
+        if (execution.action == null || response == null) {
+            return listOf(
+                "状态" to "尚未执行",
+                "说明" to "请先在左侧配置 RTU 参数并执行一个原子动作",
+            )
+        }
+        return listOf(
+            "动作" to execution.action.displayName(),
+            "接受" to response.accepted.toString(),
+            "摘要" to response.summary,
+            "串口" to execution.config?.portPath.orEmpty(),
+            "波特率" to execution.config?.baudRate?.toString().orEmpty(),
+            "UnitId" to execution.config?.unitId?.toString().orEmpty(),
+            "超时" to execution.config?.timeoutMs?.let { "${it}ms" }.orEmpty(),
+        ) + execution.parameters
+    }
+
     fun transportSummaryRows(
         kind: McuTransportKind = selectedTransportKind,
     ): List<Pair<String, String>> {
@@ -925,10 +1154,16 @@ class McuConsoleWorkbenchState(
 
             McuTransportKind.MODBUS_RTU -> listOf(
                 "模式" to kind.displayName(),
+                "连接别名" to modbusConnectionNameText,
                 "串口" to (selectedPortPath.orEmpty()),
+                "帧格式" to modbusFrameFormat.displayName(),
                 "波特率" to baudRateText,
                 "UnitId" to modbusRtuUnitIdText,
+                "dataBits" to modbusRtuDataBitsText,
+                "stopBits" to modbusRtuStopBitsText,
+                "parity" to modbusRtuParity.displayName(),
                 "超时" to "${modbusRtuTimeoutMsText}ms",
+                "重试" to modbusRtuRetriesText,
                 "状态" to "复用串口链路",
             )
 
@@ -959,6 +1194,112 @@ class McuConsoleWorkbenchState(
                 "QoS" to mqttQosText,
                 "状态" to "仅配置，未接通",
             )
+        }
+    }
+
+    private fun hasValidModbusRtuConfigForSubmit(): Boolean {
+        val portPath = selectedPortPath?.trim()
+        if (portPath.isNullOrBlank()) {
+            return false
+        }
+        val baudRate = baudRateText.toIntOrNull() ?: return false
+        val unitId = modbusRtuUnitIdText.toIntOrNull() ?: return false
+        val dataBits = modbusRtuDataBitsText.toIntOrNull() ?: return false
+        val stopBits = modbusRtuStopBitsText.toIntOrNull() ?: return false
+        val timeoutMs = modbusRtuTimeoutMsText.toLongOrNull() ?: return false
+        val retries = modbusRtuRetriesText.toIntOrNull() ?: return false
+        return baudRate > 0 &&
+            unitId in 1..247 &&
+            dataBits in 5..8 &&
+            stopBits in 1..2 &&
+            timeoutMs > 0 &&
+            retries >= 0
+    }
+
+    private fun hasValidSelectedModbusActionForSubmit(): Boolean {
+        return when (selectedModbusAtomicAction) {
+            McuModbusAtomicAction.GPIO_WRITE -> modbusGpioWritePinText.toIntOrNull() in 0..255
+            McuModbusAtomicAction.GPIO_MODE -> modbusGpioModePinText.toIntOrNull() in 0..255
+            McuModbusAtomicAction.PWM_DUTY -> {
+                val pin = modbusPwmPinText.toIntOrNull()
+                val duty = modbusPwmDutyText.toIntOrNull()
+                pin in 0..255 && duty in 0..65535
+            }
+
+            McuModbusAtomicAction.SERVO_ANGLE -> {
+                val pin = modbusServoPinText.toIntOrNull()
+                val angle = modbusServoAngleText.toIntOrNull()
+                pin in 0..255 && angle in 0..180
+            }
+        }
+    }
+
+    private fun buildModbusRtuConfigForSubmit(): McuModbusRtuTransportConfig? {
+        if (modbusFrameFormat != McuModbusFrameFormat.RTU) {
+            updateFeedback("当前后端只支持 Modbus RTU，ASCII 帧格式尚未接通", true)
+            return null
+        }
+        val portPath = selectedPortPath?.trim()?.takeIf { it.isNotBlank() }
+            ?: run {
+                updateFeedback("请先选择 Modbus 串口", true)
+                return null
+            }
+        val baudRate = requirePositiveInt(baudRateText, "Modbus 波特率") ?: return null
+        val unitId = requireIntInRange(
+            value = modbusRtuUnitIdText,
+            label = "Modbus UnitId",
+            min = 1,
+            max = 247,
+        ) ?: return null
+        val dataBits = requireIntInRange(
+            value = modbusRtuDataBitsText,
+            label = "Modbus dataBits",
+            min = 5,
+            max = 8,
+        ) ?: return null
+        val stopBits = requireIntInRange(
+            value = modbusRtuStopBitsText,
+            label = "Modbus stopBits",
+            min = 1,
+            max = 2,
+        ) ?: return null
+        val timeoutMs = requirePositiveLong(modbusRtuTimeoutMsText, "Modbus 超时") ?: return null
+        val retries = requireNonNegativeInt(modbusRtuRetriesText, "Modbus 重试次数") ?: return null
+        return McuModbusRtuTransportConfig(
+            portPath = portPath,
+            baudRate = baudRate,
+            unitId = unitId,
+            dataBits = dataBits,
+            stopBits = stopBits,
+            parity = modbusRtuParity,
+            timeoutMs = timeoutMs,
+            retries = retries,
+        )
+    }
+
+    private suspend fun runModbusOperation(
+        action: McuModbusAtomicAction,
+        config: McuModbusRtuTransportConfig,
+        parameters: List<Pair<String, String>>,
+        block: suspend () -> McuModbusCommandResponse,
+    ) {
+        isSubmitting = true
+        try {
+            val response = block()
+            modbusLastExecution = McuModbusExecutionResult(
+                action = action,
+                config = config,
+                parameters = parameters,
+                response = response,
+            )
+            updateFeedback(
+                response.summary.ifBlank { "${action.displayName()} 已下发" },
+                !response.accepted,
+            )
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        } finally {
+            isSubmitting = false
         }
     }
 
@@ -1065,6 +1406,56 @@ class McuConsoleWorkbenchState(
         }
         return parsed
     }
+
+    private fun requirePositiveLong(
+        value: String,
+        label: String,
+    ): Long? {
+        val parsed = value.toLongOrNull()
+            ?: run {
+                updateFeedback("$label 无效", true)
+                return null
+            }
+        if (parsed <= 0) {
+            updateFeedback("$label 必须大于 0", true)
+            return null
+        }
+        return parsed
+    }
+
+    private fun requireNonNegativeInt(
+        value: String,
+        label: String,
+    ): Int? {
+        val parsed = value.toIntOrNull()
+            ?: run {
+                updateFeedback("$label 无效", true)
+                return null
+            }
+        if (parsed < 0) {
+            updateFeedback("$label 不能小于 0", true)
+            return null
+        }
+        return parsed
+    }
+
+    private fun requireIntInRange(
+        value: String,
+        label: String,
+        min: Int,
+        max: Int,
+    ): Int? {
+        val parsed = value.toIntOrNull()
+            ?: run {
+                updateFeedback("$label 无效", true)
+                return null
+            }
+        if (parsed !in min..max) {
+            updateFeedback("$label 必须在 $min..$max 之间", true)
+            return null
+        }
+        return parsed
+    }
 }
 
 data class McuWidgetInstanceState(
@@ -1082,6 +1473,13 @@ data class McuWidgetInstanceState(
     val lastFrameType: String? = null,
     val lastPayloadText: String? = null,
     val lastMessage: String? = null,
+)
+
+data class McuModbusExecutionResult(
+    val action: McuModbusAtomicAction? = null,
+    val config: McuModbusRtuTransportConfig? = null,
+    val parameters: List<Pair<String, String>> = emptyList(),
+    val response: McuModbusCommandResponse? = null,
 )
 
 private fun McuRuntimeBundleSummary.defaultLanguage(): String {
@@ -1102,6 +1500,46 @@ fun McuBluetoothMode.displayName(): String {
     return when (this) {
         McuBluetoothMode.BLE -> "BLE"
         McuBluetoothMode.CLASSIC -> "经典蓝牙"
+    }
+}
+
+fun McuModbusSerialParity.displayName(): String {
+    return when (this) {
+        McuModbusSerialParity.NONE -> "NONE"
+        McuModbusSerialParity.EVEN -> "EVEN"
+        McuModbusSerialParity.ODD -> "ODD"
+    }
+}
+
+fun McuModbusFrameFormat.displayName(): String {
+    return when (this) {
+        McuModbusFrameFormat.RTU -> "RTU"
+        McuModbusFrameFormat.ASCII -> "ASCII"
+    }
+}
+
+fun McuModbusAtomicAction.displayName(): String {
+    return when (this) {
+        McuModbusAtomicAction.GPIO_WRITE -> "GPIO 电平"
+        McuModbusAtomicAction.GPIO_MODE -> "GPIO 模式"
+        McuModbusAtomicAction.PWM_DUTY -> "PWM 占空比"
+        McuModbusAtomicAction.SERVO_ANGLE -> "舵机角度"
+    }
+}
+
+fun McuModbusGpioMode.displayName(): String {
+    return when (this) {
+        McuModbusGpioMode.INPUT -> "输入"
+        McuModbusGpioMode.OUTPUT -> "输出"
+        McuModbusGpioMode.INPUT_PULL_UP -> "上拉输入"
+    }
+}
+
+private fun McuModbusGpioMode.code(): Int {
+    return when (this) {
+        McuModbusGpioMode.INPUT -> 0
+        McuModbusGpioMode.OUTPUT -> 1
+        McuModbusGpioMode.INPUT_PULL_UP -> 2
     }
 }
 

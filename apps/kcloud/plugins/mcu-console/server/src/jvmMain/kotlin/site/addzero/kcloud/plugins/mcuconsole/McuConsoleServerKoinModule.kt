@@ -115,6 +115,11 @@ class McuConsoleServerKoinModule {
     }
 
     @Single
+    fun provideTransportProbeService(): McuTransportProbeService {
+        return McuTransportProbeService()
+    }
+
+    @Single
     fun provideAutomicModbusConfigProvider(): AutomicModbusApiGeneratedRtuConfigProvider {
         return AutomicModbusApiGeneratedRtuConfigProvider()
     }

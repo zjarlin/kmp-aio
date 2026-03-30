@@ -6,4 +6,5 @@ expect object McuConsoleApiClient {
     val scriptApi: McuScriptApi
     val flashApi: McuFlashApi
     val runtimeApi: McuRuntimeApi
+    val modbusApi: McuModbusApi
 }

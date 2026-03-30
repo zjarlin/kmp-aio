@@ -16,31 +16,25 @@ actual object McuConsoleApiClient {
         baseUrl = value.ifBlank { defaultBaseUrl }
     }
 
-    actual val sessionApi: McuSessionApi
-        get() = Ktorfit.Builder()
+    private fun createKtorfit(): Ktorfit {
+        return Ktorfit.Builder()
             .baseUrl(baseUrl.ifBlank { defaultBaseUrl })
             .httpClient(httpClientFactory.get(httpClientProfile))
             .build()
-            .createMcuSessionApi()
+    }
+
+    actual val sessionApi: McuSessionApi
+        get() = createKtorfit().createMcuSessionApi()
 
     actual val scriptApi: McuScriptApi
-        get() = Ktorfit.Builder()
-            .baseUrl(baseUrl.ifBlank { defaultBaseUrl })
-            .httpClient(httpClientFactory.get(httpClientProfile))
-            .build()
-            .createMcuScriptApi()
+        get() = createKtorfit().createMcuScriptApi()
 
     actual val flashApi: McuFlashApi
-        get() = Ktorfit.Builder()
-            .baseUrl(baseUrl.ifBlank { defaultBaseUrl })
-            .httpClient(httpClientFactory.get(httpClientProfile))
-            .build()
-            .createMcuFlashApi()
+        get() = createKtorfit().createMcuFlashApi()
 
     actual val runtimeApi: McuRuntimeApi
-        get() = Ktorfit.Builder()
-            .baseUrl(baseUrl.ifBlank { defaultBaseUrl })
-            .httpClient(httpClientFactory.get(httpClientProfile))
-            .build()
-            .createMcuRuntimeApi()
+        get() = createKtorfit().createMcuRuntimeApi()
+
+    actual val modbusApi: McuModbusApi
+        get() = createKtorfit().createMcuModbusApi()
 }

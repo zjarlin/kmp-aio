@@ -35,6 +35,19 @@ enum class McuBluetoothMode {
 }
 
 @Serializable
+enum class McuModbusSerialParity {
+    NONE,
+    EVEN,
+    ODD,
+}
+
+@Serializable
+enum class McuModbusFrameFormat {
+    RTU,
+    ASCII,
+}
+
+@Serializable
 data class McuSerialTransportConfig(
     val portPath: String? = null,
     val baudRate: Int = 115200,
@@ -45,7 +58,11 @@ data class McuModbusRtuTransportConfig(
     val portPath: String? = null,
     val baudRate: Int = 115200,
     val unitId: Int = 1,
-    val timeoutMs: Int = 1000,
+    val dataBits: Int = 8,
+    val stopBits: Int = 1,
+    val parity: McuModbusSerialParity = McuModbusSerialParity.NONE,
+    val timeoutMs: Long = 1000,
+    val retries: Int = 2,
 )
 
 @Serializable
@@ -76,6 +93,109 @@ data class McuMqttTransportConfig(
     val subscribeTopic: String = "",
     val qos: Int = 0,
     val keepAliveSeconds: Int = 60,
+)
+
+@Serializable
+enum class McuModbusAtomicAction {
+    GPIO_WRITE,
+    GPIO_MODE,
+    PWM_DUTY,
+    SERVO_ANGLE,
+}
+
+@Serializable
+enum class McuModbusGpioMode {
+    INPUT,
+    OUTPUT,
+    INPUT_PULL_UP,
+}
+
+@Serializable
+data class McuModbusCommandResponse(
+    val accepted: Boolean = false,
+    val summary: String = "",
+)
+
+@Serializable
+data class McuModbusGpioWriteRequest(
+    val portPath: String? = null,
+    val unitId: Int? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: McuModbusSerialParity? = null,
+    val timeoutMs: Long? = null,
+    val retries: Int? = null,
+    val pin: Int = 0,
+    val high: Boolean = false,
+)
+
+@Serializable
+data class McuModbusGpioModeRequest(
+    val portPath: String? = null,
+    val unitId: Int? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: McuModbusSerialParity? = null,
+    val timeoutMs: Long? = null,
+    val retries: Int? = null,
+    val pin: Int = 0,
+    val mode: Int = 0,
+)
+
+@Serializable
+data class McuModbusPwmDutyRequest(
+    val portPath: String? = null,
+    val unitId: Int? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: McuModbusSerialParity? = null,
+    val timeoutMs: Long? = null,
+    val retries: Int? = null,
+    val pin: Int = 0,
+    val dutyU16: Int = 0,
+)
+
+@Serializable
+data class McuModbusServoAngleRequest(
+    val portPath: String? = null,
+    val unitId: Int? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: McuModbusSerialParity? = null,
+    val timeoutMs: Long? = null,
+    val retries: Int? = null,
+    val pin: Int = 0,
+    val angle: Int = 0,
+)
+
+@Serializable
+data class McuModbusTcpProbeRequest(
+    val host: String = "",
+    val port: Int = 502,
+    val unitId: Int = 1,
+    val timeoutMs: Int = 1000,
+)
+
+@Serializable
+data class McuMqttProbeRequest(
+    val brokerUrl: String = "",
+    val clientId: String = "",
+    val username: String = "",
+    val password: String = "",
+    val keepAliveSeconds: Int = 60,
+)
+
+@Serializable
+data class McuTransportProbeResponse(
+    val success: Boolean = false,
+    val transportKind: McuTransportKind = McuTransportKind.SERIAL,
+    val endpoint: String = "",
+    val lastMessage: String? = null,
+    val verifiedAt: String? = null,
 )
 
 @Serializable

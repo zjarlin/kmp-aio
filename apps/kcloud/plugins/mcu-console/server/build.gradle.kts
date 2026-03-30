@@ -33,6 +33,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:plugins:mcu-console"))
             implementation(project(":lib:ksp:metadata:modbus:modbus-runtime"))
+            implementation(libs.findLibrary("com-hivemq-hivemq-mqtt-client").get())
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("jserialcomm").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())
