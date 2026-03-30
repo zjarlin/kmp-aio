@@ -65,6 +65,8 @@ private class KCloudServerSchemaBootstrapper : JimmerDatasourceBootstrapSpi {
             "config_center_secret_version" to listOf("create_time", "update_time"),
             "config_center_service_token" to listOf("create_time", "update_time"),
             "config_center_activity_log" to listOf("create_time", "update_time"),
+            "mcu_device_profile" to listOf("last_seen_at", "create_time", "update_time"),
+            "mcu_transport_profile" to listOf("last_used_at", "create_time", "update_time"),
         )
         context.dataSource.connection.use { connection ->
             connection.createStatement().use { statement ->

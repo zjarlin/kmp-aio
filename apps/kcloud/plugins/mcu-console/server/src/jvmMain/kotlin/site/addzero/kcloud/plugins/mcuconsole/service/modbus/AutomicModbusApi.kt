@@ -20,6 +20,7 @@ import site.addzero.device.protocol.modbus.model.ModbusCommandResult
 )
 interface AutomicModbusApi {
     /**
+     * 前端按钮: Modbus 页“执行 GPIO 电平”。
      * 设置 GPIO 输出电平。
      */
     @ModbusOperation(
@@ -35,6 +36,7 @@ interface AutomicModbusApi {
     ): ModbusCommandResult
 
     /**
+     * 前端按钮: Modbus 页“执行 GPIO 模式”。
      * 设置 GPIO 模式。
      */
     @ModbusOperation(
@@ -50,6 +52,7 @@ interface AutomicModbusApi {
     ): ModbusCommandResult
 
     /**
+     * 前端按钮: Modbus 页“执行 PWM 占空比”。
      * 设置 PWM 占空比。
      */
     @ModbusOperation(
@@ -65,6 +68,7 @@ interface AutomicModbusApi {
     ): ModbusCommandResult
 
     /**
+     * 前端按钮: Modbus 页“执行舵机角度”。
      * 设置舵机角度。
      */
     @ModbusOperation(

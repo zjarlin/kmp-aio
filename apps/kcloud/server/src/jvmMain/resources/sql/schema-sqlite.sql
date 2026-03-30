@@ -305,6 +305,55 @@ CREATE TABLE IF NOT EXISTS config_center_activity_log (
     FOREIGN KEY(config_id) REFERENCES config_center_config(id)
 );
 
+CREATE TABLE IF NOT EXISTS mcu_device_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_key TEXT NOT NULL UNIQUE,
+    serial_number TEXT,
+    manufacturer TEXT,
+    vendor_id INTEGER,
+    product_id INTEGER,
+    remark TEXT,
+    last_port_path TEXT,
+    last_port_name TEXT,
+    last_seen_at TEXT,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT
+);
+
+CREATE TABLE IF NOT EXISTS mcu_transport_profile (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_key TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    transport_kind TEXT NOT NULL,
+    device_key TEXT,
+    port_path_hint TEXT,
+    baud_rate INTEGER,
+    unit_id INTEGER,
+    data_bits INTEGER,
+    stop_bits INTEGER,
+    parity TEXT,
+    timeout_ms INTEGER,
+    retries INTEGER,
+    host TEXT,
+    port INTEGER,
+    client_id TEXT,
+    username TEXT,
+    password TEXT,
+    publish_topic TEXT,
+    subscribe_topic TEXT,
+    qos INTEGER,
+    keep_alive_seconds INTEGER,
+    last_used_at TEXT,
+    create_time TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+    update_time TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_mcu_device_profile_last_seen_at
+    ON mcu_device_profile(last_seen_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_mcu_transport_profile_last_used_at
+    ON mcu_transport_profile(last_used_at DESC);
+
 CREATE INDEX IF NOT EXISTS idx_config_center_environment_project
     ON config_center_environment(project_id, sort_order, slug);
 

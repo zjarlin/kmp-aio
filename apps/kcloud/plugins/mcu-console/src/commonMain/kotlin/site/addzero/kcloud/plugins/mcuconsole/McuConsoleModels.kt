@@ -27,9 +27,8 @@ data class McuPortsResponse(
 )
 
 @Serializable
-data class McuPortRemarkUpdateRequest(
-    val deviceKey: String = "",
-    val remark: String = "",
+data class McuTransportProfilesResponse(
+    val items: List<McuTransportProfileIso> = emptyList(),
 )
 
 @Serializable
@@ -187,6 +186,7 @@ data class McuModbusServoAngleRequest(
 
 @Serializable
 data class McuModbusTcpProbeRequest(
+    val profileKey: String? = null,
     val host: String = "",
     val port: Int = 502,
     val unitId: Int = 1,
@@ -195,6 +195,7 @@ data class McuModbusTcpProbeRequest(
 
 @Serializable
 data class McuMqttProbeRequest(
+    val profileKey: String? = null,
     val brokerUrl: String = "",
     val clientId: String = "",
     val username: String = "",
@@ -213,6 +214,7 @@ data class McuTransportProbeResponse(
 
 @Serializable
 data class McuSessionOpenRequest(
+    val profileKey: String? = null,
     val portPath: String = "",
     val baudRate: Int = 115200,
 )
@@ -226,6 +228,28 @@ data class McuSignalRequest(
 @Serializable
 data class McuResetRequest(
     val pulseMs: Int = 100,
+)
+
+@Serializable
+enum class McuSerialLineEnding {
+    LF,
+    CRLF,
+    CR,
+}
+
+@Serializable
+data class McuSerialTextSendRequest(
+    val text: String = "",
+    val appendLineEnding: Boolean = true,
+    val lineEnding: McuSerialLineEnding = McuSerialLineEnding.CRLF,
+)
+
+@Serializable
+data class McuSerialTextSendResponse(
+    val accepted: Boolean = false,
+    val bytesSent: Int = 0,
+    val preview: String = "",
+    val lineEnding: McuSerialLineEnding = McuSerialLineEnding.CRLF,
 )
 
 @Serializable
@@ -248,6 +272,7 @@ data class McuSessionSnapshot(
 @Serializable
 enum class McuEventKind {
     SYSTEM,
+    TX_TEXT,
     TX_FRAME,
     RX_FRAME,
     LOG,

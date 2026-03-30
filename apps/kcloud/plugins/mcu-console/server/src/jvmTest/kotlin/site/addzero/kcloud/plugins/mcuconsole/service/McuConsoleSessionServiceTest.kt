@@ -3,6 +3,8 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 import kotlinx.serialization.json.Json
 import site.addzero.kcloud.plugins.mcuconsole.FakeSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuSerialLineEnding
+import site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
@@ -43,5 +45,36 @@ class McuConsoleSessionServiceTest {
         assertTrue(events.items.any { it.title == "会话已打开" })
         assertTrue(events.items.any { it.title == "设备复位" })
         assertEquals(115200, opened.baudRate)
+    }
+
+    @Test
+    fun `sends raw serial text and records tx event`() {
+        val service = McuConsoleSessionService(
+            gateway = gateway,
+            protocolCodec = codec,
+        )
+
+        service.openSession(
+            McuSessionOpenRequest(
+                portPath = "COM9",
+                baudRate = 115200,
+            ),
+        )
+        val response = service.sendSerialText(
+            McuSerialTextSendRequest(
+                text = "import panel_control as p\np.s(9527)",
+                appendLineEnding = true,
+                lineEnding = McuSerialLineEnding.CRLF,
+            ),
+        )
+        val connection = gateway.openedConnections.single()
+        val events = service.readRecentEvents(McuSessionLinesRequest(limit = 20))
+
+        assertTrue(response.accepted)
+        assertEquals(
+            "import panel_control as p\r\np.s(9527)\r\n",
+            connection.textWrites.last(),
+        )
+        assertTrue(events.items.any { it.title == "串口直发" })
     }
 }

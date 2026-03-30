@@ -21,18 +21,7 @@ fun listMcuPorts(): McuPortsResponse {
 }
 
 /**
- * 前端按钮: 串口浏览器“保存备注”。
- * 作用: 按稳定设备标识保存或清空本地串口备注。
- */
-@PostMapping("/api/mcu/ports/remark")
-fun updateMcuPortRemark(
-    @RequestBody request: McuPortRemarkUpdateRequest,
-): McuPortsResponse {
-    return sessionService().updatePortRemark(request)
-}
-
-/**
- * 前端按钮: 控制台“打开会话”、烧录页“刷新状态”、调试页“刷新”。
+ * 前端按钮: 控制台“打开会话”、控制台“会话状态”卡片自动刷新、烧录页“刷新状态”、调试页“刷新”。
  * 作用: 读取当前活动串口会话快照。
  */
 @GetMapping("/api/mcu/session")
@@ -72,6 +61,17 @@ fun resetMcuSession(
 }
 
 /**
+ * 前端按钮: 控制台“发送串口命令”、MicroPython 快捷操作。
+ * 作用: 直接向当前串口会话写入 UTF-8 文本，不经过 MCU VM 协议。
+ */
+@PostMapping("/api/mcu/session/send-text")
+fun sendMcuSerialText(
+    @RequestBody request: McuSerialTextSendRequest,
+): McuSerialTextSendResponse {
+    return sessionService().sendSerialText(request)
+}
+
+/**
  * 前端按钮: 控制台“开启 DTR”/“关闭 DTR”/“开启 RTS”/“关闭 RTS”。
  * 作用: 更新 DTR 和 RTS 的显式线路状态。
  */
@@ -83,7 +83,7 @@ fun updateMcuSignals(
 }
 
 /**
- * 前端按钮: 调试页“刷新”、控制台“打开会话”。
+ * 前端按钮: 控制台“实时日志”首屏加载、控制台“打开会话”、调试页“刷新”。
  * 作用: 拉取最近一批串口事件日志。
  */
 @PostMapping("/api/mcu/session/lines")
@@ -94,7 +94,7 @@ fun readMcuRecentLines(
 }
 
 /**
- * 前端按钮: 烧录页“开始烧录”/“刷新状态”。
+ * 前端按钮: 控制台“实时日志”自动轮询、烧录页“开始烧录”/“刷新状态”、调试页日志自动刷新。
  * 作用: 读取指定序号之后的增量事件。
  */
 @GetMapping("/api/mcu/events")

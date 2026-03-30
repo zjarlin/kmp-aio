@@ -13,7 +13,9 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 
-class McuTransportProbeService {
+class McuTransportProbeService(
+    private val settingsService: McuConsoleSettingsService,
+) {
     suspend fun probeModbusTcp(
         request: McuModbusTcpProbeRequest,
     ): McuTransportProbeResponse = withContext(Dispatchers.IO) {
@@ -58,7 +60,11 @@ class McuTransportProbeService {
                 transportKind = McuTransportKind.MODBUS_TCP,
                 endpoint = endpoint,
                 message = "Modbus TCP 已连通，UnitId=${request.unitId}，超时=${request.timeoutMs}ms",
-            )
+            ).also { response ->
+                if (response.success) {
+                    settingsService.markTransportProfileUsed(request.profileKey)
+                }
+            }
         } catch (throwable: Throwable) {
             failure(
                 transportKind = McuTransportKind.MODBUS_TCP,
@@ -127,7 +133,11 @@ class McuTransportProbeService {
                 transportKind = McuTransportKind.MQTT,
                 endpoint = broker.endpoint,
                 message = "MQTT Broker 已连通，clientId=${request.clientId.trim()}",
-            )
+            ).also { response ->
+                if (response.success) {
+                    settingsService.markTransportProfileUsed(request.profileKey)
+                }
+            }
         } catch (throwable: Throwable) {
             failure(
                 transportKind = McuTransportKind.MQTT,

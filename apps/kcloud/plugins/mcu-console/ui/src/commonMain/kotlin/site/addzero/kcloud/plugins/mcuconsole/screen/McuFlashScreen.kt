@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.component.button.AddIconButton
 import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
 
 @Route(
@@ -26,7 +27,6 @@ import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
             icon = "Build",
             order = 0,
         ),
-        defaultInScene = true,
     ),
 )
 @Composable
@@ -36,59 +36,65 @@ fun McuFlashScreen() {
 
     McuWorkbenchFrame(
         state = state,
-        actions = listOf(
-            McuToolbarAction("刷新资源", Icons.Default.Search) {
+        actions = {
+            AddIconButton(
+                text = "刷新资源",
+                imageVector = Icons.Default.Search,
+            ) {
                 runAction {
                     state.refreshPorts()
                     state.refreshFlashProfiles()
                     state.refreshRuntimeBundles()
                     state.refreshRuntimeStatus()
                 }
-            },
-            McuToolbarAction(
-                label = "刷内置运行时",
-                icon = Icons.Default.Build,
+            }
+            AddIconButton(
+                text = "刷内置运行时",
+                imageVector = Icons.Default.Build,
                 enabled = state.session.isOpen && state.selectedRuntimeBundle != null,
             ) {
                 runAction {
                     state.ensureRuntime(forceReflash = true)
                 }
-            },
-            McuToolbarAction(
-                label = "在线下载",
-                icon = Icons.Default.Search,
+            }
+            AddIconButton(
+                text = "在线下载",
+                imageVector = Icons.Default.Search,
                 enabled = state.canDownloadFirmwareOnline,
             ) {
                 runAction {
                     state.downloadFirmwareOnline(flashAfterDownload = false)
                 }
-            },
-            McuToolbarAction(
-                label = "在线下载并烧录",
-                icon = Icons.Default.Upload,
+            }
+            AddIconButton(
+                text = "在线下载并烧录",
+                imageVector = Icons.Default.Upload,
                 enabled = state.canDownloadFirmwareOnline,
             ) {
                 runAction {
                     state.downloadFirmwareOnline(flashAfterDownload = true)
                 }
-            },
-            McuToolbarAction(
-                label = "开始烧录",
-                icon = Icons.Default.Upload,
+            }
+            AddIconButton(
+                text = "开始烧录",
+                imageVector = Icons.Default.Upload,
                 enabled = state.canStartFlash,
             ) {
                 runAction {
                     state.startFlash()
                 }
-            },
-            McuToolbarAction("刷新状态", Icons.Default.Refresh) {
+            }
+            AddIconButton(
+                text = "刷新状态",
+                imageVector = Icons.Default.Refresh,
+            ) {
                 runAction {
                     state.refreshFlashStatus()
                     state.refreshRuntimeStatus()
                     state.loadRecentEvents()
                 }
-            },
-        ),
+            }
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),

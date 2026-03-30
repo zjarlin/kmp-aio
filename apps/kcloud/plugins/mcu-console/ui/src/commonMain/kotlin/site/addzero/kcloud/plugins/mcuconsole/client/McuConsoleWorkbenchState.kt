@@ -11,119 +11,573 @@ import kotlin.math.max
 class McuConsoleWorkbenchState(
     private val remoteService: McuConsoleRemoteService,
 ) {
-    var ports by mutableStateOf<List<McuPortSummary>>(emptyList())
+    var uiState by mutableStateOf(McuConsoleUiState())
         private set
-    var flashProfiles by mutableStateOf<List<McuFlashProfileSummary>>(emptyList())
-        private set
-    var runtimeBundles by mutableStateOf<List<McuRuntimeBundleSummary>>(emptyList())
-        private set
-    var portQuery by mutableStateOf("")
-    var selectedPortPath by mutableStateOf<String?>(null)
-        private set
-    var selectedPortDeviceKey by mutableStateOf<String?>(null)
-        private set
-    var selectedPortRemarkDraft by mutableStateOf("")
-    var selectedFlashProfileId by mutableStateOf<String?>(null)
-        private set
-    var selectedRuntimeBundleId by mutableStateOf<String?>(null)
-        private set
-    var selectedScriptExampleId by mutableStateOf<String?>(null)
-        private set
-    var selectedAtomicCommandId by mutableStateOf<String?>(null)
-        private set
-    var selectedTransportKind by mutableStateOf(McuTransportKind.SERIAL)
-        private set
-    var selectedModbusAtomicAction by mutableStateOf(McuModbusAtomicAction.GPIO_WRITE)
-        private set
-    var activeSessionTransportKind by mutableStateOf(McuTransportKind.SERIAL)
-        private set
-    var modbusConnectionNameText by mutableStateOf("RTU 主站")
-    var baudRateText by mutableStateOf("115200")
-    var modbusRtuUnitIdText by mutableStateOf("1")
-    var modbusRtuTimeoutMsText by mutableStateOf("1000")
-    var modbusRtuDataBitsText by mutableStateOf("8")
-    var modbusRtuStopBitsText by mutableStateOf("1")
-    var modbusRtuParity by mutableStateOf(McuModbusSerialParity.NONE)
-    var modbusFrameFormat by mutableStateOf(McuModbusFrameFormat.RTU)
-    var modbusRtuRetriesText by mutableStateOf("2")
-    var modbusTcpHostText by mutableStateOf("192.168.1.10")
-    var modbusTcpPortText by mutableStateOf("502")
-    var modbusTcpUnitIdText by mutableStateOf("1")
-    var modbusTcpTimeoutMsText by mutableStateOf("1000")
-    var bluetoothMode by mutableStateOf(McuBluetoothMode.BLE)
-    var bluetoothDeviceNameText by mutableStateOf("")
-    var bluetoothDeviceAddressText by mutableStateOf("")
-    var bluetoothServiceUuidText by mutableStateOf("")
-    var bluetoothWriteCharacteristicUuidText by mutableStateOf("")
-    var bluetoothNotifyCharacteristicUuidText by mutableStateOf("")
-    var mqttBrokerUrlText by mutableStateOf("tcp://127.0.0.1:1883")
-    var mqttClientIdText by mutableStateOf("kcloud-mcu-client")
-    var mqttUsernameText by mutableStateOf("")
-    var mqttPasswordText by mutableStateOf("")
-    var mqttPublishTopicText by mutableStateOf("devices/mcu/tx")
-    var mqttSubscribeTopicText by mutableStateOf("devices/mcu/rx")
-    var mqttQosText by mutableStateOf("0")
-    var mqttKeepAliveSecondsText by mutableStateOf("60")
-    var modbusGpioWritePinText by mutableStateOf("2")
-    var modbusGpioWriteHigh by mutableStateOf(true)
-    var modbusGpioModePinText by mutableStateOf("2")
-    var modbusGpioMode by mutableStateOf(McuModbusGpioMode.OUTPUT)
-    var modbusPwmPinText by mutableStateOf("4")
-    var modbusPwmDutyText by mutableStateOf("32768")
-    var modbusServoPinText by mutableStateOf("12")
-    var modbusServoAngleText by mutableStateOf("90")
-    var scriptLanguage by mutableStateOf("micropython")
-    var session by mutableStateOf(McuSessionSnapshot())
-        private set
-    var scriptStatus by mutableStateOf(McuScriptStatusResponse())
-        private set
-    var flashStatus by mutableStateOf(McuFlashStatusResponse())
-        private set
-    var runtimeStatus by mutableStateOf(McuRuntimeStatusResponse())
-        private set
-    var modbusLastExecution by mutableStateOf(McuModbusExecutionResult())
-        private set
-    var transportProbes by mutableStateOf<Map<McuTransportKind, McuTransportProbeResponse>>(emptyMap())
-        private set
-    var events by mutableStateOf<List<McuEventEnvelope>>(emptyList())
-        private set
-    var widgetInstances by mutableStateOf<List<McuWidgetInstanceState>>(emptyList())
-        private set
-    var scriptText by mutableStateOf(
-        """
-        from machine import Pin
-        from time import sleep_ms
-        led = Pin(2, Pin.OUT)
-        led.value(1)
-        sleep_ms(300)
-        led.value(0)
-        """.trimIndent(),
-    )
-    var firmwarePathText by mutableStateOf("")
-    var firmwareDownloadUrlText by mutableStateOf("")
-    var flashCommandTemplateText by mutableStateOf("")
-    var timeoutMsText by mutableStateOf("5000")
-    var feedbackMessage by mutableStateOf<String?>(null)
-        private set
-    var feedbackIsError by mutableStateOf(false)
-        private set
-    var isLoadingPorts by mutableStateOf(false)
-        private set
-    var isSubmitting by mutableStateOf(false)
-        private set
+
+    var ports: List<McuPortSummary>
+        get() = uiState.devices
+        private set(value) {
+            updateUiState { copy(devices = value) }
+        }
+
+    var deviceDraft: McuDeviceProfileIso?
+        get() = uiState.deviceDraft
+        private set(value) {
+            updateUiState { copy(deviceDraft = value) }
+        }
+
+    var transportProfiles: List<McuTransportProfileIso>
+        get() = uiState.transportProfiles
+        private set(value) {
+            updateUiState { copy(transportProfiles = value) }
+        }
+
+    var transportDraft: McuTransportProfileIso
+        get() = uiState.transportDraft
+        private set(value) {
+            updateUiState { copy(transportDraft = value) }
+        }
+
+    var flashProfiles: List<McuFlashProfileSummary>
+        get() = uiState.flashProfiles
+        private set(value) {
+            updateUiState { copy(flashProfiles = value) }
+        }
+
+    var runtimeBundles: List<McuRuntimeBundleSummary>
+        get() = uiState.runtimeBundles
+        private set(value) {
+            updateUiState { copy(runtimeBundles = value) }
+        }
+
+    var portQuery: String
+        get() = uiState.selection.portQuery
+        set(value) {
+            updateSelection { copy(portQuery = value) }
+        }
+
+    var selectedPortPath: String?
+        get() = uiState.selection.selectedPortPath
+        private set(value) {
+            updateSelection { copy(selectedPortPath = value) }
+        }
+
+    var selectedPortDeviceKey: String?
+        get() = uiState.selection.selectedPortDeviceKey
+        private set(value) {
+            updateSelection { copy(selectedPortDeviceKey = value) }
+        }
+
+    var selectedPortRemarkDraft: String
+        get() = uiState.deviceDraft?.remark.orEmpty()
+        set(value) {
+            val nextDraft = (deviceDraft ?: selectedPort.toDeviceDraft()).copy(remark = value)
+            deviceDraft = nextDraft
+        }
+
+    var selectedFlashProfileId: String?
+        get() = uiState.selection.selectedFlashProfileId
+        private set(value) {
+            updateSelection { copy(selectedFlashProfileId = value) }
+        }
+
+    var selectedRuntimeBundleId: String?
+        get() = uiState.selection.selectedRuntimeBundleId
+        private set(value) {
+            updateSelection { copy(selectedRuntimeBundleId = value) }
+        }
+
+    var selectedScriptExampleId: String?
+        get() = uiState.selection.selectedScriptExampleId
+        private set(value) {
+            updateSelection { copy(selectedScriptExampleId = value) }
+        }
+
+    var selectedAtomicCommandId: String?
+        get() = uiState.selection.selectedAtomicCommandId
+        private set(value) {
+            updateSelection { copy(selectedAtomicCommandId = value) }
+        }
+
+    var selectedTransportKind: McuTransportKind
+        get() = uiState.selection.selectedTransportKind
+        private set(value) {
+            updateSelection { copy(selectedTransportKind = value) }
+        }
+
+    var selectedModbusAtomicAction: McuModbusAtomicAction
+        get() = uiState.selection.selectedModbusAtomicAction
+        private set(value) {
+            updateSelection { copy(selectedModbusAtomicAction = value) }
+        }
+
+    var activeSessionTransportKind: McuTransportKind
+        get() = uiState.selection.activeSessionTransportKind
+        private set(value) {
+            updateSelection { copy(activeSessionTransportKind = value) }
+        }
+
+    var modbusConnectionNameText: String
+        get() = transportDraft.name
+        set(value) {
+            updateTransportDraft {
+                copy(name = value.ifBlank { selectedTransportKind.defaultDraftName() })
+            }
+        }
+
+    var baudRateText: String
+        get() = transportDraft.baudRate?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(baudRate = value.toIntOrNull()) }
+        }
+
+    var modbusRtuUnitIdText: String
+        get() = transportDraft.unitId?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(unitId = value.toIntOrNull()) }
+        }
+
+    var modbusRtuTimeoutMsText: String
+        get() = transportDraft.timeoutMs?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
+        }
+
+    var modbusRtuDataBitsText: String
+        get() = transportDraft.dataBits?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(dataBits = value.toIntOrNull()) }
+        }
+
+    var modbusRtuStopBitsText: String
+        get() = transportDraft.stopBits?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(stopBits = value.toIntOrNull()) }
+        }
+
+    var modbusRtuParity: McuModbusSerialParity
+        get() = transportDraft.parity ?: McuModbusSerialParity.NONE
+        set(value) {
+            updateTransportDraft { copy(parity = value) }
+        }
+
+    var modbusFrameFormat: McuModbusFrameFormat
+        get() = uiState.modbus.frameFormat
+        set(value) {
+            updateModbusState { copy(frameFormat = value) }
+        }
+
+    var modbusRtuRetriesText: String
+        get() = transportDraft.retries?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(retries = value.toIntOrNull()) }
+        }
+
+    var modbusTcpHostText: String
+        get() = transportDraft.host.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(host = value.ifBlank { null }) }
+        }
+
+    var modbusTcpPortText: String
+        get() = transportDraft.port?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(port = value.toIntOrNull()) }
+        }
+
+    var modbusTcpUnitIdText: String
+        get() = transportDraft.unitId?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(unitId = value.toIntOrNull()) }
+        }
+
+    var modbusTcpTimeoutMsText: String
+        get() = transportDraft.timeoutMs?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
+        }
+
+    var bluetoothMode: McuBluetoothMode
+        get() = uiState.bluetooth.mode
+        set(value) {
+            updateBluetoothState { copy(mode = value) }
+        }
+
+    var bluetoothDeviceNameText: String
+        get() = uiState.bluetooth.deviceNameText
+        set(value) {
+            updateBluetoothState { copy(deviceNameText = value) }
+        }
+
+    var bluetoothDeviceAddressText: String
+        get() = uiState.bluetooth.deviceAddressText
+        set(value) {
+            updateBluetoothState { copy(deviceAddressText = value) }
+        }
+
+    var bluetoothServiceUuidText: String
+        get() = uiState.bluetooth.serviceUuidText
+        set(value) {
+            updateBluetoothState { copy(serviceUuidText = value) }
+        }
+
+    var bluetoothWriteCharacteristicUuidText: String
+        get() = uiState.bluetooth.writeCharacteristicUuidText
+        set(value) {
+            updateBluetoothState { copy(writeCharacteristicUuidText = value) }
+        }
+
+    var bluetoothNotifyCharacteristicUuidText: String
+        get() = uiState.bluetooth.notifyCharacteristicUuidText
+        set(value) {
+            updateBluetoothState { copy(notifyCharacteristicUuidText = value) }
+        }
+
+    var mqttBrokerUrlText: String
+        get() = transportDraft.host.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(host = value.ifBlank { null }) }
+        }
+
+    var mqttClientIdText: String
+        get() = transportDraft.clientId.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(clientId = value.ifBlank { null }) }
+        }
+
+    var mqttUsernameText: String
+        get() = transportDraft.username.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(username = value.ifBlank { null }) }
+        }
+
+    var mqttPasswordText: String
+        get() = transportDraft.password.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(password = value.ifBlank { null }) }
+        }
+
+    var mqttPublishTopicText: String
+        get() = transportDraft.publishTopic.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(publishTopic = value.ifBlank { null }) }
+        }
+
+    var mqttSubscribeTopicText: String
+        get() = transportDraft.subscribeTopic.orEmpty()
+        set(value) {
+            updateTransportDraft { copy(subscribeTopic = value.ifBlank { null }) }
+        }
+
+    var mqttQosText: String
+        get() = transportDraft.qos?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(qos = value.toIntOrNull()) }
+        }
+
+    var mqttKeepAliveSecondsText: String
+        get() = transportDraft.keepAliveSeconds?.toString().orEmpty()
+        set(value) {
+            updateTransportDraft { copy(keepAliveSeconds = value.toIntOrNull()) }
+        }
+
+    var modbusGpioWritePinText: String
+        get() = uiState.modbus.gpioWritePinText
+        set(value) {
+            updateModbusState { copy(gpioWritePinText = value) }
+        }
+
+    var modbusGpioWriteHigh: Boolean
+        get() = uiState.modbus.gpioWriteHigh
+        set(value) {
+            updateModbusState { copy(gpioWriteHigh = value) }
+        }
+
+    var modbusGpioModePinText: String
+        get() = uiState.modbus.gpioModePinText
+        set(value) {
+            updateModbusState { copy(gpioModePinText = value) }
+        }
+
+    var modbusGpioMode: McuModbusGpioMode
+        get() = uiState.modbus.gpioMode
+        set(value) {
+            updateModbusState { copy(gpioMode = value) }
+        }
+
+    var modbusPwmPinText: String
+        get() = uiState.modbus.pwmPinText
+        set(value) {
+            updateModbusState { copy(pwmPinText = value) }
+        }
+
+    var modbusPwmDutyText: String
+        get() = uiState.modbus.pwmDutyText
+        set(value) {
+            updateModbusState { copy(pwmDutyText = value) }
+        }
+
+    var modbusServoPinText: String
+        get() = uiState.modbus.servoPinText
+        set(value) {
+            updateModbusState { copy(servoPinText = value) }
+        }
+
+    var modbusServoAngleText: String
+        get() = uiState.modbus.servoAngleText
+        set(value) {
+            updateModbusState { copy(servoAngleText = value) }
+        }
+
+    var scriptLanguage: String
+        get() = uiState.scriptEditor.language
+        set(value) {
+            updateScriptEditor { copy(language = value) }
+        }
+
+    var session: McuSessionSnapshot
+        get() = uiState.session
+        private set(value) {
+            updateUiState { copy(session = value) }
+        }
+
+    var scriptStatus: McuScriptStatusResponse
+        get() = uiState.scriptStatus
+        private set(value) {
+            updateUiState { copy(scriptStatus = value) }
+        }
+
+    var flashStatus: McuFlashStatusResponse
+        get() = uiState.flashStatus
+        private set(value) {
+            updateUiState { copy(flashStatus = value) }
+        }
+
+    var runtimeStatus: McuRuntimeStatusResponse
+        get() = uiState.runtimeStatus
+        private set(value) {
+            updateUiState { copy(runtimeStatus = value) }
+        }
+
+    var modbusLastExecution: McuModbusExecutionResult
+        get() = uiState.modbusLastExecution
+        private set(value) {
+            updateUiState { copy(modbusLastExecution = value) }
+        }
+
+    var transportProbes: Map<McuTransportKind, McuTransportProbeResponse>
+        get() = uiState.transportProbes
+        private set(value) {
+            updateUiState { copy(transportProbes = value) }
+        }
+
+    var events: List<McuEventEnvelope>
+        get() = uiState.events
+        private set(value) {
+            updateUiState { copy(events = value) }
+        }
+
+    var widgetInstances: List<McuWidgetInstanceState>
+        get() = uiState.widgetInstances
+        private set(value) {
+            updateUiState { copy(widgetInstances = value) }
+        }
+
+    var scriptText: String
+        get() = uiState.scriptEditor.scriptText
+        set(value) {
+            updateScriptEditor { copy(scriptText = value) }
+        }
+
+    var serialCommandText: String
+        get() = uiState.serialConsole.commandText
+        set(value) {
+            updateSerialConsoleState { copy(commandText = value) }
+        }
+
+    var serialCommandAppendLineEnding: Boolean
+        get() = uiState.serialConsole.appendLineEnding
+        set(value) {
+            updateSerialConsoleState { copy(appendLineEnding = value) }
+        }
+
+    var serialCommandLineEnding: McuSerialLineEnding
+        get() = uiState.serialConsole.lineEnding
+        set(value) {
+            updateSerialConsoleState { copy(lineEnding = value) }
+        }
+
+    var panelControlModuleText: String
+        get() = uiState.panelControl.moduleText
+        set(value) {
+            updatePanelControlState { copy(moduleText = value) }
+        }
+
+    var panelDisplayValueText: String
+        get() = uiState.panelControl.displayValueText
+        set(value) {
+            updatePanelControlState { copy(displayValueText = value) }
+        }
+
+    var panelBeepTimesText: String
+        get() = uiState.panelControl.beepTimesText
+        set(value) {
+            updatePanelControlState { copy(beepTimesText = value) }
+        }
+
+    var panelLedIndexText: String
+        get() = uiState.panelControl.ledIndexText
+        set(value) {
+            updatePanelControlState { copy(ledIndexText = value) }
+        }
+
+    var firmwarePathText: String
+        get() = uiState.flashEditor.firmwarePathText
+        set(value) {
+            updateFlashEditor { copy(firmwarePathText = value) }
+        }
+
+    var firmwareDownloadUrlText: String
+        get() = uiState.flashEditor.firmwareDownloadUrlText
+        set(value) {
+            updateFlashEditor { copy(firmwareDownloadUrlText = value) }
+        }
+
+    var flashCommandTemplateText: String
+        get() = uiState.flashEditor.flashCommandTemplateText
+        set(value) {
+            updateFlashEditor { copy(flashCommandTemplateText = value) }
+        }
+
+    var timeoutMsText: String
+        get() = uiState.scriptEditor.timeoutMsText
+        set(value) {
+            updateScriptEditor { copy(timeoutMsText = value) }
+        }
+
+    var feedbackMessage: String?
+        get() = uiState.feedback.message
+        private set(value) {
+            updateFeedbackState { copy(message = value) }
+        }
+
+    var feedbackIsError: Boolean
+        get() = uiState.feedback.isError
+        private set(value) {
+            updateFeedbackState { copy(isError = value) }
+        }
+
+    var isLoadingPorts: Boolean
+        get() = uiState.loading.isLoadingPorts
+        private set(value) {
+            updateLoadingState { copy(isLoadingPorts = value) }
+        }
+
+    var isSubmitting: Boolean
+        get() = uiState.loading.isSubmitting
+        private set(value) {
+            updateLoadingState { copy(isSubmitting = value) }
+        }
 
     private var lastSeenSeq: Long = 0
     private var widgetInstanceSequence = 0
     private var autoFilledFirmwarePath: String? = null
     private var autoFilledFirmwareDownloadUrl: String? = null
 
+    private inline fun updateUiState(
+        transform: McuConsoleUiState.() -> McuConsoleUiState,
+    ) {
+        uiState = uiState.transform()
+    }
+
+    private inline fun updateSelection(
+        transform: McuConsoleSelectionState.() -> McuConsoleSelectionState,
+    ) {
+        updateUiState {
+            copy(selection = selection.transform())
+        }
+    }
+
+    private inline fun updateTransportDraft(
+        transform: McuTransportProfileIso.() -> McuTransportProfileIso,
+    ) {
+        updateUiState {
+            copy(transportDraft = transportDraft.transform())
+        }
+    }
+
+    private inline fun updateModbusState(
+        transform: McuConsoleModbusState.() -> McuConsoleModbusState,
+    ) {
+        updateUiState {
+            copy(modbus = modbus.transform())
+        }
+    }
+
+    private inline fun updateBluetoothState(
+        transform: McuConsoleBluetoothState.() -> McuConsoleBluetoothState,
+    ) {
+        updateUiState {
+            copy(bluetooth = bluetooth.transform())
+        }
+    }
+
+    private inline fun updateSerialConsoleState(
+        transform: McuConsoleSerialConsoleState.() -> McuConsoleSerialConsoleState,
+    ) {
+        updateUiState {
+            copy(serialConsole = serialConsole.transform())
+        }
+    }
+
+    private inline fun updatePanelControlState(
+        transform: McuConsolePanelControlState.() -> McuConsolePanelControlState,
+    ) {
+        updateUiState {
+            copy(panelControl = panelControl.transform())
+        }
+    }
+
+    private inline fun updateScriptEditor(
+        transform: McuConsoleScriptEditorState.() -> McuConsoleScriptEditorState,
+    ) {
+        updateUiState {
+            copy(scriptEditor = scriptEditor.transform())
+        }
+    }
+
+    private inline fun updateFlashEditor(
+        transform: McuConsoleFlashEditorState.() -> McuConsoleFlashEditorState,
+    ) {
+        updateUiState {
+            copy(flashEditor = flashEditor.transform())
+        }
+    }
+
+    private inline fun updateFeedbackState(
+        transform: McuConsoleFeedbackState.() -> McuConsoleFeedbackState,
+    ) {
+        updateUiState {
+            copy(feedback = feedback.transform())
+        }
+    }
+
+    private inline fun updateLoadingState(
+        transform: McuConsoleLoadingState.() -> McuConsoleLoadingState,
+    ) {
+        updateUiState {
+            copy(loading = loading.transform())
+        }
+    }
+
     val filteredPorts: List<McuPortSummary>
         get() {
+            val source = ports.sortedByWorkbenchPriority()
             val keyword = portQuery.trim()
             if (keyword.isBlank()) {
-                return ports
+                return source
             }
-            return ports.filter { port ->
+            return source.filter { port ->
                 listOf(
                     port.portName,
                     port.portPath,
@@ -218,6 +672,11 @@ class McuConsoleWorkbenchState(
             (activeSessionTransportKind == McuTransportKind.SERIAL ||
                 activeSessionTransportKind == McuTransportKind.MODBUS_RTU)
 
+    val canSendDirectSerialText: Boolean
+        get() = session.isOpen &&
+            activeSessionTransportKind == McuTransportKind.SERIAL &&
+            !isSubmitting
+
     val selectedTransportNotice: String
         get() = when (selectedTransportKind) {
             McuTransportKind.SERIAL -> "直接打开本机串口，并复用现有 MCU VM 运行时链路。"
@@ -260,7 +719,15 @@ class McuConsoleWorkbenchState(
         selectedPortPath = portPath
         val selected = ports.firstOrNull { it.portPath == portPath }
         selectedPortDeviceKey = selected?.deviceKey?.takeIf { it.isNotBlank() }
-        selectedPortRemarkDraft = selected?.remark.orEmpty()
+        deviceDraft = selected.toDeviceDraft(deviceDraft)
+        if (selected != null) {
+            updateTransportDraft {
+                copy(
+                    deviceKey = selected.deviceKey.ifBlank { null },
+                    portPathHint = selected.portPath.ifBlank { null },
+                )
+            }
+        }
     }
 
     fun updateSelectedPortRemarkDraft(
@@ -273,6 +740,12 @@ class McuConsoleWorkbenchState(
         kind: McuTransportKind,
     ) {
         selectedTransportKind = kind
+        updateTransportDraft {
+            copy(
+                transportKind = kind,
+                name = name.ifBlank { kind.defaultDraftName() },
+            )
+        }
     }
 
     fun selectModbusAtomicAction(
@@ -405,6 +878,7 @@ class McuConsoleWorkbenchState(
         isLoadingPorts = true
         try {
             val loadedPorts = remoteService.listPorts()
+                .sortedByWorkbenchPriority()
             ports = loadedPorts
             val nextSelectedPort = when {
                 session.portPath != null -> loadedPorts.firstOrNull { it.portPath == session.portPath }
@@ -437,6 +911,24 @@ class McuConsoleWorkbenchState(
         }
     }
 
+    suspend fun refreshTransportProfiles() {
+        try {
+            val loadedProfiles = remoteService.listTransportProfiles()
+            transportProfiles = loadedProfiles
+            val currentProfile = transportDraft.profileKey
+                .takeIf { it.isNotBlank() }
+                ?.let { profileKey ->
+                    loadedProfiles.firstOrNull { profile -> profile.profileKey == profileKey }
+                }
+            if (currentProfile != null) {
+                transportDraft = currentProfile
+                selectedTransportKind = currentProfile.transportKind
+            }
+        } catch (throwable: Throwable) {
+            reportError(throwable)
+        }
+    }
+
     suspend fun saveSelectedPortRemark() {
         val selected = selectedPort
             ?: run {
@@ -455,16 +947,23 @@ class McuConsoleWorkbenchState(
                 "串口备注已保存"
             },
         ) {
-            val updatedPorts = remoteService.updatePortRemark(
-                McuPortRemarkUpdateRequest(
+            val savedDraft = remoteService.saveDeviceProfile(
+                (deviceDraft ?: selected.toDeviceDraft()).copy(
                     deviceKey = deviceKey,
-                    remark = selectedPortRemarkDraft,
+                    serialNumber = selected.serialNumber.ifBlank { null },
+                    manufacturer = selected.manufacturer.ifBlank { null },
+                    vendorId = selected.vendorId,
+                    productId = selected.productId,
+                    lastPortPath = selected.portPath.ifBlank { null },
+                    lastPortName = selected.portName.ifBlank { null },
+                    remark = selectedPortRemarkDraft.ifBlank { null },
                 ),
             )
-            ports = updatedPorts
-            val nextSelected = updatedPorts.firstOrNull { port ->
+            deviceDraft = savedDraft
+            refreshPorts()
+            val nextSelected = ports.firstOrNull { port ->
                 port.deviceKey == deviceKey
-            } ?: updatedPorts.firstOrNull { port ->
+            } ?: ports.firstOrNull { port ->
                 port.portPath == selected.portPath
             }
             selectPort(nextSelected?.portPath)
@@ -563,6 +1062,19 @@ class McuConsoleWorkbenchState(
     }
 
     suspend fun refreshRuntimeStatus() {
+        if (!session.isOpen) {
+            val selectedBundle = selectedRuntimeBundle
+            runtimeStatus = McuRuntimeStatusResponse(
+                state = McuRuntimeEnsureState.IDLE,
+                bundleId = selectedBundle?.bundleId,
+                bundleTitle = selectedBundle?.title,
+                runtimeKind = selectedBundle?.runtimeKind,
+                mcuFamily = selectedBundle?.mcuFamily,
+                defaultFlashProfileId = selectedBundle?.defaultFlashProfileId,
+                baudRate = selectedBundle?.defaultBaudRate,
+            )
+            return
+        }
         try {
             applyRuntimeStatus(remoteService.getRuntimeStatus())
         } catch (throwable: Throwable) {
@@ -572,15 +1084,53 @@ class McuConsoleWorkbenchState(
 
     suspend fun refreshAll() {
         refreshPorts()
+        refreshTransportProfiles()
         refreshFlashProfiles()
         refreshRuntimeBundles()
         refreshSession()
         refreshFlashStatus()
-        refreshRuntimeStatus()
+        if (session.isOpen) {
+            refreshRuntimeStatus()
+        }
         if (events.isEmpty()) {
             loadRecentEvents()
         } else {
             pollEvents()
+        }
+    }
+
+    suspend fun saveCurrentTransportProfile() {
+        runSubmitting("连接配置已保存") {
+            persistTransportDraft(selectedTransportKind)
+        }
+    }
+
+    fun applyTransportProfile(
+        profileKey: String,
+    ) {
+        val profile = transportProfiles.firstOrNull { item -> item.profileKey == profileKey } ?: return
+        transportDraft = profile
+        selectedTransportKind = profile.transportKind
+        profile.deviceKey
+            ?.takeIf { key -> key.isNotBlank() }
+            ?.let { deviceKey ->
+                val matchedPort = ports.firstOrNull { port -> port.deviceKey == deviceKey }
+                    ?: profile.portPathHint?.let { portPath ->
+                        ports.firstOrNull { port -> port.portPath == portPath }
+                    }
+                selectPort(matchedPort?.portPath)
+            }
+    }
+
+    suspend fun deleteTransportProfile(
+        profileKey: String,
+    ) {
+        runSubmitting("连接配置已删除") {
+            val updatedProfiles = remoteService.deleteTransportProfile(profileKey)
+            transportProfiles = updatedProfiles
+            if (transportDraft.profileKey == profileKey) {
+                transportDraft = defaultTransportDraft(selectedTransportKind)
+            }
         }
     }
 
@@ -666,6 +1216,92 @@ class McuConsoleWorkbenchState(
                 ),
             )
         }
+    }
+
+    suspend fun sendSerialCommand() {
+        val command = serialCommandText.trimEnd()
+        if (command.isBlank()) {
+            updateFeedback("串口命令不能为空", true)
+            return
+        }
+        if (!canSendDirectSerialText) {
+            updateFeedback("请先打开串口会话", true)
+            return
+        }
+        runSubmitting("串口命令已发送") {
+            remoteService.sendSerialText(
+                McuSerialTextSendRequest(
+                    text = command,
+                    appendLineEnding = serialCommandAppendLineEnding,
+                    lineEnding = serialCommandLineEnding,
+                ),
+            )
+            pollEvents()
+        }
+    }
+
+    suspend fun sendPanelDisplayCommand() {
+        val value = panelDisplayValueText.trim()
+        if (value.isBlank()) {
+            updateFeedback("显示内容不能为空", true)
+            return
+        }
+        sendPanelControlCommand(
+            commandLines = listOf("p.s(${value.toPythonLiteralOrNumber()})"),
+            successMessage = "数码管命令已发送",
+        )
+    }
+
+    suspend fun sendPanelBeepCommand() {
+        val times = requireIntInRange(
+            value = panelBeepTimesText,
+            label = "蜂鸣器次数",
+            min = 1,
+            max = 20,
+        ) ?: return
+        sendPanelControlCommand(
+            commandLines = listOf("p.b($times)"),
+            successMessage = "蜂鸣器命令已发送",
+        )
+    }
+
+    suspend fun sendPanelLedCommand(
+        enabled: Boolean,
+    ) {
+        val index = requireIntInRange(
+            value = panelLedIndexText,
+            label = "LED 序号",
+            min = 0,
+            max = 7,
+        ) ?: return
+        sendPanelControlCommand(
+            commandLines = listOf("p.l($index, ${if (enabled) "True" else "False"})"),
+            successMessage = if (enabled) {
+                "LED 点亮命令已发送"
+            } else {
+                "LED 熄灭命令已发送"
+            },
+        )
+    }
+
+    suspend fun sendPanelAllLedCommand(
+        enabled: Boolean,
+    ) {
+        sendPanelControlCommand(
+            commandLines = listOf("p.${if (enabled) "all_on" else "all_off"}()"),
+            successMessage = if (enabled) {
+                "全亮命令已发送"
+            } else {
+                "全灭命令已发送"
+            },
+        )
+    }
+
+    suspend fun sendPanelClearDisplayCommand() {
+        sendPanelControlCommand(
+            commandLines = listOf("p.c()"),
+            successMessage = "清屏命令已发送",
+        )
     }
 
     suspend fun executeSelectedModbusAction() {
@@ -1156,6 +1792,41 @@ class McuConsoleWorkbenchState(
         feedbackIsError = isError
     }
 
+    private suspend fun sendPanelControlCommand(
+        commandLines: List<String>,
+        successMessage: String,
+    ) {
+        if (!canSendDirectSerialText) {
+            updateFeedback("请先打开串口会话", true)
+            return
+        }
+        val moduleName = panelControlModuleText.trim()
+        if (moduleName.isBlank()) {
+            updateFeedback("panel_control 模块名不能为空", true)
+            return
+        }
+        val script = buildString {
+            append("import ")
+            append(moduleName)
+            append(" as p\n")
+            commandLines.forEach { line ->
+                append(line)
+                append('\n')
+            }
+        }.trimEnd()
+        serialCommandText = script
+        runSubmitting(successMessage) {
+            remoteService.sendSerialText(
+                McuSerialTextSendRequest(
+                    text = script,
+                    appendLineEnding = true,
+                    lineEnding = serialCommandLineEnding,
+                ),
+            )
+            pollEvents()
+        }
+    }
+
     fun selectedModbusActionReferenceRows(): List<Pair<String, String>> {
         return when (selectedModbusAtomicAction) {
             McuModbusAtomicAction.GPIO_WRITE -> listOf(
@@ -1386,11 +2057,13 @@ class McuConsoleWorkbenchState(
             ?: run {
                 updateFeedback("波特率无效", true)
                 return
-            }
+        }
         isSubmitting = true
         try {
+            val savedProfile = persistTransportDraft(transportKind)
             session = remoteService.openSession(
                 McuSessionOpenRequest(
+                    profileKey = savedProfile.profileKey,
                     portPath = portPath,
                     baudRate = baudRate,
                 ),
@@ -1419,8 +2092,10 @@ class McuConsoleWorkbenchState(
     private suspend fun probeModbusTcpTransport() {
         isSubmitting = true
         try {
+            val savedProfile = persistTransportDraft(McuTransportKind.MODBUS_TCP)
             val response = remoteService.probeModbusTcp(
                 McuModbusTcpProbeRequest(
+                    profileKey = savedProfile.profileKey,
                     host = modbusTcpHostText.trim(),
                     port = requirePositiveInt(modbusTcpPortText, "Modbus TCP 端口") ?: return,
                     unitId = requirePositiveInt(modbusTcpUnitIdText, "Modbus TCP UnitId") ?: return,
@@ -1442,8 +2117,10 @@ class McuConsoleWorkbenchState(
     private suspend fun probeMqttTransport() {
         isSubmitting = true
         try {
+            val savedProfile = persistTransportDraft(McuTransportKind.MQTT)
             val response = remoteService.probeMqtt(
                 McuMqttProbeRequest(
+                    profileKey = savedProfile.profileKey,
                     brokerUrl = mqttBrokerUrlText.trim(),
                     clientId = mqttClientIdText.trim(),
                     username = mqttUsernameText.trim(),
@@ -1467,6 +2144,34 @@ class McuConsoleWorkbenchState(
         response: McuTransportProbeResponse,
     ) {
         transportProbes = transportProbes + (response.transportKind to response)
+    }
+
+    private suspend fun persistTransportDraft(
+        kind: McuTransportKind,
+    ): McuTransportProfileIso {
+        val selected = selectedPort
+        val saved = remoteService.saveTransportProfile(
+            transportDraft.copy(
+                name = transportDraft.name.ifBlank { kind.defaultDraftName() },
+                transportKind = kind,
+                deviceKey = when (kind) {
+                    McuTransportKind.SERIAL,
+                    McuTransportKind.MODBUS_RTU,
+                    -> selected?.deviceKey?.ifBlank { null } ?: transportDraft.deviceKey
+                    else -> transportDraft.deviceKey
+                },
+                portPathHint = when (kind) {
+                    McuTransportKind.SERIAL,
+                    McuTransportKind.MODBUS_RTU,
+                    -> selected?.portPath?.ifBlank { null } ?: transportDraft.portPathHint
+                    else -> transportDraft.portPathHint
+                },
+            ),
+        )
+        transportDraft = saved
+        selectedTransportKind = saved.transportKind
+        transportProfiles = remoteService.listTransportProfiles()
+        return saved
     }
 
     private fun transportProbeStatus(
@@ -1521,7 +2226,7 @@ class McuConsoleWorkbenchState(
             updateFeedback("MQTT ClientId 不能为空", true)
             return false
         }
-        if (requirePositiveInt(mqttQosText, "MQTT QoS") == null) {
+        if (requireIntInRange(mqttQosText, "MQTT QoS", 0, 2) == null) {
             return false
         }
         if (requirePositiveInt(mqttKeepAliveSecondsText, "MQTT KeepAlive") == null) {
@@ -1595,6 +2300,12 @@ class McuConsoleWorkbenchState(
         }
         return parsed
     }
+
+    private fun String.toPythonLiteralOrNumber(): String {
+        val normalized = trim()
+        return normalized.toIntOrNull()?.toString()
+            ?: "\"${normalized.escapePythonString()}\""
+    }
 }
 
 data class McuWidgetInstanceState(
@@ -1623,6 +2334,54 @@ data class McuModbusExecutionResult(
 
 private fun McuRuntimeBundleSummary.defaultLanguage(): String {
     return "micropython"
+}
+
+private fun List<McuPortSummary>.sortedByWorkbenchPriority(): List<McuPortSummary> {
+    return sortedWith(
+        compareByDescending<McuPortSummary> { port -> port.workbenchPriority() }
+            .thenBy { port -> port.portPath.lowercase() },
+    )
+}
+
+private fun McuPortSummary.workbenchPriority(): Int {
+    var score = 0
+    if (serialNumber.isNotBlank()) {
+        score += 400
+    }
+    if (vendorId != null || productId != null) {
+        score += 260
+    }
+    if (portPath.startsWith("/dev/cu.")) {
+        score += 120
+    }
+    if (portPath.startsWith("COM", ignoreCase = true)) {
+        score += 120
+    }
+    if (portPath.startsWith("/dev/tty.")) {
+        score += 30
+    }
+    if (portPath.contains("usb", ignoreCase = true) ||
+        portName.contains("usb", ignoreCase = true) ||
+        description.contains("usb", ignoreCase = true)
+    ) {
+        score += 80
+    }
+    if (portPath.contains("uart", ignoreCase = true) ||
+        portName.contains("uart", ignoreCase = true) ||
+        description.contains("uart", ignoreCase = true)
+    ) {
+        score += 40
+    }
+    if (portPath.contains("Bluetooth-Incoming-Port", ignoreCase = true)) {
+        score -= 500
+    }
+    if (portPath.contains("debug-console", ignoreCase = true)) {
+        score -= 300
+    }
+    if (descriptiveName.contains("Dial-In", ignoreCase = true)) {
+        score -= 80
+    }
+    return score
 }
 
 fun McuTransportKind.displayName(): String {
@@ -1657,6 +2416,14 @@ fun McuModbusFrameFormat.displayName(): String {
     }
 }
 
+fun McuSerialLineEnding.displayName(): String {
+    return when (this) {
+        McuSerialLineEnding.LF -> "LF"
+        McuSerialLineEnding.CRLF -> "CRLF"
+        McuSerialLineEnding.CR -> "CR"
+    }
+}
+
 fun McuModbusAtomicAction.displayName(): String {
     return when (this) {
         McuModbusAtomicAction.GPIO_WRITE -> "GPIO 电平"
@@ -1682,10 +2449,33 @@ private fun McuModbusGpioMode.code(): Int {
     }
 }
 
+private fun McuPortSummary?.toDeviceDraft(
+    current: McuDeviceProfileIso? = null,
+): McuDeviceProfileIso {
+    if (this == null) {
+        return current ?: McuDeviceProfileIso()
+    }
+    return (current ?: McuDeviceProfileIso()).copy(
+        deviceKey = deviceKey,
+        serialNumber = serialNumber.ifBlank { null },
+        manufacturer = manufacturer.ifBlank { null },
+        vendorId = vendorId,
+        productId = productId,
+        remark = current?.remark ?: remark.ifBlank { null },
+        lastPortPath = portPath.ifBlank { null },
+        lastPortName = portName.ifBlank { null },
+    )
+}
+
 private fun String.escapeScriptText(): String {
     return replace("\\", "\\\\")
         .replace("\"", "\\\"")
         .replace("\n", "\\n")
+}
+
+private fun String.escapePythonString(): String {
+    return replace("\\", "\\\\")
+        .replace("\"", "\\\"")
 }
 
 private fun Throwable.userFacingMessage(): String {

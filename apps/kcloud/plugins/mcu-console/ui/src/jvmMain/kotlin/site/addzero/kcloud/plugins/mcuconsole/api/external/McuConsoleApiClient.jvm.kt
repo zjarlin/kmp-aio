@@ -26,6 +26,9 @@ actual object McuConsoleApiClient {
     actual val sessionApi: McuSessionApi
         get() = createKtorfit().createMcuSessionApi()
 
+    actual val settingsApi: McuSettingsApi
+        get() = createKtorfit().createMcuSettingsApi()
+
     actual val scriptApi: McuScriptApi
         get() = createKtorfit().createMcuScriptApi()
 

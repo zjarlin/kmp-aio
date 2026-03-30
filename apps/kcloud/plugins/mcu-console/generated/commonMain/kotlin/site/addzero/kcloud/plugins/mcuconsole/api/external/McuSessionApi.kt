@@ -4,9 +4,10 @@ import de.jensklingenberg.ktorfit.http.*
 import site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuPortRemarkUpdateRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSignalRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionLinesRequest
 
@@ -45,18 +46,6 @@ interface McuSessionApi {
     ): site.addzero.kcloud.plugins.mcuconsole.McuEventBatchResponse
 
 /**
- * updateMcuPortRemark
- * HTTP方法: POST
- * 路径: /api/mcu/ports/remark
- * 参数:
- *   - request: site.addzero.kcloud.plugins.mcuconsole.McuPortRemarkUpdateRequest (RequestBody)
- * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
- */
-    @POST("/api/mcu/ports/remark")    suspend fun updateMcuPortRemark(
-        @Body request: site.addzero.kcloud.plugins.mcuconsole.McuPortRemarkUpdateRequest
-    ): site.addzero.kcloud.plugins.mcuconsole.McuPortsResponse
-
-/**
  * openMcuSession
  * HTTP方法: POST
  * 路径: /api/mcu/session/open
@@ -87,6 +76,18 @@ interface McuSessionApi {
     @POST("/api/mcu/session/reset")    suspend fun resetMcuSession(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
+
+/**
+ * sendMcuSerialText
+ * HTTP方法: POST
+ * 路径: /api/mcu/session/send-text
+ * 参数:
+ *   - request: site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendRequest (RequestBody)
+ * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendResponse
+ */
+    @POST("/api/mcu/session/send-text")    suspend fun sendMcuSerialText(
+        @Body request: site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendRequest
+    ): site.addzero.kcloud.plugins.mcuconsole.McuSerialTextSendResponse
 
 /**
  * updateMcuSignals

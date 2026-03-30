@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.component.button.AddIconButton
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusFrameFormat
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusGpioMode
@@ -55,22 +57,34 @@ fun McuModbusScreen() {
 
     McuWorkbenchFrame(
         state = state,
-        actions = listOf(
-            McuToolbarAction("扫描串口", Icons.Default.Search) {
+        actions = {
+            AddIconButton(
+                text = "扫描串口",
+                imageVector = Icons.Default.Search,
+            ) {
                 runAction {
                     state.refreshPorts()
                 }
-            },
-            McuToolbarAction(
-                label = "执行 ${state.selectedModbusAtomicAction.displayName()}",
-                icon = Icons.Default.PlayArrow,
+            }
+            AddIconButton(
+                text = "执行 ${state.selectedModbusAtomicAction.displayName()}",
+                imageVector = Icons.Default.PlayArrow,
                 enabled = state.canExecuteSelectedModbusAction,
             ) {
                 runAction {
                     state.executeSelectedModbusAction()
                 }
-            },
-        ),
+            }
+            AddIconButton(
+                text = "保存连接",
+                imageVector = Icons.Default.Save,
+                enabled = !state.isSubmitting,
+            ) {
+                runAction {
+                    state.saveCurrentTransportProfile()
+                }
+            }
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
@@ -82,7 +96,7 @@ fun McuModbusScreen() {
             ) {
                 McuInfoNotice("参考主站模拟器的布局做了连接编辑区，但当前真正接到后端的只有 Modbus RTU。")
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(260.dp),
+                    modifier = Modifier.fillMaxWidth().height(320.dp),
                 ) {
                     McuPortBrowser(
                         state = state,
@@ -93,6 +107,22 @@ fun McuModbusScreen() {
                         },
                     )
                 }
+                McuTransportProfileList(
+                    state = state,
+                    onSave = {
+                        runAction {
+                            state.saveCurrentTransportProfile()
+                        }
+                    },
+                    onApply = { profileKey ->
+                        state.applyTransportProfile(profileKey)
+                    },
+                    onDelete = { profileKey ->
+                        runAction {
+                            state.deleteTransportProfile(profileKey)
+                        }
+                    },
+                )
                 McuSummaryTable(rows = state.transportSummaryRows(McuTransportKind.MODBUS_RTU))
             }
 

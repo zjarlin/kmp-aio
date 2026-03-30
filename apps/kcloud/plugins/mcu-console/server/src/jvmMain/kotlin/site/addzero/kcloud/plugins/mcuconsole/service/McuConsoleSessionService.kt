@@ -11,7 +11,7 @@ import java.util.concurrent.CopyOnWriteArrayList
 class McuConsoleSessionService(
     private val gateway: SerialPortGateway,
     private val protocolCodec: McuVmProtocolCodec,
-    private val portRemarkStore: McuPortRemarkStore = McuPortRemarkStore.inMemory(),
+    private val settingsService: McuConsoleSettingsService? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val frameListeners = CopyOnWriteArrayList<(McuVmIncomingFrame) -> Unit>()
@@ -25,19 +25,8 @@ class McuConsoleSessionService(
 
     fun listPorts(): McuPortsResponse {
         return McuPortsResponse(
-            items = gateway.listPorts().map(::decoratePortSummary),
+            items = settingsService?.mergeLivePorts(gateway.listPorts()) ?: gateway.listPorts(),
         )
-    }
-
-    fun updatePortRemark(
-        request: McuPortRemarkUpdateRequest,
-    ): McuPortsResponse {
-        require(request.deviceKey.isNotBlank()) { "deviceKey is required" }
-        portRemarkStore.updateRemark(
-            deviceKey = request.deviceKey,
-            remark = request.remark,
-        )
-        return listPorts()
     }
 
     fun getSessionSnapshot(): McuSessionSnapshot {
@@ -75,6 +64,7 @@ class McuConsoleSessionService(
             title = "会话已打开",
             message = "${connection.portPath} @ ${connection.baudRate}",
         )
+        settingsService?.markTransportProfileUsed(request.profileKey)
         startReader(connection)
         return getSessionSnapshot()
     }
@@ -199,6 +189,35 @@ class McuConsoleSessionService(
             message = "已发送 ${frame.command}",
             requestId = frame.requestId,
             raw = encoded.trim(),
+        )
+    }
+
+    fun sendSerialText(
+        request: McuSerialTextSendRequest,
+    ): McuSerialTextSendResponse {
+        require(request.text.isNotBlank()) { "text is required" }
+        val payload = request.text.normalizeLineEndings(request.lineEnding)
+            .let { normalized ->
+                if (request.appendLineEnding) {
+                    normalized + request.lineEnding.sequence()
+                } else {
+                    normalized
+                }
+            }
+        val bytes = payload.toByteArray(Charsets.UTF_8)
+        val connection = requireConnection()
+        connection.writeUtf8(payload)
+        appendEvent(
+            kind = McuEventKind.TX_TEXT,
+            title = "串口直发",
+            message = "已发送 ${bytes.size} bytes",
+            raw = payload.escapeForEventLog(),
+        )
+        return McuSerialTextSendResponse(
+            accepted = true,
+            bytesSent = bytes.size,
+            preview = payload.previewForTransport(),
+            lineEnding = request.lineEnding,
         )
     }
 
@@ -327,12 +346,36 @@ class McuConsoleSessionService(
             return activeConnection === connection
         }
     }
+}
 
-    private fun decoratePortSummary(
-        port: McuPortSummary,
-    ): McuPortSummary {
-        return port.copy(
-            remark = portRemarkStore.findRemark(port.deviceKey),
-        )
+private fun McuSerialLineEnding.sequence(): String {
+    return when (this) {
+        McuSerialLineEnding.LF -> "\n"
+        McuSerialLineEnding.CRLF -> "\r\n"
+        McuSerialLineEnding.CR -> "\r"
+    }
+}
+
+private fun String.normalizeLineEndings(
+    lineEnding: McuSerialLineEnding,
+): String {
+    val normalized = replace("\r\n", "\n").replace('\r', '\n')
+    return normalized.replace("\n", lineEnding.sequence())
+}
+
+private fun String.escapeForEventLog(): String {
+    return replace("\r", "\\r")
+        .replace("\n", "\\n\n")
+}
+
+private fun String.previewForTransport(
+    limit: Int = 160,
+): String {
+    val escaped = replace("\r", "\\r")
+        .replace("\n", "\\n")
+    return if (escaped.length <= limit) {
+        escaped
+    } else {
+        escaped.take(limit) + "..."
     }
 }

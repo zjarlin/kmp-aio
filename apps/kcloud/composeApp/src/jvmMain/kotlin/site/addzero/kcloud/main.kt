@@ -30,10 +30,7 @@ fun main() {
                 },
             )
         }
-        DisposableEffect(embeddedServer.baseUrl) {
-            configureLocalApiClients(embeddedServer.baseUrl)
-            onDispose {}
-        }
+        configureLocalApiClients(embeddedServer.baseUrl)
 
         DisposableEffect(embeddedServer) {
             onDispose {

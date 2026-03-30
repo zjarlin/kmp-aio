@@ -3,17 +3,29 @@ package site.addzero.kcloud.plugins.mcuconsole.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.runtime.Composable
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.plugins.mcuconsole.McuSerialLineEnding
+import site.addzero.component.button.AddIconButton
 import site.addzero.kcloud.plugins.mcuconsole.McuBluetoothMode
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
 import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 
+/**
+ */
 @Route(
     value = "设备会话",
     title = "控制台",
@@ -26,338 +38,617 @@ import site.addzero.kcloud.plugins.mcuconsole.client.displayName
             icon = "Build",
             order = 0,
         ),
+        defaultInScene = true,
     ),
 )
 @Composable
 fun McuControlScreen() {
     val state = rememberMcuWorkbenchState()
     val runAction = rememberMcuActionRunner()
-
+    var followLatestLogs by rememberSaveable {
+        mutableStateOf(true)
+    }
     McuWorkbenchFrame(
         state = state,
-        actions = listOf(
-            McuToolbarAction("扫描串口", Icons.Default.Search) {
+        actions = {
+            AddIconButton(
+                text = "扫描串口",
+                imageVector = Icons.Default.Search,
+            ) {
                 runAction {
                     state.refreshPorts()
                 }
-            },
-            McuToolbarAction(
-                label = state.openSessionActionLabel,
-                icon = Icons.Default.PowerSettingsNew,
+            }
+            AddIconButton(
+                text = state.openSessionActionLabel,
+                imageVector = Icons.Default.PowerSettingsNew,
                 enabled = state.canOpenSelectedTransportSession,
             ) {
                 runAction {
                     state.openSession()
                 }
-            },
-            McuToolbarAction(
-                label = "关闭会话",
-                icon = Icons.Default.Stop,
+            }
+            AddIconButton(
+                text = "保存连接",
+                imageVector = Icons.Default.Save,
+                enabled = !state.isSubmitting,
+            ) {
+                runAction {
+                    state.saveCurrentTransportProfile()
+                }
+            }
+            AddIconButton(
+                text = "关闭会话",
+                imageVector = Icons.Default.Stop,
                 enabled = state.session.isOpen,
             ) {
                 runAction {
                     state.closeSession()
                 }
-            },
-            McuToolbarAction(
-                label = "确保运行时",
-                icon = Icons.Default.Build,
+            }
+            AddIconButton(
+                text = "确保运行时",
+                imageVector = Icons.Default.Build,
                 enabled = state.canEnsureRuntime,
             ) {
                 runAction {
                     state.ensureRuntime(forceReflash = false)
                 }
-            },
-            McuToolbarAction(
-                label = "复位",
-                icon = Icons.Default.Refresh,
+            }
+            AddIconButton(
+                text = "复位",
+                imageVector = Icons.Default.Refresh,
                 enabled = state.canControlSerialLines,
             ) {
                 runAction {
                     state.resetSession()
                 }
-            },
-            McuToolbarAction(
-                label = if (state.session.dtrEnabled) "关闭 DTR" else "开启 DTR",
-                icon = Icons.Default.Settings,
+            }
+            AddIconButton(
+                text = if (state.session.dtrEnabled) "关闭 DTR" else "开启 DTR",
+                imageVector = Icons.Default.Settings,
                 enabled = state.canControlSerialLines,
             ) {
                 runAction {
                     state.updateDtr(!state.session.dtrEnabled)
                 }
-            },
-            McuToolbarAction(
-                label = if (state.session.rtsEnabled) "关闭 RTS" else "开启 RTS",
-                icon = Icons.Default.Tune,
+            }
+            AddIconButton(
+                text = if (state.session.rtsEnabled) "关闭 RTS" else "开启 RTS",
+                imageVector = Icons.Default.Tune,
                 enabled = state.canControlSerialLines,
             ) {
                 runAction {
                     state.updateRts(!state.session.rtsEnabled)
                 }
-            },
-        ),
+            }
+        },
     ) {
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            McuPanel(
-                title = "连接配置",
-                modifier = Modifier.width(420.dp).fillMaxHeight(),
+            Row(
+                modifier = Modifier.fillMaxWidth().height(430.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                Column(
+                    modifier = Modifier.width(440.dp).fillMaxHeight(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item {
-                        McuTransportSelector(
-                            selectedKind = state.selectedTransportKind,
-                            onSelect = { kind -> state.selectTransport(kind) },
+                    McuPanel(
+                        title = "连接配置",
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            item {
+                                McuTransportSelector(
+                                    selectedKind = state.selectedTransportKind,
+                                    onSelect = { kind -> state.selectTransport(kind) },
+                                )
+                            }
+                            item {
+                                McuInfoNotice(text = state.selectedTransportNotice)
+                            }
+                            item {
+                                McuTransportProfileList(
+                                    state = state,
+                                    onSave = {
+                                        runAction {
+                                            state.saveCurrentTransportProfile()
+                                        }
+                                    },
+                                    onApply = { profileKey ->
+                                        state.applyTransportProfile(profileKey)
+                                    },
+                                    onDelete = { profileKey ->
+                                        runAction {
+                                            state.deleteTransportProfile(profileKey)
+                                        }
+                                    },
+                                )
+                            }
+                            when (state.selectedTransportKind) {
+                                McuTransportKind.SERIAL -> {
+                                    item {
+                                        McuCompactInput(
+                                            value = state.baudRateText,
+                                            onValueChange = { state.baudRateText = it },
+                                            label = "baudRate",
+                                            supportingText = "当前串口链路将直接作为 MCU 会话使用",
+                                        )
+                                    }
+                                    item {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(360.dp),
+                                        ) {
+                                            McuPortBrowser(
+                                                state = state,
+                                                onRefresh = {
+                                                    runAction {
+                                                        state.refreshPorts()
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
+                                McuTransportKind.MODBUS_RTU -> {
+                                    item {
+                                        McuCompactInput(
+                                            value = state.baudRateText,
+                                            onValueChange = { state.baudRateText = it },
+                                            label = "baudRate",
+                                            supportingText = "RTU 仍复用本地串口打开链路",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusRtuUnitIdText,
+                                            onValueChange = { state.modbusRtuUnitIdText = it },
+                                            label = "unitId",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusRtuTimeoutMsText,
+                                            onValueChange = { state.modbusRtuTimeoutMsText = it },
+                                            label = "timeoutMs",
+                                        )
+                                    }
+                                    item {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(360.dp),
+                                        ) {
+                                            McuPortBrowser(
+                                                state = state,
+                                                onRefresh = {
+                                                    runAction {
+                                                        state.refreshPorts()
+                                                    }
+                                                },
+                                            )
+                                        }
+                                    }
+                                }
+
+                                McuTransportKind.MODBUS_TCP -> {
+                                    item {
+                                        McuInfoNotice("当前模式不会使用本机串口，所以这里不会显示串口列表。切回“串口”或“Modbus RTU”即可查看。")
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusConnectionNameText,
+                                            onValueChange = { state.modbusConnectionNameText = it },
+                                            label = "connectionName",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusTcpHostText,
+                                            onValueChange = { state.modbusTcpHostText = it },
+                                            label = "host",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusTcpPortText,
+                                            onValueChange = { state.modbusTcpPortText = it },
+                                            label = "port",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusTcpUnitIdText,
+                                            onValueChange = { state.modbusTcpUnitIdText = it },
+                                            label = "unitId",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusTcpTimeoutMsText,
+                                            onValueChange = { state.modbusTcpTimeoutMsText = it },
+                                            label = "timeoutMs",
+                                        )
+                                    }
+                                }
+
+                                McuTransportKind.BLUETOOTH -> {
+                                    item {
+                                        McuInfoNotice("当前模式不会使用本机串口，所以这里不会显示串口列表。切回“串口”或“Modbus RTU”即可查看。")
+                                    }
+                                    item {
+                                        McuChoiceChipRow(
+                                            items = McuBluetoothMode.entries,
+                                            selectedItem = state.bluetoothMode,
+                                            labelOf = { mode -> mode.displayName() },
+                                            onSelect = { mode -> state.bluetoothMode = mode },
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.bluetoothDeviceNameText,
+                                            onValueChange = { state.bluetoothDeviceNameText = it },
+                                            label = "deviceName",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.bluetoothDeviceAddressText,
+                                            onValueChange = { state.bluetoothDeviceAddressText = it },
+                                            label = "deviceAddress",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.bluetoothServiceUuidText,
+                                            onValueChange = { state.bluetoothServiceUuidText = it },
+                                            label = "serviceUuid",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.bluetoothWriteCharacteristicUuidText,
+                                            onValueChange = { state.bluetoothWriteCharacteristicUuidText = it },
+                                            label = "writeCharacteristicUuid",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.bluetoothNotifyCharacteristicUuidText,
+                                            onValueChange = { state.bluetoothNotifyCharacteristicUuidText = it },
+                                            label = "notifyCharacteristicUuid",
+                                        )
+                                    }
+                                }
+
+                                McuTransportKind.MQTT -> {
+                                    item {
+                                        McuInfoNotice("当前模式不会使用本机串口，所以这里不会显示串口列表。切回“串口”或“Modbus RTU”即可查看。")
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.modbusConnectionNameText,
+                                            onValueChange = { state.modbusConnectionNameText = it },
+                                            label = "connectionName",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttBrokerUrlText,
+                                            onValueChange = { state.mqttBrokerUrlText = it },
+                                            label = "brokerUrl",
+                                            supportingText = "例如 tcp://127.0.0.1:1883 或 ssl://broker:8883",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttClientIdText,
+                                            onValueChange = { state.mqttClientIdText = it },
+                                            label = "clientId",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttUsernameText,
+                                            onValueChange = { state.mqttUsernameText = it },
+                                            label = "username",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttPasswordText,
+                                            onValueChange = { state.mqttPasswordText = it },
+                                            label = "password",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttPublishTopicText,
+                                            onValueChange = { state.mqttPublishTopicText = it },
+                                            label = "publishTopic",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttSubscribeTopicText,
+                                            onValueChange = { state.mqttSubscribeTopicText = it },
+                                            label = "subscribeTopic",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttQosText,
+                                            onValueChange = { state.mqttQosText = it },
+                                            label = "qos",
+                                        )
+                                    }
+                                    item {
+                                        McuCompactInput(
+                                            value = state.mqttKeepAliveSecondsText,
+                                            onValueChange = { state.mqttKeepAliveSecondsText = it },
+                                            label = "keepAliveSeconds",
+                                        )
+                                    }
+                                }
+                            }
+                            item {
+                                McuSummaryTable(rows = state.transportSummaryRows())
+                            }
+                        }
+                    }
+
+                    McuPanel(
+                        title = "会话状态",
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        McuSummaryTable(
+                            rows = listOf(
+                                "配置模式" to state.selectedTransportKind.displayName(),
+                                "当前会话" to if (state.session.isOpen) {
+                                    state.activeSessionTransportKind.displayName()
+                                } else {
+                                    "未打开"
+                                },
+                                "当前串口" to (state.session.portPath ?: state.selectedPortPath.orEmpty()),
+                                "波特率" to state.baudRateText,
+                                "会话" to if (state.session.isOpen) "OPEN" else "CLOSED",
+                                "运行时" to state.runtimeStatus.state.name,
+                                "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
+                                "Profile" to (state.runtimeStatus.defaultFlashProfileId ?: state.selectedRuntimeBundle?.defaultFlashProfileId.orEmpty()),
+                                "烧录" to state.flashStatus.state.name,
+                                "DTR" to state.session.dtrEnabled.toString(),
+                                "RTS" to state.session.rtsEnabled.toString(),
+                                "消息" to state.runtimeStatus.lastMessage.orEmpty(),
+                                "最后错误" to state.session.lastError.orEmpty(),
+                            ),
                         )
                     }
-                    item {
-                        McuInfoNotice(text = state.selectedTransportNotice)
-                    }
-                    when (state.selectedTransportKind) {
-                        McuTransportKind.SERIAL -> {
-                            item {
-                                McuCompactInput(
-                                    value = state.baudRateText,
-                                    onValueChange = { state.baudRateText = it },
-                                    label = "baudRate",
-                                    supportingText = "当前串口链路将直接作为 MCU 会话使用",
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(240.dp),
+                }
+
+                McuPanel(
+                    title = "快捷命令",
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                ) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        item {
+                            McuInfoNotice(
+                                if (state.canSendDirectSerialText) {
+                                    "当前串口已打开，可直接把 UTF-8 文本写进 MicroPython REPL。快捷按钮默认调用板子上的 panel_control.py。"
+                                } else {
+                                    "先以“串口”模式打开会话，再发送 MicroPython 命令。"
+                                },
+                            )
+                        }
+                        item {
+                            McuCompactInput(
+                                value = state.panelControlModuleText,
+                                onValueChange = { state.panelControlModuleText = it },
+                                label = "panel_control 模块",
+                                supportingText = "默认使用板子上的 panel_control.py",
+                            )
+                        }
+                        item {
+                            McuCompactInput(
+                                value = state.panelDisplayValueText,
+                                onValueChange = { state.panelDisplayValueText = it },
+                                label = "显示内容",
+                            )
+                        }
+                        item {
+                            McuCompactInput(
+                                value = state.panelBeepTimesText,
+                                onValueChange = { state.panelBeepTimesText = it },
+                                label = "蜂鸣器次数",
+                            )
+                        }
+                        item {
+                            McuCompactInput(
+                                value = state.panelLedIndexText,
+                                onValueChange = { state.panelLedIndexText = it },
+                                label = "LED 序号",
+                            )
+                        }
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelDisplayCommand()
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
                                 ) {
-                                    McuPortBrowser(
-                                        state = state,
-                                        onRefresh = {
-                                            runAction {
-                                                state.refreshPorts()
-                                            }
-                                        },
-                                    )
+                                    Text("显示数码管")
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelBeepCommand()
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
+                                ) {
+                                    Text("蜂鸣器")
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelClearDisplayCommand()
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
+                                ) {
+                                    Text("清屏")
                                 }
                             }
                         }
-
-                        McuTransportKind.MODBUS_RTU -> {
-                            item {
-                                McuCompactInput(
-                                    value = state.baudRateText,
-                                    onValueChange = { state.baudRateText = it },
-                                    label = "baudRate",
-                                    supportingText = "RTU 仍复用本地串口打开链路",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.modbusRtuUnitIdText,
-                                    onValueChange = { state.modbusRtuUnitIdText = it },
-                                    label = "unitId",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.modbusRtuTimeoutMsText,
-                                    onValueChange = { state.modbusRtuTimeoutMsText = it },
-                                    label = "timeoutMs",
-                                )
-                            }
-                            item {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(240.dp),
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                FilledTonalButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelLedCommand(enabled = true)
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
                                 ) {
-                                    McuPortBrowser(
-                                        state = state,
-                                        onRefresh = {
-                                            runAction {
-                                                state.refreshPorts()
-                                            }
-                                        },
-                                    )
+                                    Text("点亮 LED")
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelLedCommand(enabled = false)
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
+                                ) {
+                                    Text("熄灭 LED")
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelAllLedCommand(enabled = true)
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
+                                ) {
+                                    Text("全亮")
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        runAction {
+                                            state.sendPanelAllLedCommand(enabled = false)
+                                        }
+                                    },
+                                    enabled = state.canSendDirectSerialText,
+                                ) {
+                                    Text("全灭")
                                 }
                             }
                         }
-
-                        McuTransportKind.MODBUS_TCP -> {
-                            item {
-                                McuCompactInput(
-                                    value = state.modbusTcpHostText,
-                                    onValueChange = { state.modbusTcpHostText = it },
-                                    label = "host",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.modbusTcpPortText,
-                                    onValueChange = { state.modbusTcpPortText = it },
-                                    label = "port",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.modbusTcpUnitIdText,
-                                    onValueChange = { state.modbusTcpUnitIdText = it },
-                                    label = "unitId",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.modbusTcpTimeoutMsText,
-                                    onValueChange = { state.modbusTcpTimeoutMsText = it },
-                                    label = "timeoutMs",
-                                )
+                        item {
+                            McuCompactInput(
+                                value = state.serialCommandText,
+                                onValueChange = { state.serialCommandText = it },
+                                label = "原始串口命令",
+                                singleLine = false,
+                                supportingText = "支持多行；默认按所选换行符把文本直接写入当前串口。",
+                            )
+                        }
+                        item {
+                            McuChoiceChipRow(
+                                items = McuSerialLineEnding.entries,
+                                selectedItem = state.serialCommandLineEnding,
+                                labelOf = { ending -> ending.displayName() },
+                                onSelect = { ending -> state.serialCommandLineEnding = ending },
+                            )
+                        }
+                        item {
+                            McuChoiceChipRow(
+                                items = listOf(true, false),
+                                selectedItem = state.serialCommandAppendLineEnding,
+                                labelOf = { enabled -> if (enabled) "追加结尾换行" else "原样发送" },
+                                onSelect = { enabled -> state.serialCommandAppendLineEnding = enabled },
+                            )
+                        }
+                        item {
+                            FilledTonalButton(
+                                onClick = {
+                                    runAction {
+                                        state.sendSerialCommand()
+                                    }
+                                },
+                                enabled = state.canSendDirectSerialText,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("发送原始串口命令")
                             }
                         }
-
-                        McuTransportKind.BLUETOOTH -> {
-                            item {
-                                McuChoiceChipRow(
-                                    items = McuBluetoothMode.entries,
-                                    selectedItem = state.bluetoothMode,
-                                    labelOf = { mode -> mode.displayName() },
-                                    onSelect = { mode -> state.bluetoothMode = mode },
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.bluetoothDeviceNameText,
-                                    onValueChange = { state.bluetoothDeviceNameText = it },
-                                    label = "deviceName",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.bluetoothDeviceAddressText,
-                                    onValueChange = { state.bluetoothDeviceAddressText = it },
-                                    label = "deviceAddress",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.bluetoothServiceUuidText,
-                                    onValueChange = { state.bluetoothServiceUuidText = it },
-                                    label = "serviceUuid",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.bluetoothWriteCharacteristicUuidText,
-                                    onValueChange = { state.bluetoothWriteCharacteristicUuidText = it },
-                                    label = "writeCharacteristicUuid",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.bluetoothNotifyCharacteristicUuidText,
-                                    onValueChange = { state.bluetoothNotifyCharacteristicUuidText = it },
-                                    label = "notifyCharacteristicUuid",
-                                )
-                            }
-                        }
-
-                        McuTransportKind.MQTT -> {
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttBrokerUrlText,
-                                    onValueChange = { state.mqttBrokerUrlText = it },
-                                    label = "brokerUrl",
-                                    supportingText = "例如 tcp://127.0.0.1:1883 或 ssl://broker:8883",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttClientIdText,
-                                    onValueChange = { state.mqttClientIdText = it },
-                                    label = "clientId",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttUsernameText,
-                                    onValueChange = { state.mqttUsernameText = it },
-                                    label = "username",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttPasswordText,
-                                    onValueChange = { state.mqttPasswordText = it },
-                                    label = "password",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttPublishTopicText,
-                                    onValueChange = { state.mqttPublishTopicText = it },
-                                    label = "publishTopic",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttSubscribeTopicText,
-                                    onValueChange = { state.mqttSubscribeTopicText = it },
-                                    label = "subscribeTopic",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttQosText,
-                                    onValueChange = { state.mqttQosText = it },
-                                    label = "qos",
-                                )
-                            }
-                            item {
-                                McuCompactInput(
-                                    value = state.mqttKeepAliveSecondsText,
-                                    onValueChange = { state.mqttKeepAliveSecondsText = it },
-                                    label = "keepAliveSeconds",
-                                )
-                            }
-                        }
-                    }
-                    item {
-                        McuSummaryTable(rows = state.transportSummaryRows())
                     }
                 }
             }
 
             McuPanel(
-                title = "会话状态",
-                modifier = Modifier.width(360.dp).fillMaxHeight(),
+                title = "实时日志",
+                modifier = Modifier.fillMaxWidth().weight(1f),
             ) {
-                McuSummaryTable(
-                    rows = listOf(
-                        "配置模式" to state.selectedTransportKind.displayName(),
-                        "当前会话" to if (state.session.isOpen) {
-                            state.activeSessionTransportKind.displayName()
-                        } else {
-                            "未打开"
-                        },
-                        "当前串口" to (state.session.portPath ?: state.selectedPortPath.orEmpty()),
-                        "波特率" to state.baudRateText,
-                        "会话" to if (state.session.isOpen) "OPEN" else "CLOSED",
-                        "运行时" to state.runtimeStatus.state.name,
-                        "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
-                        "Profile" to (state.runtimeStatus.defaultFlashProfileId ?: state.selectedRuntimeBundle?.defaultFlashProfileId.orEmpty()),
-                        "烧录" to state.flashStatus.state.name,
-                        "DTR" to state.session.dtrEnabled.toString(),
-                        "RTS" to state.session.rtsEnabled.toString(),
-                        "消息" to state.runtimeStatus.lastMessage.orEmpty(),
-                        "最后错误" to state.session.lastError.orEmpty(),
-                    ),
-                )
-            }
-
-            McuPanel(
-                title = "最近事件",
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-            ) {
-                McuEventFeed(events = state.events.takeLast(80))
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            text = if (state.session.isOpen) {
+                                "当前已连接 ${state.session.portPath.orEmpty()}，新日志会持续追加。"
+                            } else {
+                                "当前未连接设备，打开会话后会开始实时拉取日志。"
+                            },
+                            modifier = Modifier.weight(1f),
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                followLatestLogs = !followLatestLogs
+                            },
+                        ) {
+                            Text(if (followLatestLogs) "停止跟随" else "跟随最新")
+                        }
+                        FilledTonalButton(
+                            onClick = {
+                                state.clearVisibleEvents()
+                            },
+                        ) {
+                            Text("清空日志")
+                        }
+                    }
+                    Text(
+                        text = "已缓存 ${state.events.size} 条事件，点击单条日志可展开或收起原文。",
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                        color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    McuEventFeed(
+                        events = state.events.takeLast(200),
+                        modifier = Modifier.weight(1f),
+                        autoScrollToLatest = followLatestLogs,
+                    )
+                }
             }
         }
     }

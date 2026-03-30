@@ -13,6 +13,7 @@ import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import site.addzero.kcloud.plugins.mcuconsole.service.*
 import site.addzero.kcloud.plugins.mcuconsole.service.modbus.AutomicModbusService
+import org.babyfish.jimmer.sql.kt.KSqlClient
 
 @Module
 class McuConsoleServerKoinModule {
@@ -54,10 +55,10 @@ class McuConsoleServerKoinModule {
     }
 
     @Single
-    fun providePortRemarkStore(
-        json: Json,
-    ): McuPortRemarkStore {
-        return McuPortRemarkStore.persisted(json)
+    fun provideSettingsService(
+        sqlClient: KSqlClient,
+    ): McuConsoleSettingsService {
+        return McuConsoleSettingsService(sqlClient)
     }
 
     @Single
@@ -71,12 +72,12 @@ class McuConsoleServerKoinModule {
     fun provideSessionService(
         gateway: SerialPortGateway,
         protocolCodec: McuVmProtocolCodec,
-        portRemarkStore: McuPortRemarkStore,
+        settingsService: McuConsoleSettingsService,
     ): McuConsoleSessionService {
         return McuConsoleSessionService(
             gateway = gateway,
             protocolCodec = protocolCodec,
-            portRemarkStore = portRemarkStore,
+            settingsService = settingsService,
         )
     }
 
@@ -124,8 +125,10 @@ class McuConsoleServerKoinModule {
     }
 
     @Single
-    fun provideTransportProbeService(): McuTransportProbeService {
-        return McuTransportProbeService()
+    fun provideTransportProbeService(
+        settingsService: McuConsoleSettingsService,
+    ): McuTransportProbeService {
+        return McuTransportProbeService(settingsService)
     }
 
     @Single

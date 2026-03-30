@@ -8,13 +8,35 @@ import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 class McuConsoleRemoteService {
     suspend fun listPorts() = McuConsoleApiClient.sessionApi.listMcuPorts().items
 
-    suspend fun getSession(): McuSessionSnapshot = McuConsoleApiClient.sessionApi.getMcuSession()
-
-    suspend fun updatePortRemark(
-        request: McuPortRemarkUpdateRequest,
-    ): List<McuPortSummary> {
-        return McuConsoleApiClient.sessionApi.updateMcuPortRemark(request).items
+    suspend fun getDeviceProfile(
+        deviceKey: String?,
+    ): McuDeviceProfileIso {
+        return McuConsoleApiClient.settingsApi.getMcuDeviceProfile(deviceKey)
     }
+
+    suspend fun saveDeviceProfile(
+        request: McuDeviceProfileIso,
+    ): McuDeviceProfileIso {
+        return McuConsoleApiClient.settingsApi.saveMcuDeviceProfile(request)
+    }
+
+    suspend fun listTransportProfiles(): List<McuTransportProfileIso> {
+        return McuConsoleApiClient.settingsApi.listMcuTransportProfiles().items
+    }
+
+    suspend fun saveTransportProfile(
+        request: McuTransportProfileIso,
+    ): McuTransportProfileIso {
+        return McuConsoleApiClient.settingsApi.saveMcuTransportProfile(request)
+    }
+
+    suspend fun deleteTransportProfile(
+        profileKey: String,
+    ): List<McuTransportProfileIso> {
+        return McuConsoleApiClient.settingsApi.deleteMcuTransportProfile(profileKey).items
+    }
+
+    suspend fun getSession(): McuSessionSnapshot = McuConsoleApiClient.sessionApi.getMcuSession()
 
     suspend fun openSession(
         request: McuSessionOpenRequest,
@@ -30,6 +52,12 @@ class McuConsoleRemoteService {
         request: McuResetRequest,
     ): McuSessionSnapshot {
         return McuConsoleApiClient.sessionApi.resetMcuSession(request)
+    }
+
+    suspend fun sendSerialText(
+        request: McuSerialTextSendRequest,
+    ): McuSerialTextSendResponse {
+        return McuConsoleApiClient.sessionApi.sendMcuSerialText(request)
     }
 
     suspend fun updateSignals(

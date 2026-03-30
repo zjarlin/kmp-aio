@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.component.button.AddIconButton
 
 @Route(
     value = "开发工具",
@@ -32,17 +33,23 @@ fun McuDebugScreen() {
 
     McuWorkbenchFrame(
         state = state,
-        actions = listOf(
-            McuToolbarAction("刷新", Icons.Default.Refresh) {
+        actions = {
+            AddIconButton(
+                text = "刷新",
+                imageVector = Icons.Default.Refresh,
+            ) {
                 runAction {
                     state.loadRecentEvents()
                     state.refreshRuntimeStatus()
                 }
-            },
-            McuToolbarAction("清空日志", Icons.Default.Stop) {
+            }
+            AddIconButton(
+                text = "清空日志",
+                imageVector = Icons.Default.Stop,
+            ) {
                 state.clearVisibleEvents()
-            },
-        ),
+            }
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
