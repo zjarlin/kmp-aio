@@ -638,7 +638,7 @@ internal fun McuTransportProfileList(
                                 profile.host?.takeIf { it.isNotBlank() }?.let { value ->
                                     append(" / ")
                                     append(value)
-                                    profile.port?.takeIf { profile.transportKind != McuTransportKind.MQTT }?.let { port ->
+                                    profile.port?.let { port ->
                                         append(':')
                                         append(port)
                                     }

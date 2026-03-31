@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterService
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.kcloud.vibepocket.dto.OkResponse
 import site.addzero.kcloud.vibepocket.model.AppConfig
 
@@ -133,7 +133,7 @@ private fun runtimeConfig(): ApplicationConfig {
     return KoinPlatform.getKoin().get()
 }
 
-private fun configCenterService(): ConfigCenterService {
+private fun configCenterService(): ConfigValueServiceSpi {
     return KoinPlatform.getKoin().get()
 }
 

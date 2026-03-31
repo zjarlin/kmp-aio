@@ -1,53 +1,68 @@
 package site.addzero.kcloud.plugins.mcuconsole.driver.serial
 
-import com.fazecast.jSerialComm.SerialPort
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
+import site.addzero.serial.SerialConnection
+import site.addzero.serial.SerialPortConfig
+import site.addzero.serial.SerialPortDescriptor
+import site.addzero.serial.SerialPortTool
 
+@Single(
+    binds = [
+        SerialPortGateway::class,
+    ],
+)
 class JSerialCommSerialPortGateway : SerialPortGateway {
     override fun listPorts(): List<McuPortSummary> {
-        val commPorts = SerialPort.getCommPorts()
-        return commPorts.map { port ->
-            val serialNumber = port.serialNumber.normalizedPortMeta()
-            val manufacturer = port.manufacturer.normalizedPortMeta()
-            val portLocation = port.portLocation.normalizedPortMeta().orEmpty()
-            McuPortSummary(
-                portPath = port.systemPortPath,
-                portName = port.portDescription?.takeIf { it.isNotBlank() } ?: port.systemPortName,
-                systemPortName = port.systemPortName.orEmpty(),
-                descriptiveName = port.descriptivePortName.orEmpty(),
-                description = port.portDescription.orEmpty(),
-                kind = portLocation,
-                portLocation = portLocation,
-                serialNumber = serialNumber.orEmpty(),
-                manufacturer = manufacturer.orEmpty(),
-                vendorId = port.vendorID.takeIf { it >= 0 },
-                productId = port.productID.takeIf { it >= 0 },
-                deviceKey = buildDeviceKey(
-                    serialNumber = serialNumber,
-                    vendorId = port.vendorID.takeIf { it >= 0 },
-                    productId = port.productID.takeIf { it >= 0 },
-                    manufacturer = manufacturer,
-                    description = port.portDescription.normalizedPortMeta()
-                        ?: port.descriptivePortName.normalizedPortMeta()
-                        ?: port.systemPortName.normalizedPortMeta(),
-                    portLocation = portLocation,
-                ),
-            )
-        }.sortedBy { it.portPath }
+        return SerialPortTool.listPorts()
+            .map(SerialPortDescriptor::toPortSummary)
+            .sortedBy { it.portPath }
     }
 
     override fun openConnection(
         portPath: String,
         baudRate: Int,
     ): SerialPortConnection {
-        val port = SerialPort.getCommPort(portPath)
-        port.setComPortParameters(baudRate, 8, SerialPort.ONE_STOP_BIT, SerialPort.NO_PARITY)
-        port.setFlowControl(SerialPort.FLOW_CONTROL_DISABLED)
-        port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, 200, 0)
-        check(port.openPort()) { "打开串口失败: $portPath" }
-        val jSerialCommSerialPortConnection = JSerialCommSerialPortConnection(port, portPath, baudRate)
-        return jSerialCommSerialPortConnection
+        return ToolSerialPortConnection(
+            delegate = SerialPortTool.open(
+                SerialPortConfig(
+                    portName = portPath,
+                    baudRate = baudRate,
+                    readTimeoutMs = 250,
+                    writeTimeoutMs = 1_000,
+                ),
+            ),
+        )
     }
+}
+
+private fun SerialPortDescriptor.toPortSummary(): McuPortSummary {
+    val serialNumber = serialNumber.normalizedPortMeta()
+    val manufacturer = manufacturer.normalizedPortMeta()
+    val portLocation = portLocation.normalizedPortMeta().orEmpty()
+    return McuPortSummary(
+        portPath = systemPortPath,
+        portName = portDescription.takeIf { it.isNotBlank() } ?: systemPortName,
+        systemPortName = systemPortName,
+        descriptiveName = descriptivePortName,
+        description = portDescription,
+        kind = portLocation,
+        portLocation = portLocation,
+        serialNumber = serialNumber.orEmpty(),
+        manufacturer = manufacturer.orEmpty(),
+        vendorId = vendorId,
+        productId = productId,
+        deviceKey = buildDeviceKey(
+            serialNumber = serialNumber,
+            vendorId = vendorId,
+            productId = productId,
+            manufacturer = manufacturer,
+            description = portDescription.normalizedPortMeta()
+                ?: descriptivePortName.normalizedPortMeta()
+                ?: systemPortName.normalizedPortMeta(),
+            portLocation = portLocation,
+        ),
+    )
 }
 
 private fun buildDeviceKey(
@@ -98,62 +113,54 @@ private fun String?.normalizedPortMeta(): String? {
     return value
 }
 
-private class JSerialCommSerialPortConnection(
-    private val port: SerialPort,
-    override val portPath: String,
-    override val baudRate: Int,
+private class ToolSerialPortConnection(
+    private val delegate: SerialConnection,
 ) : SerialPortConnection {
-    override val portName: String = port.portDescription?.takeIf { it.isNotBlank() } ?: port.systemPortName.orEmpty()
+    override val portPath: String = delegate.config.portName
+
+    override val portName: String = delegate.systemPortName
+
+    override val baudRate: Int = delegate.config.baudRate
 
     override val isOpen: Boolean
-        get() = port.isOpen
+        get() = delegate.isOpen
 
     override fun writeUtf8(
         text: String,
     ) {
-        writeBytes(text.toByteArray(Charsets.UTF_8))
+        delegate.write(text)
     }
 
     override fun writeBytes(
         bytes: ByteArray,
         length: Int,
     ) {
-        val written = port.writeBytes(bytes, length)
-        check(written == length) { "串口写入失败: $portPath" }
+        delegate.write(bytes.copyOf(length))
     }
 
     override fun read(
         buffer: ByteArray,
         timeoutMs: Int,
     ): Int {
-        port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING, timeoutMs, 0)
-        val count = port.readBytes(buffer, buffer.size)
-        return if (count < 0) 0 else count
+        val read = delegate.read(maxBytes = buffer.size)
+        val count = read.size
+        read.copyInto(buffer, endIndex = count)
+        return count
     }
 
     override fun setDtr(
         enabled: Boolean,
     ) {
-        if (enabled) {
-            port.setDTR()
-        } else {
-            port.clearDTR()
-        }
+        delegate.setDtr(enabled)
     }
 
     override fun setRts(
         enabled: Boolean,
     ) {
-        if (enabled) {
-            port.setRTS()
-        } else {
-            port.clearRTS()
-        }
+        delegate.setRts(enabled)
     }
 
     override fun close() {
-        if (port.isOpen) {
-            port.closePort()
-        }
+        delegate.close()
     }
 }

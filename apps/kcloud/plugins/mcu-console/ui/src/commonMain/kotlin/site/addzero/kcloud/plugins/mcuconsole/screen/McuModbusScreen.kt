@@ -33,7 +33,6 @@ import site.addzero.kcloud.plugins.mcuconsole.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusFrameFormat
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusGpioMode
 import site.addzero.kcloud.plugins.mcuconsole.McuModbusSerialParity
-import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
 import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 
@@ -96,7 +95,7 @@ fun McuModbusScreen() {
                 title = "连接资源",
                 modifier = Modifier.width(320.dp).fillMaxHeight(),
             ) {
-                McuInfoNotice("参考主站模拟器的布局做了连接编辑区，但当前真正接到后端的只有 Modbus RTU。")
+                McuInfoNotice("这里复用左侧串口自动发现，并把当前 RTU 参数保存成可回填的串口配置草稿。")
                 Box(
                     modifier = Modifier.fillMaxWidth().height(320.dp),
                 ) {
@@ -125,7 +124,7 @@ fun McuModbusScreen() {
                         }
                     },
                 )
-                McuSummaryTable(rows = state.transportSummaryRows(McuTransportKind.MODBUS_RTU))
+                McuSummaryTable(rows = state.modbusConnectionSummaryRows())
             }
 
             Column(
@@ -312,13 +311,9 @@ private fun McuModbusConnectionEditor(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                OutlinedButton(onClick = { state.selectTransport(McuTransportKind.MODBUS_RTU) }) {
-                    Text("使用 RTU 模式")
-                }
                 FilledTonalButton(
                     onClick = onExecute,
                     enabled = state.canExecuteSelectedModbusAction,
-                    modifier = Modifier.padding(start = 10.dp),
                 ) {
                     Text("按当前配置执行")
                 }

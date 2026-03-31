@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.service.modbus
 
+import org.koin.core.annotation.Single
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
 import site.addzero.device.protocol.modbus.model.ModbusCommandResult
 import site.addzero.esp32_host_computer.generated.modbus.rtu.AutomicModbusApiGeneratedRtuGateway
@@ -13,6 +14,7 @@ enum class AutomicGpioMode(
     INPUT_PULL_UP(2),
 }
 
+@Single
 class AutomicModbusService(
     private val sessionService: McuConsoleSessionService,
     private val gateway: AutomicModbusApiGeneratedRtuGateway,

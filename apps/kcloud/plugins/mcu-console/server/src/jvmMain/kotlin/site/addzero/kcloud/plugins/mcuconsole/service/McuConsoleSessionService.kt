@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
 import kotlinx.coroutines.*
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortConnection
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
@@ -8,6 +9,7 @@ import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import java.time.Instant
 import java.util.concurrent.CopyOnWriteArrayList
 
+@Single
 class McuConsoleSessionService(
     private val gateway: SerialPortGateway,
     private val protocolCodec: McuVmProtocolCodec,

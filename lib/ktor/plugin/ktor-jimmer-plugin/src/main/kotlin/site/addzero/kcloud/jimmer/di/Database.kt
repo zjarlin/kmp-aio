@@ -4,6 +4,7 @@ import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
+import org.babyfish.jimmer.sql.runtime.ConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
@@ -71,7 +72,7 @@ private fun buildSqlClient(
         addScalarProvider(SqliteLocalDateTimeScalarProvider)
         addScalarProvider(SqliteInstantScalarProvider)
     }
-    setConnectionManager { dataSource.connection.use { proceed(it) } }
+    setConnectionManager(ConnectionManager.simpleConnectionManager(dataSource))
 }
 
 private data class DatasourceRuntime(

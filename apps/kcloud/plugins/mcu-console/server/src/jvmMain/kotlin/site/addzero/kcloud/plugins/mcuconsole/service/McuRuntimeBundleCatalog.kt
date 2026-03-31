@@ -2,8 +2,10 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 
+@Single
 class McuRuntimeBundleCatalog(
     private val json: Json,
 ) {

@@ -41,9 +41,6 @@ actual object McuConsoleApiClient {
     actual val modbusApi: McuModbusApi
         get() = createKtorfit().createMcuModbusApi()
 
-    actual val transportApi: McuTransportApi
-        get() = createKtorfit().createMcuTransportApi()
-
     private fun String.normalizeBaseUrl(): String {
         val normalized = trim()
             .ifBlank { defaultBaseUrl }

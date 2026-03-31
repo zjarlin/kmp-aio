@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
+import org.koin.core.annotation.Single
 import java.io.File
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -17,6 +18,11 @@ interface McuFlashCommandRunner {
     ): McuFlashCommandResult
 }
 
+@Single(
+    binds = [
+        McuFlashCommandRunner::class,
+    ],
+)
 class JvmMcuFlashCommandRunner : McuFlashCommandRunner {
     override fun run(
         commandLine: String,

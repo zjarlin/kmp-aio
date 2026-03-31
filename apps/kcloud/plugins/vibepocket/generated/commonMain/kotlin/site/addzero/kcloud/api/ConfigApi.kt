@@ -19,7 +19,8 @@ interface ConfigApi {
  * 路径: /api/config/runtime
  * 返回类型: site.addzero.kcloud.vibepocket.routes.ConfigRuntimeInfo
  */
-    @GET("/api/config/runtime")    suspend fun getRuntimeInfo(): site.addzero.kcloud.vibepocket.routes.ConfigRuntimeInfo
+    @GET("/api/config/runtime")
+    suspend fun getRuntimeInfo(): site.addzero.kcloud.vibepocket.routes.ConfigRuntimeInfo
 
 /**
  * getConfig
@@ -29,7 +30,8 @@ interface ConfigApi {
  *   - key: kotlin.String (PathVariable)
  * 返回类型: site.addzero.kcloud.vibepocket.routes.ConfigResponse
  */
-    @GET("/api/config/{key}")    suspend fun getConfig(
+    @GET("/api/config/{key}")
+    suspend fun getConfig(
         @Path("key") key: kotlin.String
     ): site.addzero.kcloud.vibepocket.routes.ConfigResponse
 
@@ -39,7 +41,8 @@ interface ConfigApi {
  * 路径: /api/config/storage
  * 返回类型: site.addzero.kcloud.vibepocket.routes.StorageConfig
  */
-    @GET("/api/config/storage")    suspend fun getStorageConfig(): site.addzero.kcloud.vibepocket.routes.StorageConfig
+    @GET("/api/config/storage")
+    suspend fun getStorageConfig(): site.addzero.kcloud.vibepocket.routes.StorageConfig
 
 /**
  * updateConfig
@@ -49,7 +52,9 @@ interface ConfigApi {
  *   - entry: site.addzero.kcloud.vibepocket.routes.ConfigEntry (RequestBody)
  * 返回类型: site.addzero.kcloud.vibepocket.dto.OkResponse
  */
-    @PUT("/api/config")    suspend fun updateConfig(
+    @PUT("/api/config")
+    @Headers("Content-Type: application/json")
+    suspend fun updateConfig(
         @Body entry: site.addzero.kcloud.vibepocket.routes.ConfigEntry
     ): site.addzero.kcloud.vibepocket.dto.OkResponse
 
@@ -61,7 +66,9 @@ interface ConfigApi {
  *   - config: site.addzero.kcloud.vibepocket.routes.StorageConfig (RequestBody)
  * 返回类型: site.addzero.kcloud.vibepocket.dto.OkResponse
  */
-    @PUT("/api/config/storage")    suspend fun saveStorageConfig(
+    @PUT("/api/config/storage")
+    @Headers("Content-Type: application/json")
+    suspend fun saveStorageConfig(
         @Body config: site.addzero.kcloud.vibepocket.routes.StorageConfig
     ): site.addzero.kcloud.vibepocket.dto.OkResponse
 

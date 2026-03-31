@@ -3,6 +3,7 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-json")
     id("site.addzero.buildlogic.kmp.kmp-koin-core")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
+    id("site.addzero.ksp.modbus-rtu")
 }
 
 val libs = versionCatalogs.named("libs")
@@ -42,7 +43,6 @@ val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jv
 
 dependencies {
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
-    add("kspJvm", project(":lib:ksp:metadata:modbus:modbus-ksp-rtu"))
     if (hasLocalAddzeroLibJvm) {
         add("kspJvm", project(":lib:ksp:metadata:jimmer-entity-external-processor"))
     } else if (localJimmerExternalProcessorPom.isFile) {
@@ -53,8 +53,6 @@ dependencies {
 }
 
 ksp {
-    arg("addzero.modbus.codegen.mode", "server")
-    arg("addzero.modbus.contractPackages", "site.addzero.kcloud.plugins.mcuconsole.service.modbus")
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external")
     arg("apiClientOutputDir", generatedApiOutputDir)
     arg("sharedSourceDir", sharedSourceDir)
@@ -74,6 +72,11 @@ ksp {
     arg("mcpPackageName", "site.addzero.kcloud.plugins.mcuconsole.generated.mcp")
 }
 
+modbusRtu {
+    codegenModes.set(listOf("server"))
+    contractPackages.set(listOf("site.addzero.kcloud.plugins.mcuconsole.service.modbus"))
+}
+
 kotlin {
     sourceSets {
         jvmMain {
@@ -81,12 +84,9 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation(project(":lib:ksp:metadata:modbus:modbus-runtime"))
+            implementation(project(":lib:tool-jvm:tool-serial"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
-            implementation(libs.findLibrary("com-hivemq-hivemq-mqtt-client").get())
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
-            implementation(libs.findLibrary("j2mod").get())
-            implementation(libs.findLibrary("jserialcomm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())

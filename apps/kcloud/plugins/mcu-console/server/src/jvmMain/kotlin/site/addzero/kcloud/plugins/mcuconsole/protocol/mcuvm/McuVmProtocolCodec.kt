@@ -1,8 +1,10 @@
 package site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm
 
 import kotlinx.serialization.json.*
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 
+@Single
 class McuVmProtocolCodec(
     private val json: Json,
 ) {

@@ -3,6 +3,7 @@ package site.addzero.kcloud.plugins.system.pluginmarket.jvm.service
 import kotlinx.coroutines.runBlocking
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.newKSqlClient
+import org.babyfish.jimmer.sql.runtime.ConnectionManager
 import org.sqlite.SQLiteDataSource
 import site.addzero.kcloud.jimmer.di.SqliteInstantScalarProvider
 import site.addzero.kcloud.jimmer.di.SqliteLocalDateTimeScalarProvider
@@ -29,7 +30,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-class PluginMarketSupportTest {
+class PluginMarketModuleLifecycleTest {
     @Test
     fun activationStateAndMarkerActionsStayConsistent() = withPluginMarketFixture { fixture ->
         val moduleDir = fixture.tempRoot.resolve("plugins/system/sample-plugin")
@@ -83,7 +84,7 @@ class PluginMarketSupportTest {
         fixture.packageService.uninstall(created.id)
 
         assertTrue(moduleDir.notExists())
-        assertTrue(fixture.support.listPackages().none { it.id == created.id })
+        assertTrue(fixture.catalog.listPackages().none { it.id == created.id })
     }
 
     @Test
@@ -111,7 +112,7 @@ class PluginMarketSupportTest {
         assertTrue(moduleDir.exists())
         assertTrue(markerPath.exists())
         assertTrue(markerPath.readText().contains("reason=package-deleted-from-db"))
-        assertTrue(fixture.support.listPackages().none { it.id == created.id })
+        assertTrue(fixture.catalog.listPackages().none { it.id == created.id })
     }
 
     @Test
@@ -178,13 +179,14 @@ class PluginMarketSupportTest {
 private data class PluginMarketFixture(
     val tempRoot: Path,
     val dataSource: DataSource,
-    val support: PluginMarketSupport,
+    val catalog: PluginMarketCatalogSupport,
+    val workspace: PluginPackageWorkspaceSupport,
     val packageService: PluginPackageServiceImpl,
     val fileService: PluginSourceFileServiceImpl,
     val deploymentService: PluginDeploymentServiceImpl,
 ) {
     fun markerPath(packageId: String): Path {
-        return support.disabledMarkerPath(support.packageOrThrow(packageId))
+        return workspace.disabledMarkerPath(catalog.packageOrThrow(packageId))
     }
 
     fun attachImportRecord(packageId: String, sourceModuleDir: String) {
@@ -200,11 +202,11 @@ private data class PluginMarketFixture(
                 ) values (?, ?, ?, ?, ?)
                 """.trimIndent(),
             ).use { statement ->
-                statement.setString(1, support.newId())
+                statement.setString(1, catalog.newId())
                 statement.setString(2, packageId)
                 statement.setString(3, sourceModuleDir)
                 statement.setString(4, ":apps:kcloud:plugins:system:imported-plugin")
-                statement.setString(5, support.now().toString())
+                statement.setString(5, catalog.now().toString())
                 statement.executeUpdate()
             }
         }
@@ -228,13 +230,24 @@ private fun withPluginMarketFixture(block: suspend (PluginMarketFixture) -> Unit
             setDialect(SQLiteDialect())
             addScalarProvider(SqliteLocalDateTimeScalarProvider)
             addScalarProvider(SqliteInstantScalarProvider)
-            setConnectionManager { dataSource.connection.use { proceed(it) } }
+            setConnectionManager(ConnectionManager.simpleConnectionManager(dataSource))
         }
-        val support = PluginMarketSupport(sqlClient, dataSource)
-        val fileService = PluginSourceFileServiceImpl(support)
+        val catalog = PluginMarketCatalogSupport(sqlClient)
+        val workspace = PluginPackageWorkspaceSupport(catalog)
+        val aggregateSupport = PluginPackageAggregateSupport(catalog, workspace)
+        val managedIntegrationSupport = PluginManagedIntegrationSupport()
+        val fileService = PluginSourceFileServiceImpl(sqlClient, catalog)
+        val presetService = PluginPresetServiceImpl(
+            sqlClient = sqlClient,
+            catalog = catalog,
+            aggregateSupport = aggregateSupport,
+        )
         val packageService = PluginPackageServiceImpl(
-            support = support,
-            presetService = PluginPresetServiceImpl(support),
+            sqlClient = sqlClient,
+            catalog = catalog,
+            aggregateSupport = aggregateSupport,
+            workspaceSupport = workspace,
+            presetService = presetService,
         )
         val configService = object : PluginMarketConfigService {
             override suspend fun read(): PluginMarketConfigDto = PluginMarketConfigDto(
@@ -256,7 +269,10 @@ private fun withPluginMarketFixture(block: suspend (PluginMarketFixture) -> Unit
             }
         }
         val deploymentService = PluginDeploymentServiceImpl(
-            support = support,
+            sqlClient = sqlClient,
+            catalog = catalog,
+            workspaceSupport = workspace,
+            managedIntegrationSupport = managedIntegrationSupport,
             configService = configService,
             commandRunner = object : PluginBuildCommandRunner {
                 override fun run(
@@ -279,7 +295,8 @@ private fun withPluginMarketFixture(block: suspend (PluginMarketFixture) -> Unit
                 PluginMarketFixture(
                     tempRoot = tempRoot,
                     dataSource = dataSource,
-                    support = support,
+                    catalog = catalog,
+                    workspace = workspace,
                     packageService = packageService,
                     fileService = fileService,
                     deploymentService = deploymentService,

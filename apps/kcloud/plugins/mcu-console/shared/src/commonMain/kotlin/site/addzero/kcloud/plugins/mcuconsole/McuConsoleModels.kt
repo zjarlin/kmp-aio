@@ -34,16 +34,6 @@ data class McuTransportProfilesResponse(
 @Serializable
 enum class McuTransportKind {
     SERIAL,
-    MODBUS_RTU,
-    MODBUS_TCP,
-    BLUETOOTH,
-    MQTT,
-}
-
-@Serializable
-enum class McuBluetoothMode {
-    BLE,
-    CLASSIC,
 }
 
 @Serializable
@@ -66,7 +56,7 @@ data class McuSerialTransportConfig(
 )
 
 @Serializable
-data class McuModbusRtuTransportConfig(
+data class McuModbusCommandConfig(
     val portPath: String? = null,
     val baudRate: Int = 115200,
     val unitId: Int = 1,
@@ -77,37 +67,6 @@ data class McuModbusRtuTransportConfig(
     val retries: Int = 2,
 )
 
-@Serializable
-data class McuModbusTcpTransportConfig(
-    val host: String = "",
-    val port: Int = 502,
-    val unitId: Int = 1,
-    val timeoutMs: Int = 1000,
-)
-
-@Serializable
-data class McuBluetoothTransportConfig(
-    val mode: McuBluetoothMode = McuBluetoothMode.BLE,
-    val deviceName: String = "",
-    val deviceAddress: String = "",
-    val serviceUuid: String = "",
-    val writeCharacteristicUuid: String = "",
-    val notifyCharacteristicUuid: String = "",
-)
-
-@Serializable
-data class McuMqttTransportConfig(
-    val brokerUrl: String = "",
-    val clientId: String = "",
-    val username: String = "",
-    val password: String = "",
-    val publishTopic: String = "",
-    val subscribeTopic: String = "",
-    val qos: Int = 0,
-    val keepAliveSeconds: Int = 60,
-)
-
-@Serializable
 enum class McuModbusAtomicAction {
     GPIO_WRITE,
     GPIO_MODE,
@@ -184,35 +143,6 @@ data class McuModbusServoAngleRequest(
     val angle: Int = 0,
 )
 
-@Serializable
-data class McuModbusTcpProbeRequest(
-    val profileKey: String? = null,
-    val host: String = "",
-    val port: Int = 502,
-    val unitId: Int = 1,
-    val timeoutMs: Int = 1000,
-)
-
-@Serializable
-data class McuMqttProbeRequest(
-    val profileKey: String? = null,
-    val brokerUrl: String = "",
-    val clientId: String = "",
-    val username: String = "",
-    val password: String = "",
-    val keepAliveSeconds: Int = 60,
-)
-
-@Serializable
-data class McuTransportProbeResponse(
-    val success: Boolean = false,
-    val transportKind: McuTransportKind = McuTransportKind.SERIAL,
-    val endpoint: String = "",
-    val lastMessage: String? = null,
-    val verifiedAt: String? = null,
-)
-
-@Serializable
 data class McuSessionOpenRequest(
     val profileKey: String? = null,
     val portPath: String = "",

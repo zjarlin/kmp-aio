@@ -15,7 +15,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,7 +36,6 @@ import site.addzero.annotation.RouteScene
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRunState
 import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureState
 import site.addzero.kcloud.plugins.mcuconsole.McuSerialLineEnding
-import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
 import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 
@@ -62,12 +60,6 @@ fun McuControlScreen() {
     val state = rememberMcuWorkbenchState(viewModel.state)
     val runAction = rememberMcuActionRunner()
 
-    LaunchedEffect(state) {
-        if (state.selectedTransportKind != McuTransportKind.SERIAL) {
-            state.selectTransport(McuTransportKind.SERIAL)
-        }
-    }
-
     McuWorkbenchFrame(
         state = state,
     ) {
@@ -75,39 +67,39 @@ fun McuControlScreen() {
             modifier = Modifier.fillMaxWidth().weight(1f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            McuControlSideRail(
-                state = state,
-                runAction = runAction,
-                modifier = Modifier.width(170.dp).fillMaxHeight(),
-            )
+            Column(
+                modifier = Modifier.width(300.dp).fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                McuDeviceListPanel(
+                    state = state,
+                    onRefresh = {
+                        runAction {
+                            state.refreshPorts()
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
+                McuControlSideRail(
+                    state = state,
+                    runAction = runAction,
+                    modifier = Modifier.fillMaxWidth().weight(0.72f),
+                )
+            }
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().weight(0.9f).heightIn(min = 280.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    McuDeviceListPanel(
-                        state = state,
-                        onRefresh = {
-                            runAction {
-                                state.refreshPorts()
-                            }
-                        },
-                        modifier = Modifier.weight(1.2f).fillMaxHeight(),
-                    )
-                    McuConnectionConfigPanel(
-                        state = state,
-                        modifier = Modifier.width(360.dp).fillMaxHeight(),
-                    )
-                }
+                McuConnectionConfigPanel(
+                    state = state,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 300.dp),
+                )
                 McuTerminalPanel(
                     state = state,
                     followLatestLogs = viewModel.followLatestLogs,
                     onFollowLatestChange = { viewModel.followLatestLogs = it },
                     runAction = runAction,
-                    modifier = Modifier.fillMaxWidth().weight(1.15f),
+                    modifier = Modifier.fillMaxWidth().weight(1f),
                 )
             }
         }
@@ -122,7 +114,7 @@ private fun McuControlSideRail(
 ) {
     val scrollState = rememberScrollState()
     McuPanel(
-        title = "终端控制",
+        title = "会话状态",
         modifier = modifier,
     ) {
         Column(

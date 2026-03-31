@@ -1,7 +1,9 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
+import org.koin.core.annotation.Single
 import java.io.File
 
+@Single
 class McuRuntimeAssetExtractor(
     private val bundleCatalog: McuRuntimeBundleCatalog,
 ) {

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
-import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterService
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.kcloud.api.suno.SunoApiClient
 import site.addzero.kcloud.api.suno.SunoGenerateRequest
 import site.addzero.kcloud.vibepocket.dto.GenerateRequest
@@ -140,7 +140,7 @@ private fun sqlClient(): KSqlClient {
     return KoinPlatform.getKoin().get()
 }
 
-private fun configCenterService(): ConfigCenterService {
+private fun configCenterService(): ConfigValueServiceSpi {
     return KoinPlatform.getKoin().get()
 }
 

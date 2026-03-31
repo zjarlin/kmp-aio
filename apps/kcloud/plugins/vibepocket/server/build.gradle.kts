@@ -30,7 +30,7 @@ kotlin {
             implementation(project(":lib:api:api-suno"))
             implementation(project(":lib:api:api-netease"))
             implementation(project(":lib:api:api-qqmusic"))
-            implementation(project(":apps:kcloud:plugins:system:config-center:server"))
+            implementation(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())

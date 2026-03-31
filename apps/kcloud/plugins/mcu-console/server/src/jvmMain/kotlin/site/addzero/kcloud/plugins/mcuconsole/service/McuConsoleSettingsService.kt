@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
@@ -12,6 +13,7 @@ import site.addzero.kcloud.plugins.mcuconsole.model.by
 import java.time.Instant
 import java.util.UUID
 
+@Single
 class McuConsoleSettingsService(
     private val sqlClient: KSqlClient,
 ) {
@@ -260,11 +262,5 @@ private fun Instant.toKotlinInstantCompat(): kotlinx.datetime.Instant {
 }
 
 private fun McuTransportKind.defaultProfileName(): String {
-    return when (this) {
-        McuTransportKind.SERIAL -> "串口连接"
-        McuTransportKind.MODBUS_RTU -> "Modbus RTU"
-        McuTransportKind.MODBUS_TCP -> "Modbus TCP"
-        McuTransportKind.BLUETOOTH -> "蓝牙连接"
-        McuTransportKind.MQTT -> "MQTT 连接"
-    }
+    return "串口连接"
 }

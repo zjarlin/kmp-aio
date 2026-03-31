@@ -1,6 +1,5 @@
 package site.addzero.kcloud.plugins.mcuconsole.client
 
-import site.addzero.kcloud.plugins.mcuconsole.McuBluetoothMode
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
@@ -16,7 +15,6 @@ import site.addzero.kcloud.plugins.mcuconsole.McuSerialLineEnding
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
-import site.addzero.kcloud.plugins.mcuconsole.McuTransportProbeResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportProfileIso
 
 data class McuConsoleUiState(
@@ -26,7 +24,6 @@ data class McuConsoleUiState(
     val transportDraft: McuTransportProfileIso = defaultTransportDraft(),
     val flashProfiles: List<McuFlashProfileSummary> = emptyList(),
     val runtimeBundles: List<McuRuntimeBundleSummary> = emptyList(),
-    val transportProbes: Map<McuTransportKind, McuTransportProbeResponse> = emptyMap(),
     val events: List<McuEventEnvelope> = emptyList(),
     val widgetInstances: List<McuWidgetInstanceState> = emptyList(),
     val session: McuSessionSnapshot = McuSessionSnapshot(),
@@ -36,7 +33,6 @@ data class McuConsoleUiState(
     val modbusLastExecution: McuModbusExecutionResult = McuModbusExecutionResult(),
     val selection: McuConsoleSelectionState = McuConsoleSelectionState(),
     val modbus: McuConsoleModbusState = McuConsoleModbusState(),
-    val bluetooth: McuConsoleBluetoothState = McuConsoleBluetoothState(),
     val serialConsole: McuConsoleSerialConsoleState = McuConsoleSerialConsoleState(),
     val panelControl: McuConsolePanelControlState = McuConsolePanelControlState(),
     val probe: McuConsoleProbeState = McuConsoleProbeState(),
@@ -71,15 +67,6 @@ data class McuConsoleModbusState(
     val pwmDutyText: String = "32768",
     val servoPinText: String = "12",
     val servoAngleText: String = "90",
-)
-
-data class McuConsoleBluetoothState(
-    val mode: McuBluetoothMode = McuBluetoothMode.BLE,
-    val deviceNameText: String = "",
-    val deviceAddressText: String = "",
-    val serviceUuidText: String = "",
-    val writeCharacteristicUuidText: String = "",
-    val notifyCharacteristicUuidText: String = "",
 )
 
 data class McuConsoleSerialConsoleState(
@@ -147,7 +134,7 @@ internal fun defaultTransportDraft(
 ): McuTransportProfileIso {
     return McuTransportProfileIso(
         name = kind.defaultDraftName(),
-        transportKind = kind,
+        transportKind = McuTransportKind.SERIAL,
         baudRate = 115200,
         unitId = 1,
         dataBits = 8,
@@ -155,32 +142,11 @@ internal fun defaultTransportDraft(
         parity = McuModbusSerialParity.NONE,
         timeoutMs = 1000,
         retries = 2,
-        host = when (kind) {
-            McuTransportKind.MODBUS_TCP -> "192.168.1.10"
-            McuTransportKind.MQTT -> "tcp://127.0.0.1:1883"
-            else -> null
-        },
-        port = when (kind) {
-            McuTransportKind.MODBUS_TCP -> 502
-            McuTransportKind.MQTT -> 1883
-            else -> null
-        },
-        clientId = "kcloud-mcu-client",
-        publishTopic = "devices/mcu/tx",
-        subscribeTopic = "devices/mcu/rx",
-        qos = 0,
-        keepAliveSeconds = 60,
     )
 }
 
 internal fun McuTransportKind.defaultDraftName(): String {
-    return when (this) {
-        McuTransportKind.SERIAL -> "串口连接"
-        McuTransportKind.MODBUS_RTU -> "RTU 主站"
-        McuTransportKind.MODBUS_TCP -> "TCP 主站"
-        McuTransportKind.BLUETOOTH -> "蓝牙连接"
-        McuTransportKind.MQTT -> "MQTT 连接"
-    }
+    return "串口连接"
 }
 
 internal fun defaultCustomSerialActions(): List<McuCustomSerialActionState> {

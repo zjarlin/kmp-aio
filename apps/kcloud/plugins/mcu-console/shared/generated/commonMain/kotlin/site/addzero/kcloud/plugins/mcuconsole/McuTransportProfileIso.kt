@@ -9,7 +9,7 @@ import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
 /**
  * MCU 连接档案。
  *
- * 用于保存串口 RTU、TCP、MQTT 等连接参数，供页面编辑、回显和最近使用记录复用。
+ * 用于保存串口连接草稿和 Modbus RTU 复用参数，供页面编辑、回显和最近使用记录复用。
  */
 @Serializable
 data class McuTransportProfileIso(

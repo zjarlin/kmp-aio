@@ -19,7 +19,8 @@ interface McuSettingsApi {
  *   - deviceKey: kotlin.String? (RequestParam)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
  */
-    @GET("/api/mcu/device-profile")    suspend fun getMcuDeviceProfile(
+    @GET("/api/mcu/device-profile")
+    suspend fun getMcuDeviceProfile(
         @Query("deviceKey") deviceKey: kotlin.String?
     ): site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
 
@@ -29,7 +30,8 @@ interface McuSettingsApi {
  * 路径: /api/mcu/transport-profiles
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuTransportProfilesResponse
  */
-    @GET("/api/mcu/transport-profiles")    suspend fun listMcuTransportProfiles(): site.addzero.kcloud.plugins.mcuconsole.McuTransportProfilesResponse
+    @GET("/api/mcu/transport-profiles")
+    suspend fun listMcuTransportProfiles(): site.addzero.kcloud.plugins.mcuconsole.McuTransportProfilesResponse
 
 /**
  * saveMcuDeviceProfile
@@ -39,7 +41,9 @@ interface McuSettingsApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
  */
-    @POST("/api/mcu/device-profile")    suspend fun saveMcuDeviceProfile(
+    @POST("/api/mcu/device-profile")
+    @Headers("Content-Type: application/json")
+    suspend fun saveMcuDeviceProfile(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
     ): site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
 
@@ -51,7 +55,9 @@ interface McuSettingsApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuTransportProfileIso (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuTransportProfileIso
  */
-    @POST("/api/mcu/transport-profile")    suspend fun saveMcuTransportProfile(
+    @POST("/api/mcu/transport-profile")
+    @Headers("Content-Type: application/json")
+    suspend fun saveMcuTransportProfile(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuTransportProfileIso
     ): site.addzero.kcloud.plugins.mcuconsole.McuTransportProfileIso
 
@@ -63,7 +69,8 @@ interface McuSettingsApi {
  *   - profileKey: kotlin.String (RequestParam)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuTransportProfilesResponse
  */
-    @POST("/api/mcu/transport-profile/delete")    suspend fun deleteMcuTransportProfile(
+    @POST("/api/mcu/transport-profile/delete")
+    suspend fun deleteMcuTransportProfile(
         @Query("profileKey") profileKey: kotlin.String
     ): site.addzero.kcloud.plugins.mcuconsole.McuTransportProfilesResponse
 

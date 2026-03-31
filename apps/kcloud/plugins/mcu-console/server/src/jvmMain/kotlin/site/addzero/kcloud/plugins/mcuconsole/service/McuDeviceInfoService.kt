@@ -7,6 +7,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoPollRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
@@ -19,6 +20,7 @@ import java.util.UUID
 /**
  * 负责通过 MCU VM 协议主动轮询设备基础信息。
  */
+@Single
 class McuDeviceInfoService(
     private val sessionService: McuConsoleSessionService,
     private val protocolCodec: McuVmProtocolCodec,

@@ -16,7 +16,8 @@ interface McuDeviceInfoApi {
  * 路径: /api/mcu/device-info
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
  */
-    @GET("/api/mcu/device-info")    suspend fun getMcuDeviceInfo(): site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
+    @GET("/api/mcu/device-info")
+    suspend fun getMcuDeviceInfo(): site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
 
 /**
  * pollMcuDeviceInfo
@@ -26,7 +27,9 @@ interface McuDeviceInfoApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoPollRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
  */
-    @POST("/api/mcu/device-info/poll")    suspend fun pollMcuDeviceInfo(
+    @POST("/api/mcu/device-info/poll")
+    @Headers("Content-Type: application/json")
+    suspend fun pollMcuDeviceInfo(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoPollRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
 

@@ -1,10 +1,12 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRuntimeKind
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStrategyKind
 
+@Single
 class McuFlashProfileCatalog {
     private val profiles = listOf(
         McuFlashProfileSummary(

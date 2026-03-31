@@ -6,6 +6,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.springktor.runtime.optionalRequestParam
 import site.addzero.springktor.runtime.requireRequestBody
 import site.addzero.springktor.runtime.requireRequestParam
@@ -33,6 +34,6 @@ fun Route.configCenterRoutes() {
     }
 }
 
-private fun configCenterService(): ConfigCenterService {
+private fun configCenterService(): ConfigValueServiceSpi {
     return KoinPlatform.getKoin().get()
 }

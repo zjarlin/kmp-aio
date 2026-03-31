@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
-import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterService
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 
 @GetMapping("/api/system/config-center/value")
 fun getConfigCenterValue(
@@ -34,6 +34,6 @@ fun putConfigCenterValue(
     )
 }
 
-private fun service(): ConfigCenterService {
+private fun service(): ConfigValueServiceSpi {
     return KoinPlatform.getKoin().get()
 }

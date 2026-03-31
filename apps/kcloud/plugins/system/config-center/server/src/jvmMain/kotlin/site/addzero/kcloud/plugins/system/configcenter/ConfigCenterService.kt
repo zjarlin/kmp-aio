@@ -4,6 +4,7 @@ import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.kcloud.plugins.system.configcenter.model.ConfigCenterConfig
 import site.addzero.kcloud.plugins.system.configcenter.model.ConfigCenterEnvironment
 import site.addzero.kcloud.plugins.system.configcenter.model.ConfigCenterProject
@@ -12,14 +13,18 @@ import site.addzero.kcloud.plugins.system.configcenter.model.ConfigCenterValue
 import site.addzero.kcloud.plugins.system.configcenter.model.by
 import java.util.UUID
 
-@Single
+@Single(
+    binds = [
+        ConfigValueServiceSpi::class,
+    ],
+)
 class ConfigCenterService(
     private val sqlClient: KSqlClient,
-) {
-    fun readValue(
+) : ConfigValueServiceSpi {
+    override fun readValue(
         namespace: String,
         key: String,
-        active: String = "dev",
+        active: String,
     ): ConfigCenterValueDto {
         val normalizedNamespace = normalizeNamespace(namespace)
         val normalizedKey = normalizeConfigKey(key)
@@ -66,11 +71,11 @@ class ConfigCenterService(
         ).toDto()
     }
 
-    fun writeValue(
+    override fun writeValue(
         namespace: String,
         key: String,
         value: String,
-        active: String = "dev",
+        active: String,
     ): ConfigCenterValueDto {
         val normalizedNamespace = normalizeNamespace(namespace)
         val normalizedKey = normalizeConfigKey(key)

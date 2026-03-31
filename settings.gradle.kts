@@ -25,10 +25,10 @@ pluginManagement {
         ?.trim()
         ?.takeIf(String::isNotBlank)
         ?: "2026.10329.10127"
-    if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
-        plugins {
-            id("site.addzero.kcp.i18n") version localAddzeroLibJvmVersion
-        }
+    plugins {
+        id("site.addzero.kcp.i18n") version localAddzeroLibJvmVersion
+        id("site.addzero.ksp.modbus-rtu") version localAddzeroLibJvmVersion
+        id("site.addzero.ksp.modbus-tcp") version localAddzeroLibJvmVersion
     }
 }
 
@@ -77,11 +77,16 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     remapExternalProject(":lib:tool-kmp:tool-coll", "lib/tool-kmp/tool-coll")
     remapExternalProject(":lib:tool-kmp:network-starter", "lib/tool-kmp/network-starter")
     remapExternalProject(":lib:tool-kmp:tool-tree", "lib/tool-kmp/tool-tree")
+    remapExternalProject(":lib:tool-jvm", "lib/tool-jvm")
+    remapExternalProject(":lib:tool-jvm:tool-serial", "lib/tool-jvm/tool-serial")
+    remapExternalProject(":lib:tool-jvm:tool-modbus", "lib/tool-jvm/tool-modbus")
     remapExternalProject(":lib:ksp", "lib/ksp")
     remapExternalProject(":lib:ksp:common", "lib/ksp/common")
+    remapExternalProject(":lib:ksp:common:ksp-support-jdbc", "lib/ksp/common/ksp-support-jdbc")
     remapExternalProject(":lib:ksp:metadata", "lib/ksp/metadata")
     remapExternalProject(":lib:ksp:metadata:controller2api-processor", "lib/ksp/metadata/controller2api-processor")
     remapExternalProject(":lib:ksp:metadata:entity2form", "lib/ksp/metadata/entity2form")
+    remapExternalProject(":lib:ksp:metadata:ksp-dsl-builder:ksp-dsl-builder-core", "lib/ksp/metadata/ksp-dsl-builder/ksp-dsl-builder-core")
     remapExternalProject(":lib:lsi", "lib/lsi")
     remapExternalProject(":lib:lsi:lsi-core", "lib/lsi/lsi-core")
     remapExternalProject(":lib:ksp:route", "lib/ksp/route")
@@ -94,7 +99,24 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     remapExternalProject(":lib:ksp:metadata:jimmer-entity-external-processor", "lib/ksp/metadata/jimmer-entity-external-processor")
     remapExternalProject(":lib:ksp:metadata:modbus:modbus-runtime", "lib/ksp/metadata/modbus/modbus-runtime")
     remapExternalProject(":lib:ksp:metadata:modbus:modbus-ksp-core", "lib/ksp/metadata/modbus/modbus-ksp-core")
+    remapExternalProject(
+        ":lib:ksp:metadata:modbus:modbus-ksp-kotlin-gateway",
+        "lib/ksp/metadata/modbus/modbus-ksp-kotlin-gateway",
+    )
+    remapExternalProject(
+        ":lib:ksp:metadata:modbus:modbus-ksp-c-contract",
+        "lib/ksp/metadata/modbus/modbus-ksp-c-contract",
+    )
+    remapExternalProject(
+        ":lib:ksp:metadata:modbus:modbus-ksp-keil-sync",
+        "lib/ksp/metadata/modbus/modbus-ksp-keil-sync",
+    )
+    remapExternalProject(
+        ":lib:ksp:metadata:modbus:modbus-ksp-markdown",
+        "lib/ksp/metadata/modbus/modbus-ksp-markdown",
+    )
     remapExternalProject(":lib:ksp:metadata:modbus:modbus-ksp-rtu", "lib/ksp/metadata/modbus/modbus-ksp-rtu")
+    remapExternalProject(":lib:ksp:metadata:modbus:modbus-ksp-tcp", "lib/ksp/metadata/modbus/modbus-ksp-tcp")
 
     gradle.beforeProject {
         configurations.configureEach {
@@ -117,10 +139,18 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
                     .using(project(":lib:ksp:route:route-processor"))
                 substitute(module("site.addzero:controller2api-processor"))
                     .using(project(":lib:ksp:metadata:controller2api-processor"))
+                substitute(module("site.addzero:ksp-support-jdbc"))
+                    .using(project(":lib:ksp:common:ksp-support-jdbc"))
+                substitute(module("site.addzero:ksp-dsl-builder-core"))
+                    .using(project(":lib:ksp:metadata:ksp-dsl-builder:ksp-dsl-builder-core"))
                 substitute(module("site.addzero:lsi-core"))
                     .using(project(":lib:lsi:lsi-core"))
                 substitute(module("site.addzero:tool-coll"))
                     .using(project(":lib:tool-kmp:tool-coll"))
+                substitute(module("site.addzero:tool-serial"))
+                    .using(project(":lib:tool-jvm:tool-serial"))
+                substitute(module("site.addzero:tool-modbus"))
+                    .using(project(":lib:tool-jvm:tool-modbus"))
                 substitute(module("site.addzero:jimmer-entity-spi"))
                     .using(project(":lib:ksp:metadata:jimmer-entity-spi"))
                 substitute(module("site.addzero:entity2iso-processor"))
@@ -135,6 +165,8 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
                     .using(project(":lib:ksp:metadata:modbus:modbus-runtime"))
                 substitute(module("site.addzero:modbus-ksp-rtu"))
                     .using(project(":lib:ksp:metadata:modbus:modbus-ksp-rtu"))
+                substitute(module("site.addzero:modbus-ksp-tcp"))
+                    .using(project(":lib:ksp:metadata:modbus:modbus-ksp-tcp"))
             }
         }
     }

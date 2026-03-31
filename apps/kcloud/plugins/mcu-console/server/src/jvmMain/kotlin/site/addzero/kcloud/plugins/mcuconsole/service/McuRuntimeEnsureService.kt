@@ -3,11 +3,13 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import java.time.Instant
 import java.util.*
 
+@Single
 class McuRuntimeEnsureService(
     private val bundleCatalog: McuRuntimeBundleCatalog,
     private val assetExtractor: McuRuntimeAssetExtractor,

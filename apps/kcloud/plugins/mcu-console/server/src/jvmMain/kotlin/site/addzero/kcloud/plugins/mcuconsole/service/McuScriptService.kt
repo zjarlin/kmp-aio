@@ -2,11 +2,13 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import java.time.Instant
 import java.util.*
 
+@Single
 class McuScriptService(
     private val sessionService: McuConsoleSessionService,
     private val protocolCodec: McuVmProtocolCodec,

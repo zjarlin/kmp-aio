@@ -12,7 +12,7 @@ import java.time.Instant
 /**
  * MCU 连接档案。
  *
- * 用于保存串口 RTU、TCP、MQTT 等连接参数，供页面编辑、回显和最近使用记录复用。
+ * 用于保存串口连接草稿和 Modbus RTU 复用参数，供页面编辑、回显和最近使用记录复用。
  */
 @Entity
 @Table(name = "mcu_transport_profile")
@@ -63,34 +63,34 @@ interface McuTransportProfile : BaseEntity {
     /** 通信重试次数。 */
     val retries: Int?
 
-    /** TCP 或 MQTT 主机地址。 */
+    /** 兼容旧表结构保留的主机地址字段，本轮 serial-only 控制台不再使用。 */
     val host: String?
 
-    /** TCP 或 MQTT 端口。 */
+    /** 兼容旧表结构保留的端口字段，本轮 serial-only 控制台不再使用。 */
     val port: Int?
 
-    /** MQTT Client ID。 */
+    /** 兼容旧表结构保留的 Client ID 字段，本轮 serial-only 控制台不再使用。 */
     @Column(name = "client_id")
     val clientId: String?
 
-    /** MQTT 用户名。 */
+    /** 兼容旧表结构保留的用户名字段，本轮 serial-only 控制台不再使用。 */
     val username: String?
 
-    /** MQTT 密码。 */
+    /** 兼容旧表结构保留的密码字段，本轮 serial-only 控制台不再使用。 */
     val password: String?
 
-    /** MQTT 发布主题。 */
+    /** 兼容旧表结构保留的发布主题字段，本轮 serial-only 控制台不再使用。 */
     @Column(name = "publish_topic")
     val publishTopic: String?
 
-    /** MQTT 订阅主题。 */
+    /** 兼容旧表结构保留的订阅主题字段，本轮 serial-only 控制台不再使用。 */
     @Column(name = "subscribe_topic")
     val subscribeTopic: String?
 
-    /** MQTT QoS。 */
+    /** 兼容旧表结构保留的 QoS 字段，本轮 serial-only 控制台不再使用。 */
     val qos: Int?
 
-    /** MQTT KeepAlive 秒数。 */
+    /** 兼容旧表结构保留的 KeepAlive 字段，本轮 serial-only 控制台不再使用。 */
     @Column(name = "keep_alive_seconds")
     val keepAliveSeconds: Int?
 

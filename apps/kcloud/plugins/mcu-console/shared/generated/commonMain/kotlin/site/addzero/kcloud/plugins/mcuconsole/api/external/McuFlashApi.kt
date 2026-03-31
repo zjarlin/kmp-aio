@@ -19,7 +19,8 @@ interface McuFlashApi {
  * 路径: /api/mcu/flash/profiles
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
  */
-    @GET("/api/mcu/flash/profiles")    suspend fun listMcuFlashProfiles(): site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
+    @GET("/api/mcu/flash/profiles")
+    suspend fun listMcuFlashProfiles(): site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
 
 /**
  * getMcuFlashStatus
@@ -27,7 +28,8 @@ interface McuFlashApi {
  * 路径: /api/mcu/flash/status
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
  */
-    @GET("/api/mcu/flash/status")    suspend fun getMcuFlashStatus(): site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
+    @GET("/api/mcu/flash/status")
+    suspend fun getMcuFlashStatus(): site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 
 /**
  * startMcuFlash
@@ -37,7 +39,9 @@ interface McuFlashApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
  */
-    @POST("/api/mcu/flash/start")    suspend fun startMcuFlash(
+    @POST("/api/mcu/flash/start")
+    @Headers("Content-Type: application/json")
+    suspend fun startMcuFlash(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 
@@ -49,7 +53,9 @@ interface McuFlashApi {
  *   - request: site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadResponse
  */
-    @POST("/api/mcu/flash/download")    suspend fun downloadMcuFlashFirmware(
+    @POST("/api/mcu/flash/download")
+    @Headers("Content-Type: application/json")
+    suspend fun downloadMcuFlashFirmware(
         @Body request: site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadRequest
     ): site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadResponse
 

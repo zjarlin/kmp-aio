@@ -37,7 +37,7 @@ fun saveMcuDeviceProfile(
 
 /**
  * 前端控件: 控制台/Modbus “已保存连接”列表。
- * 作用: 读取所有已保存的串口、RTU、TCP、蓝牙、MQTT 连接配置。
+ * 作用: 读取串口自动发现页保存的连接草稿，以及 Modbus RTU 页复用的串口参数草稿。
  */
 @GetMapping("/api/mcu/transport-profiles")
 fun listMcuTransportProfiles(): McuTransportProfilesResponse {

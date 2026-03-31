@@ -2,11 +2,13 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
 import java.io.File
 import java.time.Instant
 
+@Single
 class McuFlashService(
     private val gateway: SerialPortGateway,
     private val sessionService: McuConsoleSessionService,
