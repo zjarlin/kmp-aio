@@ -5,7 +5,6 @@ import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.mp.KoinPlatform
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.generated.RouteKeys
 import site.addzero.kbox.app.KboxRouteCatalog
 import site.addzero.kbox.app.KboxShellState
 import site.addzero.kbox.plugin.api.KboxPluginManagerService
@@ -39,8 +38,8 @@ class KboxComposeKoinApplicationTest {
         assertNotNull(koin.getOrNull<KboxPluginManagerState>())
         assertNotNull(koin.getOrNull<KboxStorageToolState>())
         assertNotNull(koin.getOrNull<KboxSyncToolState>())
-        assertNotNull(routeCatalog.findRoute(RouteKeys.KBOX_STORAGE_TOOL_SCREEN))
         assertNotNull(routeCatalog.findRoute("system/plugin-manager"))
+        assertNotNull(routeCatalog.findRoute("tools/storage-tool"))
     }
 
     @Test

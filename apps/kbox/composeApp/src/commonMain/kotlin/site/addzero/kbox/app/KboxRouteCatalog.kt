@@ -196,10 +196,13 @@ private data class KboxSceneMeta(
 )
 
 private fun Route.toDefinition(): KboxRouteDefinition {
+    val resolvedRoutePath = routePath.ifBlank {
+        legacyKboxRoutePathFor(qualifiedName).orEmpty()
+    }
     return KboxRouteDefinition(
         parentName = value,
         title = title.ifBlank { simpleName.ifBlank { routePath } },
-        routePath = routePath,
+        routePath = resolvedRoutePath,
         iconName = icon.ifBlank { "Apps" },
         order = order,
         sceneName = placement.scene.name,
@@ -222,6 +225,16 @@ private fun KboxRouteContribution.toDefinition(): KboxRouteDefinition {
         defaultInScene = defaultInScene,
         runtimeContent = content,
     )
+}
+
+private fun legacyKboxRoutePathFor(
+    qualifiedName: String,
+): String? {
+    return when (qualifiedName) {
+        KBOX_PLUGIN_MANAGER_QUALIFIED_NAME -> KBOX_PLUGIN_MANAGER_ROUTE_PATH
+        KBOX_STORAGE_TOOL_QUALIFIED_NAME -> KBOX_STORAGE_TOOL_ROUTE_PATH
+        else -> null
+    }
 }
 
 private fun KboxRouteDefinition.sceneMeta(): KboxSceneMeta {
@@ -382,4 +395,8 @@ private fun Double.toRouteSort(): Int {
 }
 
 private const val UNASSIGNED_SCENE_ID = "unassigned"
+private const val KBOX_PLUGIN_MANAGER_QUALIFIED_NAME = "site.addzero.kbox.plugins.system.pluginmanager.screen.KboxPluginManagerScreen"
+private const val KBOX_PLUGIN_MANAGER_ROUTE_PATH = "system/plugin-manager"
+private const val KBOX_STORAGE_TOOL_QUALIFIED_NAME = "site.addzero.kbox.plugins.tools.storagetool.screen.KboxStorageToolScreen"
+private const val KBOX_STORAGE_TOOL_ROUTE_PATH = "tools/storage-tool"
 private const val UNASSIGNED_SCENE_NAME = "未分配场景"

@@ -12,14 +12,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.koin.compose.koinInject
 import site.addzero.appsidebar.WorkbenchUserButton
-import site.addzero.kcloud.app.KCloudRouteCatalog
-import site.addzero.kcloud.app.KCloudSidebarNode
-import site.addzero.kcloud.app.KCloudShellState
+import site.addzero.kcloud.app.WorkbenchRouteCatalog
+import site.addzero.kcloud.app.WorkbenchSidebarNode
+import site.addzero.kcloud.app.WorkbenchShellState
 
 @Composable
-fun KCloudUserMenu(
-    shellState: KCloudShellState = koinInject(),
-    routeCatalog: KCloudRouteCatalog = koinInject(),
+fun WorkbenchUserMenu(
+    shellState: WorkbenchShellState = koinInject(),
+    routeCatalog: WorkbenchRouteCatalog = koinInject(),
 ) {
     var expanded by remember { mutableStateOf(false) }
     val items = remember(routeCatalog) {
@@ -61,7 +61,7 @@ fun KCloudUserMenu(
     }
 }
 
-private fun KCloudSidebarNode.firstLeafRoutePath(): String? {
+private fun WorkbenchSidebarNode.firstLeafRoutePath(): String? {
     routePath?.let { route ->
         return route
     }

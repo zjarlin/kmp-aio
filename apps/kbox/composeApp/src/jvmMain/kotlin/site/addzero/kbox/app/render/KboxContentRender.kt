@@ -110,6 +110,7 @@ private fun ScreenContentEntry(
         ?: routeEntry?.routePath?.let { routePath ->
             RouteTable.allRoutes[routePath]
         }
+        ?: legacyStaticContentFor(routeEntry?.routePath)
     if (content == null) {
         EmptyShellContent(routeEntry)
         return
@@ -173,4 +174,26 @@ private fun EmptyShellContent(
             style = MaterialTheme.typography.headlineSmall,
         )
     }
+}
+
+private fun legacyStaticContentFor(
+    routePath: String?,
+): (@Composable () -> Unit)? {
+    return when (routePath) {
+        "system/plugin-manager" -> ::PluginManagerLegacyRouteContent
+
+        "tools/storage-tool" -> ::StorageToolLegacyRouteContent
+
+        else -> null
+    }
+}
+
+@Composable
+private fun PluginManagerLegacyRouteContent() {
+    site.addzero.kbox.plugins.system.pluginmanager.screen.KboxPluginManagerScreen()
+}
+
+@Composable
+private fun StorageToolLegacyRouteContent() {
+    site.addzero.kbox.plugins.tools.storagetool.screen.KboxStorageToolScreen()
 }

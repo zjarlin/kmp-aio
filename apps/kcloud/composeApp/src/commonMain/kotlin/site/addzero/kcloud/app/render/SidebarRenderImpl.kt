@@ -20,14 +20,14 @@ import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
-import site.addzero.kcloud.app.KCloudRouteCatalog
-import site.addzero.kcloud.app.KCloudShellState
-import site.addzero.kcloud.app.KCloudSidebarNode
+import site.addzero.kcloud.app.WorkbenchRouteCatalog
+import site.addzero.kcloud.app.WorkbenchShellState
+import site.addzero.kcloud.app.WorkbenchSidebarNode
 import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
 class SidebarRenderImpl(
-    private val routeCatalog: KCloudRouteCatalog,
-    private val shellState: KCloudShellState,
+    private val routeCatalog: WorkbenchRouteCatalog,
+    private val shellState: WorkbenchShellState,
 ) : SidebarRender {
     @Composable
     override fun Render(
@@ -60,13 +60,13 @@ class SidebarRenderImpl(
 @Composable
 private fun RouteSidebar(
     title: String,
-    items: List<KCloudSidebarNode>,
+    items: List<WorkbenchSidebarNode>,
     selectedRoutePath: String?,
-    onNodeClick: (KCloudSidebarNode) -> Unit,
+    onNodeClick: (WorkbenchSidebarNode) -> Unit,
     modifier: Modifier = Modifier,
     searchEnabled: Boolean = true,
     searchPlaceholder: String = "搜索页面",
-    treeViewModel: TreeViewModel<KCloudSidebarNode> = rememberTreeViewModel(),
+    treeViewModel: TreeViewModel<WorkbenchSidebarNode> = rememberTreeViewModel(),
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -74,9 +74,9 @@ private fun RouteSidebar(
 
     LaunchedEffect(treeViewModel) {
         treeViewModel.configure(
-            getId = KCloudSidebarNode::id,
-            getLabel = KCloudSidebarNode::name,
-            getChildren = KCloudSidebarNode::children,
+            getId = WorkbenchSidebarNode::id,
+            getLabel = WorkbenchSidebarNode::name,
+            getChildren = WorkbenchSidebarNode::children,
             getIcon = { node -> node.icon },
         )
     }
@@ -146,9 +146,9 @@ private fun RouteSidebar(
     }
 }
 
-private fun List<KCloudSidebarNode>.allBranchIds(): Set<String> {
+private fun List<WorkbenchSidebarNode>.allBranchIds(): Set<String> {
     return buildSet {
-        fun collect(nodes: List<KCloudSidebarNode>) {
+        fun collect(nodes: List<WorkbenchSidebarNode>) {
             nodes.forEach { node ->
                 if (node.children.isNotEmpty()) {
                     add(node.id)
@@ -160,7 +160,7 @@ private fun List<KCloudSidebarNode>.allBranchIds(): Set<String> {
     }
 }
 
-private fun List<KCloudSidebarNode>.resolveSelectedId(
+private fun List<WorkbenchSidebarNode>.resolveSelectedId(
     selectedRoutePath: String?,
 ): String? {
     if (selectedRoutePath != null) {
@@ -171,9 +171,9 @@ private fun List<KCloudSidebarNode>.resolveSelectedId(
     return firstLeafIdOrNull()
 }
 
-private fun List<KCloudSidebarNode>.firstLeafByRoutePath(
+private fun List<WorkbenchSidebarNode>.firstLeafByRoutePath(
     routePath: String,
-): KCloudSidebarNode? {
+): WorkbenchSidebarNode? {
     return firstNotNullOfOrNull { node ->
         when {
             node.routePath == routePath -> node
@@ -183,7 +183,7 @@ private fun List<KCloudSidebarNode>.firstLeafByRoutePath(
     }
 }
 
-private fun List<KCloudSidebarNode>.firstLeafIdOrNull(): String? {
+private fun List<WorkbenchSidebarNode>.firstLeafIdOrNull(): String? {
     firstOrNull { node -> node.isLeaf }?.let { node ->
         return node.id
     }
@@ -192,7 +192,7 @@ private fun List<KCloudSidebarNode>.firstLeafIdOrNull(): String? {
     }
 }
 
-private fun KCloudSidebarNode.firstLeafRoutePath(): String? {
+private fun WorkbenchSidebarNode.firstLeafRoutePath(): String? {
     routePath?.let { route ->
         return route
     }

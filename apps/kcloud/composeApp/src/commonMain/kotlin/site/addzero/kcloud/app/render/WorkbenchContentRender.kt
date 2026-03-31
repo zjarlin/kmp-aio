@@ -13,15 +13,15 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import site.addzero.generated.RouteTable
-import site.addzero.kcloud.app.KCloudNavRoute
-import site.addzero.kcloud.app.KCloudRouteCatalog
-import site.addzero.kcloud.app.KCloudRouteEntry
-import site.addzero.kcloud.app.KCloudShellState
+import site.addzero.kcloud.app.WorkbenchNavRoute
+import site.addzero.kcloud.app.WorkbenchRouteCatalog
+import site.addzero.kcloud.app.WorkbenchRouteEntry
+import site.addzero.kcloud.app.WorkbenchShellState
 import site.addzero.workbenchshell.spi.content.ContentRender
 
-class KCloudContentRender(
-    private val routeCatalog: KCloudRouteCatalog,
-    private val shellState: KCloudShellState,
+class WorkbenchContentRender(
+    private val routeCatalog: WorkbenchRouteCatalog,
+    private val shellState: WorkbenchShellState,
 ) : ContentRender {
     @Composable
     override fun Render(
@@ -59,8 +59,8 @@ class KCloudContentRender(
 
 @Composable
 private fun ScreenContentEntry(
-    route: KCloudNavRoute,
-    routeCatalog: KCloudRouteCatalog,
+    route: WorkbenchNavRoute,
+    routeCatalog: WorkbenchRouteCatalog,
 ) {
     val routeEntry = remember(routeCatalog, route.routePath) {
         routeCatalog.findRoute(route.routePath)
@@ -84,7 +84,7 @@ private fun ScreenContentEntry(
 
 @Composable
 private fun EmptyShellContent(
-    routeEntry: KCloudRouteEntry? = null,
+    routeEntry: WorkbenchRouteEntry? = null,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),

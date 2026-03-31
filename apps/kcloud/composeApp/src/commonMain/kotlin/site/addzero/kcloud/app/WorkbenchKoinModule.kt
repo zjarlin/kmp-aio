@@ -6,8 +6,8 @@ import site.addzero.core.network.ApiClientSpi
 import site.addzero.core.network.ApiClients
 import site.addzero.core.network.HttpClientFactory
 import site.addzero.generated.RouteKeys
-import site.addzero.kcloud.app.render.KCloudContentRender
-import site.addzero.kcloud.app.render.KCloudHeaderRender
+import site.addzero.kcloud.app.render.WorkbenchContentRender
+import site.addzero.kcloud.app.render.WorkbenchHeaderRender
 import site.addzero.kcloud.app.render.SidebarRenderImpl
 import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.workbenchshell.spi.content.ContentRender
@@ -15,7 +15,7 @@ import site.addzero.workbenchshell.spi.header.HeaderRender
 import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
 @Module
-class KCloudWorkbenchKoinModule {
+class WorkbenchKoinModule {
     @Single
     fun provideHttpClientFactory(): HttpClientFactory {
         return HttpClientFactory()
@@ -33,8 +33,8 @@ class KCloudWorkbenchKoinModule {
     }
 
     @Single
-    fun provideRouteCatalog(): KCloudRouteCatalog {
-        return KCloudRouteCatalog(RouteKeys.allMeta)
+    fun provideRouteCatalog(): WorkbenchRouteCatalog {
+        return WorkbenchRouteCatalog(RouteKeys.allMeta)
     }
 
     @Single
@@ -44,32 +44,32 @@ class KCloudWorkbenchKoinModule {
 
     @Single
     fun provideShellState(
-        routeCatalog: KCloudRouteCatalog,
-    ): KCloudShellState {
-        return KCloudShellState(routeCatalog)
+        routeCatalog: WorkbenchRouteCatalog,
+    ): WorkbenchShellState {
+        return WorkbenchShellState(routeCatalog)
     }
 
     @Single
     fun provideSidebarRenderer(
-        routeCatalog: KCloudRouteCatalog,
-        shellState: KCloudShellState,
+        routeCatalog: WorkbenchRouteCatalog,
+        shellState: WorkbenchShellState,
     ): SidebarRender {
         return SidebarRenderImpl(routeCatalog, shellState)
     }
 
     @Single
     fun provideHeaderRenderer(
-        routeCatalog: KCloudRouteCatalog,
-        shellState: KCloudShellState,
+        routeCatalog: WorkbenchRouteCatalog,
+        shellState: WorkbenchShellState,
     ): HeaderRender {
-        return KCloudHeaderRender(routeCatalog, shellState)
+        return WorkbenchHeaderRender(routeCatalog, shellState)
     }
 
     @Single
     fun provideContentRenderer(
-        routeCatalog: KCloudRouteCatalog,
-        shellState: KCloudShellState,
+        routeCatalog: WorkbenchRouteCatalog,
+        shellState: WorkbenchShellState,
     ): ContentRender {
-        return KCloudContentRender(routeCatalog, shellState)
+        return WorkbenchContentRender(routeCatalog, shellState)
     }
 }

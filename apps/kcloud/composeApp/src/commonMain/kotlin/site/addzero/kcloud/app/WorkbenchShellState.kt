@@ -8,21 +8,21 @@ import site.addzero.generated.RouteKeys
 import site.addzero.kcloud.feature.ShellTrayPanelController
 import site.addzero.kcloud.feature.ShellWindowController
 
-class KCloudShellState(
-    private val routeCatalog: KCloudRouteCatalog,
+class WorkbenchShellState(
+    private val routeCatalog: WorkbenchRouteCatalog,
 ) : ShellWindowController, ShellTrayPanelController {
     private val startupRoutePath = routeCatalog.findRoute(RouteKeys.MCU_CONTROL_SCREEN)?.routePath
         ?: routeCatalog.defaultRoutePath
 
     val backStack = NavBackStack(
-        KCloudNavRoute(
+        WorkbenchNavRoute(
             routePath = startupRoutePath,
         ),
     )
 
-    val selectedRoute: KCloudNavRoute
+    val selectedRoute: WorkbenchNavRoute
         get() = backStack.lastOrNull()
-            ?: KCloudNavRoute(routePath = startupRoutePath)
+            ?: WorkbenchNavRoute(routePath = startupRoutePath)
 
     val selectedRoutePath: String
         get() = selectedRoute.routePath
@@ -93,7 +93,7 @@ class KCloudShellState(
     private fun navigateToRoute(
         routePath: String,
     ) {
-        val route = KCloudNavRoute(routePath = routePath)
+        val route = WorkbenchNavRoute(routePath = routePath)
         if (backStack.isEmpty()) {
             backStack += route
             return

@@ -4,6 +4,6 @@ import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class KCloudNavRoute(
+data class WorkbenchNavRoute(
     val routePath: String = "",
 ) : NavKey

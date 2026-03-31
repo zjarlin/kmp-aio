@@ -5,7 +5,7 @@ import org.koin.core.annotation.KoinApplication
 @KoinApplication(
     modules = [
         // <managed:plugin-market-desktop-koin:start>
-        site.addzero.kcloud.app.KCloudWorkbenchKoinModule::class,
+        site.addzero.kcloud.app.WorkbenchKoinModule::class,
         // <managed:plugin-market-desktop-koin:end>
     ],
 )

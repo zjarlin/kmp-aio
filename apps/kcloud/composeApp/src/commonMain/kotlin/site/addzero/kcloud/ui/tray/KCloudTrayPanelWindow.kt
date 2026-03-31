@@ -12,8 +12,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
-import site.addzero.kcloud.app.KCloudRouteCatalog
-import site.addzero.kcloud.app.KCloudShellState
+import site.addzero.kcloud.app.WorkbenchRouteCatalog
+import site.addzero.kcloud.app.WorkbenchShellState
 import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.kcloud.feature.ShellThemeMode
 import site.addzero.kcloud.ui.theme.KCloudTheme
@@ -21,8 +21,8 @@ import site.addzero.kcloud.ui.theme.KCloudTheme
 @Composable
 fun KCloudTrayPanelWindow(
     shellSettingsService: ShellSettingsService = koinInject(),
-    shellState: KCloudShellState = koinInject(),
-    routeCatalog: KCloudRouteCatalog = koinInject(),
+    shellState: WorkbenchShellState = koinInject(),
+    routeCatalog: WorkbenchRouteCatalog = koinInject(),
 ) {
     val themeMode by shellSettingsService.themeMode.collectAsState()
     val primaryRoute = remember(routeCatalog) {
