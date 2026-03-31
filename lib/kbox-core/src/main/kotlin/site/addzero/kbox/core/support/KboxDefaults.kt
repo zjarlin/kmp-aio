@@ -6,6 +6,7 @@ import site.addzero.kbox.core.model.KboxRemoteOs
 import site.addzero.kbox.core.model.KboxRemotePathConfig
 import site.addzero.kbox.core.model.KboxSettings
 import site.addzero.kbox.core.model.KboxSshConfig
+import site.addzero.kbox.core.model.KboxSyncMappingConfig
 import java.io.File
 
 object KboxDefaults {
@@ -22,6 +23,7 @@ object KboxDefaults {
                     appName = KBOX_APP_NAME,
                 ),
             ),
+            syncRemotePollSeconds = 30,
         )
     }
 
@@ -49,6 +51,32 @@ object KboxDefaults {
                     appName = settings.ssh.remotePath.appName.ifBlank { KBOX_APP_NAME },
                 ),
             ),
+            syncRemotePollSeconds = settings.syncRemotePollSeconds.takeIf { it > 0 } ?: defaults.syncRemotePollSeconds,
+            syncMappings = settings.syncMappings.mapNotNull(::normalizeSyncMapping),
+        )
+    }
+
+    private fun normalizeSyncMapping(
+        mapping: KboxSyncMappingConfig,
+    ): KboxSyncMappingConfig? {
+        val localRoot = mapping.localRoot.trim()
+        val remoteRoot = mapping.remoteRoot.trim()
+        if (localRoot.isBlank() || remoteRoot.isBlank()) {
+            return null
+        }
+        val mappingId = mapping.mappingId.ifBlank {
+            stableShortHash("$localRoot|$remoteRoot")
+        }
+        val displayName = mapping.displayName.trim().ifBlank {
+            File(localRoot).name.ifBlank { "Mapping-$mappingId" }
+        }
+        return mapping.copy(
+            mappingId = mappingId,
+            displayName = displayName,
+            localRoot = runCatching { File(localRoot).absoluteFile.canonicalPath }.getOrElse {
+                File(localRoot).absolutePath
+            },
+            remoteRoot = remoteRoot.replace('\\', '/').replace(Regex("/{2,}"), "/"),
         )
     }
 

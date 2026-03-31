@@ -32,6 +32,7 @@ import site.addzero.kbox.core.service.KboxPackageProfileService
 import site.addzero.kbox.core.service.KboxPathService
 import site.addzero.kbox.core.service.KboxRemotePathService
 import site.addzero.kbox.core.service.KboxSettingsRepository
+import site.addzero.kbox.core.service.KboxSyncCoordinator
 import site.addzero.kbox.core.support.KboxDefaults
 import site.addzero.kbox.plugin.api.KboxPluginManagerService
 import java.awt.Desktop
@@ -42,6 +43,7 @@ import java.util.Locale
 
 enum class KboxStorageHubTab {
     FILES,
+    SYNC,
     PACKAGE_PROFILES,
     DOTFILES,
     COMPOSE,
@@ -74,6 +76,7 @@ class KboxStorageToolState(
     private val composeProjectService: KboxComposeProjectService,
     private val packageProfileService: KboxPackageProfileService,
     private val pluginManagerService: KboxPluginManagerService,
+    private val syncCoordinator: KboxSyncCoordinator,
 ) {
     val installerCandidates = mutableStateListOf<KboxInstallerCandidate>()
     val largeFileCandidates = mutableStateListOf<KboxLargeFileCandidate>()
@@ -171,6 +174,11 @@ class KboxStorageToolState(
             refreshPackageProfilesInternal()
             refreshDotfilesInternal()
             refreshComposeProjectsInternal()
+            if (saved.syncEnabled && saved.ssh.enabled && saved.syncMappings.any { mapping -> mapping.enabled }) {
+                syncCoordinator.start(saved)
+            } else {
+                syncCoordinator.stop()
+            }
         }
     }
 
@@ -535,6 +543,43 @@ class KboxStorageToolState(
     ) {
         draft = transform(draft)
         refreshPreviews(currentSettings())
+    }
+
+    fun addSyncMappingDraft() {
+        updateDraft { current ->
+            current.copy(
+                syncMappings = current.syncMappings + KboxSyncMappingDraft(),
+            )
+        }
+    }
+
+    fun updateSyncMappingDraft(
+        index: Int,
+        transform: (KboxSyncMappingDraft) -> KboxSyncMappingDraft,
+    ) {
+        updateDraft { current ->
+            current.copy(
+                syncMappings = current.syncMappings.mapIndexed { currentIndex, mapping ->
+                    if (currentIndex == index) {
+                        transform(mapping)
+                    } else {
+                        mapping
+                    }
+                },
+            )
+        }
+    }
+
+    fun removeSyncMappingDraft(
+        index: Int,
+    ) {
+        updateDraft { current ->
+            current.copy(
+                syncMappings = current.syncMappings.filterIndexed { currentIndex, _ ->
+                    currentIndex != index
+                },
+            )
+        }
     }
 
     fun toggleInstallerSelection(

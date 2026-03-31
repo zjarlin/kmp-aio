@@ -11,6 +11,7 @@ import site.addzero.kbox.app.KboxShellState
 import site.addzero.kbox.plugin.api.KboxPluginManagerService
 import site.addzero.kbox.plugins.system.pluginmanager.KboxPluginManagerState
 import site.addzero.kbox.plugins.tools.storagetool.KboxStorageToolState
+import site.addzero.kbox.plugins.tools.storagetool.KboxSyncToolState
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -37,6 +38,7 @@ class KboxComposeKoinApplicationTest {
         assertNotNull(koin.getOrNull<KboxPluginManagerService>())
         assertNotNull(koin.getOrNull<KboxPluginManagerState>())
         assertNotNull(koin.getOrNull<KboxStorageToolState>())
+        assertNotNull(koin.getOrNull<KboxSyncToolState>())
         assertNotNull(routeCatalog.findRoute(RouteKeys.KBOX_STORAGE_TOOL_SCREEN))
         assertNotNull(routeCatalog.findRoute("system/plugin-manager"))
     }

@@ -54,6 +54,15 @@ function escapeFrontmatter(text) {
   return String(text).replace(/'/g, "''");
 }
 
+function toRouteSegment(fileName) {
+  return path.posix
+    .parse(fileName)
+    .name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 function applyTemplate(template, context) {
   return template.replace(/\{(\w+)\}/g, (_, key) => context[key] ?? "");
 }
@@ -223,7 +232,7 @@ export function generateDocs(config, configDir) {
     ensureDirectory(path.dirname(metadataFile));
 
     const allFiles = walkFiles(source.repoDir);
-    const readmeFiles = allFiles
+    const markdownFiles = allFiles
       .map((absolutePath) => ({
         absolutePath,
         relativePath: normalizeGlobPath(path.relative(source.repoDir, absolutePath))
@@ -236,10 +245,13 @@ export function generateDocs(config, configDir) {
     const links = [];
     const pages = [];
 
-    for (const file of readmeFiles) {
+    for (const file of markdownFiles) {
       const moduleDir = path.posix.dirname(file.relativePath);
       const moduleName = path.posix.basename(moduleDir);
       const absoluteModuleDir = path.join(source.repoDir, moduleDir);
+      const sourceFileName = path.posix.basename(file.relativePath);
+      const isReadme = sourceFileName.toLowerCase() === "readme.md";
+      const routeSegment = isReadme ? "" : toRouteSegment(sourceFileName);
       const originalMarkdown = fs.readFileSync(file.absolutePath, "utf8");
       const title = findFirstHeading(originalMarkdown) || moduleName;
       const transformedMarkdown = config.render.stripFirstH1
@@ -252,13 +264,21 @@ export function generateDocs(config, configDir) {
         absoluteModuleDir
       });
       const targetDir = moduleDir === "." ? contentDir : path.join(contentDir, moduleDir);
-      const targetFile = path.join(targetDir, "index.md");
+      const targetFile = isReadme
+        ? path.join(targetDir, "index.md")
+        : path.join(targetDir, sourceFileName);
+      const routePath = isReadme
+        ? moduleDir === "."
+          ? "/"
+          : `/${moduleDir}/`
+        : `/${[moduleDir === "." ? "" : moduleDir, routeSegment].filter(Boolean).join("/")}/`;
 
       ensureDirectory(targetDir);
 
       const sections = [
         "---",
         `title: '${escapeFrontmatter(title)}'`,
+        `slug: ${routePath}`,
         `description: '${escapeFrontmatter(sourceNotice)}'`,
         "---",
         "",
@@ -276,8 +296,10 @@ export function generateDocs(config, configDir) {
 
       fs.writeFileSync(targetFile, `${sections.join("\n")}\n`, "utf8");
 
-      const routePath = moduleDir === "." ? "/" : `/${moduleDir}/`;
-      links.push(`- [${title}](${routePath})`);
+      if (isReadme && routePath !== "/") {
+        links.push(`- [${title}](${routePath})`);
+      }
+
       pages.push({
         title,
         sourcePath: file.relativePath,

@@ -10,12 +10,20 @@ pluginManagement {
         maven(url = "https://plugins.gradle.org/m2/")
     }
     val localBuildLogicDir = file("checkouts/build-logic")
-    if (localBuildLogicDir.resolve("src/main/kotlin").isDirectory) {
-        includeBuild(localBuildLogicDir) {
+    val fallbackBuildLogicDir = file("../addzero-lib-jvm/checkouts/build-logic")
+    val resolvedBuildLogicDir = listOf(localBuildLogicDir, fallbackBuildLogicDir)
+        .firstOrNull { buildLogicDir -> buildLogicDir.resolve("src/main/kotlin").isDirectory }
+    if (resolvedBuildLogicDir != null) {
+        includeBuild(resolvedBuildLogicDir) {
             name = "build-logic"
         }
     }
     val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+    if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+        includeBuild(localAddzeroLibJvmDir) {
+            name = "addzero-lib-jvm-plugin-build"
+        }
+    }
     val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
         .resolve("gradle.properties")
         .takeIf { file -> file.isFile }
@@ -62,6 +70,9 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
     remapExternalProject(":lib:api:api-netease", "lib/api/api-netease")
     remapExternalProject(":lib:api:api-qqmusic", "lib/api/api-qqmusic")
     remapExternalProject(":lib:api:api-suno", "lib/api/api-suno")
+    remapExternalProject(":lib:kcp", "lib/kcp")
+    remapExternalProject(":lib:kcp:kcp-i18n", "lib/kcp/kcp-i18n")
+    remapExternalProject(":lib:kcp:kcp-i18n-runtime", "lib/kcp/kcp-i18n-runtime")
     remapExternalProject(":lib:compose", "lib/compose")
     remapExternalProject(":lib:compose:app-sidebar", "lib/compose/app-sidebar")
     remapExternalProject(":lib:compose:compose-icon-map", "lib/compose/compose-icon-map")
@@ -151,6 +162,10 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
                     .using(project(":lib:tool-jvm:tool-serial"))
                 substitute(module("site.addzero:tool-modbus"))
                     .using(project(":lib:tool-jvm:tool-modbus"))
+                substitute(module("site.addzero:kcp-i18n"))
+                    .using(project(":lib:kcp:kcp-i18n"))
+                substitute(module("site.addzero:kcp-i18n-runtime"))
+                    .using(project(":lib:kcp:kcp-i18n-runtime"))
                 substitute(module("site.addzero:jimmer-entity-spi"))
                     .using(project(":lib:ksp:metadata:jimmer-entity-spi"))
                 substitute(module("site.addzero:entity2iso-processor"))

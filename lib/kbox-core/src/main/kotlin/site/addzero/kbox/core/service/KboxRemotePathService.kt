@@ -4,6 +4,8 @@ import org.koin.core.annotation.Single
 import site.addzero.kbox.core.KBOX_APP_NAME
 import site.addzero.kbox.core.model.KboxRemoteOs
 import site.addzero.kbox.core.model.KboxSshConfig
+import site.addzero.kbox.core.model.KboxSyncMappingConfig
+import site.addzero.kbox.core.support.normalizeRelativePath
 
 @Single
 class KboxRemotePathService(
@@ -47,6 +49,24 @@ class KboxRemotePathService(
             remoteAppDataDir(config),
             relativePath,
         )
+    }
+
+    fun remoteAbsolutePath(
+        mapping: KboxSyncMappingConfig,
+        relativePath: String,
+    ): String {
+        return joinRemote(
+            mapping.remoteRoot,
+            normalizeRelativePath(relativePath),
+        )
+    }
+
+    fun normalizeRemotePath(
+        path: String,
+    ): String {
+        return path.replace('\\', '/')
+            .replace(Regex("/{2,}"), "/")
+            .ifBlank { "/" }
     }
 
     fun remoteAbsolutePathForFile(
@@ -93,13 +113,5 @@ class KboxRemotePathService(
                 append(part)
             }
         }
-    }
-
-    private fun normalizeRemotePath(
-        path: String,
-    ): String {
-        return path.replace('\\', '/')
-            .replace(Regex("/{2,}"), "/")
-            .ifBlank { "/" }
     }
 }

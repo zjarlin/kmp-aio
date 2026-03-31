@@ -105,8 +105,11 @@ node xiaoeyu/src/cli.mjs generate --config ./xiaoeyu.config.json
 
 # 在 docs/ 下安装依赖并构建 Docusaurus 站点
 npm install --prefix docs
+npm run start --prefix docs
 npm run build --prefix docs
 ```
+
+本地预览启动后默认访问 `http://localhost:3000/kmp-aio/`。推送到 `master` 或 `main` 后，GitHub Actions 会自动构建并发布到 GitHub Pages。
 
 ## 技术栈
 

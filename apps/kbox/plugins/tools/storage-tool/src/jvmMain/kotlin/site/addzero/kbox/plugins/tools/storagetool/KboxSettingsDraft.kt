@@ -7,8 +7,17 @@ import site.addzero.kbox.core.model.KboxRemotePathConfig
 import site.addzero.kbox.core.model.KboxSettings
 import site.addzero.kbox.core.model.KboxSshAuthMode
 import site.addzero.kbox.core.model.KboxSshConfig
+import site.addzero.kbox.core.model.KboxSyncMappingConfig
 import site.addzero.kbox.core.support.KboxDefaults
 import java.util.Locale
+
+data class KboxSyncMappingDraft(
+    val mappingId: String = "",
+    val displayName: String = "",
+    val localRoot: String = "",
+    val remoteRoot: String = "",
+    val enabled: Boolean = true,
+)
 
 data class KboxSettingsDraft(
     val localAppDataOverride: String = "",
@@ -30,6 +39,10 @@ data class KboxSettingsDraft(
     val remoteAppData: String = "",
     val remoteXdgDataHome: String = "",
     val remoteAppName: String = KBOX_APP_NAME,
+    val syncEnabled: Boolean = false,
+    val syncStartOnLaunch: Boolean = true,
+    val syncRemotePollSecondsText: String = "30",
+    val syncMappings: List<KboxSyncMappingDraft> = emptyList(),
 )
 
 fun KboxSettings.toDraft(): KboxSettingsDraft {
@@ -58,6 +71,18 @@ fun KboxSettings.toDraft(): KboxSettingsDraft {
         remoteAppData = normalized.ssh.remotePath.appData,
         remoteXdgDataHome = normalized.ssh.remotePath.xdgDataHome,
         remoteAppName = normalized.ssh.remotePath.appName,
+        syncEnabled = normalized.syncEnabled,
+        syncStartOnLaunch = normalized.syncStartOnLaunch,
+        syncRemotePollSecondsText = normalized.syncRemotePollSeconds.toString(),
+        syncMappings = normalized.syncMappings.map { mapping ->
+            KboxSyncMappingDraft(
+                mappingId = mapping.mappingId,
+                displayName = mapping.displayName,
+                localRoot = mapping.localRoot,
+                remoteRoot = mapping.remoteRoot,
+                enabled = mapping.enabled,
+            )
+        },
     )
 }
 
@@ -88,6 +113,18 @@ fun KboxSettingsDraft.toSettings(): KboxSettings {
                 appName = remoteAppName.trim().ifBlank { KBOX_APP_NAME },
             ),
         ),
+        syncEnabled = syncEnabled,
+        syncStartOnLaunch = syncStartOnLaunch,
+        syncRemotePollSeconds = parseSyncRemotePollSeconds(),
+        syncMappings = syncMappings.map { mapping ->
+            KboxSyncMappingConfig(
+                mappingId = mapping.mappingId.trim(),
+                displayName = mapping.displayName.trim(),
+                localRoot = mapping.localRoot.trim(),
+                remoteRoot = mapping.remoteRoot.trim(),
+                enabled = mapping.enabled,
+            )
+        },
     )
 }
 
@@ -97,6 +134,12 @@ private fun KboxSettingsDraft.parseThresholdBytes(): Long {
         return KboxDefaults.defaultSettings().largeFileThresholdBytes
     }
     return (gb * KBOX_DEFAULT_LARGE_FILE_THRESHOLD_BYTES).toLong()
+}
+
+private fun KboxSettingsDraft.parseSyncRemotePollSeconds(): Int {
+    return syncRemotePollSecondsText.trim().toIntOrNull()
+        ?.takeIf { value -> value > 0 }
+        ?: 30
 }
 
 private fun String.toPathLines(): List<String> {

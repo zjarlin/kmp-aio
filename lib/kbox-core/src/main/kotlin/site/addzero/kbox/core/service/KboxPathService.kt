@@ -113,6 +113,14 @@ open class KboxPathService {
         return File(historyDir(), "offload-history.json")
     }
 
+    fun syncIndexFile(): File {
+        return File(configDir(), "sync-index.json")
+    }
+
+    fun trashIndexFile(): File {
+        return File(configDir(), "trash-index.json")
+    }
+
     fun dotfileRegistryFile(): File {
         return File(configDir(), "dotfiles.json")
     }
@@ -210,6 +218,26 @@ open class KboxPathService {
         appDataDir: File,
     ): File {
         return childDirectory(appDataDir, "package-profiles")
+    }
+
+    fun trashDir(): File {
+        return trashDir(appDataDir())
+    }
+
+    fun trashDir(
+        appDataDir: File,
+    ): File {
+        return childDirectory(appDataDir, "trash")
+    }
+
+    fun tempDir(): File {
+        return tempDir(appDataDir())
+    }
+
+    fun tempDir(
+        appDataDir: File,
+    ): File {
+        return childDirectory(appDataDir, "tmp")
     }
 
     private fun buildDestinationFileName(

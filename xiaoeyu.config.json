@@ -11,7 +11,7 @@
     "organizationName": "zjarlin",
     "projectName": "kmp-aio",
     "repositoryUrl": "https://github.com/zjarlin/kmp-aio",
-    "editUrl": "https://github.com/zjarlin/kmp-aio/tree/main",
+    "editUrl": "https://github.com/zjarlin/kmp-aio/tree/master",
     "defaultLocale": "zh",
     "locales": [
       "zh",
@@ -26,6 +26,7 @@
     "include": [
       "README.md",
       "apps/**/README.md",
+      "apps/**/PLUGIN_DEVELOPMENT.md",
       "lib/**/README.md"
     ],
     "exclude": [

@@ -20,6 +20,7 @@ build-logic
 node_modules/
 /apps/kcloud/composeApp/hs_err_pid*.log
 .kiro
+/docs/
 bin/
 out/
 /kotlin-js-store/wasm/yarn.lock

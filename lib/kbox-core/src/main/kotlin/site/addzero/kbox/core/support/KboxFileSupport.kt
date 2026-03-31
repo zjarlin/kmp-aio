@@ -1,6 +1,7 @@
 package site.addzero.kbox.core.support
 
 import java.io.File
+import java.io.InputStream
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -70,10 +71,80 @@ internal fun moveFileReplacing(
 internal fun stableShortHash(
     value: String,
 ): String {
-    return MessageDigest.getInstance("SHA-256")
-        .digest(value.toByteArray())
-        .joinToString(separator = "") { byte -> "%02x".format(byte) }
+    return digestHex(
+        algorithm = "SHA-256",
+        bytes = value.toByteArray(),
+    )
         .take(10)
+}
+
+internal fun fileMd5(
+    file: File,
+): String {
+    file.inputStream().buffered().use { input ->
+        return streamDigestHex(
+            algorithm = "MD5",
+            input = input,
+        )
+    }
+}
+
+internal fun streamMd5(
+    input: InputStream,
+): String {
+    return streamDigestHex(
+        algorithm = "MD5",
+        input = input,
+    )
+}
+
+internal fun readFilePreview(
+    file: File,
+    maxBytes: Int,
+): ByteArray {
+    file.inputStream().buffered().use { input ->
+        return readStreamPreview(
+            input = input,
+            maxBytes = maxBytes,
+        )
+    }
+}
+
+internal fun readStreamPreview(
+    input: InputStream,
+    maxBytes: Int,
+): ByteArray {
+    val buffer = ByteArray(maxBytes.coerceAtLeast(0))
+    val count = input.read(buffer, 0, buffer.size)
+    if (count <= 0) {
+        return ByteArray(0)
+    }
+    return buffer.copyOf(count)
+}
+
+internal fun looksLikeText(
+    bytes: ByteArray,
+): Boolean {
+    if (bytes.isEmpty()) {
+        return true
+    }
+    var suspicious = 0
+    bytes.forEach { byte ->
+        val value = byte.toInt() and 0xFF
+        val printable = value == 0x09 || value == 0x0A || value == 0x0D || value in 0x20..0x7E
+        if (!printable && value < 0x80) {
+            suspicious += 1
+        }
+    }
+    return suspicious * 10 <= bytes.size
+}
+
+internal fun normalizeRelativePath(
+    path: String,
+): String {
+    return path.replace('\\', '/')
+        .replace(Regex("/{2,}"), "/")
+        .trim('/')
 }
 
 internal fun sanitizeFileName(
@@ -117,4 +188,30 @@ internal fun deleteEmptyParentDirectories(
         }
         current = current.parentFile?.absoluteFile
     }
+}
+
+private fun digestHex(
+    algorithm: String,
+    bytes: ByteArray,
+): String {
+    return MessageDigest.getInstance(algorithm)
+        .digest(bytes)
+        .joinToString(separator = "") { byte -> "%02x".format(byte) }
+}
+
+private fun streamDigestHex(
+    algorithm: String,
+    input: InputStream,
+): String {
+    val digest = MessageDigest.getInstance(algorithm)
+    val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+    while (true) {
+        val read = input.read(buffer)
+        if (read <= 0) {
+            break
+        }
+        digest.update(buffer, 0, read)
+    }
+    return digest.digest()
+        .joinToString(separator = "") { byte -> "%02x".format(byte) }
 }

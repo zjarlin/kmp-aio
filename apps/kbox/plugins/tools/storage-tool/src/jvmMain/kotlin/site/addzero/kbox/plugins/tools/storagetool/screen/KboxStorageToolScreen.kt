@@ -59,6 +59,7 @@ import site.addzero.kbox.core.model.KboxSshAuthMode
 import site.addzero.kbox.plugins.tools.storagetool.KboxComposeAction
 import site.addzero.kbox.plugins.tools.storagetool.KboxStorageHubTab
 import site.addzero.kbox.plugins.tools.storagetool.KboxStorageToolState
+import site.addzero.kbox.plugins.tools.storagetool.KboxSyncToolState
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -85,11 +86,15 @@ fun KboxStorageToolScreen(
     val state = remember {
         KoinPlatform.getKoin().get<KboxStorageToolState>()
     }
+    val syncState = remember {
+        KoinPlatform.getKoin().get<KboxSyncToolState>()
+    }
     val scope = rememberCoroutineScope()
     var showOffloadHistory by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         state.load()
+        syncState.load()
     }
 
     Column(
@@ -100,7 +105,7 @@ fun KboxStorageToolScreen(
         if (state.isBusy) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
-        HubTabs(
+        StorageHubTabs(
             currentTab = state.currentTab,
             onSelect = { tab -> state.currentTab = tab },
         )
@@ -120,6 +125,21 @@ fun KboxStorageToolScreen(
                     onOffloadSelected = { scope.launch { state.offloadSelectedLargeFiles(includeAll = false) } },
                     onOffloadAll = { scope.launch { state.offloadSelectedLargeFiles(includeAll = true) } },
                     onOpenFolder = { path -> scope.launch { state.openContainingFolder(path) } },
+                )
+
+                KboxStorageHubTab.SYNC -> SyncTab(
+                    state = syncState,
+                    modifier = Modifier.fillMaxSize(),
+                    onStart = { scope.launch { syncState.start() } },
+                    onPause = { scope.launch { syncState.pause() } },
+                    onRefresh = { scope.launch { syncState.refresh() } },
+                    onCompare = { entryId -> scope.launch { syncState.compare(entryId) } },
+                    onApplyAction = { entryId, action ->
+                        scope.launch {
+                            syncState.applyAction(entryId, action)
+                        }
+                    },
+                    onDismissCompare = { syncState.clearComparePreview() },
                 )
 
                 KboxStorageHubTab.PACKAGE_PROFILES -> PackageProfilesTab(
@@ -153,10 +173,15 @@ fun KboxStorageToolScreen(
                     onOpenFolder = { path -> scope.launch { state.openContainingFolder(path) } },
                 )
 
-                KboxStorageHubTab.SETTINGS -> SettingsTab(
+                KboxStorageHubTab.SETTINGS -> StorageSettingsTab(
                     state = state,
                     modifier = Modifier.fillMaxSize(),
-                    onSave = { scope.launch { state.saveSettings() } },
+                    onSave = {
+                        scope.launch {
+                            state.saveSettings()
+                            syncState.reloadSettings()
+                        }
+                    },
                     onTestSsh = { scope.launch { state.testSsh() } },
                 )
             }
@@ -215,6 +240,32 @@ private fun HubTabs(
         KboxStorageHubTab.DOTFILES to "Dotfile",
         KboxStorageHubTab.COMPOSE to "Compose",
         KboxStorageHubTab.SETTINGS to "设置",
+    )
+    TabRow(
+        selectedTabIndex = tabs.indexOfFirst { it.first == currentTab }.coerceAtLeast(0),
+    ) {
+        tabs.forEach { (tab, label) ->
+            Tab(
+                selected = currentTab == tab,
+                onClick = { onSelect(tab) },
+                text = { Text(label) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StorageHubTabs(
+    currentTab: KboxStorageHubTab,
+    onSelect: (KboxStorageHubTab) -> Unit,
+) {
+    val tabs = listOf(
+        KboxStorageHubTab.FILES to "Files",
+        KboxStorageHubTab.SYNC to "Sync",
+        KboxStorageHubTab.PACKAGE_PROFILES to "Profiles",
+        KboxStorageHubTab.DOTFILES to "Dotfiles",
+        KboxStorageHubTab.COMPOSE to "Compose",
+        KboxStorageHubTab.SETTINGS to "Settings",
     )
     TabRow(
         selectedTabIndex = tabs.indexOfFirst { it.first == currentTab }.coerceAtLeast(0),

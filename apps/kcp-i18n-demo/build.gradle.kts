@@ -2,12 +2,52 @@
 
 import java.io.File
 
+buildscript {
+    val localAddzeroLibJvmDir = rootDir.resolve("../addzero-lib-jvm")
+    val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
+        .resolve("gradle.properties")
+        .takeIf { file -> file.isFile }
+        ?.readLines()
+        ?.firstOrNull { line -> line.startsWith("version=") }
+        ?.substringAfter("=")
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: "2026.10329.10127"
+    val localI18nPluginJar = localAddzeroLibJvmDir
+        .resolve("lib/kcp/kcp-i18n-gradle-plugin/build/libs")
+        .takeIf(File::isDirectory)
+        ?.listFiles()
+        ?.firstOrNull { file ->
+            file.isFile &&
+                file.extension == "jar" &&
+                !file.name.endsWith("-sources.jar") &&
+                !file.name.endsWith("-javadoc.jar")
+        }
+    repositories {
+        mavenLocal()
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+        maven(url = "https://repo.spring.io/milestone/")
+        maven(url = "https://plugins.gradle.org/m2/")
+    }
+    dependencies {
+        if (localI18nPluginJar != null) {
+            classpath(files(localI18nPluginJar))
+            classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20-RC")
+        } else {
+            classpath("site.addzero.kcp.i18n:site.addzero.kcp.i18n.gradle.plugin:$localAddzeroLibJvmVersion")
+        }
+    }
+}
+
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-app")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-json")
-    id("site.addzero.kcp.i18n")
 }
+
+apply(plugin = "site.addzero.kcp.i18n")
 
 val libs = versionCatalogs.named("libs")
 val jdkVersion = libs.findVersion("jdk17").get().requiredVersion.toInt()
@@ -60,9 +100,9 @@ val desktopEntryPoint = project.layout.projectDirectory
     .inferJvmMainEntryPoint()
 val desktopMainClass = desktopEntryPoint.mainClassName
 
-i18n {
+extensions.configure<site.addzero.kcp.i18n.gradle.I18NGradleExtension>("i18n") {
+    targetLocale.set("en")
     resourceBasePath.set("i18n")
-    managedLocales.addAll("en", "ja")
 }
 
 kotlin {

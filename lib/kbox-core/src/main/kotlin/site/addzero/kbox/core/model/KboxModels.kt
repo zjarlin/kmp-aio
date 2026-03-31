@@ -66,6 +66,10 @@ data class KboxSettings(
     val installerRules: List<KboxInstallerRule> = emptyList(),
     val largeFileThresholdBytes: Long = KBOX_DEFAULT_LARGE_FILE_THRESHOLD_BYTES,
     val ssh: KboxSshConfig = KboxSshConfig(),
+    val syncEnabled: Boolean = false,
+    val syncStartOnLaunch: Boolean = true,
+    val syncRemotePollSeconds: Int = 30,
+    val syncMappings: List<KboxSyncMappingConfig> = emptyList(),
 )
 
 data class KboxInstallerCandidate(

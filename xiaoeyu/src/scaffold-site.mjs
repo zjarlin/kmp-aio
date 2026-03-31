@@ -14,7 +14,28 @@ function writeFile(targetFile, content, force) {
   fs.writeFileSync(targetFile, content, "utf8");
 }
 
-function buildPackageJson() {
+function resolveXiaoeyuDependency(targetDir) {
+  const localPackageDir = path.resolve(process.cwd(), "xiaoeyu");
+  const localPackageJson = path.join(localPackageDir, "package.json");
+
+  if (!fs.existsSync(localPackageJson)) {
+    return "^0.1.0";
+  }
+
+  try {
+    const packageJson = JSON.parse(fs.readFileSync(localPackageJson, "utf8"));
+    if (packageJson.name !== "@addzero/xiaoeyu") {
+      return "^0.1.0";
+    }
+
+    const relativePackagePath = path.relative(targetDir, localPackageDir).replaceAll("\\", "/");
+    return `file:${relativePackagePath || "."}`;
+  } catch {
+    return "^0.1.0";
+  }
+}
+
+function buildPackageJson(targetDir) {
   return `${JSON.stringify(
     {
       name: "xiaoeyu-docs",
@@ -29,7 +50,7 @@ function buildPackageJson() {
         serve: "docusaurus serve"
       },
       dependencies: {
-        "@addzero/xiaoeyu": "^0.1.0",
+        "@addzero/xiaoeyu": resolveXiaoeyuDependency(targetDir),
         "@easyops-cn/docusaurus-search-local": "0.55.1",
         "@docusaurus/core": "3.9.2",
         "@docusaurus/preset-classic": "3.9.2",
@@ -96,7 +117,7 @@ export function scaffoldSite(options = {}) {
   const force = options.force === true;
 
   ensureDirectory(targetDir);
-  writeFile(path.join(targetDir, "package.json"), buildPackageJson(), force);
+  writeFile(path.join(targetDir, "package.json"), buildPackageJson(targetDir), force);
   writeFile(
     path.join(targetDir, "docusaurus.config.mjs"),
     buildDocusaurusConfig(),
