@@ -1,14 +1,21 @@
-package site.addzero.network.call.musiclib
+package site.addzero.kcloud.vibepocket.musiclib
 
 import de.jensklingenberg.ktorfit.Ktorfit
-import io.ktor.client.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.json.*
+import io.ktor.client.HttpClient
+import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.http.ContentType
+import io.ktor.serialization.kotlinx.json.json
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import site.addzero.kcloud.api.netease.MusicSearchClient
 import site.addzero.kcloud.api.netease.SearchType as NeteaseSearchType
-import site.addzero.network.call.musiclib.model.Song
+import site.addzero.kcloud.vibepocket.musiclib.model.Song
 import site.addzero.network.call.qqmusic.QQMusic
 import site.addzero.network.call.qqmusic.createQQMusicMainApi
 import site.addzero.network.call.qqmusic.createQQMusicQzoneApi
@@ -26,13 +33,18 @@ object MusicAPIFactory {
 
 interface MusicProvider {
     suspend fun search(keyword: String): List<Song>
+
     suspend fun getLyrics(song: Song): String
+
     suspend fun getDownloadURL(song: Song): String
 }
 
 private object NeteaseMusicProvider : MusicProvider {
+    private val client: MusicSearchClient
+        get() = MusicSearchClient.shared()
+
     override suspend fun search(keyword: String): List<Song> {
-        return MusicSearchClient.musicApi.search(
+        return client.musicApi.search(
             s = keyword,
             type = NeteaseSearchType.SONG.value,
             limit = 20,
@@ -53,7 +65,7 @@ private object NeteaseMusicProvider : MusicProvider {
     }
 
     override suspend fun getLyrics(song: Song): String {
-        val lyric = MusicSearchClient.musicApi.getLyric(song.id.toLong())
+        val lyric = client.musicApi.getLyric(song.id.toLong())
         return buildString {
             lyric.lrc?.lyric?.takeIf { it.isNotBlank() }?.let(::append)
             lyric.tlyric?.lyric?.takeIf { it.isNotBlank() }?.let {

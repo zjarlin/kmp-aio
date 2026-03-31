@@ -10,7 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -33,7 +33,8 @@ import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 )
 @Composable
 fun AiChatSessionsScreen() {
-    AiChatSessionsContent(state = koinInject())
+    val viewModel: AiChatSessionsViewModel = koinViewModel()
+    AiChatSessionsContent(state = viewModel.state)
 }
 
 @Composable

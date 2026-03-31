@@ -5,83 +5,26 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import site.addzero.kcloud.api.ServerApiClient
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.kcloud.api.suno.SunoTrack
-import site.addzero.kcloud.model.FavoriteItem
-import site.addzero.kcloud.model.FavoriteRequest
-import site.addzero.kcloud.model.MusicHistoryItem
+import site.addzero.kcloud.vibepocket.model.FavoriteItem
+import site.addzero.kcloud.vibepocket.model.MusicHistoryItem
+import site.addzero.kcloud.screens.history.MusicHistoryTab
+import site.addzero.kcloud.screens.history.MusicHistoryViewModel
 import site.addzero.kcloud.ui.StudioEmptyState
-import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 
 @Composable
-fun MusicHistoryPage() {
-    var selectedTab by remember { mutableStateOf(HistoryTab.ALL) }
-
-    var historyItems by remember { mutableStateOf<List<MusicHistoryItem>>(emptyList()) }
-    var historyLoading by remember { mutableStateOf(false) }
-    var historyError by remember { mutableStateOf<String?>(null) }
-
-    var favoriteItems by remember { mutableStateOf<List<FavoriteItem>>(emptyList()) }
-    var favoriteLoading by remember { mutableStateOf(false) }
-    var favoriteError by remember { mutableStateOf<String?>(null) }
-
-    val favoriteSet = remember { mutableStateMapOf<String, Boolean>() }
-
-    var credits by remember { mutableStateOf<Int?>(null) }
-    var isLoadingCredits by remember { mutableStateOf(false) }
-
-    val scope = rememberCoroutineScope()
-
-    LaunchedEffect(Unit) {
-        val favorites = ServerApiClient.favoriteApi.getFavorites()
-        favorites.forEach { favorite ->
-            favoriteSet[favorite.trackId] = true
-        }
-        isLoadingCredits = true
-        credits = SunoWorkflowService.getCreditsOrNull()
-        isLoadingCredits = false
-    }
-
-    LaunchedEffect(selectedTab) {
-        when (selectedTab) {
-            HistoryTab.ALL -> {
-                historyLoading = true
-                historyError = null
-                try {
-                    historyItems = ServerApiClient.historyApi.getHistory()
-                } catch (error: Exception) {
-                    historyError = error.message ?: "加载历史记录失败"
-                } finally {
-                    historyLoading = false
-                }
-            }
-
-            HistoryTab.FAVORITES -> {
-                favoriteLoading = true
-                favoriteError = null
-                try {
-                    favoriteItems = ServerApiClient.favoriteApi.getFavorites()
-                    favoriteSet.clear()
-                    favoriteItems.forEach { favorite ->
-                        favoriteSet[favorite.trackId] = true
-                    }
-                } catch (error: Exception) {
-                    favoriteError = error.message ?: "加载收藏列表失败"
-                } finally {
-                    favoriteLoading = false
-                }
-            }
-        }
-    }
-
+fun MusicHistoryScreen() {
+    val viewModel: MusicHistoryViewModel = koinViewModel()
+    val state = viewModel.state
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -101,94 +44,34 @@ fun MusicHistoryPage() {
         )
 
         CreditsBar(
-            credits = credits,
-            isLoading = isLoadingCredits,
+            credits = state.credits,
+            isLoading = state.isLoadingCredits,
         )
 
         HistoryTabBar(
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
+            selectedTab = state.selectedTab,
+            onTabSelected = viewModel::selectTab,
         )
 
         Box(modifier = Modifier.weight(1f)) {
-            when (selectedTab) {
-                HistoryTab.ALL -> HistoryAllContent(
-                    items = historyItems,
-                    isLoading = historyLoading,
-                    error = historyError,
-                    onRetry = {
-                        scope.launch {
-                            historyLoading = true
-                            historyError = null
-                            try {
-                                historyItems = ServerApiClient.historyApi.getHistory()
-                            } catch (error: Exception) {
-                                historyError = error.message ?: "加载失败"
-                            } finally {
-                                historyLoading = false
-                            }
-                        }
-                    },
-                    favoriteSet = favoriteSet,
-                    onFavoriteToggle = { trackId, track, taskId, newFavorite ->
-                        scope.launch {
-                            try {
-                                if (newFavorite) {
-                                    ServerApiClient.favoriteApi.addFavorite(
-                                        FavoriteRequest(
-                                            trackId = trackId,
-                                            taskId = taskId,
-                                            audioUrl = track.audioUrl,
-                                            title = track.title,
-                                            tags = track.tags,
-                                            imageUrl = track.imageUrl,
-                                            duration = track.duration,
-                                        ),
-                                    )
-                                    favoriteSet[trackId] = true
-                                } else {
-                                    ServerApiClient.favoriteApi.removeFavorite(trackId)
-                                    favoriteSet.remove(trackId)
-                                }
-                            } catch (_: Exception) {
-                                // 收藏失败不阻断页面
-                            }
-                        }
-                    },
+            when (state.selectedTab) {
+                MusicHistoryTab.ALL -> HistoryAllContent(
+                    items = state.history.items,
+                    isLoading = state.history.isLoading,
+                    error = state.history.errorMessage,
+                    onRetry = viewModel::refreshSelectedTab,
+                    favoriteSet = state.favoriteIds,
+                    onFavoriteToggle = viewModel::toggleHistoryFavorite,
                 )
 
-                HistoryTab.FAVORITES -> FavoritesContent(
-                    items = favoriteItems,
-                    isLoading = favoriteLoading,
-                    error = favoriteError,
-                    onRetry = {
-                        scope.launch {
-                            favoriteLoading = true
-                            favoriteError = null
-                            try {
-                                favoriteItems = ServerApiClient.favoriteApi.getFavorites()
-                                favoriteSet.clear()
-                                favoriteItems.forEach { favorite ->
-                                    favoriteSet[favorite.trackId] = true
-                                }
-                            } catch (error: Exception) {
-                                favoriteError = error.message ?: "加载失败"
-                            } finally {
-                                favoriteLoading = false
-                            }
-                        }
-                    },
+                MusicHistoryTab.FAVORITES -> FavoritesContent(
+                    items = state.favorites.items,
+                    isLoading = state.favorites.isLoading,
+                    error = state.favorites.errorMessage,
+                    onRetry = viewModel::refreshSelectedTab,
                     onFavoriteToggle = { trackId, newFavorite ->
-                        scope.launch {
-                            try {
-                                if (!newFavorite) {
-                                    ServerApiClient.favoriteApi.removeFavorite(trackId)
-                                    favoriteSet.remove(trackId)
-                                    favoriteItems = favoriteItems.filter { it.trackId != trackId }
-                                }
-                            } catch (_: Exception) {
-                                // 收藏失败不阻断页面
-                            }
+                        if (!newFavorite) {
+                            viewModel.removeFavorite(trackId)
                         }
                     },
                 )
@@ -197,24 +80,16 @@ fun MusicHistoryPage() {
     }
 }
 
-private enum class HistoryTab(
-    val title: String,
-    val icon: String,
-) {
-    ALL("全部", "📋"),
-    FAVORITES("收藏", "⭐"),
-}
-
 @Composable
 private fun HistoryTabBar(
-    selectedTab: HistoryTab,
-    onTabSelected: (HistoryTab) -> Unit,
+    selectedTab: MusicHistoryTab,
+    onTabSelected: (MusicHistoryTab) -> Unit,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        HistoryTab.entries.forEach { tab ->
+        MusicHistoryTab.entries.forEach { tab ->
             if (tab == selectedTab) {
                 FilledTonalButton(
                     onClick = { onTabSelected(tab) },
@@ -240,7 +115,7 @@ private fun HistoryAllContent(
     isLoading: Boolean,
     error: String?,
     onRetry: () -> Unit,
-    favoriteSet: Map<String, Boolean>,
+    favoriteSet: Set<String>,
     onFavoriteToggle: (trackId: String, track: SunoTrack, taskId: String, newFavorite: Boolean) -> Unit,
 ) {
     when {
@@ -282,7 +157,7 @@ private fun HistoryAllContent(
                 itemActions = { entry, _ ->
                     val trackId = entry.track.id
                     if (trackId != null) {
-                        val isFavorite = favoriteSet[trackId] == true
+                        val isFavorite = trackId in favoriteSet
                         IconButton(
                             onClick = {
                                 onFavoriteToggle(trackId, entry.track, entry.taskId, !isFavorite)
@@ -363,23 +238,6 @@ private fun FavoritesContent(
             )
         }
     }
-}
-
-@Composable
-private fun HistoryItemHeader(item: MusicHistoryItem) {
-    StudioSectionCard(
-        modifier = Modifier.fillMaxWidth(),
-        title = item.taskId.take(12) + if (item.taskId.length > 12) "…" else "",
-        subtitle = item.createdAt ?: "未知时间",
-        action = {
-            val pillText = when (item.status) {
-                "SUCCESS" -> "成功"
-                "FAILED" -> "失败"
-                else -> "处理中"
-            }
-            StudioPill(text = pillText)
-        },
-    ) {}
 }
 
 @Composable

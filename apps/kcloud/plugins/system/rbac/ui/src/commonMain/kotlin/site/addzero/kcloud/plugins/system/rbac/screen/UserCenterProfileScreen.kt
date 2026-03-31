@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -32,7 +32,8 @@ import site.addzero.kcloud.plugins.system.rbac.UserCenterWorkbenchState
 )
 @Composable
 fun UserCenterProfileScreen() {
-    UserCenterProfileContent(state = koinInject())
+    val viewModel: UserCenterProfileViewModel = koinViewModel()
+    UserCenterProfileContent(state = viewModel.state)
 }
 
 @Composable

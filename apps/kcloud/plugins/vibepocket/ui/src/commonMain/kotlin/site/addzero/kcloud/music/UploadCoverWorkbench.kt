@@ -22,9 +22,10 @@ import site.addzero.kcloud.api.suno.SUNO_MODELS
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoUploadCoverRequest
 import site.addzero.kcloud.api.suno.VOCAL_GENDERS
-import site.addzero.kcloud.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.PersonaItem
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.kcloud.ui.SunoTokenApplyHint
 
 private val uploadCoverPrettyJson = Json {
@@ -187,8 +188,7 @@ fun UploadCoverWorkbench(
             ) {
                 StudioPill(
                     text = "Upload Cover",
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tone = StudioTone.Primary,
                 )
                 Text(
                     text = "翻唱工作台",

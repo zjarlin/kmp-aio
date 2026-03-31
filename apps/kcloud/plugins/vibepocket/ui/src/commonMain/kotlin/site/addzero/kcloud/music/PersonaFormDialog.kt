@@ -11,8 +11,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoGeneratePersonaRequest
-import site.addzero.kcloud.model.PersonaItem
-import site.addzero.kcloud.model.PersonaSaveRequest
+import site.addzero.kcloud.vibepocket.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.PersonaSaveRequest
 
 @Composable
 fun PersonaFormDialog(

@@ -7,7 +7,6 @@ import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
-import org.koin.core.annotation.Property
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.kcloud.jimmer.spi.DatabaseDriverSpi
@@ -83,7 +82,6 @@ private data class DatasourceRuntime(
 
 @Single(createdAtStart = true)
 class DatasourceRegistry(
-    @Property(JIMMER_APPLICATION_CONFIG_PROPERTY)
     private val config: ApplicationConfig,
     private val interceptor: BaseEntityDraftInterceptor,
     private val driverResolver: DatabaseDriverResolver,

@@ -5,8 +5,8 @@ import org.koin.core.annotation.Single
 import site.addzero.kcloud.api.music.MusicLyric
 import site.addzero.kcloud.api.music.MusicResolvedAsset
 import site.addzero.kcloud.api.music.MusicTrack
-import site.addzero.network.call.musiclib.MusicAPIFactory
-import site.addzero.network.call.musiclib.model.Song
+import site.addzero.kcloud.vibepocket.musiclib.MusicAPIFactory
+import site.addzero.kcloud.vibepocket.musiclib.model.Song
 import site.addzero.starter.statuspages.BadGatewayHttpException
 
 interface MusicCatalogService {

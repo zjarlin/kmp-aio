@@ -19,6 +19,7 @@ import site.addzero.kcloud.api.music.MusicTrack
 import site.addzero.kcloud.ui.StudioEmptyState
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 import site.addzero.media.playlist.player.PlaylistAudioSource
 
@@ -94,8 +95,7 @@ internal fun MusicReferenceSearchSection(
         ) {
             StudioPill(
                 text = "聚合搜索 · 网易云 + QQ 音乐",
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                tone = StudioTone.Tertiary,
             )
             FilledTonalButton(
                 onClick = {

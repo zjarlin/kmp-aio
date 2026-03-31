@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import site.addzero.kcloud.api.suno.SUNO_MODELS
 import site.addzero.kcloud.api.suno.VOCAL_GENDERS
-import site.addzero.kcloud.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.PersonaItem
 import site.addzero.kcloud.ui.StudioSectionCard
 
 @Composable

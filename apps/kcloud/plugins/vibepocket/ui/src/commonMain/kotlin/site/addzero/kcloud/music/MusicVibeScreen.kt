@@ -15,13 +15,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.kcloud.api.suno.SunoGenerateRequest
 import site.addzero.kcloud.api.suno.SunoTaskDetail
-import site.addzero.kcloud.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.PersonaItem
 import site.addzero.kcloud.screens.musicstudio.MusicStudioTab
 import site.addzero.kcloud.screens.musicstudio.MusicStudioViewModel
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.kcloud.ui.SunoTokenApplyHint
 import site.addzero.liquidglass.LiquidGlassTabs
 
@@ -32,9 +34,9 @@ private val prettyJson = Json {
 }
 
 @Composable
-fun MusicVibeScreen(
-    viewModel: MusicStudioViewModel,
-) {
+fun MusicVibeScreen() {
+    val viewModel: MusicStudioViewModel = koinViewModel()
+    val state = viewModel.state
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -43,8 +45,7 @@ fun MusicVibeScreen(
     ) {
         StudioPill(
             text = "Music Studio",
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            tone = StudioTone.Primary,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -58,8 +59,8 @@ fun MusicVibeScreen(
                 fontWeight = FontWeight.Bold,
             )
             CreditsBar(
-                credits = viewModel.credits,
-                isLoading = viewModel.isLoadingCredits,
+                credits = state.credits,
+                isLoading = state.isLoadingCredits,
             )
         }
         Text(
@@ -69,7 +70,7 @@ fun MusicVibeScreen(
         )
         LiquidGlassTabs(
             items = MusicStudioTab.entries.toList(),
-            selectedItem = viewModel.selectedTab,
+            selectedItem = state.selectedTab,
             onSelectedItemChange = viewModel::selectTab,
             modifier = Modifier.fillMaxWidth(),
         ) { tab, selected ->
@@ -85,13 +86,13 @@ fun MusicVibeScreen(
             )
         }
         Text(
-            text = viewModel.selectedTab.subtitle,
+            text = state.selectedTab.subtitle,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Box(modifier = Modifier.fillMaxSize()) {
-            when (viewModel.selectedTab) {
+            when (state.selectedTab) {
                 MusicStudioTab.COVER -> UploadCoverWorkbench(
                     onCreditsRefresh = viewModel::refreshCredits,
                 )
@@ -242,8 +243,7 @@ private fun GenerateMusicWorkbench(
             ) {
                 StudioPill(
                     text = if (currentStep == VibeStep.LYRICS) "Step 1 / Lyrics" else "Step 2 / Vibe",
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tone = StudioTone.Primary,
                 )
                 Text(
                     text = "生成音乐",

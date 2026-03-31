@@ -3,22 +3,23 @@ package site.addzero.kcloud.screens.musicstudio
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.*
-import org.koin.core.annotation.Factory
+import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.music.SunoRuntimeConfig
 import site.addzero.kcloud.music.SunoWorkflowService
 
-@Factory
-class MusicStudioViewModel {
+data class MusicStudioScreenState(
+    val selectedTab: MusicStudioTab = MusicStudioTab.COVER,
+    val credits: Int? = null,
+    val isLoadingCredits: Boolean = false,
+)
+
+@KoinViewModel
+class MusicStudioViewModel : ViewModel() {
     private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    var selectedTab by mutableStateOf(MusicStudioTab.COVER)
-        private set
-
-    var credits by mutableStateOf<Int?>(null)
-        private set
-
-    var isLoadingCredits by mutableStateOf(false)
+    var state by mutableStateOf(MusicStudioScreenState())
         private set
 
     init {
@@ -28,7 +29,7 @@ class MusicStudioViewModel {
     fun selectTab(
         tab: MusicStudioTab,
     ) {
-        selectedTab = tab
+        state = state.copy(selectedTab = tab)
     }
 
     fun refreshCredits() {
@@ -36,21 +37,24 @@ class MusicStudioViewModel {
             val runtimeConfig = runCatching { SunoWorkflowService.loadConfig() }
                 .getOrDefault(SunoRuntimeConfig())
             if (!runtimeConfig.hasToken) {
-                credits = null
-                isLoadingCredits = false
+                state = state.copy(
+                    credits = null,
+                    isLoadingCredits = false,
+                )
                 return@launch
             }
 
-            isLoadingCredits = true
+            state = state.copy(isLoadingCredits = true)
             try {
-                credits = SunoWorkflowService.getCreditsOrNull()
+                state = state.copy(credits = SunoWorkflowService.getCreditsOrNull())
             } finally {
-                isLoadingCredits = false
+                state = state.copy(isLoadingCredits = false)
             }
         }
     }
 
-    fun dispose() {
+    override fun onCleared() {
+        super.onCleared()
         screenScope.cancel()
     }
 }

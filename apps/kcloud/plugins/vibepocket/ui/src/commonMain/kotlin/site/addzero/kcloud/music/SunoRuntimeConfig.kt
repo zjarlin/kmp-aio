@@ -2,7 +2,7 @@ package site.addzero.kcloud.music
 
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoApiClient
-import site.addzero.kcloud.model.ConfigEntry
+import site.addzero.kcloud.vibepocket.model.ConfigEntry
 
 private const val SUNO_SETUP_COMPLETE_KEY = "vibepocket_setup_complete"
 private const val SUNO_API_TOKEN_KEY = "suno_api_token"

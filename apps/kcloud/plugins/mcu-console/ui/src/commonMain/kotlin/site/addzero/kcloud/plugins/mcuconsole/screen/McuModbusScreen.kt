@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -52,7 +53,8 @@ import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 )
 @Composable
 fun McuModbusScreen() {
-    val state = rememberMcuWorkbenchState()
+    val viewModel: McuModbusViewModel = koinViewModel()
+    val state = rememberMcuWorkbenchState(viewModel.state)
     val runAction = rememberMcuActionRunner()
 
     McuWorkbenchFrame(

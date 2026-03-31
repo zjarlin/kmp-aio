@@ -3,40 +3,33 @@ package site.addzero.kcloud.screens.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.*
-import org.koin.core.annotation.Factory
+import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.api.ServerApiClient
-import site.addzero.kcloud.api.suno.SunoApiClient
-import site.addzero.kcloud.model.ConfigRuntimeInfo
+import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
 import site.addzero.kcloud.music.SunoWorkflowService
+import site.addzero.kcloud.music.SunoRuntimeConfig
 import site.addzero.kcloud.platform.DirectoryLauncher
 
-@Factory
-class SettingsViewModel {
+data class SettingsFeedbackState(
+    val message: String? = null,
+    val isError: Boolean = false,
+)
+
+data class SettingsScreenState(
+    val runtimeConfig: SunoRuntimeConfig = SunoRuntimeConfig(),
+    val loaded: Boolean = false,
+    val isSaving: Boolean = false,
+    val runtimeInfo: ConfigRuntimeInfo? = null,
+    val feedback: SettingsFeedbackState = SettingsFeedbackState(),
+)
+
+@KoinViewModel
+class SettingsViewModel : ViewModel() {
     private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    var sunoToken by mutableStateOf("")
-        private set
-
-    var sunoBaseUrl by mutableStateOf(SunoApiClient.DEFAULT_BASE_URL)
-        private set
-
-    var sunoCallbackUrl by mutableStateOf("")
-        private set
-
-    var loaded by mutableStateOf(false)
-        private set
-
-    var isSaving by mutableStateOf(false)
-        private set
-
-    var runtimeInfo by mutableStateOf<ConfigRuntimeInfo?>(null)
-        private set
-
-    var feedbackMessage by mutableStateOf<String?>(null)
-        private set
-
-    var feedbackIsError by mutableStateOf(false)
+    var state by mutableStateOf(SettingsScreenState())
         private set
 
     init {
@@ -46,19 +39,25 @@ class SettingsViewModel {
     fun updateSunoToken(
         value: String,
     ) {
-        sunoToken = value
+        state = state.copy(
+            runtimeConfig = state.runtimeConfig.copy(apiToken = value),
+        )
     }
 
     fun updateSunoBaseUrl(
         value: String,
     ) {
-        sunoBaseUrl = value
+        state = state.copy(
+            runtimeConfig = state.runtimeConfig.copy(baseUrl = value),
+        )
     }
 
     fun updateSunoCallbackUrl(
         value: String,
     ) {
-        sunoCallbackUrl = value
+        state = state.copy(
+            runtimeConfig = state.runtimeConfig.copy(callbackUrl = value),
+        )
     }
 
     fun reloadFromServer() {
@@ -70,62 +69,84 @@ class SettingsViewModel {
     fun reloadWithFeedback() {
         screenScope.launch {
             reloadFromServerInternal()
-            feedbackIsError = false
-            feedbackMessage = "已重新读取当前本地配置。"
+            state = state.copy(
+                feedback = SettingsFeedbackState(
+                    message = "已重新读取当前本地配置。",
+                    isError = false,
+                ),
+            )
         }
     }
 
     fun saveConfig() {
         screenScope.launch {
-            isSaving = true
+            state = state.copy(isSaving = true)
             try {
+                val runtimeConfig = state.runtimeConfig
                 SunoWorkflowService.saveConfig(
-                    apiToken = sunoToken,
-                    baseUrl = sunoBaseUrl,
-                    callbackUrl = sunoCallbackUrl,
+                    apiToken = runtimeConfig.apiToken,
+                    baseUrl = runtimeConfig.baseUrl,
+                    callbackUrl = runtimeConfig.callbackUrl,
                 )
                 reloadFromServerInternal()
-                feedbackIsError = false
-                feedbackMessage = when (runtimeInfo?.storage) {
-                    "sqlite" -> "已保存到本地 SQLite。"
-                    else -> "配置已保存。"
-                }
+                state = state.copy(
+                    feedback = SettingsFeedbackState(
+                        message = when (state.runtimeInfo?.storage) {
+                            "sqlite" -> "已保存到本地 SQLite。"
+                            else -> "配置已保存。"
+                        },
+                        isError = false,
+                    ),
+                )
             } catch (error: Throwable) {
-                feedbackIsError = true
-                feedbackMessage = error.message?.takeIf { it.isNotBlank() } ?: "保存配置失败"
+                state = state.copy(
+                    feedback = SettingsFeedbackState(
+                        message = error.message?.takeIf { it.isNotBlank() } ?: "保存配置失败",
+                        isError = true,
+                    ),
+                )
             } finally {
-                isSaving = false
+                state = state.copy(isSaving = false)
             }
         }
     }
 
     fun openCacheDir() {
-        val cacheDir = runtimeInfo?.cacheDir
+        val cacheDir = state.runtimeInfo?.cacheDir
         if (cacheDir.isNullOrBlank()) {
-            feedbackIsError = true
-            feedbackMessage = "当前没有可打开的缓存目录。"
+            state = state.copy(
+                feedback = SettingsFeedbackState(
+                    message = "当前没有可打开的缓存目录。",
+                    isError = true,
+                ),
+            )
             return
         }
 
         val opened = DirectoryLauncher.openDirectory(cacheDir)
-        feedbackIsError = !opened
-        feedbackMessage = if (opened) {
-            "已打开缓存目录。"
-        } else {
-            "打开缓存目录失败：$cacheDir"
-        }
+        state = state.copy(
+            feedback = SettingsFeedbackState(
+                message = if (opened) {
+                    "已打开缓存目录。"
+                } else {
+                    "打开缓存目录失败：$cacheDir"
+                },
+                isError = !opened,
+            ),
+        )
     }
 
     private suspend fun reloadFromServerInternal() {
         val runtimeConfig = SunoWorkflowService.loadConfig()
-        sunoToken = runtimeConfig.apiToken
-        sunoBaseUrl = runtimeConfig.baseUrl
-        sunoCallbackUrl = runtimeConfig.callbackUrl
-        runtimeInfo = runCatching { ServerApiClient.configApi.getRuntimeInfo() }.getOrNull()
-        loaded = true
+        state = state.copy(
+            runtimeConfig = runtimeConfig,
+            runtimeInfo = runCatching { ServerApiClient.configApi.getRuntimeInfo() }.getOrNull(),
+            loaded = true,
+        )
     }
 
-    fun dispose() {
+    override fun onCleared() {
+        super.onCleared()
         screenScope.cancel()
     }
 }

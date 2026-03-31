@@ -1,9 +1,7 @@
-package site.addzero.kcloud.model
+package site.addzero.kcloud.vibepocket.model
 
 import kotlinx.serialization.Serializable
 
-
-/** 收藏请求 */
 @Serializable
 data class FavoriteRequest(
     val trackId: String,
@@ -15,7 +13,6 @@ data class FavoriteRequest(
     val duration: Double? = null,
 )
 
-/** 收藏响应 */
 @Serializable
 data class FavoriteItem(
     val id: Long? = null,

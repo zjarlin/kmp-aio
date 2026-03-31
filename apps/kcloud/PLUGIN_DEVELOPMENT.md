@@ -168,38 +168,39 @@ dependencies {
 
 ### 4. 可选：Ktorfit API 聚合
 
-如果插件里定义了多组 Ktorfit service interface，并且你希望有一个统一生成的聚合入口，而不是手工一个个拼 factory，可以组合使用：
+如果插件 server 已经在使用 `controller2api` 从 Spring 风格 controller / 顶层 route 生成 Ktorfit API，那么现在不需要再额外接一个 `apiprovider` 处理器。
 
-- `site.addzero.buildlogic.kmp.kmp-ktorfit`
-- `site.addzero.ksp.apiprovider`
+当前约定改为：
 
-这个 Gradle 插件入口定义在：
+- `controller2api-processor` 同时生成每个 `*Api` 接口
+- `controller2api-processor` 同时生成共享聚合类 `ApiProvider`
+- `ApiProvider` 只聚合 **本次由 controller2api 生成出来的 API**
+- 不再扫描手写 Ktorfit interface
+- 不再使用 `site.addzero.ksp.apiprovider`
 
-- `/Users/zjarlin/IdeaProjects/addzero-lib-jvm/lib/ksp/metadata/apiprovider-gradle-plugin/build.gradle.kts`
-
-它的职责很直接：
-
-- 扫描 Ktorfit HTTP service interface
-- 执行 `apiprovider-processor`
-- 生成共享聚合类 `site.addzero.generated.api.ApiProvider`
-
-当前生成器行为：
-
-- 生成包名：`site.addzero.generated.api`
-- 生成对象名：`ApiProvider`
-- 每个识别到的 Ktorfit interface 会变成 `ApiProvider` 上的一个属性
-- 该属性通过对应的生成入口 `ktorfit.createXxxApi()` 创建
-
-典型插件接线：
+当前 `kcloud` server 插件的典型接线就是：
 
 ```kotlin
-plugins {
-    id("site.addzero.buildlogic.kmp.kmp-ktorfit")
-    id("site.addzero.ksp.apiprovider")
+dependencies {
+    add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-controller2api-processor").get())
+}
+
+ksp {
+    arg("apiClientPackageName", "site.addzero.generated.api")
+    arg("apiClientOutputDir", generatedApiOutputDir)
 }
 ```
 
-只有当插件内确实存在一组相关联的 Ktorfit API，且值得共享一个聚合入口时，才使用这个方案。如果只有一两个 API，不要为了“统一”再多引入一层生成代码。
+生成器行为：
+
+- 生成包名：取 `apiClientPackageName`
+- 输出目录：取 `apiClientOutputDir`
+- 生成对象名：`ApiProvider`
+- 每个由 controller / 顶层 route 生成出的 `*Api` 都会在 `ApiProvider` 上有一个 lowerCamel 属性
+- 属性通过对应的 `ktorfit.create<SomeApi>()` 创建
+
+所以，只有当插件本身已经在跑 `controller2api` 时，才会得到 `ApiProvider`。如果没有 controller2api 生成结果，就不会凭空生成聚合入口。
 
 ### 5. KCloud API Client 包装器模式
 
@@ -223,13 +224,13 @@ plugins {
 - 保存 `baseUrl`
 - 选择一个 `HttpClientFactory` profile
 - 调用 `Ktorfit.Builder().baseUrl(...).httpClient(...).build()`
-- 以属性形式暴露 `createXxxApi()` / `create<SomeApi>()` 结果
+- 以属性形式暴露 `create<SomeApi>()` 结果
 
 后续如果继续做生成器，应把这种包装器本身当成真正的生成目标，而不是把注意力只放在 remote service 调用层。
 
 适合生成的目标：
 
-- 函数体基本就是 `baseUrl + profile + Ktorfit.createXxxApi()` 的包装器
+- 函数体基本就是 `baseUrl + profile + Ktorfit.create<SomeApi>()` 的包装器
 - 只暴露 API 属性，不包含额外领域策略
 
 不要强行生成这类同时承担真实业务行为的包装器，例如：
@@ -240,7 +241,7 @@ plugins {
 - 状态恢复
 - 复杂 helper 方法
 
-`site.addzero.ksp.apiprovider` 当前状态：
+`controller2api` 当前状态：
 
 - 已经能生成普通的 `site.addzero.generated.api.ApiProvider`
 - **还不能** 生成 `object XxxApiClient` 这类包装对象
@@ -248,7 +249,7 @@ plugins {
 
 所以，如果你想去掉 KCloud 里手写的 client wrapper，下一步处理器工作应该是：
 
-1. 继续扫描 Ktorfit interface
+1. 继续扫描 controller / 顶层 route 元数据，并把它们映射到包装器分组
 2. 为包装器名称、基础 URL、HTTP client profile 增加类型化参数
 3. 生成 `XxxApiClient` 包装对象，而不是只生成全局 `ApiProvider`
 4. 在需要时支持多 API 分组包装器

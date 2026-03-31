@@ -1,12 +1,7 @@
-package site.addzero.kcloud.model
+package site.addzero.kcloud.vibepocket.model
 
 import kotlinx.serialization.Serializable
 
-// ══════════════════════════════════════════════════════════════
-//  音乐历史数据模型
-// ══════════════════════════════════════════════════════════════
-
-/** 历史保存请求 */
 @Serializable
 data class MusicHistorySaveRequest(
     val taskId: String,
@@ -15,7 +10,6 @@ data class MusicHistorySaveRequest(
     val tracks: List<MusicHistoryTrack> = emptyList(),
 )
 
-/** 历史音轨 */
 @Serializable
 data class MusicHistoryTrack(
     val id: String? = null,
@@ -26,7 +20,6 @@ data class MusicHistoryTrack(
     val duration: Double? = null,
 )
 
-/** 历史响应 */
 @Serializable
 data class MusicHistoryItem(
     val id: Long? = null,

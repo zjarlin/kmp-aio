@@ -6,7 +6,6 @@ import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
-import org.koin.core.annotation.Property
 import org.koin.core.annotation.Single
 import org.koin.ktor.ext.getKoin
 import site.addzero.starter.AppStarter
@@ -17,15 +16,12 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3Client
 import java.net.URI
 
-private const val APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
-
 @Module
 @Configuration("vibepocket")
-@ComponentScan("site.addzero.vibepocket.s3")
+@ComponentScan("site.addzero.kcloud.s3")
 class S3KoinModule {
     @Single
     fun provideS3Config(
-        @Property(APPLICATION_CONFIG_PROPERTY)
         config: ApplicationConfig,
     ): S3Config {
         val section = runCatching { config.config("s3") }.getOrNull()

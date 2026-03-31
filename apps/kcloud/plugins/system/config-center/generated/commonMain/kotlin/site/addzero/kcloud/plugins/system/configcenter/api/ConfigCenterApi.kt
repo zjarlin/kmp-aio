@@ -20,7 +20,8 @@ interface ConfigCenterApi {
  *   - active: kotlin.String? (RequestParam)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
  */
-    @GET("/api/system/config-center/value")    suspend fun getConfigCenterValue(
+    @GET("/api/system/config-center/value")
+    suspend fun getConfigCenterValue(
         @Query("namespace") namespace: kotlin.String,
         @Query("key") key: kotlin.String,
         @Query("active") active: kotlin.String?
@@ -34,7 +35,9 @@ interface ConfigCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
  */
-    @PUT("/api/system/config-center/value")    suspend fun putConfigCenterValue(
+    @PUT("/api/system/config-center/value")
+    @Headers("Content-Type: application/json")
+    suspend fun putConfigCenterValue(
         @Body request: site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
     ): site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
 

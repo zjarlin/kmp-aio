@@ -2,7 +2,7 @@ package site.addzero.kcloud.plugins.system.pluginmarket.jvm.service
 
 import org.babyfish.jimmer.kt.new
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterCompatService
+import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterService
 import site.addzero.kcloud.plugins.system.pluginmarket.jvm.entity.*
 import site.addzero.kcloud.plugins.system.pluginmarket.model.*
 import site.addzero.kcloud.plugins.system.pluginmarket.service.*
@@ -581,7 +581,7 @@ class PluginDiscoveryServiceImpl(
     ],
 )
 class PluginMarketConfigServiceImpl(
-    private val compatService: ConfigCenterCompatService,
+    private val configCenterService: ConfigCenterService,
 ) : PluginMarketConfigService {
     override suspend fun read(): PluginMarketConfigDto {
         ensureDefaults()
@@ -630,7 +630,7 @@ class PluginMarketConfigServiceImpl(
     }
 
     private suspend fun saveValue(key: String, value: String, _description: String) {
-        compatService.writeValue(
+        configCenterService.writeValue(
             namespace = CONFIG_NAMESPACE,
             key = key,
             value = value,
@@ -640,7 +640,7 @@ class PluginMarketConfigServiceImpl(
     private fun readValue(
         key: String,
     ): String? {
-        return compatService.readValue(CONFIG_NAMESPACE, key)
+        return configCenterService.readValue(CONFIG_NAMESPACE, key).value
     }
 
     private fun defaultGradleTasks(): List<String> {

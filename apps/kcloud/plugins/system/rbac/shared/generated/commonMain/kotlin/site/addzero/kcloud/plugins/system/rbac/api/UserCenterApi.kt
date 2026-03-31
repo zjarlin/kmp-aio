@@ -16,7 +16,8 @@ interface UserCenterApi {
  * 路径: /api/system/user/profile
  * 返回类型: site.addzero.kcloud.plugins.system.rbac.api.UserProfileDto
  */
-    @GET("/api/system/user/profile")    suspend fun getCurrentUserProfile(): site.addzero.kcloud.plugins.system.rbac.api.UserProfileDto
+    @GET("/api/system/user/profile")
+    suspend fun getCurrentUserProfile(): site.addzero.kcloud.plugins.system.rbac.api.UserProfileDto
 
 /**
  * saveCurrentUserProfile
@@ -26,7 +27,9 @@ interface UserCenterApi {
  *   - request: site.addzero.kcloud.plugins.system.rbac.api.UserProfileUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.rbac.api.UserProfileDto
  */
-    @PUT("/api/system/user/profile")    suspend fun saveCurrentUserProfile(
+    @PUT("/api/system/user/profile")
+    @Headers("Content-Type: application/json")
+    suspend fun saveCurrentUserProfile(
         @Body request: site.addzero.kcloud.plugins.system.rbac.api.UserProfileUpdateRequest
     ): site.addzero.kcloud.plugins.system.rbac.api.UserProfileDto
 

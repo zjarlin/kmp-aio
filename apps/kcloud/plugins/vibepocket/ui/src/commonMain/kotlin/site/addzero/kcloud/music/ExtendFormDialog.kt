@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.kcloud.api.suno.SunoExtendRequest
 import site.addzero.kcloud.api.suno.SunoTaskDetail
-import site.addzero.kcloud.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.PersonaItem
 
 @Composable
 fun ExtendFormDialog(

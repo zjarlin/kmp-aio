@@ -14,6 +14,14 @@ import site.addzero.liquidglass.LiquidGlassCard
 import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
 import site.addzero.liquidglass.liquidGlassSurface
 
+enum class StudioTone {
+    Primary,
+    Secondary,
+    Tertiary,
+    Error,
+    Surface,
+}
+
 @Composable
 fun StudioSectionCard(
     modifier: Modifier = Modifier,
@@ -76,13 +84,13 @@ fun StudioMetricCard(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    tone: StudioTone = StudioTone.Primary,
 ) {
     Box(
         modifier = modifier,
     ) {
         Row(
-            modifier = Modifier.metricCardSurface(containerColor),
+            modifier = Modifier.metricCardSurface(tone.metricContainerColor()),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
@@ -104,18 +112,18 @@ fun StudioMetricCard(
 fun StudioPill(
     text: String,
     modifier: Modifier = Modifier,
-    containerColor: Color = MaterialTheme.colorScheme.secondaryContainer,
-    contentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer,
+    tone: StudioTone = StudioTone.Secondary,
 ) {
+    val colors = tone.pillColors()
     Box(
-        modifier = modifier.pillSurface(containerColor),
+        modifier = modifier.pillSurface(colors.containerColor),
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             style = MaterialTheme.typography.labelLarge,
             textAlign = TextAlign.Center,
-            color = contentColor,
+            color = colors.contentColor,
         )
     }
 }
@@ -160,6 +168,52 @@ private val StudioSectionCardPadding = androidx.compose.foundation.layout.Paddin
     horizontal = 16.dp,
     vertical = 14.dp,
 )
+
+private data class StudioPillColors(
+    val containerColor: Color,
+    val contentColor: Color,
+)
+
+@Composable
+private fun StudioTone.metricContainerColor(): Color {
+    return when (this) {
+        StudioTone.Primary -> MaterialTheme.colorScheme.primaryContainer
+        StudioTone.Secondary -> MaterialTheme.colorScheme.secondaryContainer
+        StudioTone.Tertiary -> MaterialTheme.colorScheme.tertiaryContainer
+        StudioTone.Error -> MaterialTheme.colorScheme.errorContainer
+        StudioTone.Surface -> MaterialTheme.colorScheme.surfaceVariant
+    }
+}
+
+@Composable
+private fun StudioTone.pillColors(): StudioPillColors {
+    return when (this) {
+        StudioTone.Primary -> StudioPillColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        )
+
+        StudioTone.Secondary -> StudioPillColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        )
+
+        StudioTone.Tertiary -> StudioPillColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+        )
+
+        StudioTone.Error -> StudioPillColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        )
+
+        StudioTone.Surface -> StudioPillColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
 
 /** 指标卡片表面：用更紧凑的玻璃小面板承接短指标。 */
 private fun Modifier.metricCardSurface(accent: Color): Modifier {

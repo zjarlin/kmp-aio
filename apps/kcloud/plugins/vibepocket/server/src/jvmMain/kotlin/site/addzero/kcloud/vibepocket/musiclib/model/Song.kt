@@ -1,4 +1,4 @@
-package site.addzero.network.call.musiclib.model
+package site.addzero.kcloud.vibepocket.musiclib.model
 
 data class Song(
     val id: String,

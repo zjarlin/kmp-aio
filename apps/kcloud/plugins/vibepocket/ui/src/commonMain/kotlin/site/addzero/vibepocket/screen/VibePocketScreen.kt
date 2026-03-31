@@ -2,18 +2,14 @@ package site.addzero.vibepocket.screen
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
-import org.koin.compose.koinInject
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.kcloud.music.MusicTaskResourcePage
+import site.addzero.kcloud.music.MusicHistoryScreen
+import site.addzero.kcloud.music.MusicTaskResourceScreen
 import site.addzero.kcloud.music.MusicVibeScreen
-import site.addzero.kcloud.screens.creativeassets.CreativeAssetsViewModel
-import site.addzero.kcloud.screens.musicstudio.MusicStudioViewModel
-import site.addzero.kcloud.screens.settings.SettingsViewModel
-import site.addzero.kcloud.settings.SettingsPage
+import site.addzero.kcloud.settings.SettingsScreen
 import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
 
 @Route(
@@ -33,15 +29,31 @@ import site.addzero.liquidglass.LiquidGlassWorkbenchRoot
     ),
 )
 @Composable
-fun MusicStudioScreen() {
-    val viewModel: MusicStudioViewModel = koinInject()
-    DisposableEffect(viewModel) {
-        onDispose {
-            viewModel.dispose()
-        }
-    }
+fun MusicStudioRouteScreen() {
     VibePocketSceneRoot {
-        MusicVibeScreen(viewModel = viewModel)
+        MusicVibeScreen()
+    }
+}
+
+@Route(
+    value = "创作中心",
+    title = "音乐库",
+    routePath = "vibepocket/music-library",
+    icon = "LibraryMusic",
+    order = 35.0,
+    enabled = false,
+    placement = RoutePlacement(
+        scene = RouteScene(
+            name = "音乐创作",
+            icon = "PlayArrow",
+            order = 200,
+        ),
+    ),
+)
+@Composable
+fun MusicLibraryRouteScreen() {
+    VibePocketSceneRoot {
+        MusicHistoryScreen()
     }
 }
 
@@ -61,15 +73,9 @@ fun MusicStudioScreen() {
     ),
 )
 @Composable
-fun CreativeAssetsScreen() {
-    val viewModel: CreativeAssetsViewModel = koinInject()
-    DisposableEffect(viewModel) {
-        onDispose {
-            viewModel.dispose()
-        }
-    }
+fun CreativeAssetsRouteScreen() {
     VibePocketSceneRoot {
-        MusicTaskResourcePage(viewModel = viewModel)
+        MusicTaskResourceScreen()
     }
 }
 
@@ -89,15 +95,9 @@ fun CreativeAssetsScreen() {
     ),
 )
 @Composable
-fun SettingsScreen() {
-    val viewModel: SettingsViewModel = koinInject()
-    DisposableEffect(viewModel) {
-        onDispose {
-            viewModel.dispose()
-        }
-    }
+fun SettingsRouteScreen() {
     VibePocketSceneRoot {
-        SettingsPage(viewModel = viewModel)
+        SettingsScreen()
     }
 }
 

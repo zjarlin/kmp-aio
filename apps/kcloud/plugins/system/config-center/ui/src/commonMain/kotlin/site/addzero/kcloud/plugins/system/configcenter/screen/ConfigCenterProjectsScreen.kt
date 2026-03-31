@@ -17,6 +17,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -38,7 +39,8 @@ import site.addzero.annotation.RouteScene
 )
 @Composable
 fun ConfigCenterProjectsScreen() {
-    val state = rememberConfigCenterWorkbenchState()
+    val viewModel: ConfigCenterProjectsViewModel = koinViewModel()
+    val state = viewModel.state
     val scope = rememberCoroutineScope()
 
     ConfigCenterWorkspaceFrame(

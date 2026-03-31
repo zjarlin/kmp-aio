@@ -4,7 +4,7 @@ import kotlinx.serialization.json.Json
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoTrack
-import site.addzero.kcloud.model.*
+import site.addzero.kcloud.vibepocket.model.*
 import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse as ApiSunoTaskResourceResponse
 import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest as ApiSunoTaskResourceSaveRequest
 import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceTrackResponse as ApiSunoTaskResourceTrackResponse

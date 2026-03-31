@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import site.addzero.kcloud.api.suno.SunoLyricItem
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 
 @Composable
 fun LyricsStep(
@@ -34,15 +35,10 @@ fun LyricsStep(
             action = {
                 StudioPill(
                     text = if (isAiMode) "AI mode" else "Manual mode",
-                    containerColor = if (isAiMode) {
-                        MaterialTheme.colorScheme.secondaryContainer
+                    tone = if (isAiMode) {
+                        StudioTone.Secondary
                     } else {
-                        MaterialTheme.colorScheme.primaryContainer
-                    },
-                    contentColor = if (isAiMode) {
-                        MaterialTheme.colorScheme.onSecondaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onPrimaryContainer
+                        StudioTone.Primary
                     },
                 )
             },

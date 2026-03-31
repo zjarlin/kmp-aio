@@ -17,20 +17,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterWorkbenchState
-
-@Composable
-internal fun rememberConfigCenterWorkbenchState(): ConfigCenterWorkbenchState {
-    return remember {
-        KoinPlatform.getKoin().get<ConfigCenterWorkbenchState>()
-    }
-}
 
 @Composable
 internal fun ConfigCenterWorkspaceFrame(

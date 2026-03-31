@@ -19,12 +19,13 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTaskDetail
-import site.addzero.kcloud.model.FavoriteRequest
-import site.addzero.kcloud.model.PersonaItem
-import site.addzero.kcloud.model.TrackAction
+import site.addzero.kcloud.vibepocket.model.FavoriteRequest
+import site.addzero.kcloud.vibepocket.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.TrackAction
 import site.addzero.kcloud.ui.StudioEmptyState
 import site.addzero.kcloud.ui.StudioMetricCard
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 
 @Composable
@@ -111,16 +112,16 @@ fun TaskProgressPanel(
                     label = "音轨数",
                     value = tracks.size.toString(),
                     modifier = Modifier.width(120.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    tone = StudioTone.Primary,
                 )
                 StudioMetricCard(
                     label = "状态",
                     value = effectiveTaskDetail?.displayStatus?.take(4) ?: effectiveTaskStatus.take(4),
                     modifier = Modifier.width(120.dp),
-                    containerColor = when {
-                        effectiveTaskDetail?.isSuccess == true -> MaterialTheme.colorScheme.primaryContainer
-                        effectiveTaskDetail?.isFailed == true -> MaterialTheme.colorScheme.errorContainer
-                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    tone = when {
+                        effectiveTaskDetail?.isSuccess == true -> StudioTone.Primary
+                        effectiveTaskDetail?.isFailed == true -> StudioTone.Error
+                        else -> StudioTone.Secondary
                     },
                 )
                 effectiveTaskDetail?.firstTrack?.duration?.let { firstDuration ->
@@ -128,7 +129,7 @@ fun TaskProgressPanel(
                         label = "时长",
                         value = "${firstDuration.toInt()}s",
                         modifier = Modifier.width(120.dp),
-                        containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                        tone = StudioTone.Tertiary,
                     )
                 }
             }

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Stop
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -28,7 +29,8 @@ import site.addzero.component.button.AddIconButton
 )
 @Composable
 fun McuDebugScreen() {
-    val state = rememberMcuWorkbenchState()
+    val viewModel: McuDebugViewModel = koinViewModel()
+    val state = rememberMcuWorkbenchState(viewModel.state)
     val runAction = rememberMcuActionRunner()
 
     McuWorkbenchFrame(

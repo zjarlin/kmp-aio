@@ -15,8 +15,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import org.koin.compose.viewmodel.koinViewModel
+import site.addzero.kcloud.screens.welcome.WelcomeStep
+import site.addzero.kcloud.screens.welcome.WelcomeViewModel
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.kcloud.ui.SunoTokenApplyHint
 import site.addzero.liquidglass.LiquidGlassButton
 import site.addzero.liquidglass.LiquidGlassButtonStyle
@@ -24,12 +28,11 @@ import site.addzero.liquidglass.LiquidGlassWorkbenchDefaults
 import site.addzero.liquidglass.liquidGlassSurface
 
 @Composable
-fun WelcomePage(
-    onEnter: (sunoToken: String, sunoBaseUrl: String) -> Unit,
+fun WelcomeScreen(
+    onSetupComplete: (sunoToken: String, sunoBaseUrl: String) -> Unit,
 ) {
-    var token by remember { mutableStateOf("") }
-    var baseUrl by remember { mutableStateOf("https://api.sunoapi.org/api/v1") }
-    var step by remember { mutableStateOf(0) }
+    val viewModel: WelcomeViewModel = koinViewModel()
+    val state = viewModel.state
     val scrollState = rememberScrollState()
 
     BoxWithConstraints(
@@ -37,13 +40,13 @@ fun WelcomePage(
         contentAlignment = Alignment.Center,
     ) {
         WelcomeActionPanel(
-            step = step,
-            token = token,
-            onTokenChange = { token = it },
-            baseUrl = baseUrl,
-            onBaseUrlChange = { baseUrl = it },
-            onAdvance = { step = 1 },
-            onSubmit = { onEnter(token, baseUrl) },
+            step = state.step,
+            token = state.runtimeConfig.apiToken,
+            onTokenChange = viewModel::updateSunoToken,
+            baseUrl = state.runtimeConfig.baseUrl,
+            onBaseUrlChange = viewModel::updateSunoBaseUrl,
+            onAdvance = viewModel::advance,
+            onSubmit = { viewModel.completeSetup(onSetupComplete) },
             modifier = Modifier
                 .welcomeCardFrame()
                 .verticalScroll(scrollState),
@@ -53,7 +56,7 @@ fun WelcomePage(
 
 @Composable
 private fun WelcomeActionPanel(
-    step: Int,
+    step: WelcomeStep,
     token: String,
     onTokenChange: (String) -> Unit,
     baseUrl: String,
@@ -68,8 +71,8 @@ private fun WelcomeActionPanel(
     ) {
         AnimatedContent(targetState = step) { currentStep ->
             when (currentStep) {
-                0 -> WelcomeIntroCard(onAdvance = onAdvance)
-                else -> ApiConfigCard(
+                WelcomeStep.INTRO -> WelcomeIntroCard(onAdvance = onAdvance)
+                WelcomeStep.CONFIG -> ApiConfigCard(
                     token = token,
                     onTokenChange = onTokenChange,
                     baseUrl = baseUrl,
@@ -89,8 +92,7 @@ private fun WelcomeIntroCard(onAdvance: () -> Unit) {
         action = {
             StudioPill(
                 text = "Step 1 / 2",
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                tone = StudioTone.Tertiary,
             )
         },
     ) {
@@ -126,17 +128,12 @@ private fun ApiConfigCard(
         action = {
             StudioPill(
                 text = "Step 2 / 2",
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                tone = StudioTone.Primary,
             )
         },
     ) {
         SunoTokenApplyHint(
             intro = "没申请过的话，先去 Suno 控制台申请 Token，再回来填这里。",
-            introStyle = MaterialTheme.typography.bodyMedium,
-            introColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            linkStyle = MaterialTheme.typography.bodyMedium,
-            linkColor = MaterialTheme.colorScheme.primary,
         )
         WelcomeGlassTextField(
             value = token,

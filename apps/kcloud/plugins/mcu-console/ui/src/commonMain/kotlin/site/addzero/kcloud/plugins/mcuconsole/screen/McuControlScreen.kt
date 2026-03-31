@@ -16,10 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -34,6 +30,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -61,11 +58,9 @@ import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 )
 @Composable
 fun McuControlScreen() {
-    val state = rememberMcuWorkbenchState()
+    val viewModel: McuControlViewModel = koinViewModel()
+    val state = rememberMcuWorkbenchState(viewModel.state)
     val runAction = rememberMcuActionRunner()
-    var followLatestLogs by rememberSaveable {
-        mutableStateOf(true)
-    }
 
     LaunchedEffect(state) {
         if (state.selectedTransportKind != McuTransportKind.SERIAL) {
@@ -109,8 +104,8 @@ fun McuControlScreen() {
                 }
                 McuTerminalPanel(
                     state = state,
-                    followLatestLogs = followLatestLogs,
-                    onFollowLatestChange = { followLatestLogs = it },
+                    followLatestLogs = viewModel.followLatestLogs,
+                    onFollowLatestChange = { viewModel.followLatestLogs = it },
                     runAction = runAction,
                     modifier = Modifier.fillMaxWidth().weight(1.15f),
                 )

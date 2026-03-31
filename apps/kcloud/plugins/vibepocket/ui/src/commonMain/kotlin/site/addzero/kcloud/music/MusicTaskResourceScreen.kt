@@ -31,13 +31,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.kcloud.api.suno.SunoTaskDetail
-import site.addzero.kcloud.model.SunoTaskResourceItem
+import site.addzero.kcloud.vibepocket.model.SunoTaskResourceItem
 import site.addzero.kcloud.screens.creativeassets.CreativeAssetsViewModel
 import site.addzero.kcloud.ui.StudioEmptyState
 import site.addzero.kcloud.ui.StudioMetricCard
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 
 private val taskResourcePrettyJson = Json {
@@ -47,9 +49,9 @@ private val taskResourcePrettyJson = Json {
 }
 
 @Composable
-fun MusicTaskResourcePage(
-    viewModel: CreativeAssetsViewModel,
-) {
+fun MusicTaskResourceScreen() {
+    val viewModel: CreativeAssetsViewModel = koinViewModel()
+    val state = viewModel.state
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -58,8 +60,7 @@ fun MusicTaskResourcePage(
     ) {
         StudioPill(
             text = "Creative Assets",
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            tone = StudioTone.Primary,
         )
         Text(
             text = "创作资产",
@@ -78,27 +79,27 @@ fun MusicTaskResourcePage(
         ) {
             StudioMetricCard(
                 label = "总任务",
-                value = viewModel.items.size.toString(),
+                value = state.items.size.toString(),
                 modifier = Modifier.width(112.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                tone = StudioTone.Primary,
             )
             StudioMetricCard(
                 label = "成功",
                 value = viewModel.successCount.toString(),
                 modifier = Modifier.width(112.dp),
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                tone = StudioTone.Secondary,
             )
             StudioMetricCard(
                 label = "失败",
                 value = viewModel.failedCount.toString(),
                 modifier = Modifier.width(112.dp),
-                containerColor = MaterialTheme.colorScheme.errorContainer,
+                tone = StudioTone.Error,
             )
             StudioMetricCard(
                 label = "进行中",
                 value = viewModel.runningCount.toString(),
                 modifier = Modifier.width(112.dp),
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                tone = StudioTone.Tertiary,
             )
         }
 
@@ -108,14 +109,14 @@ fun MusicTaskResourcePage(
             action = {
                 OutlinedButton(
                     onClick = viewModel::refreshTaskResources,
-                    enabled = !viewModel.isLoading,
+                    enabled = !state.isLoading,
                 ) {
-                    Text(if (viewModel.isLoading) "刷新中..." else "刷新")
+                    Text(if (state.isLoading) "刷新中..." else "刷新")
                 }
             },
         ) {
             OutlinedTextField(
-                value = viewModel.keyword,
+                value = state.keyword,
                 onValueChange = viewModel::updateKeyword,
                 modifier = Modifier.fillMaxWidth(),
                 label = { Text("搜索任务") },
@@ -136,16 +137,16 @@ fun MusicTaskResourcePage(
                 subtitle = "按最近更新时间倒序显示。",
             ) {
                 when {
-                    viewModel.isLoading && viewModel.items.isEmpty() -> ResourceLoadingState()
-                    viewModel.errorMessage != null && viewModel.items.isEmpty() -> ResourceErrorState(
-                        message = viewModel.errorMessage.orEmpty(),
+                    state.isLoading && state.items.isEmpty() -> ResourceLoadingState()
+                    state.errorMessage != null && state.items.isEmpty() -> ResourceErrorState(
+                        message = state.errorMessage.orEmpty(),
                         onRetry = viewModel::refreshTaskResources,
                     )
 
                     viewModel.filteredItems.isEmpty() -> StudioEmptyState(
                         icon = "🧾",
                         title = "暂无生成日志",
-                        description = if (viewModel.keyword.isBlank()) {
+                        description = if (state.keyword.isBlank()) {
                             "先去音乐工作台提交一次任务，这里就会出现记录。"
                         } else {
                             "没有匹配当前筛选条件的任务。"
@@ -183,9 +184,9 @@ fun MusicTaskResourcePage(
                     if (viewModel.selectedItem != null) {
                         OutlinedButton(
                             onClick = viewModel::refreshSelectedTaskFromSuno,
-                            enabled = !viewModel.isRefreshingLiveDetail,
+                            enabled = !state.isRefreshingLiveDetail,
                         ) {
-                            Text(if (viewModel.isRefreshingLiveDetail) "查询中..." else "按 taskId 查询")
+                            Text(if (state.isRefreshingLiveDetail) "查询中..." else "按 taskId 查询")
                         }
                     }
                 },
@@ -201,8 +202,8 @@ fun MusicTaskResourcePage(
                 } else {
                     TaskResourceDetail(
                         item = selectedItem,
-                        liveDetail = viewModel.liveDetail,
-                        liveSyncMessage = viewModel.liveSyncMessage,
+                        liveDetail = state.liveDetail,
+                        liveSyncMessage = state.liveSyncMessage,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -217,10 +218,10 @@ private fun TaskResourceListItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val statusColor = when {
-        item.isSuccessStatus() -> MaterialTheme.colorScheme.secondaryContainer
-        item.isFailedStatus() -> MaterialTheme.colorScheme.errorContainer
-        else -> MaterialTheme.colorScheme.tertiaryContainer
+    val statusTone = when {
+        item.isSuccessStatus() -> StudioTone.Secondary
+        item.isFailedStatus() -> StudioTone.Error
+        else -> StudioTone.Tertiary
     }
     Surface(
         modifier = Modifier
@@ -268,8 +269,7 @@ private fun TaskResourceListItem(
                 }
                 StudioPill(
                     text = item.displayStatus(),
-                    containerColor = statusColor,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tone = statusTone,
                 )
             }
 
@@ -333,25 +333,25 @@ private fun TaskResourceDetail(
                     label = "类型",
                     value = effectiveType.ifBlank { "-" },
                     modifier = Modifier.width(112.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    tone = StudioTone.Primary,
                 )
                 StudioMetricCard(
                     label = "状态",
                     value = effectiveStatus,
                     modifier = Modifier.width(112.dp),
-                    containerColor = when {
-                        liveDetail != null && liveDetail.isSuccess -> MaterialTheme.colorScheme.secondaryContainer
-                        liveDetail != null && liveDetail.isFailed -> MaterialTheme.colorScheme.errorContainer
-                        item.isSuccessStatus() -> MaterialTheme.colorScheme.secondaryContainer
-                        item.isFailedStatus() -> MaterialTheme.colorScheme.errorContainer
-                        else -> MaterialTheme.colorScheme.tertiaryContainer
+                    tone = when {
+                        liveDetail != null && liveDetail.isSuccess -> StudioTone.Secondary
+                        liveDetail != null && liveDetail.isFailed -> StudioTone.Error
+                        item.isSuccessStatus() -> StudioTone.Secondary
+                        item.isFailedStatus() -> StudioTone.Error
+                        else -> StudioTone.Tertiary
                     },
                 )
                 StudioMetricCard(
                     label = "结果数",
                     value = effectiveTrackCount.toString(),
                     modifier = Modifier.width(112.dp),
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    tone = StudioTone.Surface,
                 )
             }
             TaskResourceValueBlock(

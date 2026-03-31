@@ -1,11 +1,11 @@
 package site.addzero.kcloud.music
 
 import site.addzero.kcloud.api.suno.SunoTrack
-import site.addzero.kcloud.model.FavoriteItem
-import site.addzero.kcloud.model.MusicHistoryItem
-import site.addzero.kcloud.model.MusicHistoryTrack
-import site.addzero.kcloud.model.SunoTaskResourceItem
-import site.addzero.kcloud.model.SunoTaskResourceTrack
+import site.addzero.kcloud.vibepocket.model.FavoriteItem
+import site.addzero.kcloud.vibepocket.model.MusicHistoryItem
+import site.addzero.kcloud.vibepocket.model.MusicHistoryTrack
+import site.addzero.kcloud.vibepocket.model.SunoTaskResourceItem
+import site.addzero.kcloud.vibepocket.model.SunoTaskResourceTrack
 import site.addzero.media.playlist.player.PlaylistAudioSource
 
 

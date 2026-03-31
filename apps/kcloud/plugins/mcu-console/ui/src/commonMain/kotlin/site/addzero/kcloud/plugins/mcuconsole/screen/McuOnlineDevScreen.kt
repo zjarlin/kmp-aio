@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -53,7 +54,8 @@ import site.addzero.kcloud.plugins.mcuconsole.client.McuWidgetInstanceState
 )
 @Composable
 fun McuOnlineDevScreen() {
-    val state = rememberMcuWorkbenchState()
+    val viewModel: McuOnlineDevViewModel = koinViewModel()
+    val state = rememberMcuWorkbenchState(viewModel.state)
     val runAction = rememberMcuActionRunner()
 
     McuWorkbenchFrame(

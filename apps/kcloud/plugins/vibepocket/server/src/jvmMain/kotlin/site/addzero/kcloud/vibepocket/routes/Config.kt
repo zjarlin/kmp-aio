@@ -8,12 +8,11 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterCompatService
+import site.addzero.kcloud.plugins.system.configcenter.ConfigCenterService
 import site.addzero.kcloud.vibepocket.dto.OkResponse
 import site.addzero.kcloud.vibepocket.model.AppConfig
 
 private const val VIBEPOCKET_CONFIG_NAMESPACE = "vibepocket"
-private const val VIBEPOCKET_APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
 
 private fun KSqlClient.readLegacyConfig(key: String): String? {
     return createQuery(AppConfig::class) {
@@ -38,7 +37,7 @@ suspend fun getConfig(
 suspend fun updateConfig(
     @RequestBody entry: ConfigEntry,
 ): OkResponse {
-    compatService().writeValue(
+    configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = entry.key,
         value = entry.value,
@@ -68,7 +67,7 @@ suspend fun getStorageConfig(): StorageConfig {
 suspend fun saveStorageConfig(
     @RequestBody config: StorageConfig,
 ): OkResponse {
-    compatService().writeValue(
+    configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = "storage.type",
         value = config.type,
@@ -84,7 +83,7 @@ suspend fun saveStorageConfig(
 }
 
 private suspend fun saveStorageValue(key: String, value: String) {
-    compatService().writeValue(
+    configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
         value = value,
@@ -94,14 +93,14 @@ private suspend fun saveStorageValue(key: String, value: String) {
 private suspend fun readConfigValue(
     key: String,
 ): String? {
-    compatService().readValue(
+    configCenterService().readValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
-    )?.let { value ->
+    ).value?.let { value ->
         return value
     }
     val legacyValue = legacySqlClient().readLegacyConfig(key) ?: return null
-    compatService().writeValue(
+    configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
         value = legacyValue,
@@ -131,11 +130,10 @@ private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
 }
 
 private fun runtimeConfig(): ApplicationConfig {
-    return KoinPlatform.getKoin().getProperty(VIBEPOCKET_APPLICATION_CONFIG_PROPERTY)
-        ?: throw IllegalStateException("Ktor ApplicationConfig not found in Koin properties")
+    return KoinPlatform.getKoin().get()
 }
 
-private fun compatService(): ConfigCenterCompatService {
+private fun configCenterService(): ConfigCenterService {
     return KoinPlatform.getKoin().get()
 }
 

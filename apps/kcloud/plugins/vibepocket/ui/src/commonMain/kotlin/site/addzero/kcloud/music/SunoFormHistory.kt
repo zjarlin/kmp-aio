@@ -13,7 +13,7 @@ import io.ktor.util.date.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import site.addzero.kcloud.api.ServerApiClient
-import site.addzero.kcloud.model.ConfigEntry
+import site.addzero.kcloud.vibepocket.model.ConfigEntry
 
 private const val MAX_FORM_HISTORY_SIZE = 6
 private const val VIBE_FORM_HISTORY_KEY = "music_vibe_form_history"

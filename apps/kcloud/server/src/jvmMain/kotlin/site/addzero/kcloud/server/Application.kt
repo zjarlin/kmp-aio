@@ -7,8 +7,8 @@ import io.ktor.server.config.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.routing.*
+import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.starter.installEffectiveConfig
 import site.addzero.starter.normalizeConfigCenterActive
@@ -25,8 +25,6 @@ private const val DEFAULT_EMBEDDED_DESKTOP_PORT = 18080
 private const val DESKTOP_APP_DIRECTORY_NAME = "KCloud"
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
-private const val KCLOUD_APPLICATION_CONFIG_PROPERTY = "kcloud.applicationConfig"
-private const val VIBEPOCKET_APPLICATION_CONFIG_PROPERTY = "vibepocket.applicationConfig"
 private const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
 @Volatile
 private var embeddedApplicationConfigOverride: ApplicationConfig? = null
@@ -60,19 +58,20 @@ fun Application.module(
     val config = embeddedApplicationConfigOverride ?: environment.config
     installEffectiveConfig(config)
     val desktopKoinConfigurer = embeddedDesktopKoinConfigurer
+    val runtimeModules = buildList {
+        add(
+            module {
+                single<ApplicationConfig> { config }
+            },
+        )
+        addAll(overrideModules)
+    }
     installKoin {
         withConfiguration<KCloudServerStarterKoinApplication>()
         desktopKoinConfigurer?.invoke(this)
-        if (overrideModules.isNotEmpty()) {
-            modules(overrideModules)
+        if (runtimeModules.isNotEmpty()) {
+            modules(runtimeModules)
         }
-        properties(
-            mapOf(
-                JIMMER_APPLICATION_CONFIG_PROPERTY to config,
-                KCLOUD_APPLICATION_CONFIG_PROPERTY to config,
-                VIBEPOCKET_APPLICATION_CONFIG_PROPERTY to config,
-            ),
-        )
     }
     runStarters()
     routing {

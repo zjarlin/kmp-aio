@@ -16,7 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.koin.mp.KoinPlatform
+import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -51,9 +51,9 @@ import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPresetKind
 )
 @Composable
 fun PluginMarketPackagesScreen() {
-    val state = rememberPluginMarketWorkbenchState()
+    val viewModel: PluginMarketPackagesViewModel = koinViewModel()
+    val state = viewModel.state
     val scope = rememberCoroutineScope()
-    var selectedBottomTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
         state.refreshAll()
@@ -109,18 +109,11 @@ fun PluginMarketPackagesScreen() {
             }
             PluginBottomPanel(
                 state = state,
-                selectedTab = selectedBottomTab,
-                onTabChange = { selectedBottomTab = it },
+                selectedTab = viewModel.selectedBottomTab,
+                onTabChange = { viewModel.selectedBottomTab = it },
                 modifier = Modifier.fillMaxWidth().height(260.dp),
             )
         }
-    }
-}
-
-@Composable
-private fun rememberPluginMarketWorkbenchState(): PluginMarketWorkbenchState {
-    return remember {
-        KoinPlatform.getKoin().get()
     }
 }
 

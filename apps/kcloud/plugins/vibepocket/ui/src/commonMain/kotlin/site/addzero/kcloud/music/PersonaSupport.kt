@@ -14,7 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import site.addzero.kcloud.api.ServerApiClient
-import site.addzero.kcloud.model.PersonaItem
+import site.addzero.kcloud.vibepocket.model.PersonaItem
 
 internal suspend fun loadSavedPersonas(): List<PersonaItem> {
     return ServerApiClient.personaApi.getPersonas()

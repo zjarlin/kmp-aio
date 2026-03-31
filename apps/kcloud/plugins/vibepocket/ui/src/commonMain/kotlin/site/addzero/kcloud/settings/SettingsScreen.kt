@@ -8,24 +8,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import site.addzero.kcloud.model.ConfigRuntimeInfo
+import org.koin.compose.viewmodel.koinViewModel
+import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
 import site.addzero.kcloud.screens.settings.SettingsViewModel
 import site.addzero.kcloud.ui.StudioEmptyState
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
+import site.addzero.kcloud.ui.StudioTone
 import site.addzero.kcloud.ui.SunoTokenApplyHint
 
 @Composable
-fun SettingsPage(
-    viewModel: SettingsViewModel,
-) {
+fun SettingsScreen() {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state = viewModel.state
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        if (!viewModel.loaded) {
+        if (!state.loaded) {
             StudioEmptyState(
                 icon = "⏳",
                 title = "读取配置中",
@@ -33,21 +35,9 @@ fun SettingsPage(
                 modifier = Modifier.fillMaxWidth(),
             )
         } else {
-            MusicConfigEditor(
-                sunoToken = viewModel.sunoToken,
-                onTokenChange = viewModel::updateSunoToken,
-                sunoBaseUrl = viewModel.sunoBaseUrl,
-                onBaseUrlChange = viewModel::updateSunoBaseUrl,
-                sunoCallbackUrl = viewModel.sunoCallbackUrl,
-                onCallbackUrlChange = viewModel::updateSunoCallbackUrl,
-                isSaving = viewModel.isSaving,
-                feedbackMessage = viewModel.feedbackMessage,
-                feedbackIsError = viewModel.feedbackIsError,
-                onSave = viewModel::saveConfig,
-                onReload = viewModel::reloadWithFeedback,
-            )
+            MusicConfigEditor()
             LocalStorageCard(
-                runtimeInfo = viewModel.runtimeInfo,
+                runtimeInfo = state.runtimeInfo,
                 onOpenCacheDir = viewModel::openCacheDir,
             )
         }
@@ -55,19 +45,9 @@ fun SettingsPage(
 }
 
 @Composable
-private fun MusicConfigEditor(
-    sunoToken: String,
-    onTokenChange: (String) -> Unit,
-    sunoBaseUrl: String,
-    onBaseUrlChange: (String) -> Unit,
-    sunoCallbackUrl: String,
-    onCallbackUrlChange: (String) -> Unit,
-    isSaving: Boolean,
-    feedbackMessage: String?,
-    feedbackIsError: Boolean,
-    onSave: () -> Unit,
-    onReload: () -> Unit,
-) {
+private fun MusicConfigEditor() {
+    val viewModel: SettingsViewModel = koinViewModel()
+    val state = viewModel.state
     StudioSectionCard(
         modifier = Modifier.fillMaxWidth(),
         title = "音乐接口配置",
@@ -75,38 +55,33 @@ private fun MusicConfigEditor(
         action = {
             StudioPill(
                 text = "Music service",
-                containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+                tone = StudioTone.Tertiary,
             )
         },
     ) {
         SunoTokenApplyHint(
             intro = "如果你还没申请过 Suno API Token，这里可以直接跳去控制台申请。",
-            introStyle = MaterialTheme.typography.bodyMedium,
-            introColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            linkStyle = MaterialTheme.typography.bodyMedium,
-            linkColor = MaterialTheme.colorScheme.primary,
         )
 
         OutlinedTextField(
-            value = sunoToken,
-            onValueChange = onTokenChange,
+            value = state.runtimeConfig.apiToken,
+            onValueChange = viewModel::updateSunoToken,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Suno API Token") },
             placeholder = { Text("sk-...") },
             singleLine = true,
         )
         OutlinedTextField(
-            value = sunoBaseUrl,
-            onValueChange = onBaseUrlChange,
+            value = state.runtimeConfig.baseUrl,
+            onValueChange = viewModel::updateSunoBaseUrl,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Suno API Base URL") },
             placeholder = { Text("https://api.sunoapi.org/api/v1") },
             singleLine = true,
         )
         OutlinedTextField(
-            value = sunoCallbackUrl,
-            onValueChange = onCallbackUrlChange,
+            value = state.runtimeConfig.callbackUrl,
+            onValueChange = viewModel::updateSunoCallbackUrl,
             modifier = Modifier.fillMaxWidth(),
             label = { Text("Suno Callback URL") },
             placeholder = { Text("https://xxxx.trycloudflare.com/api/suno/callback/default") },
@@ -117,11 +92,11 @@ private fun MusicConfigEditor(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (feedbackMessage != null) {
+        state.feedback.message?.let { message ->
             Text(
-                text = feedbackMessage,
+                text = message,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (feedbackIsError) {
+                color = if (state.feedback.isError) {
                     MaterialTheme.colorScheme.error
                 } else {
                     MaterialTheme.colorScheme.primary
@@ -133,11 +108,11 @@ private fun MusicConfigEditor(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Button(
-                onClick = onSave,
-                enabled = !isSaving,
+                onClick = viewModel::saveConfig,
+                enabled = !state.isSaving,
                 modifier = Modifier.weight(1f),
             ) {
-                if (isSaving) {
+                if (state.isSaving) {
                     Box {
                         CircularProgressIndicator(
                             modifier = Modifier.size(18.dp),
@@ -149,8 +124,8 @@ private fun MusicConfigEditor(
                 }
             }
             OutlinedButton(
-                onClick = onReload,
-                enabled = !isSaving,
+                onClick = viewModel::reloadWithFeedback,
+                enabled = !state.isSaving,
                 modifier = Modifier.weight(1f),
             ) {
                 Text("重新读取")
@@ -171,8 +146,7 @@ private fun LocalStorageCard(
         action = {
             StudioPill(
                 text = runtimeInfo?.storage?.uppercase().orEmpty().ifBlank { "UNKNOWN" },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                tone = StudioTone.Primary,
             )
         },
     ) {

@@ -37,15 +37,15 @@ object MyServerKoinApplication
 
 ### 2. Pass `ApplicationConfig`
 
-启动 Ktor/Koin 时，把 `ApplicationConfig` 放进 Koin property：
+启动 Ktor/Koin 时，直接把 `ApplicationConfig` 作为类型化单例放进 Koin：
 
 ```kotlin
 installKoin {
     withConfiguration<MyServerKoinApplication>()
-    properties(
-        mapOf(
-            JIMMER_APPLICATION_CONFIG_PROPERTY to environment.config,
-        ),
+    modules(
+        module {
+            single<ApplicationConfig> { environment.config }
+        },
     )
 }
 ```
@@ -58,7 +58,6 @@ System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
 
 对应常量：
 
-- `site.addzero.kcloud.jimmer.di.JIMMER_APPLICATION_CONFIG_PROPERTY`
 - `site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY`
 
 ## Consumer SPI

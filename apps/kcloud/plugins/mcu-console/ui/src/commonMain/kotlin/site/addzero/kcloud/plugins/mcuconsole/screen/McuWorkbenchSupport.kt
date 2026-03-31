@@ -36,16 +36,15 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
 import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 
 @Composable
-internal fun rememberMcuWorkbenchState(): McuConsoleWorkbenchState {
-    val state: McuConsoleWorkbenchState = koinInject()
-
+internal fun rememberMcuWorkbenchState(
+    state: McuConsoleWorkbenchState,
+): McuConsoleWorkbenchState {
     LaunchedEffect(state) {
         state.refreshAll()
     }
