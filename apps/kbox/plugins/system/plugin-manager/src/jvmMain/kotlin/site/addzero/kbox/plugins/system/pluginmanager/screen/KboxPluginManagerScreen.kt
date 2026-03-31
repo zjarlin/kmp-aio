@@ -1,5 +1,6 @@
 package site.addzero.kbox.plugins.system.pluginmanager.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,10 +17,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,16 +48,12 @@ import site.addzero.kbox.plugins.system.pluginmanager.KboxPluginManagerState
 @Route(
     value = "插件运行时",
     title = "插件管理",
-    routePath = "system/plugin-manager",
     icon = "Extension",
-    order = 100.0,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "系统",
             icon = "AdminPanelSettings",
-            order = 100,
         ),
-        defaultInScene = false,
     ),
 )
 @Composable
@@ -73,39 +73,104 @@ fun KboxPluginManagerScreen(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
             Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Text(
-                    text = "运行时插件管理",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = "安装目录包后可直接热加载到当前工作台。目录格式固定为 plugin.json + lib/*.jar。",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Plugin runtime",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "Install runtime plugins from a folder, inspect their current state, and enable or disable them without leaving the workbench.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    PluginStatePill(
+                        text = when {
+                            state.isBusy -> "Refreshing"
+                            state.statusIsError -> "Issue detected"
+                            else -> "Stable"
+                        },
+                        accent = when {
+                            state.statusIsError -> MaterialTheme.colorScheme.errorContainer
+                            state.isBusy -> MaterialTheme.colorScheme.primaryContainer
+                            else -> MaterialTheme.colorScheme.tertiaryContainer
+                        },
+                        contentColor = when {
+                            state.statusIsError -> MaterialTheme.colorScheme.onErrorContainer
+                            state.isBusy -> MaterialTheme.colorScheme.onPrimaryContainer
+                            else -> MaterialTheme.colorScheme.onTertiaryContainer
+                        },
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    PluginMetricCard(
+                        title = "Installed",
+                        value = state.plugins.size.toString(),
+                        detail = "Discovered plugin folders",
+                        modifier = Modifier.weight(1f),
+                    )
+                    PluginMetricCard(
+                        title = "Selected",
+                        value = state.selectedPlugin?.name ?: "-",
+                        detail = state.selectedPlugin?.state?.name ?: "No plugin selected",
+                        modifier = Modifier.weight(1.3f),
+                        accent = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+                    )
+                    PluginMetricCard(
+                        title = "Install source",
+                        value = if (state.installSourceDir.isBlank()) "-" else "Ready",
+                        detail = if (state.installSourceDir.isBlank()) {
+                            "Choose a folder to install from"
+                        } else {
+                            state.installSourceDir
+                        },
+                        modifier = Modifier.weight(1.6f),
+                    )
+                }
+
                 OutlinedTextField(
                     value = state.installSourceDir,
                     onValueChange = { value -> state.installSourceDir = value },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("待安装插件目录") },
+                    label = { Text("Plugin install directory") },
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
                         onClick = { scope.launch { state.installFromDirectory() } },
                         enabled = !state.isBusy,
                     ) {
-                        Text("安装并加载")
+                        Text("Install and load")
                     }
                     Button(
                         onClick = { scope.launch { state.refresh() } },
                         enabled = !state.isBusy,
                     ) {
-                        Text("刷新列表")
+                        Text("Refresh list")
                     }
                 }
                 Text(
@@ -119,9 +184,11 @@ fun KboxPluginManagerScreen(
                 )
             }
         }
+
         if (state.isBusy) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
+
         Row(
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -130,7 +197,7 @@ fun KboxPluginManagerScreen(
                 plugins = state.plugins,
                 selectedPluginId = state.selectedPluginId,
                 onSelect = state::selectPlugin,
-                modifier = Modifier.width(340.dp).fillMaxHeight(),
+                modifier = Modifier.width(360.dp).fillMaxHeight(),
             )
             PluginDetailPanel(
                 plugin = state.selectedPlugin,
@@ -151,15 +218,30 @@ private fun PluginListPanel(
     onSelect: (String) -> Unit,
     modifier: Modifier,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
-                text = "已安装插件",
+                text = "Installed plugins",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = "Select a plugin to inspect its runtime state, capabilities, and installation directory.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -168,29 +250,37 @@ private fun PluginListPanel(
                 items(plugins, key = { plugin -> plugin.pluginId }) { plugin ->
                     val selected = plugin.pluginId == selectedPluginId
                     Column(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .background(
                                 if (selected) {
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
                                 } else {
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.74f)
                                 },
+                                RoundedCornerShape(14.dp),
                             )
                             .clickable { onSelect(plugin.pluginId) }
                             .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        Text(plugin.name, fontWeight = FontWeight.Medium)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(plugin.name, fontWeight = FontWeight.Medium)
+                            PluginStatePill(
+                                text = plugin.state.name,
+                                accent = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.76f),
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         Text(
-                            "${plugin.pluginId} · ${plugin.version}",
+                            "${plugin.pluginId} / ${plugin.version}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
                             fontFamily = FontFamily.Monospace,
-                        )
-                        Text(
-                            plugin.state.name,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary,
                         )
                     }
                 }
@@ -208,38 +298,115 @@ private fun PluginDetailPanel(
     onUninstall: () -> Unit,
     busy: Boolean,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         if (plugin == null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("请选择一个插件")
+                Text(
+                    text = "Select a plugin to inspect its runtime details.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             return@Card
         }
+
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(plugin.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            DetailLine("插件 ID", plugin.pluginId)
-            DetailLine("版本", plugin.version)
-            DetailLine("状态", plugin.state.name)
-            DetailLine("目录", plugin.pluginDir)
-            DetailLine("页面能力", if (plugin.hasScreen) "有" else "无")
-            if (plugin.lastError.isNotBlank()) {
-                DetailLine("最近错误", plugin.lastError)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = plugin.name,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = plugin.pluginId,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                PluginStatePill(
+                    text = plugin.state.name,
+                    accent = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
             }
-            Divider()
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onEnable, enabled = !busy) {
-                    Text("启用")
-                }
-                Button(onClick = onDisable, enabled = !busy) {
-                    Text("停用")
-                }
-                Button(onClick = onUninstall, enabled = !busy) {
-                    Text("卸载")
+
+            PluginInspectorCard(
+                title = "Runtime details",
+            ) {
+                DetailLine("Version", plugin.version)
+                DetailLine("Plugin directory", plugin.pluginDir)
+                DetailLine("Screen capability", if (plugin.hasScreen) "Available" else "Not provided")
+                if (plugin.lastError.isNotBlank()) {
+                    DetailLine("Last error", plugin.lastError)
                 }
             }
+
+            PluginInspectorCard(
+                title = "Actions",
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onEnable, enabled = !busy) {
+                        Text("Enable")
+                    }
+                    Button(onClick = onDisable, enabled = !busy) {
+                        Text("Disable")
+                    }
+                    Button(onClick = onUninstall, enabled = !busy) {
+                        Text("Uninstall")
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PluginInspectorCard(
+    title: String,
+    content: @Composable () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            content()
         }
     }
 }
@@ -256,6 +423,66 @@ private fun DetailLine(
             style = MaterialTheme.typography.bodySmall,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+        )
+    }
+}
+
+@Composable
+private fun PluginMetricCard(
+    title: String,
+    value: String,
+    detail: String,
+    modifier: Modifier = Modifier,
+    accent: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = accent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PluginStatePill(
+    text: String,
+    accent: Color,
+    contentColor: Color,
+) {
+    Card(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.cardColors(containerColor = accent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = contentColor,
         )
     }
 }

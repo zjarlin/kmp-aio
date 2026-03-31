@@ -1,5 +1,6 @@
 package site.addzero.kbox.app.render
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
 import org.koin.compose.koinInject
+import org.koin.core.annotation.Single
 import site.addzero.generated.RouteTable
 import site.addzero.kbox.app.KboxNavRoute
 import site.addzero.kbox.app.KboxRouteCatalog
@@ -31,6 +36,7 @@ import site.addzero.kbox.app.KboxShellState
 import site.addzero.kbox.plugin.api.KboxDynamicRouteRegistry
 import site.addzero.workbenchshell.spi.content.ContentRender
 
+@Single
 class KboxContentRender(
     private val routeCatalog: KboxRouteCatalog,
     private val shellState: KboxShellState,
@@ -52,27 +58,40 @@ class KboxContentRender(
         }
 
         Column(modifier = modifier) {
-            NavDisplay(
-                backStack = shellState.backStack,
-                modifier = Modifier.weight(1f)
+            Card(
+                modifier = Modifier
+                    .weight(1f)
                     .fillMaxWidth()
                     .padding(horizontal = 18.dp, vertical = 14.dp),
-                onBack = shellState::popNavigation,
-                entryProvider = { route ->
-                    NavEntry(route) { key ->
-                        ScreenContentEntry(
-                            route = key,
-                            routeCatalog = routeCatalog,
-                            routeVersion = dynamicRoutes.size,
-                        )
-                    }
-                },
-            )
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                NavDisplay(
+                    backStack = shellState.backStack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    onBack = shellState::popNavigation,
+                    entryProvider = { route ->
+                        NavEntry(route) { key ->
+                            ScreenContentEntry(
+                                route = key,
+                                routeCatalog = routeCatalog,
+                                routeVersion = dynamicRoutes.size,
+                            )
+                        }
+                    },
+                )
+            }
             ShellStatusBar(
-                currentScene = selectedScene?.name ?: "未分组",
-                currentTitle = selectedRoute?.title ?: "未选择页面",
-                pageCount = selectedScene.routeCount(),
-                modifier = Modifier.height(60.dp),
+                currentScene = selectedScene?.name ?: "Workspace",
+                currentTitle = selectedRoute?.title ?: "No page selected",
+                pageCount = selectedScene?.routeCount() ?: 0,
+                modifier = Modifier.height(52.dp),
             )
         }
     }
@@ -111,13 +130,14 @@ private fun ShellStatusBar(
     val darkThemeEnabled = colorScheme.background.luminance() < 0.5f
 
     Row(
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
             .statusBarFrame()
             .background(
                 if (darkThemeEnabled) {
-                    colorScheme.surface.copy(alpha = 0.78f)
+                    colorScheme.surface.copy(alpha = 0.92f)
                 } else {
-                    colorScheme.surfaceVariant.copy(alpha = 0.36f)
+                    colorScheme.surfaceVariant.copy(alpha = 0.52f)
                 },
             ),
         verticalAlignment = Alignment.CenterVertically,
@@ -129,9 +149,9 @@ private fun ShellStatusBar(
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "当前场景 $pageCount 个页面",
+            text = "$pageCount pages in this scene",
             style = MaterialTheme.typography.bodySmall,
-            color = colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+            color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
         )
     }
 }
@@ -145,7 +165,11 @@ private fun EmptyShellContent(
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            text = if (routeEntry == null) "暂无可用页面" else "页面 ${routeEntry.title} 暂未挂载内容",
+            text = if (routeEntry == null) {
+                "No page available yet"
+            } else {
+                "Page ${routeEntry.title} is not mounted yet"
+            },
             style = MaterialTheme.typography.headlineSmall,
         )
     }

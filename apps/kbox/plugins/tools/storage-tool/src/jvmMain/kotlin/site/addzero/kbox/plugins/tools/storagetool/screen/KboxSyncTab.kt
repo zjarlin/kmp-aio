@@ -1,5 +1,6 @@
 package site.addzero.kbox.plugins.tools.storagetool.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -12,12 +13,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -54,13 +57,13 @@ fun SyncTab(
     onDismissCompare: () -> Unit,
 ) {
     Row(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         SyncMappingsPanel(
             state = state,
             modifier = Modifier
-                .width(300.dp)
+                .width(328.dp)
                 .fillMaxHeight(),
             onStart = onStart,
             onPause = onPause,
@@ -94,23 +97,38 @@ private fun SyncMappingsPanel(
     onPause: () -> Unit,
     onRefresh: () -> Unit,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Sync status",
+                text = "Sync control",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
-            Text("State: ${state.runState.status.name}")
-            Text("Mappings: ${state.mappings.size}")
-            Text("Start on launch: ${state.syncStartOnLaunch}")
-            Text("Remote poll: ${state.remotePollSeconds}s")
-            Text("Reclaimable local: ${state.releasableEntryCount} files / ${formatBytes(state.releasableBytes)}")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SyncBadge("State ${state.runState.status.name}")
+                SyncBadge("${state.mappings.size} mappings")
+            }
+            SyncStatCard(
+                title = "Run behavior",
+                lines = listOf(
+                    "Start on launch: ${state.syncStartOnLaunch}",
+                    "Remote poll: ${state.remotePollSeconds}s",
+                    "Reclaimable local: ${state.releasableEntryCount} files / ${formatBytes(state.releasableBytes)}",
+                ),
+            )
             startBlockedReason(state)?.let { reason ->
                 Text(
                     text = reason,
@@ -166,10 +184,11 @@ private fun SyncMappingsPanel(
                             .fillMaxWidth()
                             .background(
                                 if (state.selectedMappingId == mapping.mappingId) {
-                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
                                 } else {
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
                                 },
+                                RoundedCornerShape(14.dp),
                             )
                             .clickable { state.selectMapping(mapping.mappingId) }
                             .padding(12.dp),
@@ -195,11 +214,19 @@ private fun SyncEntriesPanel(
     onCompare: (String) -> Unit,
     onApplyAction: (String, KboxSyncAction) -> Unit,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
@@ -225,10 +252,11 @@ private fun SyncEntriesPanel(
                                 .fillMaxWidth()
                                 .background(
                                     if (state.selectedEntryId == entry.entryId) {
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
                                     } else {
-                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                                        MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
                                     },
+                                    RoundedCornerShape(14.dp),
                                 )
                                 .clickable { state.selectEntry(entry.entryId) }
                                 .padding(12.dp),
@@ -271,11 +299,19 @@ private fun SyncDetailsPanel(
     onApplyAction: (String, KboxSyncAction) -> Unit,
     onDismissCompare: () -> Unit,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(18.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -293,8 +329,10 @@ private fun SyncDetailsPanel(
                 )
             } else {
                 Text(entry.relativePath, fontWeight = FontWeight.Medium)
-                Text("Decision: ${decisionLabel(entry.decision)}")
-                Text("Reason: ${entry.reason}")
+                SyncStatCard(
+                    title = decisionLabel(entry.decision),
+                    lines = listOf("Reason: ${entry.reason}"),
+                )
                 if (entry.lastSyncedAtMillis > 0) {
                     Text("Last synced: ${formatTime(entry.lastSyncedAtMillis)}")
                 }
@@ -384,7 +422,16 @@ private fun TransferQueueSummary(
     queue: KboxSyncTransferQueueState,
     currentTask: KboxSyncTransferTask,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                RoundedCornerShape(14.dp),
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
         Text(
             text = "Transfer queue",
             style = MaterialTheme.typography.titleSmall,
@@ -458,7 +505,10 @@ private fun TransferQueueRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.18f))
+            .background(
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                RoundedCornerShape(14.dp),
+            )
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -488,6 +538,56 @@ private fun TransferQueueRow(
                 text = task.error,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SyncBadge(
+    text: String,
+) {
+    Card(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.72f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun SyncStatCard(
+    title: String,
+    lines: List<String>,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                RoundedCornerShape(14.dp),
+            )
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Medium,
+        )
+        lines.forEach { line ->
+            Text(
+                text = line,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

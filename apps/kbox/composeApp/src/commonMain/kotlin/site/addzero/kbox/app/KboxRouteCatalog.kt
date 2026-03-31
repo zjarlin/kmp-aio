@@ -13,12 +13,14 @@ import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.coroutines.flow.StateFlow
+import org.koin.core.annotation.Single
 import site.addzero.annotation.Route
 import site.addzero.generated.RouteKeys
 import site.addzero.kbox.plugin.api.KboxDynamicRouteRegistry
 import site.addzero.kbox.plugin.api.KboxRouteContribution
 import kotlin.math.roundToInt
 
+@Single
 class KboxRouteCatalog(
     dynamicRouteRegistry: KboxDynamicRouteRegistry,
     private val staticRouteMeta: List<Route> = RouteKeys.allMeta,

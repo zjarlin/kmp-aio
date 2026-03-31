@@ -1,5 +1,6 @@
 package site.addzero.kbox.app.render
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -13,6 +14,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -85,17 +90,44 @@ private fun RouteSidebar(
     val flatItems = remember(visibleItems) {
         visibleItems.flatten()
     }
+    val pageCount = remember(flatItems) {
+        flatItems.count { item -> item.node.routePath != null }
+    }
 
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (title.isNotBlank()) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+        Card(
+            shape = RoundedCornerShape(18.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface,
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "Workspace",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (title.isNotBlank()) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+                Text(
+                    text = "$pageCount pages in this scene",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         header()
@@ -106,22 +138,55 @@ private fun RouteSidebar(
                 onValueChange = { value -> searchQuery = value },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text(searchPlaceholder) },
+                label = { Text("Search") },
+                placeholder = { Text(searchPlaceholder) },
             )
         }
 
-        LazyColumn(
+        Card(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.88f),
+            ),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         ) {
-            items(flatItems, key = { item -> item.node.id }) { item ->
-                SidebarNodeRow(
-                    item = item,
-                    selectedRoutePath = selectedRoutePath,
-                    onNodeClick = { node -> currentOnNodeClick.value(node) },
+            Column(
+                modifier = Modifier.fillMaxSize().padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    text = "Pages",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 6.dp),
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.8f))
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    items(flatItems, key = { item -> item.node.id }) { item ->
+                        SidebarNodeRow(
+                            item = item,
+                            selectedRoutePath = selectedRoutePath,
+                            onNodeClick = { node -> currentOnNodeClick.value(node) },
+                        )
+                    }
+                }
             }
         }
+
+        Text(
+            text = if (searchQuery.isBlank()) {
+                "Compact navigation for tool-heavy workflows"
+            } else {
+                "Filtered $pageCount matching pages"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         footer()
     }
@@ -137,18 +202,18 @@ private fun SidebarNodeRow(
     val selected = node.routePath == selectedRoutePath
     val branchSelected = !selected && node.containsRoute(selectedRoutePath)
     val containerColor = when {
-        selected -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
-        branchSelected -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-        else -> MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+        selected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.92f)
+        branchSelected -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.66f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f)
     }
     val textColor = when {
-        selected -> MaterialTheme.colorScheme.onSecondaryContainer
+        selected -> MaterialTheme.colorScheme.onPrimaryContainer
         else -> MaterialTheme.colorScheme.onSurface
     }
 
     Row(
         modifier = Modifier.fillMaxWidth()
-            .background(containerColor, shape = MaterialTheme.shapes.medium)
+            .background(containerColor, shape = RoundedCornerShape(12.dp))
             .clickable { onNodeClick(node) }
             .padding(horizontal = 10.dp, vertical = 9.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),

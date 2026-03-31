@@ -26,13 +26,7 @@ import site.addzero.kbox.plugin.api.KboxRuntimePlugin
 import java.io.File
 import java.net.URLClassLoader
 
-@Single(
-    binds = [
-        KboxPluginManagerService::class,
-        KboxPluginInstallerService::class,
-        KboxDynamicRouteRegistry::class,
-    ],
-)
+@Single( )
 class KboxRuntimePluginManager(
     private val pathService: KboxPathService,
     private val json: Json,

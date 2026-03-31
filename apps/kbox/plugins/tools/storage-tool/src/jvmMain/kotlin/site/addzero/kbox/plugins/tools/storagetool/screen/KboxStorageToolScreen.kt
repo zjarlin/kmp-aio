@@ -1,11 +1,14 @@
 package site.addzero.kbox.plugins.tools.storagetool.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,11 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
@@ -67,16 +72,12 @@ import java.util.Locale
 @Route(
     value = "环境资产",
     title = "环境资产管理",
-    routePath = "tools/storage-tool",
     icon = "Inventory2",
-    order = 10.0,
     placement = RoutePlacement(
         scene = RouteScene(
             name = "工具箱",
             icon = "Inventory2",
-            order = 200,
         ),
-        defaultInScene = true,
     ),
 )
 @Composable
@@ -101,12 +102,17 @@ fun KboxStorageToolScreen(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        HeaderPanel(state = state)
+        HeaderPanel(
+            state = state,
+            syncState = syncState,
+        )
         if (state.isBusy) {
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         }
         StorageHubTabs(
             currentTab = state.currentTab,
+            state = state,
+            syncState = syncState,
             onSelect = { tab -> state.currentTab = tab },
         )
         Box(modifier = Modifier.weight(1f)) {
@@ -277,6 +283,280 @@ private fun StorageHubTabs(
                 text = { Text(label) },
             )
         }
+    }
+}
+
+@Composable
+private fun HeaderPanel(
+    state: KboxStorageToolState,
+    syncState: KboxSyncToolState,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    ) {
+                        Box(modifier = Modifier.padding(12.dp)) {
+                            androidx.compose.material3.Icon(
+                                imageVector = Icons.Rounded.Inventory2,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "KBox Workspace",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = "A dense desktop control center for cleanup, sync, package state, dotfiles, Compose stacks, and remote storage workflows.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                StatusPill(
+                    text = when {
+                        state.isBusy -> "Working"
+                        syncState.runState.status.name == "RUNNING" -> "Sync Live"
+                        syncState.releasableEntryCount > 0 -> "Review Needed"
+                        else -> "Ready"
+                    },
+                    emphasized = state.isBusy || syncState.runState.status.name == "RUNNING",
+                    warning = !state.isBusy && syncState.releasableEntryCount > 0,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MetricCard(
+                    title = "Installers",
+                    value = state.installerCandidates.size.toString(),
+                    detail = "Detected archives ready to sort",
+                    modifier = Modifier.weight(1f),
+                )
+                MetricCard(
+                    title = "Large Files",
+                    value = state.largeFileCandidates.size.toString(),
+                    detail = "Candidates for offload or cleanup",
+                    modifier = Modifier.weight(1f),
+                )
+                MetricCard(
+                    title = "Sync Items",
+                    value = syncState.syncEntries.size.toString(),
+                    detail = "${syncState.transferQueue.runningCount} running / ${syncState.transferQueue.queuedCount} queued",
+                    modifier = Modifier.weight(1f),
+                )
+                MetricCard(
+                    title = "Reclaimable",
+                    value = formatSize(syncState.releasableBytes),
+                    detail = "${syncState.releasableEntryCount} safe local copies",
+                    modifier = Modifier.weight(1f),
+                    accent = MaterialTheme.colorScheme.tertiaryContainer,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                MonoLine(
+                    label = "Current app data",
+                    value = state.activeAppDataDir,
+                    modifier = Modifier.weight(1f),
+                )
+                MonoLine(
+                    label = "Configured target",
+                    value = state.configuredAppDataDirPreview,
+                    modifier = Modifier.weight(1f),
+                )
+                MonoLine(
+                    label = "Remote preview",
+                    value = state.remoteAppDataPreview,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Text(
+                text = state.statusText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (state.statusIsError) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.secondary
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun StorageHubTabs(
+    currentTab: KboxStorageHubTab,
+    state: KboxStorageToolState,
+    syncState: KboxSyncToolState,
+    onSelect: (KboxStorageHubTab) -> Unit,
+) {
+    val tabs = listOf(
+        Triple(KboxStorageHubTab.FILES, "Files", (state.installerCandidates.size + state.largeFileCandidates.size).toString()),
+        Triple(KboxStorageHubTab.SYNC, "Sync", syncState.syncEntries.size.toString()),
+        Triple(KboxStorageHubTab.PACKAGE_PROFILES, "Profiles", state.packageProfiles.size.toString()),
+        Triple(KboxStorageHubTab.DOTFILES, "Dotfiles", state.dotfileCandidates.size.toString()),
+        Triple(KboxStorageHubTab.COMPOSE, "Compose", state.composeProjects.size.toString()),
+        Triple(KboxStorageHubTab.SETTINGS, "Settings", ""),
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        tabs.forEach { (tab, label, count) ->
+            val selected = currentTab == tab
+            Card(
+                modifier = Modifier.clickable { onSelect(tab) },
+                shape = RoundedCornerShape(14.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (selected) {
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.28f)
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
+                ),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (selected) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.88f)
+                    } else {
+                        MaterialTheme.colorScheme.surface.copy(alpha = 0.94f)
+                    },
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (selected) {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
+                    )
+                    if (count.isNotBlank()) {
+                        Text(
+                            text = count,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (selected) {
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f)
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricCard(
+    title: String,
+    value: String,
+    detail: String,
+    modifier: Modifier = Modifier,
+    accent: Color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.62f),
+) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = accent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                text = value.ifBlank { "-" },
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatusPill(
+    text: String,
+    emphasized: Boolean = false,
+    warning: Boolean = false,
+) {
+    val containerColor = when {
+        warning -> MaterialTheme.colorScheme.tertiaryContainer
+        emphasized -> MaterialTheme.colorScheme.primaryContainer
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+    }
+    val contentColor = when {
+        warning -> MaterialTheme.colorScheme.onTertiaryContainer
+        emphasized -> MaterialTheme.colorScheme.onPrimaryContainer
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    Card(
+        shape = RoundedCornerShape(999.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            style = MaterialTheme.typography.labelLarge,
+            color = contentColor,
+        )
     }
 }
 
@@ -911,7 +1191,15 @@ private fun DataPanel(
     actions: @Composable () -> Unit,
     content: @Composable () -> Unit,
 ) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -921,15 +1209,26 @@ private fun DataPanel(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = "Operational surface",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     actions()
                 }
             }
             Box(
-                modifier = Modifier.fillMaxSize().background(
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
-                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
+                        RoundedCornerShape(16.dp),
+                    )
+                    .padding(6.dp),
             ) {
                 content()
             }
@@ -947,7 +1246,13 @@ private fun FileSelectionRow(
     onOpenFolder: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+                RoundedCornerShape(14.dp),
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1006,13 +1311,15 @@ private fun SelectableCardRow(
     onClick: () -> Unit,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .background(
                 if (selected) {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.72f)
                 } else {
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
                 },
+                RoundedCornerShape(14.dp),
             )
             .clickable(onClick = onClick)
             .padding(12.dp),
@@ -1035,13 +1342,15 @@ private fun SimpleCardRow(
     highlighted: Boolean,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
             .background(
                 if (highlighted) {
-                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.35f)
+                    MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.52f)
                 } else {
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.15f)
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)
                 },
+                RoundedCornerShape(14.dp),
             )
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -1063,7 +1372,13 @@ private fun HistoryRow(
     extra: String,
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.75f),
+                RoundedCornerShape(14.dp),
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(primary, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Medium)
@@ -1125,7 +1440,23 @@ private fun MonoLine(
     label: String,
     value: String,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    MonoLine(
+        label = label,
+        value = value,
+        modifier = Modifier,
+    )
+}
+
+@Composable
+private fun MonoLine(
+    label: String,
+    value: String,
+    modifier: Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
         Text(label, style = MaterialTheme.typography.labelLarge)
         Text(
             text = value.ifBlank { "-" },
