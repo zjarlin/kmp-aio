@@ -5,6 +5,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
+val addzeroLibJvmVersion: String by project
 val sharedSourceDir = rootProject.file("apps/kbox/shared/src/commonMain/kotlin").absolutePath
 val routeOwnerModuleDir = rootProject.file("apps/kbox/composeApp/src/jvmMain/kotlin").absolutePath
 
@@ -23,7 +24,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:compose:scaffold-spi"))
+            implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation(libs.findLibrary("site-addzero-route-core").get())
         }
         jvmMain.dependencies {

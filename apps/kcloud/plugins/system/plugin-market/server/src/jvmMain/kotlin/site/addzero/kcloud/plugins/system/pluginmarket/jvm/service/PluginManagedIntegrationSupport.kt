@@ -41,10 +41,10 @@ class PluginManagedIntegrationSupport {
             "site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketComposeKoinModule::class",
             "site.addzero.kcloud.plugins.system.rbac.RbacKoinModule::class",
             "site.addzero.kcloud.vibepocket.VibePocketComposeKoinModule::class",
-            "site.addzero.kcloud.app.KCloudWorkbenchKoinModule::class",
+            "site.addzero.kcloud.app.KCloudShellKoinModule::class",
         )
         val fixedDesktopModules = listOf(
-            "site.addzero.kcloud.app.KCloudWorkbenchKoinModule::class",
+            "site.addzero.kcloud.app.KCloudShellKoinModule::class",
         )
         val fixedServerModules = listOf(
             "site.addzero.kcloud.server.KCloudServerScanKoinModule::class",

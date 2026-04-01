@@ -1,13 +1,14 @@
 package site.addzero.kcloud.plugins.mcuconsole.api.external
 
 import de.jensklingenberg.ktorfit.Ktorfit
+import org.koin.mp.KoinPlatform
 import site.addzero.core.network.HttpClientFactory
 
 actual object McuConsoleApiClient {
     private const val httpClientProfile = "kcloud-mcu-console"
     private const val defaultBaseUrl = "http://localhost:18080"
     private val httpClientFactory: HttpClientFactory
-        get() = HttpClientFactory.shared()
+        get() = KoinPlatform.getKoin().get()
 
     @Volatile
     private var baseUrl: String = defaultBaseUrl

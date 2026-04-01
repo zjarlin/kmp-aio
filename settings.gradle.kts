@@ -42,6 +42,7 @@ pluginManagement {
 
 val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
 val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir.resolve("checkouts/build-logic/gradle/libs.versions.toml")
+val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion").orNull ?: "2026.10329.10127"
 
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -144,6 +145,8 @@ if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
                     .using(project(":lib:compose:compose-native-component-searchbar"))
                 substitute(module("site.addzero:compose-native-component-tree"))
                     .using(project(":lib:compose:compose-native-component-tree"))
+                substitute(module("site.addzero:scaffold-spi:$addzeroLibJvmVersion"))
+                    .using(project(":lib:compose:scaffold-spi"))
                 substitute(module("site.addzero:route-core"))
                     .using(project(":lib:ksp:route:route-core"))
                 substitute(module("site.addzero:route-processor"))

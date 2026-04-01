@@ -1,31 +1,25 @@
 package site.addzero.kcloud.app
 
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.navigation3.runtime.NavBackStack
+import org.koin.core.annotation.Single
 import site.addzero.generated.RouteKeys
 import site.addzero.kcloud.feature.ShellTrayPanelController
 import site.addzero.kcloud.feature.ShellWindowController
 
-class WorkbenchShellState(
-    private val routeCatalog: WorkbenchRouteCatalog,
+@Single
+class KCloudShellState(
+    private val routeCatalog: KCloudRouteCatalog,
 ) : ShellWindowController, ShellTrayPanelController {
     private val startupRoutePath = routeCatalog.findRoute(RouteKeys.MCU_CONTROL_SCREEN)?.routePath
         ?: routeCatalog.defaultRoutePath
 
-    val backStack = NavBackStack(
-        WorkbenchNavRoute(
-            routePath = startupRoutePath,
-        ),
-    )
-
-    val selectedRoute: WorkbenchNavRoute
-        get() = backStack.lastOrNull()
-            ?: WorkbenchNavRoute(routePath = startupRoutePath)
+    val backStack = mutableStateListOf(startupRoutePath)
 
     val selectedRoutePath: String
-        get() = selectedRoute.routePath
+        get() = backStack.lastOrNull() ?: startupRoutePath
 
     val selectedSceneId: String
         get() = routeCatalog.sceneIdFor(selectedRoutePath)
@@ -93,16 +87,15 @@ class WorkbenchShellState(
     private fun navigateToRoute(
         routePath: String,
     ) {
-        val route = WorkbenchNavRoute(routePath = routePath)
         if (backStack.isEmpty()) {
-            backStack += route
+            backStack += routePath
             return
         }
-        if (backStack.last() == route) {
+        if (backStack.last() == routePath) {
             return
         }
 
         // 工作台导航保持单选语义，切页时替换当前栈顶而不是无限累积历史。
-        backStack[backStack.lastIndex] = route
+        backStack[backStack.lastIndex] = routePath
     }
 }

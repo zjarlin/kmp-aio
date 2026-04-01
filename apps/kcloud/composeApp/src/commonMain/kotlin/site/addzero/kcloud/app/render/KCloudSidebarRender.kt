@@ -16,18 +16,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.koin.core.annotation.Single
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
-import site.addzero.kcloud.app.WorkbenchRouteCatalog
-import site.addzero.kcloud.app.WorkbenchShellState
-import site.addzero.kcloud.app.WorkbenchSidebarNode
+import site.addzero.kcloud.app.KCloudRouteCatalog
+import site.addzero.kcloud.app.KCloudShellState
+import site.addzero.kcloud.app.KCloudSidebarNode
 import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
-class SidebarRenderImpl(
-    private val routeCatalog: WorkbenchRouteCatalog,
-    private val shellState: WorkbenchShellState,
+@Single(
+    binds = [
+        SidebarRender::class,
+    ],
+)
+class KCloudSidebarRender(
+    private val routeCatalog: KCloudRouteCatalog,
+    private val shellState: KCloudShellState,
 ) : SidebarRender {
     @Composable
     override fun Render(
@@ -60,13 +66,13 @@ class SidebarRenderImpl(
 @Composable
 private fun RouteSidebar(
     title: String,
-    items: List<WorkbenchSidebarNode>,
+    items: List<KCloudSidebarNode>,
     selectedRoutePath: String?,
-    onNodeClick: (WorkbenchSidebarNode) -> Unit,
+    onNodeClick: (KCloudSidebarNode) -> Unit,
     modifier: Modifier = Modifier,
     searchEnabled: Boolean = true,
     searchPlaceholder: String = "搜索页面",
-    treeViewModel: TreeViewModel<WorkbenchSidebarNode> = rememberTreeViewModel(),
+    treeViewModel: TreeViewModel<KCloudSidebarNode> = rememberTreeViewModel(),
     header: @Composable ColumnScope.() -> Unit = {},
     footer: @Composable ColumnScope.() -> Unit = {},
 ) {
@@ -74,9 +80,9 @@ private fun RouteSidebar(
 
     LaunchedEffect(treeViewModel) {
         treeViewModel.configure(
-            getId = WorkbenchSidebarNode::id,
-            getLabel = WorkbenchSidebarNode::name,
-            getChildren = WorkbenchSidebarNode::children,
+            getId = KCloudSidebarNode::id,
+            getLabel = KCloudSidebarNode::name,
+            getChildren = KCloudSidebarNode::children,
             getIcon = { node -> node.icon },
         )
     }
@@ -146,9 +152,9 @@ private fun RouteSidebar(
     }
 }
 
-private fun List<WorkbenchSidebarNode>.allBranchIds(): Set<String> {
+private fun List<KCloudSidebarNode>.allBranchIds(): Set<String> {
     return buildSet {
-        fun collect(nodes: List<WorkbenchSidebarNode>) {
+        fun collect(nodes: List<KCloudSidebarNode>) {
             nodes.forEach { node ->
                 if (node.children.isNotEmpty()) {
                     add(node.id)
@@ -160,7 +166,7 @@ private fun List<WorkbenchSidebarNode>.allBranchIds(): Set<String> {
     }
 }
 
-private fun List<WorkbenchSidebarNode>.resolveSelectedId(
+private fun List<KCloudSidebarNode>.resolveSelectedId(
     selectedRoutePath: String?,
 ): String? {
     if (selectedRoutePath != null) {
@@ -171,9 +177,9 @@ private fun List<WorkbenchSidebarNode>.resolveSelectedId(
     return firstLeafIdOrNull()
 }
 
-private fun List<WorkbenchSidebarNode>.firstLeafByRoutePath(
+private fun List<KCloudSidebarNode>.firstLeafByRoutePath(
     routePath: String,
-): WorkbenchSidebarNode? {
+): KCloudSidebarNode? {
     return firstNotNullOfOrNull { node ->
         when {
             node.routePath == routePath -> node
@@ -183,7 +189,7 @@ private fun List<WorkbenchSidebarNode>.firstLeafByRoutePath(
     }
 }
 
-private fun List<WorkbenchSidebarNode>.firstLeafIdOrNull(): String? {
+private fun List<KCloudSidebarNode>.firstLeafIdOrNull(): String? {
     firstOrNull { node -> node.isLeaf }?.let { node ->
         return node.id
     }
@@ -192,7 +198,7 @@ private fun List<WorkbenchSidebarNode>.firstLeafIdOrNull(): String? {
     }
 }
 
-private fun WorkbenchSidebarNode.firstLeafRoutePath(): String? {
+private fun KCloudSidebarNode.firstLeafRoutePath(): String? {
     routePath?.let { route ->
         return route
     }

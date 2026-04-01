@@ -5,15 +5,15 @@ import site.addzero.annotation.Route
 import site.addzero.compose.icons.IconMap
 import kotlin.math.roundToInt
 
-class WorkbenchRouteCatalog(
+class KCloudRouteCatalog(
     val routeMeta: List<Route>,
 ) {
-    val scenes: List<WorkbenchRouteScene> = buildScenes(
+    val scenes: List<KCloudRouteScene> = buildScenes(
         routeMeta = routeMeta,
     )
-    val routeEntries: List<WorkbenchRouteEntry> = scenes.flatMap { scene -> scene.routes }
-    private val scenesById: Map<String, WorkbenchRouteScene> = scenes.associateBy { scene -> scene.id }
-    private val routesByPath: Map<String, WorkbenchRouteEntry> = routeEntries.associateBy { route -> route.routePath }
+    val routeEntries: List<KCloudRouteEntry> = scenes.flatMap { scene -> scene.routes }
+    private val scenesById: Map<String, KCloudRouteScene> = scenes.associateBy { scene -> scene.id }
+    private val routesByPath: Map<String, KCloudRouteEntry> = routeEntries.associateBy { route -> route.routePath }
 
     val defaultRoutePath: String = scenes.firstNotNullOfOrNull { scene ->
         scene.defaultRoutePath
@@ -21,13 +21,13 @@ class WorkbenchRouteCatalog(
 
     fun findScene(
         sceneId: String,
-    ): WorkbenchRouteScene? {
+    ): KCloudRouteScene? {
         return scenesById[sceneId]
     }
 
     fun findRoute(
         routePath: String,
-    ): WorkbenchRouteEntry? {
+    ): KCloudRouteEntry? {
         return routesByPath[routePath]
     }
 
@@ -62,24 +62,24 @@ class WorkbenchRouteCatalog(
     }
 }
 
-data class WorkbenchRouteScene(
+data class KCloudRouteScene(
     val id: String,
     val name: String,
     val icon: ImageVector,
     val sort: Int,
-    val routes: List<WorkbenchRouteEntry>,
-    val menuNodes: List<WorkbenchSidebarNode>,
+    val routes: List<KCloudRouteEntry>,
+    val menuNodes: List<KCloudSidebarNode>,
     val defaultRoutePath: String?,
 ) {
     val routeCount: Int
         get() = routes.size
 }
 
-data class WorkbenchSidebarNode(
+data class KCloudSidebarNode(
     val id: String,
     val name: String,
     val icon: ImageVector,
-    val children: List<WorkbenchSidebarNode> = emptyList(),
+    val children: List<KCloudSidebarNode> = emptyList(),
     val routePath: String? = null,
     val sort: Int = Int.MAX_VALUE,
 ) {
@@ -87,7 +87,7 @@ data class WorkbenchSidebarNode(
         get() = routePath != null && children.isEmpty()
 }
 
-data class WorkbenchRouteEntry(
+data class KCloudRouteEntry(
     val route: Route,
     val sceneId: String,
     val sceneName: String,
@@ -105,7 +105,7 @@ data class WorkbenchRouteEntry(
 
 private fun buildScenes(
     routeMeta: List<Route>,
-): List<WorkbenchRouteScene> {
+): List<KCloudRouteScene> {
     val orderedRoutes = routeMeta.sortedWith(
         compareBy<Route> { route -> route.order }
             .thenBy { route -> route.title }
@@ -113,7 +113,7 @@ private fun buildScenes(
     )
 
     val sceneMap = linkedMapOf<String, MutableList<Route>>()
-    val sceneMetaById = linkedMapOf<String, WorkbenchSceneMeta>()
+    val sceneMetaById = linkedMapOf<String, KCloudSceneMeta>()
 
     orderedRoutes.forEach { route ->
         val sceneMeta = route.resolveSceneMeta()
@@ -125,25 +125,25 @@ private fun buildScenes(
     return sceneMap.mapNotNull { (sceneId, routes) ->
         val sceneMeta = sceneMetaById[sceneId] ?: return@mapNotNull null
         val sortedRoutes = routes.map { route ->
-            WorkbenchRouteEntry(
+            KCloudRouteEntry(
                 route = route,
                 sceneId = sceneMeta.id,
                 sceneName = sceneMeta.name,
                 parentName = route.resolveParentName(),
                 parentSegments = emptyList(),
-                icon = resolveWorkbenchIcon(route.icon),
+                icon = resolveKCloudIcon(route.icon),
                 sort = route.order.toRouteSort(),
             )
         }.sortedWith(
-            compareBy<WorkbenchRouteEntry> { route -> route.sort }
+            compareBy<KCloudRouteEntry> { route -> route.sort }
                 .thenBy { route -> route.title }
                 .thenBy { route -> route.routePath },
         )
         val finalizedRoutes = resolveRouteHierarchy(sortedRoutes)
-        WorkbenchRouteScene(
+        KCloudRouteScene(
             id = sceneMeta.id,
             name = sceneMeta.name,
-            icon = resolveWorkbenchIcon(sceneMeta.iconName),
+            icon = resolveKCloudIcon(sceneMeta.iconName),
             sort = sceneMeta.sort,
             routes = finalizedRoutes,
             menuNodes = buildSidebarNodes(
@@ -155,14 +155,14 @@ private fun buildScenes(
             }?.routePath ?: finalizedRoutes.firstOrNull()?.routePath,
         )
     }.sortedWith(
-        compareBy<WorkbenchRouteScene> { scene -> scene.sort }
+        compareBy<KCloudRouteScene> { scene -> scene.sort }
             .thenBy { scene -> scene.name },
     )
 }
 
 private fun resolveRouteHierarchy(
-    routes: List<WorkbenchRouteEntry>,
-): List<WorkbenchRouteEntry> {
+    routes: List<KCloudRouteEntry>,
+): List<KCloudRouteEntry> {
     val parentByTitle = linkedMapOf<String, String>()
     routes.forEach { route ->
         val title = route.title.trim()
@@ -219,8 +219,8 @@ private fun resolveRouteHierarchy(
 
 private fun buildSidebarNodes(
     sceneId: String,
-    routes: List<WorkbenchRouteEntry>,
-): List<WorkbenchSidebarNode> {
+    routes: List<KCloudRouteEntry>,
+): List<KCloudSidebarNode> {
     val rootNodes = mutableListOf<MutableSidebarNode>()
     val nodeIndex = linkedMapOf<String, MutableSidebarNode>()
 
@@ -258,12 +258,12 @@ private fun buildSidebarNodes(
     return rootNodes.toImmutableNodes()
 }
 
-private fun MutableList<MutableSidebarNode>.toImmutableNodes(): List<WorkbenchSidebarNode> {
+private fun MutableList<MutableSidebarNode>.toImmutableNodes(): List<KCloudSidebarNode> {
     return sortedWith(
         compareBy<MutableSidebarNode> { node -> node.sort }
             .thenBy { node -> node.name },
     ).map { node ->
-        WorkbenchSidebarNode(
+        KCloudSidebarNode(
             id = node.id,
             name = node.name,
             icon = node.icon,
@@ -283,25 +283,25 @@ private data class MutableSidebarNode(
     val children: MutableList<MutableSidebarNode> = mutableListOf(),
 )
 
-private data class WorkbenchSceneMeta(
+private data class KCloudSceneMeta(
     val id: String,
     val name: String,
     val iconName: String,
     val sort: Int,
 )
 
-private fun Route.resolveSceneMeta(): WorkbenchSceneMeta {
+private fun Route.resolveSceneMeta(): KCloudSceneMeta {
     val scene = placement.scene
     val sceneName = scene.name.trim()
     if (sceneName.isBlank()) {
-        return WorkbenchSceneMeta(
+        return KCloudSceneMeta(
             id = UNASSIGNED_SCENE_ID,
             name = UNASSIGNED_SCENE_NAME,
             iconName = "Apps",
             sort = Int.MAX_VALUE,
         )
     }
-    return WorkbenchSceneMeta(
+    return KCloudSceneMeta(
         id = sceneName,
         name = sceneName,
         iconName = scene.icon.ifBlank { "Apps" },
@@ -313,19 +313,19 @@ private fun Route.resolveParentName(): String {
     return value.trim()
 }
 
-internal fun resolveWorkbenchIcon(
+internal fun resolveKCloudIcon(
     iconName: String?,
 ): ImageVector {
     val normalizedIconName = iconName?.trim()
         .takeUnless { it.isNullOrEmpty() }
-        ?: DEFAULT_WORKBENCH_ICON_NAME
-    return WORKBENCH_ICON_TYPE_PRIORITY.firstNotNullOfOrNull { iconType ->
+        ?: DEFAULT_KCLOUD_ICON_NAME
+    return KCLOUD_ICON_TYPE_PRIORITY.firstNotNullOfOrNull { iconType ->
         IconMap.allIcons.firstOrNull { icon ->
             icon.iconKey == normalizedIconName && icon.iconType == iconType
         }?.vector
     } ?: IconMap.allIcons.firstOrNull { icon ->
-        icon.iconKey == DEFAULT_WORKBENCH_ICON_NAME && icon.iconType == DEFAULT_WORKBENCH_ICON_TYPE
-    }?.vector ?: error("compose-icon-map 缺少默认图标 $DEFAULT_WORKBENCH_ICON_NAME")
+        icon.iconKey == DEFAULT_KCLOUD_ICON_NAME && icon.iconType == DEFAULT_KCLOUD_ICON_TYPE
+    }?.vector ?: error("compose-icon-map 缺少默认图标 $DEFAULT_KCLOUD_ICON_NAME")
 }
 
 private fun Double.toRouteSort(): Int {
@@ -334,9 +334,9 @@ private fun Double.toRouteSort(): Int {
 
 private const val UNASSIGNED_SCENE_ID = "unassigned"
 private const val UNASSIGNED_SCENE_NAME = "未分配场景"
-private const val DEFAULT_WORKBENCH_ICON_NAME = "Apps"
-private const val DEFAULT_WORKBENCH_ICON_TYPE = "Filled"
-private val WORKBENCH_ICON_TYPE_PRIORITY = listOf(
+private const val DEFAULT_KCLOUD_ICON_NAME = "Apps"
+private const val DEFAULT_KCLOUD_ICON_TYPE = "Filled"
+private val KCLOUD_ICON_TYPE_PRIORITY = listOf(
     "Filled",
     "AutoMirroredFilled",
     "Outlined",

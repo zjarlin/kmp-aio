@@ -50,6 +50,7 @@ plugins {
 apply(plugin = "site.addzero.kcp.i18n")
 
 val libs = versionCatalogs.named("libs")
+val addzeroLibJvmVersion: String by project
 val jdkVersion = libs.findVersion("jdk17").get().requiredVersion.toInt()
 val desktopJavaLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(jdkVersion))
@@ -108,7 +109,7 @@ extensions.configure<site.addzero.kcp.i18n.gradle.I18NGradleExtension>("i18n") {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:compose:scaffold-spi"))
+            implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
         }
     }
 }

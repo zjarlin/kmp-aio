@@ -1,41 +1,39 @@
 package site.addzero.kcloud.app.render
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.ui.NavDisplay
+import org.koin.core.annotation.Single
 import site.addzero.generated.RouteTable
-import site.addzero.kcloud.app.WorkbenchNavRoute
-import site.addzero.kcloud.app.WorkbenchRouteCatalog
-import site.addzero.kcloud.app.WorkbenchRouteEntry
-import site.addzero.kcloud.app.WorkbenchShellState
+import site.addzero.kcloud.app.KCloudRouteCatalog
+import site.addzero.kcloud.app.KCloudRouteEntry
+import site.addzero.kcloud.app.KCloudShellState
 import site.addzero.workbenchshell.spi.content.ContentRender
 
-class WorkbenchContentRender(
-    private val routeCatalog: WorkbenchRouteCatalog,
-    private val shellState: WorkbenchShellState,
+@Single(
+    binds = [
+        ContentRender::class,
+    ],
+)
+class KCloudContentRender(
+    private val routeCatalog: KCloudRouteCatalog,
+    private val shellState: KCloudShellState,
 ) : ContentRender {
     @Composable
     override fun Render(
         modifier: Modifier,
     ) {
-        val selectedSceneId = shellState.selectedSceneId
-        val selectedScene = remember(routeCatalog, selectedSceneId) {
-            routeCatalog.findScene(selectedSceneId)
-        }
-        val selectedRoute = rememberSelectedRoute(
-            routeCatalog = routeCatalog,
-            shellState = shellState,
-        )
-
         Column(
             modifier = modifier,
         ) {
@@ -44,26 +42,25 @@ class WorkbenchContentRender(
                 modifier = Modifier.weight(1f).fillMaxWidth()
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 onBack = shellState::popNavigation,
-                entryProvider = { route ->
-                    NavEntry(route) { key ->
-                        ScreenContentEntry(
-                            route = key,
-                            routeCatalog = routeCatalog,
-                        )
-                    }
-                },
-            )
+            ) { routePath ->
+                NavEntry(routePath) { key ->
+                    ScreenContentEntry(
+                        routePath = key,
+                        routeCatalog = routeCatalog,
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun ScreenContentEntry(
-    route: WorkbenchNavRoute,
-    routeCatalog: WorkbenchRouteCatalog,
+    routePath: String,
+    routeCatalog: KCloudRouteCatalog,
 ) {
-    val routeEntry = remember(routeCatalog, route.routePath) {
-        routeCatalog.findRoute(route.routePath)
+    val routeEntry = remember(routeCatalog, routePath) {
+        routeCatalog.findRoute(routePath)
     }
     val content = routeEntry?.routePath?.let { routePath ->
         RouteTable.allRoutes[routePath]
@@ -84,7 +81,7 @@ private fun ScreenContentEntry(
 
 @Composable
 private fun EmptyShellContent(
-    routeEntry: WorkbenchRouteEntry? = null,
+    routeEntry: KCloudRouteEntry? = null,
 ) {
     Box(
         modifier = Modifier.fillMaxSize(),

@@ -1,6 +1,7 @@
 package site.addzero.kcloud.api
 
 import io.ktor.client.HttpClient
+import org.koin.mp.KoinPlatform
 import site.addzero.core.network.HttpClientFactory
 
 internal expect fun buildConfigApi(
@@ -40,7 +41,7 @@ object ServerApiClient {
     private const val httpClientProfile = "kcloud-vibepocket"
     private const val defaultBaseUrl = "http://localhost:18080/"
     private val httpClientFactory: HttpClientFactory
-        get() = HttpClientFactory.shared()
+        get() = KoinPlatform.getKoin().get()
 
     @Volatile
     private var baseUrl: String = defaultBaseUrl

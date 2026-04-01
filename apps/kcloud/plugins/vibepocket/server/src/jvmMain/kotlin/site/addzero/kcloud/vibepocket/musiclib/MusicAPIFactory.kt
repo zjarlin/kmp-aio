@@ -13,6 +13,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.api.netease.MusicSearchClient
 import site.addzero.kcloud.api.netease.SearchType as NeteaseSearchType
 import site.addzero.kcloud.vibepocket.musiclib.model.Song
@@ -41,7 +42,7 @@ interface MusicProvider {
 
 private object NeteaseMusicProvider : MusicProvider {
     private val client: MusicSearchClient
-        get() = MusicSearchClient.shared()
+        get() = KoinPlatform.getKoin().get()
 
     override suspend fun search(keyword: String): List<Song> {
         return client.musicApi.search(

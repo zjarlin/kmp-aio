@@ -192,14 +192,15 @@ class PluginPresetServiceImpl(
 
     private fun buildGradleTemplate(): String {
         return """
-            plugins {
-                id("site.addzero.buildlogic.kmp.cmp-lib")
-                id("site.addzero.buildlogic.kmp.kmp-koin")
-                id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
-            }
+plugins {
+    id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.kmp-koin")
+    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
+}
 
-            val libs = versionCatalogs.named("libs")
-            val sharedSourceDir = project(":apps:kcloud:shared")
+val libs = versionCatalogs.named("libs")
+val addzeroLibJvmVersion: String by project
+val sharedSourceDir = project(":apps:kcloud:shared")
                 .extensions
                 .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
                 .sourceSets
@@ -234,7 +235,7 @@ class PluginPresetServiceImpl(
             kotlin {
                 sourceSets {
                     commonMain.dependencies {
-                        implementation(project(":lib:compose:scaffold-spi"))
+                        implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
                         implementation(libs.findLibrary("site-addzero-route-core").get())
                     }
                     jvmMain.dependencies {

@@ -15,7 +15,7 @@ import site.addzero.appsidebar.adminWorkbenchActions
 import site.addzero.appsidebar.adminWorkbenchConfig
 import site.addzero.appsidebar.adminWorkbenchPageConfig
 import site.addzero.appsidebar.adminWorkbenchSlots
-import site.addzero.kcloud.app.menu.WorkbenchUserMenu
+import site.addzero.kcloud.app.menu.KCloudUserMenu
 import site.addzero.kcloud.feature.ShellSettingsService
 import site.addzero.kcloud.feature.ShellThemeMode
 import site.addzero.kcloud.ui.theme.KCloudTheme
@@ -79,7 +79,7 @@ fun MainWindow(
                     )
                 },
                 userContent = {
-                    WorkbenchUserMenu()
+                    KCloudUserMenu()
                 },
             ),
         )

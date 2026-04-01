@@ -6,6 +6,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
+val addzeroLibJvmVersion: String by project
 val sharedSourceDir = project(":apps:kcloud:shared")
     .extensions
     .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
@@ -41,7 +42,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation(project(":lib:compose:scaffold-spi"))
+            implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

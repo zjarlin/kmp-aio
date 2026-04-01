@@ -12,6 +12,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
+val addzeroLibJvmVersion: String by project
 val desktopMainClass = "site.addzero.kcloud.MainKt"
 val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(24))
@@ -19,7 +20,7 @@ val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
 
 kotlin {
     dependencies {
-        implementation(project(":lib:compose:scaffold-spi"))
+        implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
         implementation("site.addzero:compose-icon-map:2026.10329.10127")
         implementation(project(":apps:kcloud:shared"))
         // KCloud 插件 UI/root 模块由 cmp-kcloud-aio 自动扫描并注入到 commonMain，

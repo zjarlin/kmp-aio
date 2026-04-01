@@ -7,13 +7,14 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-kbox-aio")
 }
 
+val addzeroLibJvmVersion: String by project
 val desktopMainClass = "site.addzero.kbox.MainKt"
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":apps:kbox:shared"))
-            implementation(project(":lib:compose:scaffold-spi"))
+            implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation(project(":lib:kbox-plugin-api"))
         }
         jvmMain.dependencies {
