@@ -19,7 +19,8 @@ interface AiChatApi {
  * 路径: /api/system/ai-chat/sessions
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto>
  */
-    @GET("/api/system/ai-chat/sessions")    suspend fun listAiChatSessions(): kotlin.collections.List<site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto>
+    @GET("/api/system/ai-chat/sessions")
+    suspend fun listAiChatSessions(): kotlin.collections.List<site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto>
 
 /**
  * listAiChatMessages
@@ -29,7 +30,8 @@ interface AiChatApi {
  *   - sessionId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto>
  */
-    @GET("/api/system/ai-chat/sessions/{sessionId}/messages")    suspend fun listAiChatMessages(
+    @GET("/api/system/ai-chat/sessions/{sessionId}/messages")
+    suspend fun listAiChatMessages(
         @Path("sessionId") sessionId: kotlin.Long
     ): kotlin.collections.List<site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto>
 
@@ -41,7 +43,9 @@ interface AiChatApi {
  *   - request: site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
  */
-    @POST("/api/system/ai-chat/sessions")    suspend fun createAiChatSession(
+    @POST("/api/system/ai-chat/sessions")
+    @Headers("Content-Type: application/json")
+    suspend fun createAiChatSession(
         @Body request: site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionCreateRequest
     ): site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
 
@@ -54,7 +58,9 @@ interface AiChatApi {
  *   - request: site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.system.aichat.api.AiChatConversationDto
  */
-    @POST("/api/system/ai-chat/sessions/{sessionId}/messages")    suspend fun sendAiChatMessage(
+    @POST("/api/system/ai-chat/sessions/{sessionId}/messages")
+    @Headers("Content-Type: application/json")
+    suspend fun sendAiChatMessage(
         @Path("sessionId") sessionId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageCreateRequest
     ): site.addzero.kcloud.plugins.system.aichat.api.AiChatConversationDto
@@ -67,7 +73,8 @@ interface AiChatApi {
  *   - sessionId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.system.aichat.api.AiChatDeleteResult
  */
-    @DELETE("/api/system/ai-chat/sessions/{sessionId}")    suspend fun deleteAiChatSession(
+    @DELETE("/api/system/ai-chat/sessions/{sessionId}")
+    suspend fun deleteAiChatSession(
         @Path("sessionId") sessionId: kotlin.Long
     ): site.addzero.kcloud.plugins.system.aichat.api.AiChatDeleteResult
 
