@@ -14,7 +14,7 @@ val sharedSourceDir = project(":apps:kcloud:shared")
     .srcDirs
     .first()
     .absolutePath
-val routeOwnerModuleDir = project(":apps:kcloud:composeApp")
+val routeOwnerModuleDir = project(":apps:kcloud:ui")
     .extensions
     .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
     .sourceSets

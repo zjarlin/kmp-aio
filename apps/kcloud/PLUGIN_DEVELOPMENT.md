@@ -2,13 +2,14 @@
 
 ## 目标
 
-`kcloud` 现在通过 Gradle 约定插件 `site.addzero.buildlogic.kmp.cmp-kcloud-aio` 自动聚合插件模块。
+`kcloud` 现在只对 `shared`、`server` 保留 Gradle 约定插件聚合；桌面 `ui` 壳层改成手工接线，并由根 Koin 扫描统一发现 UI bean。
 
 这会直接改变插件接入方式：
 
 - 插件开发者只需要把模块放到 `apps/kcloud/plugins/**` 下
-- 壳层不再手工维护插件依赖列表
-- `composeApp`、`server`、`shared` 会在构建阶段自动发现插件入口
+- `server`、`shared` 会在构建阶段自动发现插件入口
+- `ui` 需要手工维护插件依赖列表
+- 桌面 Koin 根通过 `@ComponentScan("site.addzero")` 统一发现插件 UI 侧的 `@Single` / `@Factory`
 
 只要插件遵守下面的目录结构和命名约定，主壳层就会自动接入它。
 
@@ -53,7 +54,7 @@ apps/kcloud/plugins/
 
 ## Compose 插件契约
 
-对于 Compose 插件分面，聚合器要求同时满足路由和 DI 约定。
+对于 Compose 插件分面，壳层要求满足路由和基础 DI 约定。
 
 ### 1. 页面
 
@@ -87,24 +88,25 @@ fun PluginOverviewScreen() {
 }
 ```
 
-### 2. Compose Koin 模块
+### 2. UI Koin 约定
 
-聚合器会扫描顶层 `class` 或 `object`，名称必须以下列后缀之一结尾：
+桌面 `ui` 根入口现在直接扫描 `site.addzero`，所以插件 UI 分面默认不需要再额外写 `ComposeKoinModule`。
 
-- `ComposeKoinModule`
-- `KoinModule`
+默认做法：
 
-建议：新插件优先使用更明确的 `ComposeKoinModule` 后缀。
+- 业务状态、服务、适配器直接标 `@Single` / `@Factory`
+- 让实现类留在插件自己的包下
+- 只在确实遇到边界 provider、生成类型或扫描歧义时，才额外补一个小的 `@Module`
 
 示例：
 
 ```kotlin
 package site.addzero.kcloud.plugins.example
 
-import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Single
 
-@ComponentScan("site.addzero.kcloud.plugins.example")
-class ExampleComposeKoinModule
+@Single
+class ExampleWorkbenchState
 ```
 
 ### 3. Gradle 接线
@@ -130,7 +132,7 @@ val sharedSourceDir = project(":apps:kcloud:shared")
     .srcDirs
     .first()
     .absolutePath
-val routeOwnerModuleDir = project(":apps:kcloud:composeApp")
+val routeOwnerModuleDir = project(":apps:kcloud:ui")
     .extensions
     .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
     .sourceSets
@@ -318,24 +320,24 @@ plugins {
 
 ## 壳层如何接入你的插件
 
-当插件被放到 `apps/kcloud/plugins/**` 下，并被 `modules-buddy` 纳入后，壳层会在构建期间自动完成以下事情：
+当插件被放到 `apps/kcloud/plugins/**` 下，并被 `modules-buddy` 纳入后，壳层会在构建期间完成以下事情：
 
 1. `apps/kcloud/shared` 先依赖插件 UI 的编译任务，确保路由元数据优先就绪。
-2. `apps/kcloud/composeApp` 把识别到的 UI 模块加入依赖。
-3. `apps/kcloud/composeApp` 根据识别到的 Compose Koin 模块生成 `KCloudComposeKoinApplication`。
-4. `apps/kcloud/server` 把识别到的 `server` 分面加入依赖。
-5. `apps/kcloud/server` 根据识别到的 server 入口生成 `KCloudServerStarterKoinApplication` 和 `registerKCloudPluginRoutes()`。
+2. `apps/kcloud/server` 把识别到的 `server` 分面加入依赖。
+3. `apps/kcloud/server` 根据识别到的 server 入口生成 `KCloudServerStarterKoinApplication` 和 `registerKCloudPluginRoutes()`。
+4. `apps/kcloud/ui` 需要手工把插件 `:ui` 模块加入依赖。
+5. `apps/kcloud/ui` 的根扫描模块会统一发现插件 UI 侧的 bean，不再逐个补 `ComposeKoinModule`。
 
-因此，现在已经不再需要手工修改壳层源码。
+因此，桌面壳层现在不再自动改写源码，新增插件后要同步更新 `apps/kcloud/ui`。
 
 ## 贡献者检查清单
 
 - 插件位于 `apps/kcloud/plugins/**` 下
 - UI 分面包含顶层 `@Route` 的 `...Screen()` 函数
-- UI 分面对外暴露了 `*ComposeKoinModule` 或 `*KoinModule`
+- UI 分面里的 Koin 定义直接落在 `@Single` / `@Factory` / 必要时的小型 provider module 上
 - 如果存在 server 分面，则在某个 `*Routes.kt` 文件中暴露公开的 `fun Route.xxxRoutes()`
 - 只有在确实需要显式模块组合时，server 分面才添加 `*ServerKoinModule`
-- Route KSP 参数正确指向 `:apps:kcloud:shared` 和 `:apps:kcloud:composeApp`
+- Route KSP 参数正确指向 `:apps:kcloud:shared` 和 `:apps:kcloud:ui`
 - 在让壳层自动聚合前，插件本身已经可以单独编译通过
 
 ## 验证命令
@@ -344,7 +346,7 @@ plugins {
 
 ```bash
 ./gradlew :apps:kcloud:shared:compileCommonMainKotlinMetadata
-./gradlew :apps:kcloud:composeApp:compileKotlinJvm
+./gradlew :apps:kcloud:ui:compileKotlinJvm
 ./gradlew :apps:kcloud:server:compileKotlinJvm
 ```
 

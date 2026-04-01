@@ -73,6 +73,7 @@ ksp {
 }
 
 modbusRtu {
+    transports.set(listOf("rtu"))
     codegenModes.set(listOf("server"))
     contractPackages.set(listOf("site.addzero.kcloud.plugins.mcuconsole.service.modbus"))
 }

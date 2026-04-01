@@ -83,20 +83,6 @@ class PluginPresetServiceImpl(
                 "meta",
             ),
             PresetFile(
-                "src/commonMain/kotlin/${packageRoot.toPath()}/${classPrefix}ComposeKoinModule.kt",
-                """
-                package $serverPackage
-
-                import org.koin.core.annotation.ComponentScan
-                import org.koin.core.annotation.Module
-
-                @Module
-                @ComponentScan("$serverPackage")
-                class ${classPrefix}ComposeKoinModule
-                """.trimIndent(),
-                "common",
-            ),
-            PresetFile(
                 "src/commonMain/kotlin/${screenPackage.toPath()}/${classPrefix}Screen.kt",
                 """
                 package $screenPackage
@@ -209,7 +195,7 @@ val sharedSourceDir = project(":apps:kcloud:shared")
                 .srcDirs
                 .first()
                 .absolutePath
-            val routeOwnerModuleDir = project(":apps:kcloud:composeApp")
+            val routeOwnerModuleDir = project(":apps:kcloud:ui")
                 .extensions
                 .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
                 .sourceSets

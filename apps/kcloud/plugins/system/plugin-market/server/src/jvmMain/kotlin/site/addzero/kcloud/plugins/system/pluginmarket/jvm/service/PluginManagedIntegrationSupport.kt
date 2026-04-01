@@ -34,17 +34,12 @@ class PluginManagedIntegrationSupport {
             """:apps:kcloud:plugins:vibepocket:ui:compileKotlinJvm""",
         )
         val fixedComposeModules = listOf(
-            "site.addzero.kcloud.plugins.mcuconsole.McuConsoleComposeKoinModule::class",
-            "site.addzero.kcloud.plugins.system.configcenter.ConfigCenterComposeKoinModule::class",
-            "site.addzero.kcloud.plugins.system.aichat.AiChatKoinModule::class",
-            "site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseKoinModule::class",
-            "site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketComposeKoinModule::class",
-            "site.addzero.kcloud.plugins.system.rbac.RbacKoinModule::class",
-            "site.addzero.kcloud.vibepocket.VibePocketComposeKoinModule::class",
-            "site.addzero.kcloud.app.KCloudShellKoinModule::class",
+            "site.addzero.kcloud.ui.KCloudUiScanKoinModule::class",
+            "site.addzero.kcloud.ui.KCloudUiSupportKoinModule::class",
         )
         val fixedDesktopModules = listOf(
-            "site.addzero.kcloud.app.KCloudShellKoinModule::class",
+            "site.addzero.kcloud.ui.KCloudUiScanKoinModule::class",
+            "site.addzero.kcloud.ui.KCloudUiSupportKoinModule::class",
         )
         val fixedServerModules = listOf(
             "site.addzero.kcloud.server.KCloudServerScanKoinModule::class",
@@ -84,7 +79,6 @@ class PluginManagedIntegrationSupport {
         val dynamicRouteTasks = dbPackages.map { pluginPackage ->
             """"${gradlePathFor(pluginPackage)}:compileKotlinJvm""""
         }
-        val dynamicComposeModules = dbPackages.mapNotNull { it.composeKoinModuleClass?.let { fqcn -> "$fqcn::class" } }
         val dynamicServerModules = dbPackages.mapNotNull { it.serverKoinModuleClass?.let { fqcn -> "$fqcn::class" } }
         val dynamicRouteImports = dbPackages.mapNotNull { it.routeRegistrarImport?.takeIf(String::isNotBlank) }
         val dynamicRouteCalls = dbPackages.mapNotNull { it.routeRegistrarCall?.takeIf(String::isNotBlank) }
@@ -93,8 +87,8 @@ class PluginManagedIntegrationSupport {
             composeDependencies = (fixedComposeDeps + dynamicComposeDeps).distinct().sorted(),
             serverDependencies = (fixedServerDeps + dynamicServerDeps).distinct().sorted(),
             sharedRouteTasks = (fixedRouteTasks + dynamicRouteTasks).distinct().sorted(),
-            composeModules = (fixedComposeModules + dynamicComposeModules).distinct(),
-            desktopModules = (fixedDesktopModules + dynamicComposeModules).distinct(),
+            composeModules = fixedComposeModules,
+            desktopModules = fixedDesktopModules,
             serverModules = (fixedServerModules + dynamicServerModules).distinct(),
             serverRouteImports = (fixedRouteImports + dynamicRouteImports).distinct().sorted(),
             serverRouteCalls = (fixedRouteCalls + dynamicRouteCalls).distinct(),
@@ -105,8 +99,8 @@ class PluginManagedIntegrationSupport {
         return ManagedIntegrationResult(
             changedFiles = emptyList(),
             diffText = buildString {
-                appendLine("KCloud shell aggregation is now handled by Gradle convention plugin `site.addzero.buildlogic.kmp.cmp-kcloud-aio`.")
-                appendLine("No shell source files were rewritten; exporting the plugin module and rerunning Gradle is enough.")
+                appendLine("KCloud UI 壳层现在由 `apps/kcloud/ui/build.gradle.kts` 显式维护依赖，并由根 Koin 扫描 `site.addzero`。")
+                appendLine("新增插件 UI 后，需要同步补进 UI 模块依赖；正常情况下不再需要额外写 Compose Koin 模块。")
                 appendLine()
                 appendLine("Compose 依赖：")
                 snapshot.composeDependencies.forEach { appendLine(it) }
