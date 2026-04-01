@@ -68,7 +68,7 @@ fun McuControlScreen() {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(
-                modifier = Modifier.width(300.dp).fillMaxHeight(),
+                modifier = Modifier.width(340.dp).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 McuDeviceListPanel(
@@ -83,7 +83,7 @@ fun McuControlScreen() {
                 McuControlSideRail(
                     state = state,
                     runAction = runAction,
-                    modifier = Modifier.fillMaxWidth().weight(0.72f),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 286.dp, max = 360.dp),
                 )
             }
             Column(
@@ -92,7 +92,7 @@ fun McuControlScreen() {
             ) {
                 McuConnectionConfigPanel(
                     state = state,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp, max = 300.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 184.dp, max = 228.dp),
                 )
                 McuTerminalPanel(
                     state = state,
@@ -119,15 +119,8 @@ private fun McuControlSideRail(
     ) {
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            McuInfoNotice(
-                text = if (state.session.isOpen) {
-                    "串口终端已连通，底部会持续追日志，Enter 会把输入直接写到 REPL。"
-                } else {
-                    "先扫描并选中串口，再打开终端进入 REPL。"
-                },
-            )
             McuStatusLamp(
                 label = "会话",
                 color = if (state.session.isOpen) {
@@ -303,11 +296,24 @@ private fun McuDeviceListPanel(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(
-                text = "这里只保留本机串口自动发现。先选设备，再到右侧确认波特率并打开终端。",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "共 ${state.filteredPorts.size} / ${state.ports.size}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FilledTonalButton(
+                    onClick = onRefresh,
+                    enabled = !state.isSubmitting,
+                ) {
+                    Text("扫描")
+                }
+            }
             Box(
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
             ) {
@@ -335,9 +341,6 @@ private fun McuConnectionConfigPanel(
             modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            McuInfoNotice(
-                text = "底部终端按 Enter 时，会使用这里的波特率和回车行尾配置直接写到串口。",
-            )
             McuCompactInput(
                 value = state.baudRateText,
                 onValueChange = { state.baudRateText = it },
