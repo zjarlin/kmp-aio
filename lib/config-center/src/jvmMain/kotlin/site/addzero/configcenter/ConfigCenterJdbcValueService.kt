@@ -180,6 +180,13 @@ class JdbcConfigCenterValueService(
                 values = values,
                 active = active,
                 limit = limit,
+                lookupDefinition = { currentNamespace, currentKey ->
+                    findDefinition(
+                        connection = connection,
+                        namespace = currentNamespace,
+                        key = currentKey,
+                    )
+                },
             )
         }
     }
@@ -364,6 +371,13 @@ class JdbcConfigCenterValueService(
         limit: Int,
     ): List<ConfigCenterValueDto> {
         val selectedColumns = selectValueColumnsSql(connection)
+        val valueColumns = existingColumns(connection, "config_center_value")
+        val commentSearchExpression = when {
+            "comment" in valueColumns && "description" in valueColumns -> "COALESCE(comment, description, '')"
+            "comment" in valueColumns -> "COALESCE(comment, '')"
+            "description" in valueColumns -> "COALESCE(description, '')"
+            else -> "''"
+        }
         val clauses = mutableListOf<String>()
         val values = mutableListOf<Any>()
         namespace?.trim()?.takeIf(String::isNotBlank)?.let { rawNamespace ->
@@ -375,7 +389,7 @@ class JdbcConfigCenterValueService(
             values += normalizeConfigCenterActive(rawActive)
         }
         keyword?.trim()?.takeIf(String::isNotBlank)?.let { rawKeyword ->
-            clauses += "(config_key LIKE ? OR config_value LIKE ? OR COALESCE(comment, description, '') LIKE ?)"
+            clauses += "(config_key LIKE ? OR config_value LIKE ? OR $commentSearchExpression LIKE ?)"
             val likeValue = "%$rawKeyword%"
             values += likeValue
             values += likeValue
@@ -779,6 +793,7 @@ private fun mergeEntries(
     values: List<ConfigCenterValueDto>,
     active: String?,
     limit: Int,
+    lookupDefinition: (String, String) -> StoredDefinition? = { _, _ -> null },
 ): List<ConfigCenterEntryDto> {
     val merged = LinkedHashMap<String, ConfigCenterEntryDto>()
     val normalizedActive = active?.trim()?.takeIf(String::isNotBlank)?.let(::normalizeConfigCenterActive)
@@ -795,7 +810,7 @@ private fun mergeEntries(
             definitions.findBestMatchingDefinition(
                 namespace = value.namespace,
                 key = value.key,
-            )
+            ) ?: lookupDefinition(value.namespace, value.key)
         } else {
             null
         }
