@@ -44,6 +44,8 @@ kotlin {
         commonMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
+            implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")
+            implementation("io.github.alexzhirkevich:cupertino-adaptive:0.1.0-alpha04")
             implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

@@ -8,8 +8,11 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.configcenter.ConfigCenterKeyDefinition
+import site.addzero.kcloud.config.KCloudConfigKeys
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.kcloud.vibepocket.dto.OkResponse
+import site.addzero.kcloud.vibepocket.config.VibepocketConfigKeys
 import site.addzero.kcloud.vibepocket.model.AppConfig
 
 private const val VIBEPOCKET_CONFIG_NAMESPACE = "vibepocket"
@@ -47,19 +50,21 @@ suspend fun updateConfig(
 
 @GetMapping("/api/config/storage")
 suspend fun getStorageConfig(): StorageConfig {
-    fun readValue(key: String): String? {
-        return runBlocking { readConfigValue(key) }
+    fun readValue(definition: ConfigCenterKeyDefinition): String? {
+        return runBlocking { readConfigValue(definition) }
     }
 
     return StorageConfig(
-        type = readValue("storage.type") ?: "LOCAL",
-        endpoint = readValue("storage.endpoint"),
-        accessKey = readValue("storage.accessKey"),
-        secretKey = readValue("storage.secretKey"),
-        bucketName = readValue("storage.bucketName"),
-        region = readValue("storage.region"),
-        domain = readValue("storage.domain"),
-        basePath = readValue("storage.basePath"),
+        type = readValue(VibepocketConfigKeys.storageType)
+            ?: VibepocketConfigKeys.storageType.defaultValue
+            ?: "LOCAL",
+        endpoint = readValue(VibepocketConfigKeys.storageEndpoint),
+        accessKey = readValue(VibepocketConfigKeys.storageAccessKey),
+        secretKey = readValue(VibepocketConfigKeys.storageSecretKey),
+        bucketName = readValue(VibepocketConfigKeys.storageBucketName),
+        region = readValue(VibepocketConfigKeys.storageRegion),
+        domain = readValue(VibepocketConfigKeys.storageDomain),
+        basePath = readValue(VibepocketConfigKeys.storageBasePath),
     )
 }
 
@@ -69,16 +74,16 @@ suspend fun saveStorageConfig(
 ): OkResponse {
     configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
-        key = "storage.type",
+        key = VibepocketConfigKeys.STORAGE_TYPE,
         value = config.type,
     )
-    config.endpoint?.let { saveStorageValue("storage.endpoint", it) }
-    config.accessKey?.let { saveStorageValue("storage.accessKey", it) }
-    config.secretKey?.let { saveStorageValue("storage.secretKey", it) }
-    config.bucketName?.let { saveStorageValue("storage.bucketName", it) }
-    config.region?.let { saveStorageValue("storage.region", it) }
-    config.domain?.let { saveStorageValue("storage.domain", it) }
-    config.basePath?.let { saveStorageValue("storage.basePath", it) }
+    config.endpoint?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_ENDPOINT, it) }
+    config.accessKey?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_ACCESS_KEY, it) }
+    config.secretKey?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_SECRET_KEY, it) }
+    config.bucketName?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_BUCKET_NAME, it) }
+    config.region?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_REGION, it) }
+    config.domain?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_DOMAIN, it) }
+    config.basePath?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_BASE_PATH, it) }
     return OkResponse()
 }
 
@@ -88,6 +93,12 @@ private suspend fun saveStorageValue(key: String, value: String) {
         key = key,
         value = value,
     )
+}
+
+private suspend fun readConfigValue(
+    definition: ConfigCenterKeyDefinition,
+): String? {
+    return readConfigValue(definition.key)
 }
 
 private suspend fun readConfigValue(
@@ -109,13 +120,13 @@ private suspend fun readConfigValue(
 }
 
 private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
-    val sqliteEnabled = propertyOrNull("datasources.sqlite.enabled")
+    val sqliteEnabled = propertyOrNull(KCloudConfigKeys.SQLITE_ENABLED)
         ?.getString()
         ?.toBoolean() == true
-    val postgresEnabled = propertyOrNull("datasources.postgres.enabled")
+    val postgresEnabled = propertyOrNull(KCloudConfigKeys.POSTGRES_ENABLED)
         ?.getString()
         ?.toBoolean() == true
-    val sqliteUrl = propertyOrNull("datasources.sqlite.url")?.getString()
+    val sqliteUrl = propertyOrNull(KCloudConfigKeys.SQLITE_URL)?.getString()
 
     return ConfigRuntimeInfo(
         storage = when {
@@ -124,8 +135,8 @@ private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
             else -> "unknown"
         },
         sqlitePath = sqliteUrl?.removePrefix("jdbc:sqlite:"),
-        dataDir = propertyOrNull("kcloud.dataDir")?.getString(),
-        cacheDir = propertyOrNull("kcloud.cacheDir")?.getString(),
+        dataDir = propertyOrNull(KCloudConfigKeys.DATA_DIR)?.getString(),
+        cacheDir = propertyOrNull(KCloudConfigKeys.CACHE_DIR)?.getString(),
     )
 }
 

@@ -6,11 +6,11 @@ import kotlinx.serialization.Serializable
 data class McuModbusDeviceInfoResponse(
     val success: Boolean = false,
     val portPath: String? = null,
-    val protocolVersion: Int? = null,
-    val channelCount: Int? = null,
-    val unitId: Int? = null,
-    val baudRateCode: Int? = null,
-    val deviceName: String? = null,
+    val firmwareVersion: String? = null,
+    val cpuModel: String? = null,
+    val xtalFrequencyHz: Int? = null,
+    val flashSizeBytes: Int? = null,
+    val macAddress: String? = null,
     val lastMessage: String? = null,
     val updatedAt: String? = null,
 )

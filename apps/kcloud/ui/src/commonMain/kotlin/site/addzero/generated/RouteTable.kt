@@ -15,8 +15,7 @@ object RouteTable {
         RouteKeys.MCU_FLASH_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuFlashScreen() },
         RouteKeys.MCU_MODBUS_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuModbusScreen() },
         RouteKeys.MCU_ONLINE_DEV_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuOnlineDevScreen() },
-        RouteKeys.MCU_DEBUG_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen() },
-        RouteKeys.CONFIG_CENTER_PROJECTS_SCREEN to @Composable { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterProjectsScreen() }
+        RouteKeys.MCU_DEBUG_SCREEN to @Composable { site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen() }
     )
 
     /**

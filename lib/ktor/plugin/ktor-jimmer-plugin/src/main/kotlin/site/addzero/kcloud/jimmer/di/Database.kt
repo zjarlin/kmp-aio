@@ -9,6 +9,8 @@ import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import site.addzero.configcenter.boolean
+import site.addzero.configcenter.string
 import site.addzero.kcloud.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.kcloud.jimmer.spi.DatabaseDriverSpi
 import site.addzero.kcloud.jimmer.spi.DatasourceBootstrapContext
@@ -19,7 +21,7 @@ import javax.sql.DataSource
 private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:jimmer-embedded.db"
 
 /**
- * 数据源属性（从 application.conf 的 datasources.xxx 读取）
+ * 数据源属性（从配置中心覆盖后的 datasources.xxx 读取）
  */
 data class DatasourceProperties(
     val name: String = "",
@@ -152,12 +154,10 @@ private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): Dataso
         return null
     }
 
-    val sqliteUrl = config.propertyOrNull("datasources.sqlite.url")
-        ?.getString()
+    val sqliteUrl = config.string(DatasourceConfigKeys.urlDefinition("sqlite"))
         ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_EMBEDDED_SQLITE_URL
-    val sqliteDriver = config.propertyOrNull("datasources.sqlite.driver")
-        ?.getString()
+    val sqliteDriver = config.string(DatasourceConfigKeys.driverDefinition("sqlite"))
         ?.takeIf { it.isNotBlank() }
         ?: "org.sqlite.SQLiteDriver"
 
@@ -195,14 +195,13 @@ private fun loadAllDatasources(config: ApplicationConfig): List<DatasourceProper
     val datasourceConfig = runCatching { config.config("datasources") }.getOrNull() ?: return emptyList()
 
     for (name in datasourceConfig.toMap().keys) {
-        val section = runCatching { datasourceConfig.config(name) }.getOrNull() ?: continue
         datasources += DatasourceProperties(
             name = name,
-            enabled = section.propertyOrNull("enabled")?.getString()?.toBoolean() == true,
-            url = section.propertyOrNull("url")?.getString().orEmpty(),
-            driver = section.propertyOrNull("driver")?.getString().orEmpty(),
-            user = section.propertyOrNull("user")?.getString().orEmpty(),
-            password = section.propertyOrNull("password")?.getString().orEmpty(),
+            enabled = config.boolean(DatasourceConfigKeys.enabledDefinition(name)) == true,
+            url = config.string(DatasourceConfigKeys.urlDefinition(name)).orEmpty(),
+            driver = config.string(DatasourceConfigKeys.driverDefinition(name)).orEmpty(),
+            user = config.string(DatasourceConfigKeys.userDefinition(name)).orEmpty(),
+            password = config.string(DatasourceConfigKeys.passwordDefinition(name)).orEmpty(),
         )
     }
 

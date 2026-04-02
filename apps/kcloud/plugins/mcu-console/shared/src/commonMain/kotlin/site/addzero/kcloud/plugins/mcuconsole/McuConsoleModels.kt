@@ -126,6 +126,18 @@ typealias McuModbusPowerLightsResponse = site.addzero.kcloud.plugins.mcuconsole.
 )
 typealias McuModbusDeviceInfoResponse = site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
 
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusIndicatorLightsRequest",
+    replaceWith = ReplaceWith("McuModbusIndicatorLightsRequest", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusIndicatorLightsRequest"),
+)
+typealias McuModbusIndicatorLightsRequest = site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusIndicatorLightsRequest
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusIndicatorLightsResponse",
+    replaceWith = ReplaceWith("McuModbusIndicatorLightsResponse", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusIndicatorLightsResponse"),
+)
+typealias McuModbusIndicatorLightsResponse = site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusIndicatorLightsResponse
+
 data class McuSessionOpenRequest(
     val profileKey: String? = null,
     val portPath: String = "",

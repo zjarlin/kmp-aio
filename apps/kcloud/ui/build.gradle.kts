@@ -12,7 +12,7 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val addzeroLibJvmVersion: String by project
-val desktopMainClass = "site.addzero.kcloud.ui.MainKt"
+val desktopMainClass = "site.addzero.kcloud.bootstrap.MainKt"
 val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(24))
 }

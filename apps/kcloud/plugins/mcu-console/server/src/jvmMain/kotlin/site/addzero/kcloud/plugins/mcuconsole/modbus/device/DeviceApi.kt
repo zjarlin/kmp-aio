@@ -4,7 +4,7 @@ import site.addzero.device.protocol.modbus.annotation.ModbusOperation
 import site.addzero.device.protocol.modbus.model.ModbusFunctionCode
 
 /**
- * 板卡基础信息的 Modbus RTU 契约。
+ * 板卡读侧的 Modbus RTU 契约。
  *
  * 当前 `get24PowerLights()` 与 `getDeviceInfo()` 的地址布局，
  * 先对齐仓库里已有的 Modbus smoke 契约与 24 路线圈读测试：
@@ -26,7 +26,7 @@ interface DeviceApi {
 
     /**
      * 前端按钮: Modbus 页“读取设备信息”。
-     * 读取板子的运行信息。
+     * 读取板子的固件版本、CPU、晶振、Flash 容量和 MAC 地址。
      */
     @ModbusOperation(
         address = 100,

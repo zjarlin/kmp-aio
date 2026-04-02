@@ -9,6 +9,7 @@ import site.addzero.device.driver.modbus.rtu.ModbusRtuExecutor
 import site.addzero.device.protocol.modbus.ModbusCodecSupport
 import site.addzero.device.protocol.modbus.model.ModbusCodec
 import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceApiGeneratedRtuGateway
+import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceWriteApiGeneratedRtuGateway
 import site.addzero.kcloud.plugins.mcuconsole.FakeSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
 import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig
@@ -55,13 +56,13 @@ class DeviceModbusServiceTest {
         val response = service.getDeviceInfo()
 
         assertEquals(100, executor.lastReadInputAddress)
-        assertEquals(20, executor.lastReadInputQuantity)
+        assertEquals(29, executor.lastReadInputQuantity)
         assertEquals("COM11", executor.lastReadConfig?.portPath)
-        assertEquals(3, response.protocolVersion)
-        assertEquals(24, response.channelCount)
-        assertEquals(1, response.unitId)
-        assertEquals(9600, response.baudRateCode)
-        assertEquals("OKM-X自控", response.deviceName)
+        assertEquals("2026.04.02", response.firmwareVersion)
+        assertEquals("ESP32-C3", response.cpuModel)
+        assertEquals(40_000_000, response.xtalFrequencyHz)
+        assertEquals(4_194_304, response.flashSizeBytes)
+        assertEquals("AA:BB:CC:DD:EE:FF", response.macAddress)
         assertTrue(response.success)
     }
 
@@ -88,8 +89,28 @@ class DeviceModbusServiceTest {
         assertEquals("/dev/cu.usbserial-2130", executor.lastReadConfig?.portPath)
         assertEquals(9600, executor.lastReadConfig?.baudRate)
         assertEquals(1, executor.lastReadConfig?.unitId)
-        assertEquals("OKM-X自控", response.deviceName)
+        assertEquals("2026.04.02", response.firmwareVersion)
+        assertEquals("ESP32-C3", response.cpuModel)
         assertTrue(response.success)
+    }
+
+    @Test
+    fun `writeIndicatorLights uses active session port and writes two indicator coils`() = runBlocking {
+        val executor = RecordingDeviceModbusExecutor()
+        val service = newService(executor)
+
+        val response = service.writeIndicatorLights(
+            faultLightOn = true,
+            runLightOn = false,
+        )
+
+        assertEquals(24, executor.lastWriteCoilsAddress)
+        assertEquals(listOf(true, false), executor.lastWriteCoilsValues)
+        assertEquals("COM11", executor.lastWriteConfig?.portPath)
+        assertEquals(38400, executor.lastWriteConfig?.baudRate)
+        assertEquals(true, response.success)
+        assertEquals(true, response.faultLightOn)
+        assertEquals(false, response.runLightOn)
     }
 
     private fun newService(
@@ -128,7 +149,11 @@ class DeviceModbusServiceTest {
         )
         return DeviceModbusService(
             sessionService = sessionService,
-            gateway = DeviceApiGeneratedRtuGateway(
+            readGateway = DeviceApiGeneratedRtuGateway(
+                configRegistry = registry,
+                executor = executor,
+            ),
+            writeGateway = DeviceWriteApiGeneratedRtuGateway(
                 configRegistry = registry,
                 executor = executor,
             ),
@@ -136,17 +161,17 @@ class DeviceModbusServiceTest {
     }
 
     private fun buildDeviceInfoRegisters(): List<Int> {
-        val registers = MutableList(20) { 0 }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "3")
+        val registers = MutableList(29) { 0 }
+        ModbusCodecSupport.encodeString(ModbusCodec.STRING_ASCII, "2026.04.02", 8)
             .forEachIndexed { index, value -> registers[index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "24")
-            .forEachIndexed { index, value -> registers[1 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "1")
-            .forEachIndexed { index, value -> registers[2 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "9600")
-            .forEachIndexed { index, value -> registers[3 + index] = value }
-        ModbusCodecSupport.encodeString(ModbusCodec.STRING_UTF8, "OKM-X自控", 16)
-            .forEachIndexed { index, value -> registers[4 + index] = value }
+        ModbusCodecSupport.encodeString(ModbusCodec.STRING_ASCII, "ESP32-C3", 8)
+            .forEachIndexed { index, value -> registers[8 + index] = value }
+        ModbusCodecSupport.encodeValue(ModbusCodec.U32_BE, "40000000")
+            .forEachIndexed { index, value -> registers[16 + index] = value }
+        ModbusCodecSupport.encodeValue(ModbusCodec.U32_BE, "4194304")
+            .forEachIndexed { index, value -> registers[18 + index] = value }
+        ModbusCodecSupport.encodeString(ModbusCodec.STRING_ASCII, "AA:BB:CC:DD:EE:FF", 9)
+            .forEachIndexed { index, value -> registers[20 + index] = value }
         return registers
     }
 }
@@ -160,6 +185,9 @@ private class RecordingDeviceModbusExecutor(
     var lastReadCoilsQuantity: Int? = null
     var lastReadInputAddress: Int? = null
     var lastReadInputQuantity: Int? = null
+    var lastWriteConfig: ModbusRtuEndpointConfig? = null
+    var lastWriteCoilsAddress: Int? = null
+    var lastWriteCoilsValues: List<Boolean>? = null
 
     override suspend fun readCoils(
         config: ModbusRtuEndpointConfig,
@@ -205,7 +233,11 @@ private class RecordingDeviceModbusExecutor(
         config: ModbusRtuEndpointConfig,
         address: Int,
         values: List<Boolean>,
-    ) = error("not used")
+    ) {
+        lastWriteConfig = config
+        lastWriteCoilsAddress = address
+        lastWriteCoilsValues = values
+    }
 
     override suspend fun writeSingleRegister(
         config: ModbusRtuEndpointConfig,

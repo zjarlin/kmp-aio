@@ -14,7 +14,6 @@ object RouteKeys {
     const val MCU_MODBUS_SCREEN = "mcu/modbus"
     const val MCU_ONLINE_DEV_SCREEN = "mcu/online-dev"
     const val MCU_DEBUG_SCREEN = "mcu/debug"
-    const val CONFIG_CENTER_PROJECTS_SCREEN = "system/config-center/value"
 
     /**
      * 所有路由元数据
@@ -24,7 +23,6 @@ object RouteKeys {
         Route(value = "开发工具", title = "烧录", routePath = "mcu/flash", icon = "Upload", order = 10.0, placement = RoutePlacement(scene = RouteScene(name = "设备", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.screen.McuFlashScreen", simpleName = "McuFlashScreen"),
         Route(value = "开发工具", title = "Modbus", routePath = "mcu/modbus", icon = "SettingsInputComponent", order = 15.0, placement = RoutePlacement(scene = RouteScene(name = "设备", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.screen.McuModbusScreen", simpleName = "McuModbusScreen"),
         Route(value = "开发工具", title = "在线开发", routePath = "mcu/online-dev", icon = "Code", order = 15.0, placement = RoutePlacement(scene = RouteScene(name = "设备", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.screen.McuOnlineDevScreen", simpleName = "McuOnlineDevScreen"),
-        Route(value = "开发工具", title = "调试", routePath = "mcu/debug", icon = "BugReport", order = 20.0, placement = RoutePlacement(scene = RouteScene(name = "设备", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen", simpleName = "McuDebugScreen"),
-        Route(value = "配置中心", title = "配置项", routePath = "system/config-center/value", icon = "Key", order = 80.0, placement = RoutePlacement(scene = RouteScene(name = "系统", icon = "AdminPanelSettings", order = 100), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterProjectsScreen", simpleName = "ConfigCenterProjectsScreen")
+        Route(value = "开发工具", title = "调试", routePath = "mcu/debug", icon = "BugReport", order = 20.0, placement = RoutePlacement(scene = RouteScene(name = "设备", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.screen.McuDebugScreen", simpleName = "McuDebugScreen")
     )
 }

@@ -48,7 +48,7 @@ class ConfigCenterAdminPageTest {
                   "active": "dev",
                   "key": "server.port",
                   "value": "19090",
-                  "description": "from test"
+                  "comment": "from test"
                 }
                 """.trimIndent(),
             )

@@ -34,12 +34,12 @@ class PluginManagedIntegrationSupport {
             """:apps:kcloud:plugins:vibepocket:ui:compileKotlinJvm""",
         )
         val fixedComposeModules = listOf(
-            "site.addzero.kcloud.ui.KCloudUiScanKoinModule::class",
-            "site.addzero.kcloud.ui.KCloudUiSupportKoinModule::class",
+            "site.addzero.kcloud.bootstrap.KCloudUiScanKoinModule::class",
+            "site.addzero.kcloud.bootstrap.KCloudUiSupportKoinModule::class",
         )
         val fixedDesktopModules = listOf(
-            "site.addzero.kcloud.ui.KCloudUiScanKoinModule::class",
-            "site.addzero.kcloud.ui.KCloudUiSupportKoinModule::class",
+            "site.addzero.kcloud.bootstrap.KCloudUiScanKoinModule::class",
+            "site.addzero.kcloud.bootstrap.KCloudUiSupportKoinModule::class",
         )
         val fixedServerModules = listOf(
             "site.addzero.kcloud.server.KCloudServerScanKoinModule::class",
@@ -99,7 +99,7 @@ class PluginManagedIntegrationSupport {
         return ManagedIntegrationResult(
             changedFiles = emptyList(),
             diffText = buildString {
-                appendLine("KCloud UI 壳层现在由 `apps/kcloud/ui/build.gradle.kts` 显式维护依赖，并由根 Koin 扫描 `site.addzero`。")
+                appendLine("KCloud UI 壳层现在由 `apps/kcloud/ui/build.gradle.kts` 显式维护依赖，并由根 Koin 扫描 `site.addzero.kcloud`。")
                 appendLine("新增插件 UI 后，需要同步补进 UI 模块依赖；正常情况下不再需要额外写 Compose Koin 模块。")
                 appendLine()
                 appendLine("Compose 依赖：")

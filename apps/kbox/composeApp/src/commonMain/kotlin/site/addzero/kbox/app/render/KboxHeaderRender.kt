@@ -37,6 +37,7 @@ class KboxHeaderRender(
     private val routeCatalog: KboxRouteCatalog,
     private val shellState: KboxShellState,
 ) : HeaderRender {
+    /** 头部渲染 */
     @Composable
     override fun Render(
         modifier: Modifier,
@@ -126,6 +127,7 @@ private fun SceneSwitcher(
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
                     )
+                    /* 文本 */
                     Text(
                         text = scene.name,
                         style = MaterialTheme.typography.titleSmall,

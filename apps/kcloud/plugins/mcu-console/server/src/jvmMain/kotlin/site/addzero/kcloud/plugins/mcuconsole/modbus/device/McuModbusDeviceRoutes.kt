@@ -4,7 +4,7 @@ import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.GetMapping
 
 /**
- * MCU Modbus 读设备状态路由，同时作为客户端 API 生成源。
+ * MCU Modbus 读侧设备路由，同时作为客户端 API 生成源。
  */
 
 /**

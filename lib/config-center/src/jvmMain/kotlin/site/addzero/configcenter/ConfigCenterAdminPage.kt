@@ -35,6 +35,7 @@ fun Application.installConfigCenterAdmin(
     if (!adminSettings.enabled) {
         return
     }
+    val adminService = service.asAdminService()
     val basePath = adminSettings.normalizedPath
     routing {
         route(basePath) {
@@ -49,8 +50,8 @@ fun Application.installConfigCenterAdmin(
             }
             get("/api/values") {
                 call.respondJson(
-                    ConfigCenterValueListResponse(
-                        items = service.listValues(
+                    ConfigCenterEntryListResponse(
+                        items = adminService.listEntries(
                             namespace = call.parameters["namespace"],
                             active = call.parameters["active"],
                             keyword = call.parameters["keyword"],
@@ -60,7 +61,7 @@ fun Application.installConfigCenterAdmin(
             }
             get("/api/value") {
                 call.respondJson(
-                    service.readValue(
+                    adminService.readEntry(
                         namespace = call.parameters["namespace"].orEmpty(),
                         key = call.parameters["key"].orEmpty(),
                         active = call.parameters["active"] ?: DEFAULT_CONFIG_CENTER_ACTIVE,
@@ -69,13 +70,13 @@ fun Application.installConfigCenterAdmin(
             }
             put("/api/value") {
                 call.respondJson(
-                    service.writeValue(call.receiveJson()),
+                    adminService.writeEntry(call.receiveJson()),
                 )
             }
             delete("/api/value") {
                 call.respondJson(
                     ConfigCenterDeleteResponse(
-                        deleted = service.deleteValue(
+                        deleted = adminService.deleteEntry(
                             namespace = call.parameters["namespace"].orEmpty(),
                             key = call.parameters["key"].orEmpty(),
                             active = call.parameters["active"] ?: DEFAULT_CONFIG_CENTER_ACTIVE,
@@ -84,6 +85,112 @@ fun Application.installConfigCenterAdmin(
                 )
             }
         }
+    }
+}
+
+private fun ConfigCenterValueService.asAdminService(): ConfigCenterAdminService {
+    return this as? ConfigCenterAdminService ?: LegacyConfigCenterAdminService(this)
+}
+
+private class LegacyConfigCenterAdminService(
+    private val delegate: ConfigCenterValueService,
+) : ConfigCenterAdminService {
+    override fun listValues(
+        namespace: String?,
+        active: String?,
+        keyword: String?,
+        limit: Int,
+    ): List<ConfigCenterValueDto> {
+        return delegate.listValues(namespace, active, keyword, limit)
+    }
+
+    override fun readValue(
+        namespace: String,
+        key: String,
+        active: String,
+    ): ConfigCenterValueDto {
+        return delegate.readValue(namespace, key, active)
+    }
+
+    override fun writeValue(
+        request: ConfigCenterValueWriteRequest,
+    ): ConfigCenterValueDto {
+        return delegate.writeValue(request)
+    }
+
+    override fun deleteValue(
+        namespace: String,
+        key: String,
+        active: String,
+    ): Boolean {
+        return delegate.deleteValue(namespace, key, active)
+    }
+
+    override fun listEntries(
+        namespace: String?,
+        active: String?,
+        keyword: String?,
+        limit: Int,
+    ): List<ConfigCenterEntryDto> {
+        return delegate.listValues(namespace, active, keyword, limit).map { value ->
+            ConfigCenterEntryDto(
+                namespace = value.namespace,
+                active = value.active,
+                key = value.key,
+                value = value.value,
+                comment = value.comment,
+                createTimeMillis = value.createTimeMillis,
+                updateTimeMillis = value.updateTimeMillis,
+            )
+        }
+    }
+
+    override fun readEntry(
+        namespace: String,
+        key: String,
+        active: String,
+    ): ConfigCenterEntryDto {
+        val value = delegate.readValue(namespace, key, active)
+        return ConfigCenterEntryDto(
+            namespace = value.namespace,
+            active = value.active,
+            key = value.key,
+            value = value.value,
+            comment = value.comment,
+            createTimeMillis = value.createTimeMillis,
+            updateTimeMillis = value.updateTimeMillis,
+        )
+    }
+
+    override fun writeEntry(
+        request: ConfigCenterEntryWriteRequest,
+    ): ConfigCenterEntryDto {
+        val value = delegate.writeValue(
+            ConfigCenterValueWriteRequest(
+                namespace = request.namespace,
+                active = request.active,
+                key = request.key,
+                value = request.value.orEmpty(),
+                comment = request.comment,
+            ),
+        )
+        return ConfigCenterEntryDto(
+            namespace = value.namespace,
+            active = value.active,
+            key = value.key,
+            value = value.value,
+            comment = value.comment,
+            createTimeMillis = value.createTimeMillis,
+            updateTimeMillis = value.updateTimeMillis,
+        )
+    }
+
+    override fun deleteEntry(
+        namespace: String,
+        key: String,
+        active: String,
+    ): Boolean {
+        return delegate.deleteValue(namespace, key, active)
     }
 }
 
@@ -121,7 +228,7 @@ private fun renderConfigCenterAdminPage(
             var(--bg);
         }
         .shell {
-          max-width: 1180px;
+          max-width: 1280px;
           margin: 0 auto;
           padding: 32px 20px 48px;
         }
@@ -155,7 +262,7 @@ private fun renderConfigCenterAdminPage(
         }
         .layout {
           display: grid;
-          grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.9fr);
+          grid-template-columns: minmax(0, 1.4fr) minmax(360px, 1fr);
           gap: 20px;
         }
         .card {
@@ -202,8 +309,17 @@ private fun renderConfigCenterAdminPage(
           color: var(--text);
         }
         textarea {
-          min-height: 120px;
+          min-height: 92px;
           resize: vertical;
+        }
+        .checkbox {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 44px;
+        }
+        .checkbox input {
+          width: auto;
         }
         .actions {
           display: flex;
@@ -260,6 +376,21 @@ private fun renderConfigCenterAdminPage(
         .status.error {
           color: var(--danger);
         }
+        .meta {
+          display: inline-flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .tag {
+          display: inline-flex;
+          align-items: center;
+          border-radius: 999px;
+          background: #eff6ff;
+          color: #1d4ed8;
+          font-size: 12px;
+          padding: 4px 8px;
+          font-weight: 600;
+        }
         @media (max-width: 940px) {
           .layout { grid-template-columns: 1fr; }
           .filters, .editor-grid { grid-template-columns: 1fr; }
@@ -272,7 +403,7 @@ private fun renderConfigCenterAdminPage(
           <div>
             <div class="pill">Embedded H5 Admin</div>
             <h1>${escapeHtml(title)}</h1>
-            <p>轻量配置中心管理页。左侧查询和浏览配置，右侧直接新增、覆盖或删除单个 key。</p>
+            <p>左侧浏览配置项和当前值，右侧维护 value、comment、defaultValue、required、valueType 等配置元数据。</p>
           </div>
         </div>
 
@@ -281,20 +412,20 @@ private fun renderConfigCenterAdminPage(
             <div class="section">
               <div class="filters">
                 <div class="field">
-                  <label for="filter-namespace">Namespace</label>
-                  <input id="filter-namespace" value="default" />
+                  <label for="filter-namespace">命名空间</label>
+                  <input id="filter-namespace" value="kcloud" />
                 </div>
                 <div class="field">
-                  <label for="filter-active">Active</label>
+                  <label for="filter-active">环境</label>
                   <input id="filter-active" value="dev" />
                 </div>
                 <div class="field">
-                  <label for="filter-keyword">Keyword</label>
-                  <input id="filter-keyword" placeholder="key / value / description" />
+                  <label for="filter-keyword">关键词</label>
+                  <input id="filter-keyword" placeholder="key / value / comment" />
                 </div>
               </div>
               <div class="actions" style="margin-top: 14px;">
-                <button class="primary" id="refresh-button" type="button">Refresh</button>
+                <button class="primary" id="refresh-button" type="button">刷新</button>
               </div>
             </div>
             <div class="section">
@@ -306,6 +437,7 @@ private fun renderConfigCenterAdminPage(
                     <th>Active</th>
                     <th>Key</th>
                     <th>Value</th>
+                    <th>Comment</th>
                   </tr>
                 </thead>
                 <tbody id="values-body"></tbody>
@@ -317,32 +449,44 @@ private fun renderConfigCenterAdminPage(
             <div class="section">
               <div class="editor-grid">
                 <div class="field">
-                  <label for="edit-namespace">Namespace</label>
+                  <label for="edit-namespace">命名空间</label>
                   <input id="edit-namespace" />
                 </div>
                 <div class="field">
-                  <label for="edit-active">Active</label>
+                  <label for="edit-active">环境</label>
                   <input id="edit-active" value="dev" />
                 </div>
                 <div class="field wide">
-                  <label for="edit-key">Key</label>
-                  <input id="edit-key" placeholder="server.port" />
+                  <label for="edit-key">配置 Key</label>
+                  <input id="edit-key" placeholder="ktor.deployment.port" />
                 </div>
                 <div class="field wide">
-                  <label for="edit-value">Value</label>
-                  <textarea id="edit-value" placeholder="19090 or true or plain text"></textarea>
+                  <label for="edit-value">当前值</label>
+                  <textarea id="edit-value" placeholder="19090 / true / plain text"></textarea>
                 </div>
                 <div class="field wide">
-                  <label for="edit-description">Description</label>
-                  <textarea id="edit-description" placeholder="Optional note"></textarea>
+                  <label for="edit-comment">注释 Comment</label>
+                  <textarea id="edit-comment" placeholder="选填，用于说明这个配置项的用途"></textarea>
+                </div>
+                <div class="field">
+                  <label for="edit-default-value">默认值 Default</label>
+                  <input id="edit-default-value" placeholder="8080" />
+                </div>
+                <div class="field">
+                  <label for="edit-value-type">值类型 ValueType</label>
+                  <input id="edit-value-type" value="kotlin.String" />
+                </div>
+                <div class="field wide checkbox">
+                  <input id="edit-required" type="checkbox" />
+                  <label for="edit-required">Required</label>
                 </div>
               </div>
             </div>
             <div class="section">
               <div class="actions">
-                <button class="primary" id="save-button" type="button">Save</button>
-                <button class="danger" id="delete-button" type="button">Delete</button>
-                <button class="secondary" id="reset-button" type="button">Reset</button>
+                <button class="primary" id="save-button" type="button">保存</button>
+                <button class="danger" id="delete-button" type="button">删除</button>
+                <button class="secondary" id="reset-button" type="button">重置</button>
               </div>
               <div class="status" id="editor-status" style="margin-top: 12px;"></div>
             </div>
@@ -364,7 +508,10 @@ private fun renderConfigCenterAdminPage(
           editActive: document.getElementById("edit-active"),
           editKey: document.getElementById("edit-key"),
           editValue: document.getElementById("edit-value"),
-          editDescription: document.getElementById("edit-description"),
+          editComment: document.getElementById("edit-comment"),
+          editDefaultValue: document.getElementById("edit-default-value"),
+          editValueType: document.getElementById("edit-value-type"),
+          editRequired: document.getElementById("edit-required"),
           saveButton: document.getElementById("save-button"),
           deleteButton: document.getElementById("delete-button"),
           resetButton: document.getElementById("reset-button"),
@@ -399,8 +546,11 @@ private fun renderConfigCenterAdminPage(
           elements.editActive.value = item.active || "dev";
           elements.editKey.value = item.key || "";
           elements.editValue.value = item.value || "";
-          elements.editDescription.value = item.description || "";
-          setStatus(elements.editorStatus, "Loaded selected row.");
+          elements.editComment.value = item.comment || "";
+          elements.editDefaultValue.value = item.defaultValue || "";
+          elements.editValueType.value = item.valueType || "kotlin.String";
+          elements.editRequired.checked = Boolean(item.required);
+          setStatus(elements.editorStatus, "已加载选中的配置项。");
         }
 
         function resetEditor() {
@@ -408,7 +558,10 @@ private fun renderConfigCenterAdminPage(
           elements.editActive.value = elements.filterActive.value.trim() || "dev";
           elements.editKey.value = "";
           elements.editValue.value = "";
-          elements.editDescription.value = "";
+          elements.editComment.value = "";
+          elements.editDefaultValue.value = "";
+          elements.editValueType.value = "kotlin.String";
+          elements.editRequired.checked = false;
           setStatus(elements.editorStatus, "");
         }
 
@@ -418,7 +571,7 @@ private fun renderConfigCenterAdminPage(
           if (elements.filterActive.value.trim()) search.set("active", elements.filterActive.value.trim());
           if (elements.filterKeyword.value.trim()) search.set("keyword", elements.filterKeyword.value.trim());
 
-          setStatus(elements.tableStatus, "Loading...");
+          setStatus(elements.tableStatus, "加载中...");
           try {
             const response = await fetch(`${'$'}{basePath}/api/values?${'$'}{search.toString()}`);
             if (!response.ok) throw new Error(await response.text());
@@ -430,13 +583,14 @@ private fun renderConfigCenterAdminPage(
               row.innerHTML = `
                 <td class="code">${'$'}{escapeHtml(item.namespace || "")}</td>
                 <td class="code">${'$'}{escapeHtml(item.active || "")}</td>
-                <td class="code">${'$'}{escapeHtml(item.key || "")}</td>
+                <td class="code">${'$'}{escapeHtml(item.key || "")}<div class="meta">${'$'}{item.required ? '<span class="tag">required</span>' : ''}</div></td>
                 <td class="code">${'$'}{escapeHtml(item.value || "")}</td>
+                <td class="code">${'$'}{escapeHtml(item.comment || "")}</td>
               `;
               row.addEventListener("click", () => populateEditor(item));
               elements.valuesBody.appendChild(row);
             }
-            setStatus(elements.tableStatus, `Loaded ${'$'}{items.length} item(s).`);
+            setStatus(elements.tableStatus, `已加载 ${'$'}{items.length} 项配置。`);
           } catch (error) {
             setStatus(elements.tableStatus, error.message || String(error), true);
           }
@@ -449,9 +603,12 @@ private fun renderConfigCenterAdminPage(
             active: elements.editActive.value.trim() || "dev",
             key: elements.editKey.value.trim(),
             value: elements.editValue.value,
-            description: elements.editDescription.value.trim() || null
+            comment: elements.editComment.value.trim() || null,
+            defaultValue: elements.editDefaultValue.value.trim() || null,
+            valueType: elements.editValueType.value.trim() || "kotlin.String",
+            required: elements.editRequired.checked
           };
-          setStatus(elements.editorStatus, "Saving...");
+          setStatus(elements.editorStatus, "保存中...");
           try {
             const response = await fetch(`${'$'}{basePath}/api/value`, {
               method: "PUT",
@@ -461,7 +618,7 @@ private fun renderConfigCenterAdminPage(
             if (!response.ok) throw new Error(await response.text());
             const item = await response.json();
             populateEditor(item);
-            setStatus(elements.editorStatus, "Saved.");
+            setStatus(elements.editorStatus, "已保存。");
             await refreshValues();
           } catch (error) {
             setStatus(elements.editorStatus, error.message || String(error), true);
@@ -474,10 +631,10 @@ private fun renderConfigCenterAdminPage(
           const active = elements.editActive.value.trim() || "dev";
           const key = elements.editKey.value.trim();
           if (!namespace || !key) {
-            setStatus(elements.editorStatus, "Namespace and key are required for delete.", true);
+            setStatus(elements.editorStatus, "删除前请先填写命名空间和 key。", true);
             return;
           }
-          setStatus(elements.editorStatus, "Deleting...");
+          setStatus(elements.editorStatus, "删除中...");
           try {
             const search = new URLSearchParams({ namespace, active, key });
             const response = await fetch(`${'$'}{basePath}/api/value?${'$'}{search.toString()}`, {
@@ -486,10 +643,10 @@ private fun renderConfigCenterAdminPage(
             if (!response.ok) throw new Error(await response.text());
             const payload = await response.json();
             if (!payload.deleted) {
-              throw new Error("No matching config value was deleted.");
+              throw new Error("没有匹配到可删除的配置项。");
             }
             resetEditor();
-            setStatus(elements.editorStatus, "Deleted.");
+            setStatus(elements.editorStatus, "已删除。");
             await refreshValues();
           } catch (error) {
             setStatus(elements.editorStatus, error.message || String(error), true);

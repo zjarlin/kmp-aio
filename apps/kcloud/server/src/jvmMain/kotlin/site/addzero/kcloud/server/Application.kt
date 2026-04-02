@@ -9,7 +9,9 @@ import io.ktor.server.netty.*
 import io.ktor.server.routing.*
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.kcloud.config.KCloudConfigKeys
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
+import site.addzero.starter.installConfigCenterAdminIfEnabled
 import site.addzero.starter.installEffectiveConfig
 import site.addzero.starter.normalizeConfigCenterActive
 import site.addzero.starter.koin.installKoin
@@ -57,6 +59,7 @@ fun Application.module(
 ) {
     val config = embeddedApplicationConfigOverride ?: environment.config
     installEffectiveConfig(config)
+    installConfigCenterAdminIfEnabled(config)
     val desktopKoinConfigurer = embeddedDesktopKoinConfigurer
     val runtimeModules = buildList {
         add(
@@ -94,12 +97,14 @@ fun serverApplication(
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: effectiveConfig.propertyOrNull("ktor.deployment.host")?.getString()
+        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_HOST)?.getString()
+        ?: KCloudConfigKeys.serverHost.defaultValue
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: effectiveConfig.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
+        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_PORT)?.getString()?.toIntOrNull()
+        ?: KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull()
         ?: 8080
 
     val environment = applicationEnvironment {
@@ -141,12 +146,14 @@ fun ktorApplication(
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val requestedHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: effectiveConfig.propertyOrNull("ktor.deployment.host")?.getString()
+        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_HOST)?.getString()
+        ?: KCloudConfigKeys.serverHost.defaultValue
         ?: "0.0.0.0"
 
     val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: effectiveConfig.propertyOrNull("ktor.deployment.port")?.getString()?.toIntOrNull()
+        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_PORT)?.getString()?.toIntOrNull()
+        ?: KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull()
         ?: DEFAULT_EMBEDDED_DESKTOP_PORT
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
     embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
@@ -263,7 +270,8 @@ private fun resolveConfigCenterActive(
     config: ApplicationConfig,
 ): String {
     return normalizeConfigCenterActive(
-        config.propertyOrNull("ktor.environment")?.getString()
+        config.propertyOrNull(KCloudConfigKeys.KTOR_ENVIRONMENT)?.getString()
+            ?: KCloudConfigKeys.ktorEnvironment.defaultValue
             ?: System.getenv("KTOR_ENV")
             ?: DEFAULT_EMBEDDED_ENV,
     )
@@ -372,10 +380,13 @@ private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
 
 private fun embeddedDesktopRuntimeOverrides(paths: EmbeddedDesktopPaths) =
     ConfigFactory.empty()
-        .withValue("datasources.sqlite.enabled", ConfigValueFactory.fromAnyRef(true))
-        .withValue("datasources.sqlite.url", ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
-        .withValue("datasources.sqlite.driver", ConfigValueFactory.fromAnyRef("org.sqlite.JDBC"))
-        .withValue("datasources.postgres.enabled", ConfigValueFactory.fromAnyRef(false))
+        .withValue(KCloudConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(true))
+        .withValue(KCloudConfigKeys.SQLITE_URL, ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
+        .withValue(
+            KCloudConfigKeys.SQLITE_DRIVER,
+            ConfigValueFactory.fromAnyRef(KCloudConfigKeys.sqliteDriver.defaultValue ?: "org.sqlite.JDBC"),
+        )
+        .withValue(KCloudConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(false))
         .withValue("kcloud.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
         .withValue("kcloud.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))
         .withValue("kcloud.runtime.cacheDir", ConfigValueFactory.fromAnyRef(paths.cacheDir.absolutePath))

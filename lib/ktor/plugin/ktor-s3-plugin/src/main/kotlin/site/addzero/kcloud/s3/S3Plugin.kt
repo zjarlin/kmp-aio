@@ -8,6 +8,8 @@ import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import org.koin.ktor.ext.getKoin
+import site.addzero.configcenter.boolean
+import site.addzero.configcenter.string
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
@@ -24,13 +26,12 @@ class S3KoinModule {
     fun provideS3Config(
         config: ApplicationConfig,
     ): S3Config {
-        val section = runCatching { config.config("s3") }.getOrNull()
         return S3Config(
-            endpoint = section?.propertyOrNull("endpoint")?.getString() ?: "https://s3.cstcloud.cn",
-            region = section?.propertyOrNull("region")?.getString() ?: "us-east-1",
-            bucket = section?.propertyOrNull("bucket")?.getString() ?: "af466fd92b0146ccbfb40cf590c912a0",
-            accessKey = section?.propertyOrNull("accessKey")?.getString() ?: "",
-            secretKey = section?.propertyOrNull("secretKey")?.getString() ?: "",
+            endpoint = config.string(S3ConfigKeys.endpoint) ?: "https://s3.cstcloud.cn",
+            region = config.string(S3ConfigKeys.region) ?: "us-east-1",
+            bucket = config.string(S3ConfigKeys.bucket) ?: "af466fd92b0146ccbfb40cf590c912a0",
+            accessKey = config.string(S3ConfigKeys.accessKey).orEmpty(),
+            secretKey = config.string(S3ConfigKeys.secretKey).orEmpty(),
         )
     }
 
@@ -55,8 +56,7 @@ class S3Starter : AppStarter {
     override val order: Int get() = 60
 
     override fun Application.enable(): Boolean {
-        val s3Config = runCatching { effectiveConfig().config("s3") }.getOrNull()
-        return s3Config?.propertyOrNull("enabled")?.getString()?.toBoolean() != false
+        return effectiveConfig().boolean(S3ConfigKeys.enabled) != false
     }
 
     override fun Application.onInstall() {

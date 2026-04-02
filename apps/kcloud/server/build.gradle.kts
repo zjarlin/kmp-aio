@@ -7,6 +7,8 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             // 第一阶段只保留 MCU 控制台链路，系统插件稍后再恢复。
+            implementation(project(":apps:kcloud:shared"))
+            implementation(project(":lib:config-center"))
             implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-koin"))
             implementation(project(":lib:ktor:starter:starter-serialization"))

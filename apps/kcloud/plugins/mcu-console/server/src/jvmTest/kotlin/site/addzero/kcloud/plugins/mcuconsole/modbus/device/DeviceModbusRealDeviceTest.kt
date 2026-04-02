@@ -6,6 +6,8 @@ import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigRegistry
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
 import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceApiGeneratedRtuConfigProvider
 import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceApiGeneratedRtuGateway
+import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceWriteApiGeneratedRtuConfigProvider
+import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceWriteApiGeneratedRtuGateway
 import site.addzero.kcloud.plugins.mcuconsole.driver.serial.JSerialCommSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig
 import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
@@ -40,13 +42,24 @@ class DeviceModbusRealDeviceTest {
             gateway = gateway,
             protocolCodec = McuVmProtocolCodec(json),
         )
+        val configRegistry = ModbusRtuConfigRegistry(
+            listOf(
+                DeviceApiGeneratedRtuConfigProvider(),
+                DeviceWriteApiGeneratedRtuConfigProvider(),
+            ),
+        )
         val modbusGateway = DeviceApiGeneratedRtuGateway(
-            configRegistry = ModbusRtuConfigRegistry(listOf(DeviceApiGeneratedRtuConfigProvider())),
+            configRegistry = configRegistry,
+            executor = site.addzero.device.driver.modbus.rtu.createDefaultModbusRtuExecutor(),
+        )
+        val modbusWriteGateway = DeviceWriteApiGeneratedRtuGateway(
+            configRegistry = configRegistry,
             executor = site.addzero.device.driver.modbus.rtu.createDefaultModbusRtuExecutor(),
         )
         val service = DeviceModbusService(
             sessionService = sessionService,
-            gateway = modbusGateway,
+            readGateway = modbusGateway,
+            writeGateway = modbusWriteGateway,
         )
 
         val lights = service.get24PowerLights(

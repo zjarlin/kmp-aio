@@ -12,6 +12,7 @@ Lightweight embedded config center for KMP projects.
 - Automatic schema creation when the config-center table is missing
 - Simple embedded H5 admin page for listing, editing, and deleting config values
 - Lightweight CRUD service without Jimmer or Flyway
+- Koin startup announcement in Chinese so operators can quickly find the embedded H5 admin page
 
 ## Minimal Usage
 
@@ -33,6 +34,16 @@ fun Application.module() {
         ),
     )
 }
+```
+
+## Koin Startup Hint
+
+If the host app uses the repository's Koin compiler configuration, this library now registers a startup singleton that prints a Chinese startup hint for the embedded H5 admin page.
+
+Example output:
+
+```text
+配置中心管理页已启用。可通过 H5 页面管理配置命名空间、环境、键值和说明等配置元数据。访问入口：http://127.0.0.1:8080/config-center
 ```
 
 ## Config Keys

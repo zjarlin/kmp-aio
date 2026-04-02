@@ -8,6 +8,12 @@ import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
+import site.addzero.configcenter.ConfigCenterKeyDefinition
+import site.addzero.configcenter.boolean
+import site.addzero.configcenter.intOrNull
+import site.addzero.configcenter.listOrNull
+import site.addzero.configcenter.stringOrNull
+import site.addzero.kcloud.jimmer.di.DatasourceConfigKeys
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 
@@ -91,7 +97,7 @@ class FlywayStarter : AppStarter {
     override val order: Int = 200
 
     override fun Application.enable(): Boolean {
-        return effectiveConfig().propertyOrNull("flyway.enabled")?.getString()?.toBoolean() != false
+        return effectiveConfig().boolean(FlywayConfigKeys.enabled) != false
     }
 
     override fun Application.onInstall() {
@@ -108,11 +114,11 @@ class FlywayStarter : AppStarter {
         }
 
         // 全局默认配置
-        val globalDefaults = FlywayDefaults.fromConfig(config, "flyway")
+        val globalDefaults = FlywayDefaults.fromGlobalConfig(config)
 
         // 按数据源配置顺序执行迁移
         for (ds in datasources) {
-            val dsSpecificDefaults = FlywayDefaults.fromConfig(config, "datasources.${ds.name}.flyway")
+            val dsSpecificDefaults = FlywayDefaults.fromDatasourceConfig(config, ds.name)
             val mergedDefaults = dsSpecificDefaults.mergeWith(globalDefaults)
 
             executeMigration(ds, mergedDefaults)
@@ -121,7 +127,7 @@ class FlywayStarter : AppStarter {
 
     private fun Application.executeMigration(
         ds: DatasourceConfig,
-        defaults: FlywayDefaults
+        defaults: FlywayDefaults,
     ) {
         log.info("Executing Flyway migration for datasource: ${ds.name}")
 
@@ -175,7 +181,7 @@ private data class DatasourceConfig(
     val user: String,
     val password: String,
     val driver: String,
-    val flywayEnabled: Boolean
+    val flywayEnabled: Boolean,
 )
 
 /**
@@ -203,7 +209,7 @@ private data class FlywayDefaults(
     val sqlMigrationSuffixes: List<String>? = null,
     val table: String? = null,
     val target: String? = null,
-    val validateOnMigrate: Boolean? = null
+    val validateOnMigrate: Boolean? = null,
 ) {
     /**
      * 用另一个配置覆盖当前配置（非空字段优先）
@@ -231,40 +237,121 @@ private data class FlywayDefaults(
             sqlMigrationSuffixes = this.sqlMigrationSuffixes ?: other.sqlMigrationSuffixes,
             table = this.table ?: other.table,
             target = this.target ?: other.target,
-            validateOnMigrate = this.validateOnMigrate ?: other.validateOnMigrate
+            validateOnMigrate = this.validateOnMigrate ?: other.validateOnMigrate,
         )
     }
 
     companion object {
-        fun fromConfig(config: ApplicationConfig, path: String): FlywayDefaults {
-            val cfg = try { config.config(path) } catch (e: Exception) { return FlywayDefaults() }
+        fun fromGlobalConfig(config: ApplicationConfig): FlywayDefaults {
+            return fromDefinitions(
+                config = config,
+                locations = FlywayConfigKeys.locations,
+                baselineOnMigrate = FlywayConfigKeys.baselineOnMigrate,
+                baselineVersion = FlywayConfigKeys.baselineVersion,
+                cleanDisabled = FlywayConfigKeys.cleanDisabled,
+                connectRetries = FlywayConfigKeys.connectRetries,
+                group = FlywayConfigKeys.group,
+                installedBy = FlywayConfigKeys.installedBy,
+                mixed = FlywayConfigKeys.mixed,
+                outOfOrder = FlywayConfigKeys.outOfOrder,
+                placeholderReplacement = FlywayConfigKeys.placeholderReplacement,
+                placeholderPrefix = FlywayConfigKeys.placeholderPrefix,
+                placeholderSuffix = FlywayConfigKeys.placeholderSuffix,
+                placeholderPath = "flyway.placeholders",
+                schemas = FlywayConfigKeys.schemas,
+                skipDefaultCallbacks = FlywayConfigKeys.skipDefaultCallbacks,
+                skipDefaultResolvers = FlywayConfigKeys.skipDefaultResolvers,
+                sqlMigrationPrefix = FlywayConfigKeys.sqlMigrationPrefix,
+                sqlMigrationSeparator = FlywayConfigKeys.sqlMigrationSeparator,
+                sqlMigrationSuffixes = FlywayConfigKeys.sqlMigrationSuffixes,
+                table = FlywayConfigKeys.table,
+                target = FlywayConfigKeys.target,
+                validateOnMigrate = FlywayConfigKeys.validateOnMigrate,
+            )
+        }
 
-            return FlywayDefaults(
-                locations = cfg.propertyOrNull("locations")?.getList(),
-                baselineOnMigrate = cfg.propertyOrNull("baseline-on-migrate")?.getString()?.toBoolean(),
-                baselineVersion = cfg.propertyOrNull("baseline-version")?.getString(),
-                cleanDisabled = cfg.propertyOrNull("clean-disabled")?.getString()?.toBoolean(),
-                connectRetries = cfg.propertyOrNull("connect-retries")?.getString()?.toIntOrNull(),
-                group = cfg.propertyOrNull("group")?.getString()?.toBoolean(),
-                installedBy = cfg.propertyOrNull("installed-by")?.getString(),
-                mixed = cfg.propertyOrNull("mixed")?.getString()?.toBoolean(),
-                outOfOrder = cfg.propertyOrNull("out-of-order")?.getString()?.toBoolean(),
-                placeholderReplacement = cfg.propertyOrNull("placeholder-replacement")?.getString()?.toBoolean(),
-                placeholderPrefix = cfg.propertyOrNull("placeholder-prefix")?.getString(),
-                placeholderSuffix = cfg.propertyOrNull("placeholder-suffix")?.getString(),
-                placeholders = cfg.configMap("placeholders"),
-                schemas = cfg.propertyOrNull("schemas")?.getList(),
-                skipDefaultCallbacks = cfg.propertyOrNull("skip-default-callbacks")?.getString()?.toBoolean(),
-                skipDefaultResolvers = cfg.propertyOrNull("skip-default-resolvers")?.getString()?.toBoolean(),
-                sqlMigrationPrefix = cfg.propertyOrNull("sql-migration-prefix")?.getString(),
-                sqlMigrationSeparator = cfg.propertyOrNull("sql-migration-separator")?.getString(),
-                sqlMigrationSuffixes = cfg.propertyOrNull("sql-migration-suffixes")?.getList(),
-                table = cfg.propertyOrNull("table")?.getString(),
-                target = cfg.propertyOrNull("target")?.getString(),
-                validateOnMigrate = cfg.propertyOrNull("validate-on-migrate")?.getString()?.toBoolean()
+        fun fromDatasourceConfig(
+            config: ApplicationConfig,
+            datasourceName: String,
+        ): FlywayDefaults {
+            return fromDefinitions(
+                config = config,
+                locations = DatasourceFlywayConfigKeys.locationsDefinition(datasourceName),
+                baselineOnMigrate = DatasourceFlywayConfigKeys.baselineOnMigrateDefinition(datasourceName),
+                baselineVersion = DatasourceFlywayConfigKeys.baselineVersionDefinition(datasourceName),
+                cleanDisabled = DatasourceFlywayConfigKeys.cleanDisabledDefinition(datasourceName),
+                connectRetries = DatasourceFlywayConfigKeys.connectRetriesDefinition(datasourceName),
+                group = DatasourceFlywayConfigKeys.groupDefinition(datasourceName),
+                installedBy = DatasourceFlywayConfigKeys.installedByDefinition(datasourceName),
+                mixed = DatasourceFlywayConfigKeys.mixedDefinition(datasourceName),
+                outOfOrder = DatasourceFlywayConfigKeys.outOfOrderDefinition(datasourceName),
+                placeholderReplacement = DatasourceFlywayConfigKeys.placeholderReplacementDefinition(datasourceName),
+                placeholderPrefix = DatasourceFlywayConfigKeys.placeholderPrefixDefinition(datasourceName),
+                placeholderSuffix = DatasourceFlywayConfigKeys.placeholderSuffixDefinition(datasourceName),
+                placeholderPath = "datasources.$datasourceName.flyway.placeholders",
+                schemas = DatasourceFlywayConfigKeys.schemasDefinition(datasourceName),
+                skipDefaultCallbacks = DatasourceFlywayConfigKeys.skipDefaultCallbacksDefinition(datasourceName),
+                skipDefaultResolvers = DatasourceFlywayConfigKeys.skipDefaultResolversDefinition(datasourceName),
+                sqlMigrationPrefix = DatasourceFlywayConfigKeys.sqlMigrationPrefixDefinition(datasourceName),
+                sqlMigrationSeparator = DatasourceFlywayConfigKeys.sqlMigrationSeparatorDefinition(datasourceName),
+                sqlMigrationSuffixes = DatasourceFlywayConfigKeys.sqlMigrationSuffixesDefinition(datasourceName),
+                table = DatasourceFlywayConfigKeys.tableDefinition(datasourceName),
+                target = DatasourceFlywayConfigKeys.targetDefinition(datasourceName),
+                validateOnMigrate = DatasourceFlywayConfigKeys.validateOnMigrateDefinition(datasourceName),
             )
         }
     }
+}
+
+private fun fromDefinitions(
+    config: ApplicationConfig,
+    locations: ConfigCenterKeyDefinition,
+    baselineOnMigrate: ConfigCenterKeyDefinition,
+    baselineVersion: ConfigCenterKeyDefinition,
+    cleanDisabled: ConfigCenterKeyDefinition,
+    connectRetries: ConfigCenterKeyDefinition,
+    group: ConfigCenterKeyDefinition,
+    installedBy: ConfigCenterKeyDefinition,
+    mixed: ConfigCenterKeyDefinition,
+    outOfOrder: ConfigCenterKeyDefinition,
+    placeholderReplacement: ConfigCenterKeyDefinition,
+    placeholderPrefix: ConfigCenterKeyDefinition,
+    placeholderSuffix: ConfigCenterKeyDefinition,
+    placeholderPath: String,
+    schemas: ConfigCenterKeyDefinition,
+    skipDefaultCallbacks: ConfigCenterKeyDefinition,
+    skipDefaultResolvers: ConfigCenterKeyDefinition,
+    sqlMigrationPrefix: ConfigCenterKeyDefinition,
+    sqlMigrationSeparator: ConfigCenterKeyDefinition,
+    sqlMigrationSuffixes: ConfigCenterKeyDefinition,
+    table: ConfigCenterKeyDefinition,
+    target: ConfigCenterKeyDefinition,
+    validateOnMigrate: ConfigCenterKeyDefinition,
+): FlywayDefaults {
+    return FlywayDefaults(
+        locations = config.listOrNull(locations),
+        baselineOnMigrate = config.boolean(baselineOnMigrate),
+        baselineVersion = config.stringOrNull(baselineVersion) ?: baselineVersion.defaultValue,
+        cleanDisabled = config.boolean(cleanDisabled),
+        connectRetries = config.intOrNull(connectRetries) ?: connectRetries.defaultValue?.toIntOrNull(),
+        group = config.boolean(group),
+        installedBy = config.stringOrNull(installedBy) ?: installedBy.defaultValue,
+        mixed = config.boolean(mixed),
+        outOfOrder = config.boolean(outOfOrder),
+        placeholderReplacement = config.boolean(placeholderReplacement),
+        placeholderPrefix = config.stringOrNull(placeholderPrefix) ?: placeholderPrefix.defaultValue,
+        placeholderSuffix = config.stringOrNull(placeholderSuffix) ?: placeholderSuffix.defaultValue,
+        placeholders = config.configMap(placeholderPath),
+        schemas = config.listOrNull(schemas),
+        skipDefaultCallbacks = config.boolean(skipDefaultCallbacks),
+        skipDefaultResolvers = config.boolean(skipDefaultResolvers),
+        sqlMigrationPrefix = config.stringOrNull(sqlMigrationPrefix) ?: sqlMigrationPrefix.defaultValue,
+        sqlMigrationSeparator = config.stringOrNull(sqlMigrationSeparator) ?: sqlMigrationSeparator.defaultValue,
+        sqlMigrationSuffixes = config.listOrNull(sqlMigrationSuffixes),
+        table = config.stringOrNull(table) ?: table.defaultValue,
+        target = config.stringOrNull(target) ?: target.defaultValue,
+        validateOnMigrate = config.boolean(validateOnMigrate),
+    )
 }
 
 /**
@@ -279,18 +366,16 @@ private fun ApplicationConfig.getDatasources(): List<DatasourceConfig> {
 
         for (name in keys) {
             try {
-                val ds = dsConfig.config(name)
                 datasources.add(
                     DatasourceConfig(
                         name = name,
-                        enabled = ds.propertyOrNull("enabled")?.getString()?.toBoolean() == true,
-                        url = ds.propertyOrNull("url")?.getString() ?: "",
-                        user = ds.propertyOrNull("user")?.getString() ?: "",
-                        password = ds.propertyOrNull("password")?.getString() ?: "",
-                        driver = ds.propertyOrNull("driver")?.getString() ?: "",
-                        flywayEnabled = ds.config("flyway")
-                            .propertyOrNull("enabled")?.getString()?.toBoolean() != false
-                    )
+                        enabled = boolean(DatasourceConfigKeys.enabledDefinition(name)) == true,
+                        url = stringOrNull(DatasourceConfigKeys.urlDefinition(name)).orEmpty(),
+                        user = stringOrNull(DatasourceConfigKeys.userDefinition(name)).orEmpty(),
+                        password = stringOrNull(DatasourceConfigKeys.passwordDefinition(name)).orEmpty(),
+                        driver = stringOrNull(DatasourceConfigKeys.driverDefinition(name)).orEmpty(),
+                        flywayEnabled = boolean(DatasourceFlywayConfigKeys.enabledDefinition(name)) != false,
+                    ),
                 )
             } catch (e: Exception) {
                 // 跳过无效配置

@@ -26,7 +26,9 @@ ksp {
 kotlin {
     sourceSets {
         jvmMain.dependencies {
+            implementation(project(":apps:kcloud:shared"))
             implementation(project(":apps:kcloud:plugins:vibepocket"))
+            implementation(project(":lib:config-center"))
             implementation(project(":lib:api:api-music-spi"))
             implementation(project(":lib:api:api-suno"))
             implementation(project(":lib:api:api-netease"))
