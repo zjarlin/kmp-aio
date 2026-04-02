@@ -6,14 +6,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +25,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
@@ -62,46 +60,245 @@ fun McuControlScreen() {
 
     McuWorkbenchFrame(
         state = state,
+        actions = {
+            McuControlTopActions(
+                state = state,
+                runAction = runAction,
+            )
+        },
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(
-                modifier = Modifier.width(340.dp).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                McuDeviceListPanel(
-                    state = state,
-                    onRefresh = {
-                        runAction {
-                            state.refreshPorts()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                )
-                McuControlSideRail(
-                    state = state,
-                    runAction = runAction,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 286.dp, max = 360.dp),
-                )
-            }
+            McuDeviceTreeWorkspace(
+                state = state,
+                onRefresh = {
+                    runAction {
+                        state.refreshPorts()
+                    }
+                },
+                modifier = Modifier.width(360.dp).fillMaxHeight(),
+            )
             Column(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                McuConnectionConfigPanel(
+                McuDeviceOverviewPanel(
                     state = state,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 184.dp, max = 228.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 188.dp, max = 228.dp),
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    McuConnectionConfigPanel(
+                        state = state,
+                        modifier = Modifier.weight(0.52f).fillMaxHeight(),
+                    )
+                    McuControlSideRail(
+                        state = state,
+                        runAction = runAction,
+                        modifier = Modifier.weight(0.48f).fillMaxHeight(),
+                    )
+                }
                 McuTerminalPanel(
                     state = state,
                     followLatestLogs = viewModel.followLatestLogs,
                     onFollowLatestChange = { viewModel.followLatestLogs = it },
                     runAction = runAction,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier.fillMaxWidth().weight(1.18f),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun RowScope.McuControlTopActions(
+    state: McuConsoleWorkbenchState,
+    runAction: (suspend () -> Unit) -> Unit,
+) {
+    McuPrimaryButton(
+        onClick = {
+            runAction {
+                state.refreshPorts()
+            }
+        },
+        enabled = !state.isSubmitting,
+    ) {
+        Text("扫描设备")
+    }
+    McuPrimaryButton(
+        onClick = {
+            runAction {
+                if (state.session.isOpen) {
+                    state.closeSession()
+                } else {
+                    state.openReplSession()
+                }
+            }
+        },
+        enabled = if (state.session.isOpen) {
+            !state.isSubmitting
+        } else {
+            !state.isSubmitting &&
+                state.selectedPortPath != null &&
+                state.baudRateText.toIntOrNull() != null
+        },
+    ) {
+        Text(if (state.session.isOpen) "关闭会话" else "打开会话")
+    }
+    McuSecondaryButton(
+        onClick = {
+            runAction {
+                state.resetSession()
+            }
+        },
+        enabled = state.canControlSerialLines,
+    ) {
+        Text("设备复位")
+    }
+    McuSecondaryButton(
+        onClick = {
+            runAction {
+                state.ensureRuntime(forceReflash = false)
+            }
+        },
+        enabled = state.canEnsureRuntime,
+    ) {
+        Text("确保运行时")
+    }
+    Spacer(modifier = Modifier.weight(1f))
+    Text(
+        text = state.selectedPortPath ?: "未选择设备",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontFamily = FontFamily.Monospace,
+    )
+}
+
+@Composable
+private fun McuDeviceTreeWorkspace(
+    state: McuConsoleWorkbenchState,
+    onRefresh: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    McuPanel(
+        title = "设备树",
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            McuPortBrowser(
+                state = state,
+                onRefresh = onRefresh,
+            )
+        }
+    }
+}
+
+@Composable
+private fun McuDeviceOverviewPanel(
+    state: McuConsoleWorkbenchState,
+    modifier: Modifier = Modifier,
+) {
+    val selectedPort = state.selectedPort
+    McuPanel(
+        title = "设备概览",
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                McuStatusChip(
+                    label = "会话",
+                    value = if (state.session.isOpen) "在线" else "离线",
+                    positive = state.session.isOpen,
+                    modifier = Modifier.weight(1f),
+                )
+                McuStatusChip(
+                    label = "运行时",
+                    value = state.runtimeStatus.state.name,
+                    positive = state.runtimeStatus.state == McuRuntimeEnsureState.READY,
+                    modifier = Modifier.weight(1f),
+                )
+                McuStatusChip(
+                    label = "烧录",
+                    value = state.flashStatus.state.name,
+                    positive = state.flashStatus.state == McuFlashRunState.IDLE,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            McuSummaryTable(
+                rows = listOf(
+                    "当前设备" to (state.selectedPortPath ?: "未选择"),
+                    "设备键" to (selectedPort?.deviceKey ?: "未提供"),
+                    "设备备注" to (selectedPort?.remark ?: "未填写"),
+                    "已保存连接" to state.transportProfiles.size.toString(),
+                    "运行时包" to state.runtimeBundles.size.toString(),
+                ),
+            )
+            selectedPort?.let { port ->
+                McuInfoNotice(
+                    text = listOf(
+                        port.portName,
+                        port.descriptiveName,
+                        port.description,
+                        port.manufacturer,
+                    )
+                        .filter { it.isNotBlank() }
+                        .joinToString(" / ")
+                        .ifBlank { "当前设备没有更多可展示的硬件描述。" },
+                )
+            } ?: Text(
+                text = "先在左侧选择一个串口设备，再继续查看连接和终端详情。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun McuStatusChip(
+    label: String,
+    value: String,
+    positive: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val accent = if (positive) {
+        Color(0xFF1F8F52)
+    } else {
+        MaterialTheme.colorScheme.secondary
+    }
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = accent.copy(alpha = 0.14f),
+        contentColor = accent,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = accent,
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+            )
         }
     }
 }
@@ -173,7 +370,7 @@ private fun McuControlSideRail(
                     "波特率" to state.baudRateText.ifBlank { "115200" },
                 ),
             )
-            OutlinedButton(
+            McuSecondaryButton(
                 onClick = {
                     runAction {
                         state.refreshPorts()
@@ -184,7 +381,7 @@ private fun McuControlSideRail(
             ) {
                 Text("扫描串口")
             }
-            FilledTonalButton(
+            McuPrimaryButton(
                 onClick = {
                     runAction {
                         if (state.session.isOpen) {
@@ -205,7 +402,7 @@ private fun McuControlSideRail(
             ) {
                 Text(if (state.session.isOpen) "关闭终端" else "打开终端")
             }
-            OutlinedButton(
+            McuSecondaryButton(
                 onClick = {
                     runAction {
                         state.resetSession()
@@ -216,7 +413,7 @@ private fun McuControlSideRail(
             ) {
                 Text("设备复位")
             }
-            OutlinedButton(
+            McuSecondaryButton(
                 onClick = {
                     runAction {
                         state.updateDtr(!state.session.dtrEnabled)
@@ -227,7 +424,7 @@ private fun McuControlSideRail(
             ) {
                 Text(if (state.session.dtrEnabled) "关闭 DTR" else "开启 DTR")
             }
-            OutlinedButton(
+            McuSecondaryButton(
                 onClick = {
                     runAction {
                         state.updateRts(!state.session.rtsEnabled)
@@ -238,7 +435,7 @@ private fun McuControlSideRail(
             ) {
                 Text(if (state.session.rtsEnabled) "关闭 RTS" else "开启 RTS")
             }
-            OutlinedButton(
+            McuSecondaryButton(
                 onClick = {
                     runAction {
                         state.ensureRuntime(forceReflash = false)
@@ -307,7 +504,7 @@ private fun McuDeviceListPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FilledTonalButton(
+                McuPrimaryButton(
                     onClick = onRefresh,
                     enabled = !state.isSubmitting,
                 ) {
@@ -438,21 +635,21 @@ private fun McuTerminalPanel(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                TextButton(
+                McuSecondaryButton(
                     onClick = {
                         onFollowLatestChange(!followLatestLogs)
                     },
                 ) {
                     Text(if (followLatestLogs) "停止跟随" else "跟随最新")
                 }
-                TextButton(
+                McuSecondaryButton(
                     onClick = {
                         state.clearVisibleEvents()
                     },
                 ) {
                     Text("清空")
                 }
-                FilledTonalButton(
+                McuPrimaryButton(
                     onClick = {
                         runAction {
                             if (state.session.isOpen) {
@@ -516,7 +713,7 @@ private fun McuTerminalPanel(
                         fontFamily = FontFamily.Monospace,
                     ),
                 )
-                FilledTonalButton(
+                McuPrimaryButton(
                     onClick = {
                         runAction {
                             if (state.serialCommandText.isEmpty()) {

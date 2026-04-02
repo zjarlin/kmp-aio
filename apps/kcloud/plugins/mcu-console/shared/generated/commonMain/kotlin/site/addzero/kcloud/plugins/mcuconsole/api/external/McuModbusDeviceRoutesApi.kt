@@ -1,14 +1,14 @@
 package site.addzero.kcloud.plugins.mcuconsole.api.external
 
 import de.jensklingenberg.ktorfit.http.*
-import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
 
 /**
  * 原始文件: site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceRoutes.kt
  * 基础路径: 
  */
-interface McuModbusDeviceApi {
+interface McuModbusDeviceRoutesApi {
 
 /**
  * getMcuModbusPowerLights

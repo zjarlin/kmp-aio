@@ -5,8 +5,8 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.Table
 import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import java.time.Instant
 
 /**

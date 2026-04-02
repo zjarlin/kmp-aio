@@ -12,6 +12,9 @@ kotlin {
     sourceSets {
         commonMain {
             kotlin.srcDir(generatedApiSourceDir)
+            dependencies {
+                implementation(project(":lib:ksp:metadata:modbus:modbus-runtime"))
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -12,9 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
@@ -116,6 +118,78 @@ internal fun rememberMcuActionRunner(): (suspend () -> Unit) -> Unit {
 }
 
 @Composable
+internal fun McuPrimaryButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 40.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, Color(0xFF0B0F16)),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color(0xFF0B0F16),
+            contentColor = Color.White,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            disabledElevation = 0.dp,
+            hoveredElevation = 0.dp,
+            focusedElevation = 0.dp,
+        ),
+        content = content,
+    )
+}
+
+@Composable
+internal fun McuSecondaryButton(
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 40.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (darkThemeEnabled) {
+                Color.White.copy(alpha = 0.08f)
+            } else {
+                Color(0x140F172A)
+            },
+        ),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (darkThemeEnabled) {
+                Color.White.copy(alpha = 0.05f)
+            } else {
+                Color(0x0A0F172A)
+            },
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
+            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+        ),
+        elevation = ButtonDefaults.buttonElevation(
+            defaultElevation = 0.dp,
+            pressedElevation = 0.dp,
+            disabledElevation = 0.dp,
+            hoveredElevation = 0.dp,
+            focusedElevation = 0.dp,
+        ),
+        content = content,
+    )
+}
+
+@Composable
 internal fun McuWorkbenchFrame(
     state: McuConsoleWorkbenchState,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -160,11 +234,24 @@ internal fun McuPanel(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        tonalElevation = 2.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f),
+        tonalElevation = 0.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (darkThemeEnabled) {
+                Color.White.copy(alpha = 0.08f)
+            } else {
+                Color(0x140F172A)
+            },
+        ),
+        color = if (darkThemeEnabled) {
+            Color(0xFF141A25).copy(alpha = 0.96f)
+        } else {
+            Color.White.copy(alpha = 0.96f)
+        },
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
@@ -186,11 +273,24 @@ internal fun McuPanel(
 internal fun McuToolbar(
     actions: @Composable RowScope.() -> Unit,
 ) {
+    val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
-        tonalElevation = 1.dp,
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f),
+        tonalElevation = 0.dp,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (darkThemeEnabled) {
+                Color.White.copy(alpha = 0.08f)
+            } else {
+                Color(0x140F172A)
+            },
+        ),
+        color = if (darkThemeEnabled) {
+            Color(0xFF111722).copy(alpha = 0.94f)
+        } else {
+            Color.White.copy(alpha = 0.92f)
+        },
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Row(
@@ -349,19 +449,46 @@ private fun McuPortRow(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val background = if (selected) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f)
+        if (darkThemeEnabled) {
+            Color.White.copy(alpha = 0.96f)
+        } else {
+            Color(0xFF0B0F16)
+        }
     } else {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+        if (darkThemeEnabled) {
+            Color.White.copy(alpha = 0.04f)
+        } else {
+            Color(0x0A0F172A)
+        }
     }
     val contentColor = if (selected) {
-        MaterialTheme.colorScheme.onPrimaryContainer
+        if (darkThemeEnabled) {
+            Color(0xFF0B0F16)
+        } else {
+            Color.White
+        }
     } else {
         MaterialTheme.colorScheme.onSurface
     }
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (selected) {
+                if (darkThemeEnabled) {
+                    Color.White.copy(alpha = 0.92f)
+                } else {
+                    Color(0xFF0B0F16)
+                }
+            } else if (darkThemeEnabled) {
+                Color.White.copy(alpha = 0.06f)
+            } else {
+                Color(0x140F172A)
+            },
+        ),
         color = background,
         contentColor = contentColor,
     ) {
@@ -369,6 +496,26 @@ private fun McuPortRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                McuNodeBadge(
+                    label = "串口设备",
+                    selected = selected,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                port.kind
+                    .takeIf { it.isNotBlank() }
+                    ?.let { kind ->
+                        Text(
+                            text = kind,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = contentColor.copy(alpha = 0.72f),
+                        )
+                    }
+            }
             port.remark
                 .takeIf { it.isNotBlank() }
                 ?.let { remark ->
@@ -476,6 +623,43 @@ private fun McuFlashProfileRow(
 }
 
 @Composable
+private fun McuNodeBadge(
+    label: String,
+    selected: Boolean,
+) {
+    val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = if (selected) {
+            if (darkThemeEnabled) {
+                Color(0x140F172A)
+            } else {
+                Color.White.copy(alpha = 0.12f)
+            }
+        } else if (darkThemeEnabled) {
+            Color.White.copy(alpha = 0.06f)
+        } else {
+            Color(0x0A0F172A)
+        },
+        contentColor = if (selected) {
+            if (darkThemeEnabled) {
+                Color(0xFF0B0F16)
+            } else {
+                Color.White
+            }
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        },
+    ) {
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+@Composable
 private fun McuRuntimeBundleRow(
     bundle: McuRuntimeBundleSummary,
     selected: Boolean,
@@ -574,7 +758,7 @@ internal fun McuTransportProfileList(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            FilledTonalButton(
+            McuPrimaryButton(
                 onClick = onSave,
                 enabled = !state.isSubmitting,
             ) {
@@ -655,13 +839,13 @@ internal fun McuTransportProfileList(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            FilledTonalButton(
+                            McuPrimaryButton(
                                 onClick = { onApply(profile.profileKey) },
                                 enabled = !state.isSubmitting,
                             ) {
                                 Text("载入")
                             }
-                            androidx.compose.material3.OutlinedButton(
+                            McuSecondaryButton(
                                 onClick = { onDelete(profile.profileKey) },
                                 enabled = !state.isSubmitting,
                             ) {

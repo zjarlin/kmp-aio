@@ -34,10 +34,10 @@ object ApiProvider {
         get() = requireKtorfit().create<McuFlashApi>()
 
     /**
-     * McuModbusDeviceApi 服务实例
+     * McuModbusDeviceRoutesApi 服务实例
      */
-    val mcuModbusDeviceApi: McuModbusDeviceApi
-        get() = requireKtorfit().create<McuModbusDeviceApi>()
+    val mcuModbusDeviceRoutesApi: McuModbusDeviceRoutesApi
+        get() = requireKtorfit().create<McuModbusDeviceRoutesApi>()
 
     /**
      * McuRuntimeApi 服务实例

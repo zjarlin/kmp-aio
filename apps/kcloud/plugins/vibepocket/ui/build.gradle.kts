@@ -1,5 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-filekit")
@@ -52,16 +53,5 @@ kotlin {
             implementation(project(":lib:ksp:route:route-core"))
             implementation(project(":lib:tool-kmp:network-starter"))
         }
-    }
-}
-
-tasks.matching { task ->
-    task.name == "kspKotlinJvm"
-}.configureEach {
-    doFirst {
-        delete(layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbolLookups"))
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbols").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/sourceToOutputs").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/classpath").get().asFile.mkdirs()
     }
 }

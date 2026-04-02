@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.service.modbus
+package site.addzero.kcloud.plugins.mcuconsole.modbus.atomic
 
 import org.koin.core.annotation.Single
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig

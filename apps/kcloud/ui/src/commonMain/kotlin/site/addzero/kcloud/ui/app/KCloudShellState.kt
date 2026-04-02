@@ -33,6 +33,9 @@ class KCloudShellState(
     var trayPanelVisible by mutableStateOf(false)
         private set
 
+    var sidebarVisible by mutableStateOf(true)
+        private set
+
     fun selectRoute(
         routePath: String,
     ) {
@@ -76,6 +79,18 @@ class KCloudShellState(
 
     override fun toggleTrayPanel() {
         trayPanelVisible = !trayPanelVisible
+    }
+
+    fun showSidebar() {
+        sidebarVisible = true
+    }
+
+    fun hideSidebar() {
+        sidebarVisible = false
+    }
+
+    fun toggleSidebar() {
+        sidebarVisible = !sidebarVisible
     }
 
     fun popNavigation() {

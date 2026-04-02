@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.service.modbus
+package site.addzero.kcloud.plugins.mcuconsole.modbus.atomic
 
 import site.addzero.device.protocol.modbus.annotation.ModbusOperation
 import site.addzero.device.protocol.modbus.annotation.ModbusParam

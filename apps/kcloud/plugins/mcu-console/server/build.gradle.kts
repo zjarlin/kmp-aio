@@ -1,5 +1,8 @@
+import site.addzero.ksp.modbusrtu.gradle.ModbusRtuExtension
+
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-core")
+    id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-json")
     id("site.addzero.buildlogic.kmp.kmp-koin-core")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
@@ -72,10 +75,15 @@ ksp {
     arg("mcpPackageName", "site.addzero.kcloud.plugins.mcuconsole.generated.mcp")
 }
 
-modbusRtu {
+configure<ModbusRtuExtension> {
     transports.set(listOf("rtu"))
     codegenModes.set(listOf("server"))
-    contractPackages.set(listOf("site.addzero.kcloud.plugins.mcuconsole.service.modbus"))
+    contractPackages.set(
+        listOf(
+            "site.addzero.kcloud.plugins.mcuconsole.modbus.device",
+            "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic",
+        ),
+    )
 }
 
 kotlin {
@@ -100,15 +108,4 @@ tasks.register("generateRouteApis") {
     group = "code generation"
     description = "Generate Ktorfit APIs from Spring-style route sources."
     dependsOn("kspKotlinJvm")
-}
-
-tasks.matching { task ->
-    task.name == "kspKotlinJvm"
-}.configureEach {
-    doFirst {
-        delete(layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbolLookups"))
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbols").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/sourceToOutputs").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/classpath").get().asFile.mkdirs()
-    }
 }

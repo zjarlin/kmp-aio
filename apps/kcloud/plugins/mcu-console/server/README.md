@@ -16,7 +16,12 @@ plugins {
 
 modbusRtu {
     codegenModes.set(listOf("server"))
-    contractPackages.set(listOf("site.addzero.kcloud.plugins.mcuconsole.service.modbus"))
+    contractPackages.set(
+        listOf(
+            "site.addzero.kcloud.plugins.mcuconsole.modbus.device",
+            "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic",
+        ),
+    )
 }
 ```
 

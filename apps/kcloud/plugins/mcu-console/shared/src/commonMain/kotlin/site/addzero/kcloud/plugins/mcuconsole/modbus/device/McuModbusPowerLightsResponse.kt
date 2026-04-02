@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.modbus.model
+package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 
 import kotlinx.serialization.Serializable
 

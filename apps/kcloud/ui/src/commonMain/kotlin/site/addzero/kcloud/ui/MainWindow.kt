@@ -15,7 +15,8 @@ import site.addzero.appsidebar.adminWorkbenchActions
 import site.addzero.appsidebar.adminWorkbenchConfig
 import site.addzero.appsidebar.adminWorkbenchPageConfig
 import site.addzero.appsidebar.adminWorkbenchSlots
-import site.addzero.kcloud.ui.app.menu.KCloudUserMenu
+import site.addzero.kcloud.ui.app.KCloudShellState
+import site.addzero.kcloud.ui.app.menu.KCloudShellActions
 import site.addzero.kcloud.ui.feature.ShellSettingsService
 import site.addzero.kcloud.ui.feature.ShellThemeMode
 import site.addzero.kcloud.ui.theme.KCloudTheme
@@ -26,11 +27,13 @@ import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 @Composable
 fun MainWindow(
     shellSettingsService: ShellSettingsService = koinInject(),
+    shellState: KCloudShellState = koinInject(),
     sidebarRenderer: SidebarRender = koinInject(),
     headerRenderer: HeaderRender = koinInject(),
     contentRenderer: ContentRender = koinInject(),
 ) {
     val themeMode by shellSettingsService.themeMode.collectAsState()
+    val sidebarVisible = shellState.sidebarVisible
     val darkTheme = when (themeMode) {
         ShellThemeMode.LIGHT -> false
         ShellThemeMode.DARK -> true
@@ -64,6 +67,9 @@ fun MainWindow(
             config = adminWorkbenchConfig(
                 brandLabel = "KCloud",
                 welcomeLabel = "",
+                defaultSidebarRatio = if (sidebarVisible) 0.22f else 0f,
+                minSidebarWidth = if (sidebarVisible) 248.dp else 0.dp,
+                maxSidebarWidth = if (sidebarVisible) 360.dp else 0.dp,
                 contentPadding = PaddingValues(0.dp),
                 detailPadding = PaddingValues(0.dp),
                 isDarkTheme = darkTheme,
@@ -72,14 +78,14 @@ fun MainWindow(
                 onThemeToggle = toggleTheme,
             ),
             slots = adminWorkbenchSlots(
-                showContentHeader = false,
+                showContentHeader = true,
                 titleContent = {
                     headerRenderer.Render(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 },
                 userContent = {
-                    KCloudUserMenu()
+                    KCloudShellActions()
                 },
             ),
         )

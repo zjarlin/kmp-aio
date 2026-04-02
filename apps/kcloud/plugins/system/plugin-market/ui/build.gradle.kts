@@ -1,5 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
@@ -47,16 +48,5 @@ kotlin {
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
         }
-    }
-}
-
-tasks.matching { task ->
-    task.name == "kspKotlinJvm"
-}.configureEach {
-    doFirst {
-        delete(layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbolLookups"))
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbols").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/sourceToOutputs").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/classpath").get().asFile.mkdirs()
     }
 }

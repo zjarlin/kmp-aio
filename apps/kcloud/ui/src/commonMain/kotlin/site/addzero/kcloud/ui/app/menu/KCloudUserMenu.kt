@@ -1,20 +1,41 @@
 package site.addzero.kcloud.ui.app.menu
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.appsidebar.WorkbenchUserButton
 import site.addzero.kcloud.ui.app.KCloudRouteCatalog
 import site.addzero.kcloud.ui.app.KCloudSidebarNode
 import site.addzero.kcloud.ui.app.KCloudShellState
+
+@Composable
+fun RowScope.KCloudShellActions(
+    shellState: KCloudShellState = koinInject(),
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        OutlinedButton(
+            onClick = shellState::toggleSidebar,
+        ) {
+            Text(if (shellState.sidebarVisible) "隐藏菜单" else "显示菜单")
+        }
+        KCloudUserMenu(shellState = shellState)
+    }
+}
 
 @Composable
 fun KCloudUserMenu(

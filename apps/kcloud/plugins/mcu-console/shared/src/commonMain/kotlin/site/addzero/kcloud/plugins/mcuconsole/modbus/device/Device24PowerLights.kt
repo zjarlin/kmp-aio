@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.service.modbus
+package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 
 import site.addzero.device.protocol.modbus.annotation.ModbusField
 import site.addzero.device.protocol.modbus.model.ModbusCodec

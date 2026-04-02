@@ -1,10 +1,7 @@
-package site.addzero.kcloud.plugins.mcuconsole.routes
+package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 
 import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.GetMapping
-import site.addzero.kcloud.plugins.mcuconsole.modbus.model.McuModbusDeviceInfoResponse
-import site.addzero.kcloud.plugins.mcuconsole.modbus.model.McuModbusPowerLightsResponse
-import site.addzero.kcloud.plugins.mcuconsole.service.modbus.DeviceModbusService
 
 /**
  * MCU Modbus 读设备状态路由，同时作为客户端 API 生成源。
@@ -21,7 +18,7 @@ suspend fun getMcuModbusPowerLights(): McuModbusPowerLightsResponse {
 
 /**
  * 前端按钮: Modbus 页“读取设备信息”。
- * 作用: 通过当前已打开的串口会话读取板卡固件版本号、CPU、晶振、flash 容量和 MAC 地址。
+ * 作用: 通过当前已打开的串口会话读取板卡运行信息。
  */
 @GetMapping("/api/mcu/modbus/device-info")
 suspend fun getMcuModbusDeviceInfo(): McuModbusDeviceInfoResponse {

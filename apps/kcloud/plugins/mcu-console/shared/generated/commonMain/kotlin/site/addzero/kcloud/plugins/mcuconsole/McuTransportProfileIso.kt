@@ -3,8 +3,8 @@ package site.addzero.kcloud.plugins.mcuconsole
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Contextual
 import kotlinx.serialization.Serializable
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 
 /**
  * MCU 连接档案。

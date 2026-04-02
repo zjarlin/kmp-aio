@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.service.modbus
+package site.addzero.kcloud.plugins.mcuconsole.modbus.atomic
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json

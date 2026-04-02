@@ -1,5 +1,3 @@
-import site.addzero.gradle.GitDependencysExtension
-
 pluginManagement {
     repositories {
         mavenLocal()
@@ -19,7 +17,11 @@ pluginManagement {
         }
     }
     val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
-    if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+    val useLocalAddzeroLibJvmPluginBuild = providers.gradleProperty("useLocalAddzeroLibJvmPluginBuild")
+        .map(String::toBoolean)
+        .orElse(false)
+        .get()
+    if (useLocalAddzeroLibJvmPluginBuild && localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
         includeBuild(localAddzeroLibJvmDir) {
             name = "addzero-lib-jvm-plugin-build"
         }
@@ -50,17 +52,65 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 plugins {
     id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
     id("site.addzero.gradle.plugin.repo-buddy") version "+"
-    id("site.addzero.gradle.plugin.addzero-git-dependency") version "+"
-    id("site.addzero.gradle.plugin.modules-buddy") version "+"
+    id("site.addzero.gradle.plugin.addzero-git-dependency") version "+" apply false
 }
 
-if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
-    extensions.configure<GitDependencysExtension>("implementationRemoteGit") {
-        enableZlibs.set(false)
+val ignoredModuleScanDirNames = setOf("build", "generated", "out", "node_modules")
+
+fun File.shouldSkipModuleScan(rootDir: File): Boolean {
+    if (!isDirectory) return true
+    if (this != rootDir && name.startsWith(".")) return true
+    if (name in ignoredModuleScanDirNames) return true
+    if (this == rootDir) return false
+
+    val relativePath = relativeTo(rootDir).invariantSeparatorsPath
+    if (relativePath == "checkouts" || relativePath.startsWith("checkouts/")) return true
+    if (relativePath.split('/').any { segment -> segment.startsWith(".") }) return true
+    return false
+}
+
+fun File.toGradleProjectPath(rootDir: File): String =
+    relativeTo(rootDir)
+        .invariantSeparatorsPath
+        .split('/')
+        .filter(String::isNotBlank)
+        .joinToString(separator = ":", prefix = ":")
+
+fun Settings.includeLocalModules() {
+    val root = rootDir
+    val includedModules = root
+        .walkTopDown()
+        .onEnter { dir -> !dir.shouldSkipModuleScan(root) }
+        .filter { dir -> dir != root && dir.isDirectory && dir.resolve("build.gradle.kts").isFile }
+        .map { dir -> dir.toGradleProjectPath(root) }
+        .toList()
+
+    includedModules.forEach { moduleName ->
+        include(moduleName)
+        println("📦find module: $moduleName")
     }
+
+    fun sample(list: List<String>): String =
+        if (list.isEmpty()) "-" else list.take(5).joinToString(", ") + if (list.size > 5) ", ..." else ""
+
+    println(
+        """
+================ Modules Summary ================
+📦 Modules included: ${includedModules.size} (${sample(includedModules)})
+================================================
+""".trimIndent(),
+    )
 }
 
-if (localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+includeLocalModules()
+
+val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile
+
+if (!hasLocalAddzeroLibJvm) {
+    apply(plugin = "site.addzero.gradle.plugin.addzero-git-dependency")
+}
+
+if (hasLocalAddzeroLibJvm) {
     fun remapExternalProject(projectPath: String, relativeDir: String) {
         include(projectPath)
         project(projectPath).projectDir = localAddzeroLibJvmDir.resolve(relativeDir)

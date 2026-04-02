@@ -36,18 +36,17 @@ enum class McuTransportKind {
     SERIAL,
 }
 
-@Serializable
-enum class McuModbusSerialParity {
-    NONE,
-    EVEN,
-    ODD,
-}
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity",
+    replaceWith = ReplaceWith("McuModbusSerialParity", "site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity"),
+)
+typealias McuModbusSerialParity = site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 
-@Serializable
-enum class McuModbusFrameFormat {
-    RTU,
-    ASCII,
-}
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat",
+    replaceWith = ReplaceWith("McuModbusFrameFormat", "site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat"),
+)
+typealias McuModbusFrameFormat = site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat
 
 @Serializable
 data class McuSerialTransportConfig(
@@ -55,93 +54,77 @@ data class McuSerialTransportConfig(
     val baudRate: Int = 115200,
 )
 
-@Serializable
-data class McuModbusCommandConfig(
-    val portPath: String? = null,
-    val baudRate: Int = 115200,
-    val unitId: Int = 1,
-    val dataBits: Int = 8,
-    val stopBits: Int = 1,
-    val parity: McuModbusSerialParity = McuModbusSerialParity.NONE,
-    val timeoutMs: Long = 1000,
-    val retries: Int = 2,
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig",
+    replaceWith = ReplaceWith("McuModbusCommandConfig", "site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig"),
 )
+typealias McuModbusCommandConfig = site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig
 
-enum class McuModbusAtomicAction {
-    GPIO_WRITE,
-    GPIO_MODE,
-    PWM_DUTY,
-    SERVO_ANGLE,
-}
-
-@Serializable
-enum class McuModbusGpioMode {
-    INPUT,
-    OUTPUT,
-    INPUT_PULL_UP,
-}
-
-@Serializable
-data class McuModbusCommandResponse(
-    val accepted: Boolean = false,
-    val summary: String = "",
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction",
+    replaceWith = ReplaceWith("McuModbusAtomicAction", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction"),
 )
+typealias McuModbusAtomicAction = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 
-@Serializable
-data class McuModbusGpioWriteRequest(
-    val portPath: String? = null,
-    val unitId: Int? = null,
-    val baudRate: Int? = null,
-    val dataBits: Int? = null,
-    val stopBits: Int? = null,
-    val parity: McuModbusSerialParity? = null,
-    val timeoutMs: Long? = null,
-    val retries: Int? = null,
-    val pin: Int = 0,
-    val high: Boolean = false,
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode",
+    replaceWith = ReplaceWith("McuModbusGpioMode", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode"),
 )
+typealias McuModbusGpioMode = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 
-@Serializable
-data class McuModbusGpioModeRequest(
-    val portPath: String? = null,
-    val unitId: Int? = null,
-    val baudRate: Int? = null,
-    val dataBits: Int? = null,
-    val stopBits: Int? = null,
-    val parity: McuModbusSerialParity? = null,
-    val timeoutMs: Long? = null,
-    val retries: Int? = null,
-    val pin: Int = 0,
-    val mode: Int = 0,
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse",
+    replaceWith = ReplaceWith("McuModbusCommandResponse", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse"),
 )
+typealias McuModbusCommandResponse = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse
 
-@Serializable
-data class McuModbusPwmDutyRequest(
-    val portPath: String? = null,
-    val unitId: Int? = null,
-    val baudRate: Int? = null,
-    val dataBits: Int? = null,
-    val stopBits: Int? = null,
-    val parity: McuModbusSerialParity? = null,
-    val timeoutMs: Long? = null,
-    val retries: Int? = null,
-    val pin: Int = 0,
-    val dutyU16: Int = 0,
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest",
+    replaceWith = ReplaceWith("McuModbusGpioWriteRequest", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest"),
 )
+typealias McuModbusGpioWriteRequest = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
 
-@Serializable
-data class McuModbusServoAngleRequest(
-    val portPath: String? = null,
-    val unitId: Int? = null,
-    val baudRate: Int? = null,
-    val dataBits: Int? = null,
-    val stopBits: Int? = null,
-    val parity: McuModbusSerialParity? = null,
-    val timeoutMs: Long? = null,
-    val retries: Int? = null,
-    val pin: Int = 0,
-    val angle: Int = 0,
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest",
+    replaceWith = ReplaceWith("McuModbusGpioModeRequest", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest"),
 )
+typealias McuModbusGpioModeRequest = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest",
+    replaceWith = ReplaceWith("McuModbusPwmDutyRequest", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest"),
+)
+typealias McuModbusPwmDutyRequest = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest",
+    replaceWith = ReplaceWith("McuModbusServoAngleRequest", "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest"),
+)
+typealias McuModbusServoAngleRequest = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLights",
+    replaceWith = ReplaceWith("Device24PowerLights", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLights"),
+)
+typealias Device24PowerLights = site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLights
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo",
+    replaceWith = ReplaceWith("DeviceRuntimeInfo", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo"),
+)
+typealias DeviceRuntimeInfo = site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse",
+    replaceWith = ReplaceWith("McuModbusPowerLightsResponse", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse"),
+)
+typealias McuModbusPowerLightsResponse = site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse
+
+@Deprecated(
+    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse",
+    replaceWith = ReplaceWith("McuModbusDeviceInfoResponse", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse"),
+)
+typealias McuModbusDeviceInfoResponse = site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
 
 data class McuSessionOpenRequest(
     val profileKey: String? = null,

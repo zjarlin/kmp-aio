@@ -1,5 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-core")
+    id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-koin-core")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
@@ -25,16 +26,5 @@ kotlin {
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
-    }
-}
-
-tasks.matching { task ->
-    task.name == "kspKotlinJvm"
-}.configureEach {
-    doFirst {
-        delete(layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbolLookups"))
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/symbols").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/sourceToOutputs").get().asFile.mkdirs()
-        layout.buildDirectory.dir("kspCaches/jvm/jvmMain/classpath").get().asFile.mkdirs()
     }
 }

@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.service.modbus
+package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -8,10 +8,11 @@ import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
 import site.addzero.device.driver.modbus.rtu.ModbusRtuExecutor
 import site.addzero.device.protocol.modbus.ModbusCodecSupport
 import site.addzero.device.protocol.modbus.model.ModbusCodec
-import site.addzero.device.protocol.modbus.model.ModbusCommandResult
 import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceApiGeneratedRtuGateway
 import site.addzero.kcloud.plugins.mcuconsole.FakeSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm.McuVmProtocolCodec
 import site.addzero.kcloud.plugins.mcuconsole.service.McuConsoleSessionService
 import kotlin.test.Test
@@ -54,29 +55,59 @@ class DeviceModbusServiceTest {
         val response = service.getDeviceInfo()
 
         assertEquals(100, executor.lastReadInputAddress)
-        assertEquals(29, executor.lastReadInputQuantity)
+        assertEquals(20, executor.lastReadInputQuantity)
         assertEquals("COM11", executor.lastReadConfig?.portPath)
-        assertEquals("2026.04.01", response.firmwareVersion)
-        assertEquals("ESP32-S3", response.cpuModel)
-        assertEquals(40_000_000, response.xtalFrequencyHz)
-        assertEquals(16_777_216L, response.flashSizeBytes)
-        assertEquals("AA:BB:CC:DD:EE:FF", response.macAddress)
+        assertEquals(3, response.protocolVersion)
+        assertEquals(24, response.channelCount)
+        assertEquals(1, response.unitId)
+        assertEquals(9600, response.baudRateCode)
+        assertEquals("OKM-X自控", response.deviceName)
+        assertTrue(response.success)
+    }
+
+    @Test
+    fun `explicit modbus config does not require opened session`() = runBlocking {
+        val executor = RecordingDeviceModbusExecutor(
+            inputRegisters = buildDeviceInfoRegisters(),
+        )
+        val service = newService(executor, openSession = false)
+
+        val response = service.getDeviceInfo(
+            config = McuModbusCommandConfig(
+                portPath = "/dev/cu.usbserial-2130",
+                baudRate = 9600,
+                unitId = 1,
+                dataBits = 8,
+                stopBits = 1,
+                parity = McuModbusSerialParity.NONE,
+                timeoutMs = 2_000,
+                retries = 1,
+            ),
+        )
+
+        assertEquals("/dev/cu.usbserial-2130", executor.lastReadConfig?.portPath)
+        assertEquals(9600, executor.lastReadConfig?.baudRate)
+        assertEquals(1, executor.lastReadConfig?.unitId)
+        assertEquals("OKM-X自控", response.deviceName)
         assertTrue(response.success)
     }
 
     private fun newService(
         executor: RecordingDeviceModbusExecutor,
+        openSession: Boolean = true,
     ): DeviceModbusService {
         val sessionService = McuConsoleSessionService(
             gateway = FakeSerialPortGateway(),
             protocolCodec = McuVmProtocolCodec(json),
         )
-        sessionService.openSession(
-            McuSessionOpenRequest(
-                portPath = "COM11",
-                baudRate = 38400,
-            ),
-        )
+        if (openSession) {
+            sessionService.openSession(
+                McuSessionOpenRequest(
+                    portPath = "COM11",
+                    baudRate = 38400,
+                ),
+            )
+        }
         val registry = ModbusRtuConfigRegistry(
             listOf(
                 object : ModbusRtuConfigProvider {
@@ -105,17 +136,17 @@ class DeviceModbusServiceTest {
     }
 
     private fun buildDeviceInfoRegisters(): List<Int> {
-        val registers = MutableList(29) { 0 }
-        ModbusCodecSupport.encodeString(ModbusCodec.STRING_UTF8, "2026.04.01", 8)
+        val registers = MutableList(20) { 0 }
+        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "3")
             .forEachIndexed { index, value -> registers[index] = value }
-        ModbusCodecSupport.encodeString(ModbusCodec.STRING_UTF8, "ESP32-S3", 8)
-            .forEachIndexed { index, value -> registers[8 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U32_BE, "40000000")
-            .forEachIndexed { index, value -> registers[16 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U32_BE, "16777216")
-            .forEachIndexed { index, value -> registers[18 + index] = value }
-        ModbusCodecSupport.encodeString(ModbusCodec.STRING_ASCII, "AA:BB:CC:DD:EE:FF", 9)
-            .forEachIndexed { index, value -> registers[20 + index] = value }
+        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "24")
+            .forEachIndexed { index, value -> registers[1 + index] = value }
+        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "1")
+            .forEachIndexed { index, value -> registers[2 + index] = value }
+        ModbusCodecSupport.encodeValue(ModbusCodec.U16, "9600")
+            .forEachIndexed { index, value -> registers[3 + index] = value }
+        ModbusCodecSupport.encodeString(ModbusCodec.STRING_UTF8, "OKM-X自控", 16)
+            .forEachIndexed { index, value -> registers[4 + index] = value }
         return registers
     }
 }
