@@ -48,6 +48,7 @@ class KboxHeaderRender(
         val scenes = remember(routeCatalog, dynamicRoutes) {
             routeCatalog.scenes
         }
+
         val selectedRoute = rememberSelectedRoute(routeCatalog, shellState, dynamicRoutes.size)
         val breadcrumb = remember(routeCatalog, shellState.selectedRoutePath, dynamicRoutes) {
             routeCatalog.breadcrumbNamesFor(shellState.selectedRoutePath)
@@ -128,15 +129,10 @@ private fun SceneSwitcher(
                         },
                     )
                     /* 文本 */
-                    Text(
-                        text = scene.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = if (selected) {
-                            colorScheme.onPrimaryContainer
-                        } else {
-                            colorScheme.onSurface
-                        },
+
+
                     )
+                    /** dasjdoaijdoiaj *//
                     Text(
                         text = scene.routeCount.toString(),
                         style = MaterialTheme.typography.labelMedium,
@@ -174,46 +170,50 @@ private fun ScreenHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+
             Column(
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                if (breadcrumb.isNotEmpty()) {
-                    Text(
-                        text = breadcrumb.joinToString(" / "),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-            }
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (breadcrumb.isNotEmpty()) {
+                                Text(
+                                    text = breadcrumb.joinToString(" / "),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+
+
             Card(
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    Text(
-                        text = currentScene.ifBlank { "Workspace" },
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = "$pageCount pages available",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.58f),
+                            ),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp),
+                            ) {
+                                Text(
+                                    text = currentScene.ifBlank { "Workspace" },
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = "$pageCount pages available",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+
         }
     }
 }

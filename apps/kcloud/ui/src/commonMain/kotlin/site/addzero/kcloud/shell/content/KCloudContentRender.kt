@@ -5,7 +5,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -19,6 +22,7 @@ import site.addzero.generated.RouteTable
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.shell.navigation.KCloudRouteEntry
+import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.workbenchshell.spi.content.ContentRender
 
 @Single(
@@ -34,22 +38,33 @@ class KCloudContentRender(
     override fun Render(
         modifier: Modifier,
     ) {
+        val uiMetrics = currentKCloudUiMetrics()
         Column(
             modifier = modifier,
         ) {
-            NavDisplay(
-                backStack = shellState.backStack,
+            Surface(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                onBack = shellState::popNavigation,
-            ) { routePath ->
-                NavEntry(routePath) { key ->
-                    ScreenContentEntry(
-                        routePath = key,
-                        routeCatalog = routeCatalog,
-                    )
+                    .padding(uiMetrics.contentPanelPadding),
+                shape = RoundedCornerShape(uiMetrics.contentPanelRadius),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.72f)),
+                tonalElevation = 0.dp,
+            ) {
+                NavDisplay(
+                    backStack = shellState.backStack,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(uiMetrics.contentInnerPadding),
+                    onBack = shellState::popNavigation,
+                ) { routePath ->
+                    NavEntry(routePath) { key ->
+                        ScreenContentEntry(
+                            routePath = key,
+                            routeCatalog = routeCatalog,
+                        )
+                    }
                 }
             }
         }

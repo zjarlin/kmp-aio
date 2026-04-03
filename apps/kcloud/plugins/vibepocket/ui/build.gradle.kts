@@ -36,8 +36,6 @@ ksp {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", project(":lib:ksp:route:route-processor"))
-    add("kspJvm", project(":lib:ksp:route:route-processor"))
 }
 
 kotlin {

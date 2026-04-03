@@ -10,6 +10,7 @@ import io.ktor.server.routing.*
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.configcenter.ConfigCenter
+import site.addzero.configcenter.CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY
 import site.addzero.kcloud.config.KCloudConfigKeys
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.starter.installConfigCenterAdminIfEnabled
@@ -90,6 +91,7 @@ fun serverApplication(
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     embeddedApplicationConfigOverride = null
     embeddedDesktopKoinConfigurer = null
+    System.clearProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
     val config = loadServerConfig(configPath)
     val effectiveConfig = config.withConfigCenterOverrides(
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
@@ -158,6 +160,10 @@ fun ktorApplication(
         ?: DEFAULT_EMBEDDED_DESKTOP_PORT
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
     embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
+    System.setProperty(
+        CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY,
+        embeddedDesktopBaseUrl.removeSuffix("/"),
+    )
 
     val environment = applicationEnvironment {
         this.config = effectiveConfig
@@ -228,6 +234,7 @@ fun startEmbeddedDesktopServer(
             System.clearProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
             System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
             System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
+            System.clearProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
         }
     }
 }

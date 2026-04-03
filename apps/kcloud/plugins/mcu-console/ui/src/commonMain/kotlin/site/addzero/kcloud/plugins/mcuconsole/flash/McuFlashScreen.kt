@@ -20,7 +20,7 @@ import site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino.*
     order = 10.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "设备",
+            name = "物联网上位机",
             icon = "Build",
             order = 0,
         ),
@@ -42,6 +42,7 @@ fun McuFlashScreen() {
                         runAction {
                             workbenchState.refreshPorts()
                             workbenchState.refreshFlashProfiles()
+                            workbenchState.refreshFlashProbes()
                             workbenchState.refreshRuntimeBundles()
                             workbenchState.refreshRuntimeStatus()
                         }
@@ -49,28 +50,10 @@ fun McuFlashScreen() {
                 )
                 McuCupertinoSecondaryButton(
                     text = "刷内置运行时",
-                    enabled = workbenchState.session.isOpen && workbenchState.selectedRuntimeBundle != null,
+                    enabled = workbenchState.canEnsureRuntime,
                     onClick = {
                         runAction {
                             workbenchState.ensureRuntime(forceReflash = true)
-                        }
-                    },
-                )
-                McuCupertinoSecondaryButton(
-                    text = "在线下载",
-                    enabled = workbenchState.canDownloadFirmwareOnline,
-                    onClick = {
-                        runAction {
-                            workbenchState.downloadFirmwareOnline(flashAfterDownload = false)
-                        }
-                    },
-                )
-                McuCupertinoSecondaryButton(
-                    text = "下载并烧录",
-                    enabled = workbenchState.canDownloadFirmwareOnline,
-                    onClick = {
-                        runAction {
-                            workbenchState.downloadFirmwareOnline(flashAfterDownload = true)
                         }
                     },
                 )
@@ -80,6 +63,15 @@ fun McuFlashScreen() {
                     onClick = {
                         runAction {
                             workbenchState.startFlash()
+                        }
+                    },
+                )
+                McuCupertinoSecondaryButton(
+                    text = "复位设备",
+                    enabled = workbenchState.canResetDevice,
+                    onClick = {
+                        runAction {
+                            workbenchState.resetSession()
                         }
                     },
                 )
@@ -113,7 +105,13 @@ fun McuFlashScreen() {
                         profiles = workbenchState.flashProfiles,
                         selectedProfileId = workbenchState.selectedFlashProfileId,
                         onSelect = { profileId -> workbenchState.selectFlashProfile(profileId) },
-                        modifier = Modifier.fillMaxWidth().height(180.dp),
+                        modifier = Modifier.fillMaxWidth().height(140.dp),
+                    )
+                    McuFlashProbeBrowser(
+                        probes = workbenchState.flashProbes,
+                        selectedSerialNumber = workbenchState.selectedFlashProbeSerialNumber,
+                        onSelect = { serialNumber -> workbenchState.selectFlashProbe(serialNumber) },
+                        modifier = Modifier.fillMaxWidth().height(140.dp),
                     )
                     McuCupertinoField(
                         value = workbenchState.firmwarePathText,
@@ -122,32 +120,6 @@ fun McuFlashScreen() {
                         supportingText = workbenchState.runtimeStatus.artifactPath
                             ?: workbenchState.selectedFlashProfile?.artifactHint,
                     )
-                    if (workbenchState.selectedFlashProfile?.supportsOnlineDownload == true || workbenchState.firmwareDownloadUrlText.isNotBlank()) {
-                        McuCupertinoField(
-                            value = workbenchState.firmwareDownloadUrlText,
-                            onValueChange = { workbenchState.firmwareDownloadUrlText = it },
-                            label = "downloadUrl",
-                            supportingText = workbenchState.selectedFlashProfile?.downloadUrlHint
-                                ?: workbenchState.selectedFlashProfile?.defaultDownloadUrl,
-                            singleLine = false,
-                            maxLines = 4,
-                        )
-                    }
-                    McuCupertinoField(
-                        value = workbenchState.baudRateText,
-                        onValueChange = { workbenchState.baudRateText = it },
-                        label = "baudRate",
-                    )
-                    if (workbenchState.selectedFlashProfile?.supportsCommandOverride == true) {
-                        McuCupertinoField(
-                            value = workbenchState.flashCommandTemplateText,
-                            onValueChange = { workbenchState.flashCommandTemplateText = it },
-                            label = "commandTemplate",
-                            supportingText = "{firmwarePath} {portPath} {baudRate} {firmwareName} {firmwareDir} {profileId} {runtimeKind} {mcuFamily}",
-                            singleLine = false,
-                            maxLines = 4,
-                        )
-                    }
                 }
 
                 McuPanel(
@@ -159,12 +131,14 @@ fun McuFlashScreen() {
                             "Bundle" to (workbenchState.runtimeStatus.bundleTitle ?: workbenchState.selectedRuntimeBundle?.title.orEmpty()),
                             "运行时" to workbenchState.runtimeStatus.state.name,
                             "FlashProfile" to (workbenchState.runtimeStatus.defaultFlashProfileId ?: workbenchState.selectedFlashProfile?.id.orEmpty()),
-                            "目标串口" to (workbenchState.selectedPortPath ?: workbenchState.session.portPath.orEmpty()),
+                            "ST-Link" to (workbenchState.selectedFlashProbe?.serialNumber ?: workbenchState.selectedFlashProbe?.productName.orEmpty()),
                             "烧录状态" to workbenchState.flashStatus.state.name,
                             "进度" to "${workbenchState.flashStatus.bytesSent} / ${workbenchState.flashStatus.totalBytes}",
+                            "百分比" to "${workbenchState.flashStatus.progressPercent.toInt()}%",
                             "固件" to (workbenchState.flashStatus.firmwarePath ?: workbenchState.runtimeStatus.artifactPath.orEmpty()),
-                            "下载源" to workbenchState.firmwareDownloadUrlText,
-                            "命令" to workbenchState.flashStatus.commandPreview.orEmpty(),
+                            "芯片" to (workbenchState.flashStatus.targetChipId?.let { chipId ->
+                                "0x${chipId.toString(16).uppercase()}"
+                            } ?: "-"),
                             "消息" to (workbenchState.flashStatus.lastMessage ?: workbenchState.runtimeStatus.lastMessage.orEmpty()),
                         ),
                     )

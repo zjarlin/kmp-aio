@@ -10,20 +10,17 @@ import site.addzero.kcloud.plugins.mcuconsole.McuFlashStrategyKind
 class McuFlashProfileCatalog {
     private val profiles = listOf(
         McuFlashProfileSummary(
-            id = "micropython-generic-command",
-            title = "MicroPython / ESP32 官方固件",
-            runtimeKind = McuFlashRuntimeKind.MICROPYTHON,
-            strategyKind = McuFlashStrategyKind.COMMAND_TEMPLATE,
-            mcuFamily = "esp32",
-            description = "按官方 ESP32 流程，用 esptool 擦除 Flash 并写入 MicroPython 固件镜像",
-            artifactLabel = "MicroPython 固件路径",
-            artifactHint = "/abs/path/ESP32_GENERIC-*.bin",
-            defaultBaudRate = 115200,
-            commandTemplate = "{esptoolCommand} --chip esp32 --port \"{portPath}\" erase_flash && {esptoolCommand} --chip esp32 --port \"{portPath}\" --baud {baudRate} write_flash -z 0x1000 \"{firmwarePath}\"",
-            supportsCommandOverride = true,
-            supportsOnlineDownload = true,
-            defaultDownloadUrl = "https://micropython.org/download/ESP32_GENERIC/",
-            downloadUrlHint = "留空则自动抓取 MicroPython ESP32 Generic 最新稳定版，或填写直链/页面地址",
+            id = "stm32-stlink-swd-f1-hd",
+            title = "STM32 / ST-Link SWD",
+            runtimeKind = McuFlashRuntimeKind.STM32,
+            strategyKind = McuFlashStrategyKind.ST_LINK_SWD,
+            mcuFamily = "stm32f1",
+            description = "直接通过 ST-Link + SWD 烧录与复位。当前已实测支持 chipId=0x414。",
+            artifactLabel = "STM32 固件路径",
+            artifactHint = "/abs/path/firmware.bin",
+            defaultStartAddress = 0x08000000,
+            connectUnderReset = true,
+            supportedChipIds = listOf(0x414),
         ),
     )
 

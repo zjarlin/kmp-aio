@@ -1,20 +1,20 @@
 package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -39,7 +39,28 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import site.addzero.component.search_bar.AddSearchBar
+import site.addzero.component.Button as ShadcnButton
+import site.addzero.component.ButtonSize as ShadcnButtonSize
+import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 import site.addzero.kcloud.plugins.mcuconsole.*
+
+/**
+ * Cupertino 场景下 LocalIndication 还是旧 Indication 实现，不能再走默认 clickable 重载。
+ */
+@Composable
+internal fun Modifier.mcuClickable(
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier {
+    val interactionSource = remember { MutableInteractionSource() }
+    val indication = LocalIndication.current
+    return clickable(
+        interactionSource = interactionSource,
+        indication = indication,
+        enabled = enabled,
+        onClick = onClick,
+    )
+}
 
 @Composable
 internal fun rememberMcuWorkbenchState(
@@ -116,78 +137,6 @@ internal fun rememberMcuActionRunner(): (suspend () -> Unit) -> Unit {
 }
 
 @Composable
-internal fun McuPrimaryButton(
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = 40.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, Color(0xFF0B0F16)),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFF0B0F16),
-            contentColor = Color.White,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            disabledElevation = 0.dp,
-            hoveredElevation = 0.dp,
-            focusedElevation = 0.dp,
-        ),
-        content = content,
-    )
-}
-
-@Composable
-internal fun McuSecondaryButton(
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    modifier: Modifier = Modifier,
-    content: @Composable RowScope.() -> Unit,
-) {
-    val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        modifier = modifier.heightIn(min = 40.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (darkThemeEnabled) {
-                Color.White.copy(alpha = 0.08f)
-            } else {
-                Color(0x140F172A)
-            },
-        ),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (darkThemeEnabled) {
-                Color.White.copy(alpha = 0.05f)
-            } else {
-                Color(0x0A0F172A)
-            },
-            contentColor = MaterialTheme.colorScheme.onSurface,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.42f),
-            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-        ),
-        elevation = ButtonDefaults.buttonElevation(
-            defaultElevation = 0.dp,
-            pressedElevation = 0.dp,
-            disabledElevation = 0.dp,
-            hoveredElevation = 0.dp,
-            focusedElevation = 0.dp,
-        ),
-        content = content,
-    )
-}
-
-@Composable
 internal fun McuWorkbenchFrame(
     state: McuConsoleWorkbenchState,
     actions: (@Composable RowScope.() -> Unit)? = null,
@@ -235,25 +184,25 @@ internal fun McuPanel(
     val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         tonalElevation = 0.dp,
         border = BorderStroke(
             width = 1.dp,
             color = if (darkThemeEnabled) {
                 Color.White.copy(alpha = 0.08f)
             } else {
-                Color(0x140F172A)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.78f)
             },
         ),
         color = if (darkThemeEnabled) {
             Color(0xFF141A25).copy(alpha = 0.96f)
         } else {
-            Color.White.copy(alpha = 0.96f)
+            Color.White.copy(alpha = 0.98f)
         },
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(14.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             content = {
                 Text(
@@ -274,20 +223,20 @@ internal fun McuToolbar(
     val darkThemeEnabled = MaterialTheme.colorScheme.background.luminance() < 0.5f
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         tonalElevation = 0.dp,
         border = BorderStroke(
             width = 1.dp,
             color = if (darkThemeEnabled) {
                 Color.White.copy(alpha = 0.08f)
             } else {
-                Color(0x140F172A)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.82f)
             },
         ),
         color = if (darkThemeEnabled) {
             Color(0xFF111722).copy(alpha = 0.94f)
         } else {
-            Color.White.copy(alpha = 0.92f)
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.98f)
         },
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
@@ -404,6 +353,48 @@ internal fun McuFlashProfileBrowser(
 }
 
 @Composable
+internal fun McuFlashProbeBrowser(
+    probes: List<McuFlashProbeSummary>,
+    selectedSerialNumber: String?,
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (probes.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxWidth().height(120.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = "未发现 ST-Link 探针",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        return
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(
+            items = probes,
+            key = { probe -> probe.serialNumber ?: "${probe.vendorId}:${probe.productId}" },
+        ) { probe ->
+            McuFlashProbeRow(
+                probe = probe,
+                selected = when {
+                    selectedSerialNumber != null -> probe.serialNumber == selectedSerialNumber
+                    probes.size == 1 -> true
+                    else -> false
+                },
+                onClick = { onSelect(probe.serialNumber) },
+            )
+        }
+    }
+}
+
+@Composable
 internal fun McuRuntimeBundleBrowser(
     bundles: List<McuRuntimeBundleSummary>,
     selectedBundleId: String?,
@@ -452,26 +443,26 @@ private fun McuPortRow(
         if (darkThemeEnabled) {
             Color.White.copy(alpha = 0.96f)
         } else {
-            Color(0xFF0B0F16)
+            MaterialTheme.colorScheme.primaryContainer
         }
     } else {
         if (darkThemeEnabled) {
             Color.White.copy(alpha = 0.04f)
         } else {
-            Color(0x0A0F172A)
+            MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
         }
     }
     val contentColor = if (selected) {
         if (darkThemeEnabled) {
             Color(0xFF0B0F16)
         } else {
-            Color.White
+            MaterialTheme.colorScheme.onPrimaryContainer
         }
     } else {
         MaterialTheme.colorScheme.onSurface
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().mcuClickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(
             width = 1.dp,
@@ -479,12 +470,12 @@ private fun McuPortRow(
                 if (darkThemeEnabled) {
                     Color.White.copy(alpha = 0.92f)
                 } else {
-                    Color(0xFF0B0F16)
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
                 }
             } else if (darkThemeEnabled) {
                 Color.White.copy(alpha = 0.06f)
             } else {
-                Color(0x140F172A)
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.78f)
             },
         ),
         color = background,
@@ -580,7 +571,7 @@ private fun McuFlashProfileRow(
         MaterialTheme.colorScheme.onSurface
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().mcuClickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = background,
         contentColor = contentColor,
@@ -596,7 +587,7 @@ private fun McuFlashProfileRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "${profile.runtimeKind.name} / ${profile.strategyKind.name} / ${profile.mcuFamily}",
+                text = "${profile.runtimeKind.name} / ${profile.mcuFamily} / 0x${profile.defaultStartAddress.toString(16).uppercase()}",
                 style = MaterialTheme.typography.bodySmall,
                 color = contentColor.copy(alpha = 0.76f),
                 fontFamily = FontFamily.Monospace,
@@ -605,17 +596,73 @@ private fun McuFlashProfileRow(
             )
             if (profile.description.isNotBlank()) {
                 Text(
-                    text = buildString {
-                        append(profile.description)
-                        append(" / ")
-                        append(if (profile.requiresPort) "串口必选" else "串口可选")
-                    },
+                    text = profile.description,
                     style = MaterialTheme.typography.bodySmall,
                     color = contentColor.copy(alpha = 0.68f),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun McuFlashProbeRow(
+    probe: McuFlashProbeSummary,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val background = if (selected) {
+        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.85f)
+    } else {
+        MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+    }
+    val contentColor = if (selected) {
+        MaterialTheme.colorScheme.onSecondaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth().mcuClickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = background,
+        contentColor = contentColor,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                text = probe.productName ?: "ST-Link",
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = probe.serialNumber ?: "serial: unavailable",
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.76f),
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = buildString {
+                    append("VID:PID=")
+                    append(probe.vendorId.toString(16).uppercase().padStart(4, '0'))
+                    append(':')
+                    append(probe.productId.toString(16).uppercase().padStart(4, '0'))
+                    probe.manufacturerName?.takeIf { it.isNotBlank() }?.let { manufacturer ->
+                        append(" / ")
+                        append(manufacturer)
+                    }
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = contentColor.copy(alpha = 0.68f),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -674,7 +721,7 @@ private fun McuRuntimeBundleRow(
         MaterialTheme.colorScheme.onSurface
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().mcuClickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = background,
         contentColor = contentColor,
@@ -756,12 +803,15 @@ internal fun McuTransportProfileList(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            McuPrimaryButton(
+            ShadcnButton(
                 onClick = onSave,
                 enabled = !state.isSubmitting,
-            ) {
-                Text("保存当前配置")
-            }
+                modifier = Modifier.heightIn(min = 38.dp),
+                variant = ShadcnButtonVariant.Default,
+                size = ShadcnButtonSize.Default,
+                shape = RoundedCornerShape(12.dp),
+                content = { Text("保存当前配置") },
+            )
             Text(
                 text = "已保存 ${state.transportProfiles.size} 个",
                 style = MaterialTheme.typography.bodySmall,
@@ -837,18 +887,24 @@ internal fun McuTransportProfileList(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            McuPrimaryButton(
+                            ShadcnButton(
                                 onClick = { onApply(profile.profileKey) },
                                 enabled = !state.isSubmitting,
-                            ) {
-                                Text("载入")
-                            }
-                            McuSecondaryButton(
+                                modifier = Modifier.heightIn(min = 38.dp),
+                                variant = ShadcnButtonVariant.Default,
+                                size = ShadcnButtonSize.Default,
+                                shape = RoundedCornerShape(12.dp),
+                                content = { Text("载入") },
+                            )
+                            ShadcnButton(
                                 onClick = { onDelete(profile.profileKey) },
                                 enabled = !state.isSubmitting,
-                            ) {
-                                Text("删除")
-                            }
+                                modifier = Modifier.heightIn(min = 38.dp),
+                                variant = ShadcnButtonVariant.Outline,
+                                size = ShadcnButtonSize.Default,
+                                shape = RoundedCornerShape(12.dp),
+                                content = { Text("删除") },
+                            )
                         }
                     }
                 }

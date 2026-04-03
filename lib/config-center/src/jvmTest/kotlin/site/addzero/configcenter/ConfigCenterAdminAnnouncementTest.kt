@@ -47,6 +47,37 @@ class ConfigCenterAdminAnnouncementTest {
     }
 
     @Test
+    fun `resolve admin link prefers runtime base url property`() {
+        val applicationConfig = HoconApplicationConfig(
+            ConfigFactory.parseString(
+                """
+                config-center.enabled = true
+                config-center.jdbc.url = "jdbc:sqlite:./config-center.sqlite"
+                config-center.admin.path = "/config-center"
+                ktor.deployment.host = "0.0.0.0"
+                ktor.deployment.port = 8080
+                """.trimIndent(),
+            ),
+        )
+
+        val previous = System.getProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
+        try {
+            System.setProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY, "http://localhost:61587/")
+
+            assertEquals(
+                "http://localhost:61587/config-center",
+                applicationConfig.resolveConfigCenterAdminLink(),
+            )
+        } finally {
+            if (previous == null) {
+                System.clearProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
+            } else {
+                System.setProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY, previous)
+            }
+        }
+    }
+
+    @Test
     fun `build announcement skips when jdbc config is absent`() {
         val applicationConfig = HoconApplicationConfig(ConfigFactory.empty())
 

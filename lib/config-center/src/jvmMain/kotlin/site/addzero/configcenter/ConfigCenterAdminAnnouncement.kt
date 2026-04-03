@@ -7,6 +7,8 @@ import java.util.logging.Logger
 private val configCenterAnnouncementLogger: Logger =
     Logger.getLogger(ConfigCenterAdminAnnouncement::class.java.name)
 
+const val CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY: String = "config-center.admin.base-url"
+
 @Single(createdAtStart = true)
 class ConfigCenterAdminAnnouncement(
     private val applicationConfig: ApplicationConfig,
@@ -39,6 +41,13 @@ internal fun ApplicationConfig.resolveConfigCenterAdminLink(
     adminSettings: ConfigCenterAdminSettings = configCenterAdminSettings(),
 ): String {
     val normalizedPath = adminSettings.normalizedPath
+    val runtimeBaseUrl = System.getProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
+        ?.trim()
+        ?.removeSuffix("/")
+        ?.ifBlank { null }
+    if (runtimeBaseUrl != null) {
+        return "$runtimeBaseUrl$normalizedPath"
+    }
     val port = propertyOrNull("ktor.deployment.port")?.getString()?.trim()?.toIntOrNull()
     if (port == null) {
         return normalizedPath

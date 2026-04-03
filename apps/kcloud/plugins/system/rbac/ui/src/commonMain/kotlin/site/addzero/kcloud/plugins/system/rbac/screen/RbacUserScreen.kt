@@ -26,7 +26,7 @@ import site.addzero.kcloud.plugins.system.rbac.RbacWorkbenchState
     enabled = false,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "系统",
+            name = "系统管理",
             icon = "AdminPanelSettings",
             order = 100,
         ),

@@ -47,13 +47,22 @@ apps/kcloud/
 ./gradlew :apps:kcloud:ui:packageDistributionForCurrentOS
 ```
 
-现在的 Release 流水线只保留 `kcloud` 的桌面安装包产物。`wasm` 的 dist 还没有整理好，暂时不建议把它当成稳定交付物。
+浏览器端发布包命令：
+
+```bash
+./gradlew :apps:kcloud:ui:wasmDistZip
+```
+
+Release 流水线会发布三类产物：
+
+- `dist.zip`
+- macOS `.dmg`
+- Windows `.msi`
 
 ## 已知限制
 
 - 目前还是桌面优先，不是完整的多端产品
 - 一些模块边界还在调整，目录和命名后面可能继续收敛
-- `wasm` 打包链路还没稳定
 - README 只写当前能确认的内容，没把未来设想提前写进来
 
 ## 插件开发

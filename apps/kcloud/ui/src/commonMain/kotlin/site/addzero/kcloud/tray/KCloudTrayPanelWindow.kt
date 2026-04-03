@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
-import site.addzero.kcloud.theme.KCloudTheme
+import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
 
@@ -42,7 +42,7 @@ fun KCloudTrayPanelWindow(
         routeCatalog.routeEntries.lastOrNull()
     }
 
-    KCloudTheme(
+    Theme(
         darkTheme = themeMode.resolveDarkTheme(
             systemDarkTheme = isSystemInDarkTheme(),
         ),

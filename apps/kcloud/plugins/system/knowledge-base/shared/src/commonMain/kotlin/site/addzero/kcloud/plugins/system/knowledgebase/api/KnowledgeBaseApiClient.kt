@@ -15,7 +15,6 @@ object KnowledgeBaseApiClient {
     private val httpClientFactory: HttpClientFactory
         get() = KoinPlatform.getKoin().get()
 
-    @Volatile
     private var baseUrl: String = defaultBaseUrl
 
     fun configureBaseUrl(

@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino
 
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -41,7 +44,14 @@ internal fun McuCupertinoScene(
         target = AdaptiveThemeTarget.Cupertino,
         material = MaterialThemeSpec.Default(),
         cupertino = CupertinoThemeSpec.Default(),
-        content = content,
+        content = {
+            // compose-cupertino 0.1.0-alpha04 仍会通过 LocalIndication 暴露旧版
+            // Indication；Compose Desktop 的默认 clickable 在这里会直接抛错。
+            CompositionLocalProvider(
+                LocalIndication provides ripple(),
+                content = content,
+            )
+        },
     )
 }
 

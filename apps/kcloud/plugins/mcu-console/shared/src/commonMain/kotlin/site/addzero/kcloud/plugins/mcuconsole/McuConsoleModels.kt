@@ -103,18 +103,6 @@ typealias McuModbusPwmDutyRequest = site.addzero.kcloud.plugins.mcuconsole.modbu
 typealias McuModbusServoAngleRequest = site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
 
 @Deprecated(
-    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLights",
-    replaceWith = ReplaceWith("Device24PowerLights", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLights"),
-)
-typealias Device24PowerLights = site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLights
-
-@Deprecated(
-    message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo",
-    replaceWith = ReplaceWith("DeviceRuntimeInfo", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo"),
-)
-typealias DeviceRuntimeInfo = site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo
-
-@Deprecated(
     message = "Use site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse",
     replaceWith = ReplaceWith("McuModbusPowerLightsResponse", "site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse"),
 )
@@ -265,31 +253,27 @@ enum class McuFlashRunState {
 @Serializable
 enum class McuFlashRuntimeKind {
     MICROPYTHON,
+    STM32,
 }
 
 @Serializable
 enum class McuFlashStrategyKind {
-    SERIAL_ACK_STREAM,
-    COMMAND_TEMPLATE,
+    ST_LINK_SWD,
 }
 
 @Serializable
 data class McuFlashProfileSummary(
     val id: String = "",
     val title: String = "",
-    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.MICROPYTHON,
-    val strategyKind: McuFlashStrategyKind = McuFlashStrategyKind.COMMAND_TEMPLATE,
-    val mcuFamily: String = "generic",
+    val runtimeKind: McuFlashRuntimeKind = McuFlashRuntimeKind.STM32,
+    val strategyKind: McuFlashStrategyKind = McuFlashStrategyKind.ST_LINK_SWD,
+    val mcuFamily: String = "stm32",
     val description: String = "",
     val artifactLabel: String = "固件路径",
     val artifactHint: String = "",
-    val defaultBaudRate: Int = 115200,
-    val commandTemplate: String? = null,
-    val supportsCommandOverride: Boolean = false,
-    val requiresPort: Boolean = true,
-    val supportsOnlineDownload: Boolean = false,
-    val defaultDownloadUrl: String? = null,
-    val downloadUrlHint: String = "",
+    val defaultStartAddress: Long = 0x08000000,
+    val connectUnderReset: Boolean = true,
+    val supportedChipIds: List<Int> = emptyList(),
 )
 
 @Serializable
@@ -299,30 +283,25 @@ data class McuFlashProfilesResponse(
 )
 
 @Serializable
+data class McuFlashProbeSummary(
+    val serialNumber: String? = null,
+    val productName: String? = null,
+    val manufacturerName: String? = null,
+    val vendorId: Int = 0,
+    val productId: Int = 0,
+)
+
+@Serializable
+data class McuFlashProbesResponse(
+    val items: List<McuFlashProbeSummary> = emptyList(),
+)
+
+@Serializable
 data class McuFlashRequest(
     val profileId: String = "",
     val firmwarePath: String = "",
-    val portPath: String? = null,
-    val baudRate: Int? = null,
-    val commandTemplate: String? = null,
-)
-
-@Serializable
-data class McuFlashDownloadRequest(
-    val profileId: String = "",
-    val downloadUrl: String? = null,
-)
-
-@Serializable
-data class McuFlashDownloadResponse(
-    val profileId: String? = null,
-    val profileTitle: String? = null,
-    val runtimeKind: McuFlashRuntimeKind? = null,
-    val resolvedUrl: String? = null,
-    val downloadPath: String? = null,
-    val commandPreview: String? = null,
-    val lastMessage: String? = null,
-    val updatedAt: String? = null,
+    val probeSerialNumber: String? = null,
+    val startAddress: Long? = null,
 )
 
 @Serializable
@@ -332,12 +311,15 @@ data class McuFlashStatusResponse(
     val profileTitle: String? = null,
     val runtimeKind: McuFlashRuntimeKind? = null,
     val strategyKind: McuFlashStrategyKind? = null,
-    val portPath: String? = null,
-    val baudRate: Int = 115200,
+    val probeSerialNumber: String? = null,
+    val probeDescription: String? = null,
+    val targetChipId: Int? = null,
+    val targetVoltageMillivolts: Int? = null,
+    val flashStartAddress: Long? = null,
     val firmwarePath: String? = null,
     val bytesSent: Int = 0,
     val totalBytes: Int = 0,
-    val commandPreview: String? = null,
+    val progressPercent: Double = 0.0,
     val lastMessage: String? = null,
     val updatedAt: String? = null,
 )

@@ -24,29 +24,37 @@ import java.awt.image.BufferedImage
 import kotlin.math.roundToInt
 import java.util.Locale
 
+data class KboxSystemTrayHostProps(
+    val enabled: Boolean,
+    val windowVisible: Boolean,
+    val syncState: KboxSyncToolState
+)
+
+data class KboxSystemTrayHostEvents(
+    val onToggleWindow: () -> Unit,
+    val onStartSync: () -> Unit,
+    val onPauseSync: () -> Unit,
+    val onRefreshSync: () -> Unit,
+    val onReleaseLocalSpace: () -> Unit,
+    val onExit: () -> Unit
+)
+
 @Composable
 fun KboxSystemTrayHost(
-    enabled: Boolean,
-    windowVisible: Boolean,
-    syncState: KboxSyncToolState,
-    onToggleWindow: () -> Unit,
-    onStartSync: () -> Unit,
-    onPauseSync: () -> Unit,
-    onRefreshSync: () -> Unit,
-    onReleaseLocalSpace: () -> Unit,
-    onExit: () -> Unit,
+    kboxSystemTrayHostProps: KboxSystemTrayHostProps,
+    kboxSystemTrayHostEvents: KboxSystemTrayHostEvents
 ) {
-    if (!enabled) {
+    if (!kboxSystemTrayHostProps.enabled) {
         return
     }
 
     val controller = remember { KboxSystemTrayController() }
-    val toggleWindowState = rememberUpdatedState(onToggleWindow)
-    val startSyncState = rememberUpdatedState(onStartSync)
-    val pauseSyncState = rememberUpdatedState(onPauseSync)
-    val refreshSyncState = rememberUpdatedState(onRefreshSync)
-    val releaseLocalState = rememberUpdatedState(onReleaseLocalSpace)
-    val exitState = rememberUpdatedState(onExit)
+    val toggleWindowState = rememberUpdatedState(kboxSystemTrayHostEvents.onToggleWindow)
+    val startSyncState = rememberUpdatedState(kboxSystemTrayHostEvents.onStartSync)
+    val pauseSyncState = rememberUpdatedState(kboxSystemTrayHostEvents.onPauseSync)
+    val refreshSyncState = rememberUpdatedState(kboxSystemTrayHostEvents.onRefreshSync)
+    val releaseLocalState = rememberUpdatedState(kboxSystemTrayHostEvents.onReleaseLocalSpace)
+    val exitState = rememberUpdatedState(kboxSystemTrayHostEvents.onExit)
 
     DisposableEffect(controller) {
         controller.install(
@@ -63,20 +71,20 @@ fun KboxSystemTrayHost(
     }
 
     SideEffect {
-        val runState = syncState.runState
-        val canStartSync = syncState.canStartSync &&
-            runState.status !in setOf(KboxSyncStatus.STARTING, KboxSyncStatus.SCANNING, KboxSyncStatus.RUNNING)
+        val runState = kboxSystemTrayHostProps.syncState.runState
+        val canStartSync = kboxSystemTrayHostProps.syncState.canStartSync &&
+                runState.status !in setOf(KboxSyncStatus.STARTING, KboxSyncStatus.SCANNING, KboxSyncStatus.RUNNING)
         val canPauseSync = runState.status !in setOf(KboxSyncStatus.STOPPED, KboxSyncStatus.PAUSED)
         controller.update(
-            windowVisible = windowVisible,
+            windowVisible = kboxSystemTrayHostProps.windowVisible,
             runStatus = runState.status,
             lastError = runState.lastError,
-            queue = syncState.transferQueue,
+            queue = kboxSystemTrayHostProps.syncState.transferQueue,
             canStartSync = canStartSync,
             canPauseSync = canPauseSync,
-            canRefreshSync = syncState.canStartSync,
-            releasableEntryCount = syncState.releasableEntryCount,
-            releasableBytes = syncState.releasableBytes,
+            canRefreshSync = kboxSystemTrayHostProps.syncState.canStartSync,
+            releasableEntryCount = kboxSystemTrayHostProps.syncState.releasableEntryCount,
+            releasableBytes = kboxSystemTrayHostProps.syncState.releasableBytes,
         )
     }
 }

@@ -103,16 +103,26 @@ class McuConsoleRemoteService {
         return McuConsoleApiClient.flashApi.listMcuFlashProfiles().items
     }
 
+    suspend fun listFlashProbes(): List<McuFlashProbeSummary> {
+        return McuConsoleApiClient.flashApi.listMcuFlashProbes().items
+    }
+
     suspend fun startFlash(
         request: McuFlashRequest,
     ): McuFlashStatusResponse {
         return McuConsoleApiClient.flashApi.startMcuFlash(request)
     }
 
-    suspend fun downloadFlashFirmware(
-        request: McuFlashDownloadRequest,
-    ): McuFlashDownloadResponse {
-        return McuConsoleApiClient.flashApi.downloadMcuFlashFirmware(request)
+    suspend fun resetFlash(
+        request: McuResetRequest,
+        profileId: String?,
+        probeSerialNumber: String?,
+    ): McuFlashStatusResponse {
+        return McuConsoleApiClient.flashApi.resetMcuFlashTarget(
+            request = request,
+            profileId = profileId,
+            probeSerialNumber = probeSerialNumber,
+        )
     }
 
     suspend fun getFlashStatus(): McuFlashStatusResponse {

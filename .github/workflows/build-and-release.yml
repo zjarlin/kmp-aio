@@ -12,6 +12,34 @@ env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g" -Dorg.gradle.configureondemand=true
 
 jobs:
+  build-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-home-cache-cleanup: true
+
+      - name: Package KCloud Wasm Release
+        run: ./gradlew :apps:kcloud:ui:wasmDistZip --parallel
+
+      - name: Upload Wasm Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kcloud-wasm-dist
+          path: apps/kcloud/ui/build/dist/release/dist.zip
+          retention-days: 7
+          if-no-files-found: error
+
   build-desktop:
     strategy:
       fail-fast: false
@@ -21,12 +49,12 @@ jobs:
             target: macos
             gradlew: ./gradlew
             artifact_name: kcloud-macos-installer
-            artifact_glob: apps/kcloud/composeApp/build/compose/binaries/**/*.dmg
+            artifact_glob: apps/kcloud/ui/build/compose/binaries/**/*.dmg
           - os: windows-latest
             target: windows
             gradlew: ./gradlew.bat
             artifact_name: kcloud-windows-installer
-            artifact_glob: apps/kcloud/composeApp/build/compose/binaries/**/*.msi
+            artifact_glob: apps/kcloud/ui/build/compose/binaries/**/*.msi
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -45,7 +73,7 @@ jobs:
           gradle-home-cache-cleanup: true
 
       - name: Package KCloud Desktop (${{ matrix.target }})
-        run: ${{ matrix.gradlew }} :apps:kcloud:composeApp:packageDistributionForCurrentOS --parallel
+        run: ${{ matrix.gradlew }} :apps:kcloud:ui:packageReleaseDistributionForCurrentOS --parallel
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v4
@@ -56,7 +84,7 @@ jobs:
           if-no-files-found: error
 
   create-release:
-    needs: [build-desktop]
+    needs: [build-wasm, build-desktop]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
@@ -75,6 +103,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
+            artifacts/kcloud-wasm-dist/dist.zip
             artifacts/kcloud-macos-installer/**/*.dmg
             artifacts/kcloud-windows-installer/**/*.msi
           generate_release_notes: true

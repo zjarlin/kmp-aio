@@ -36,7 +36,7 @@ import site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino.*
     order = 15.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "设备",
+            name = "物联网上位机",
             icon = "Build",
             order = 0,
         ),
@@ -390,7 +390,7 @@ private fun McuSelectableItem(
         MaterialTheme.colorScheme.onSurface
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().mcuClickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         color = background,
         contentColor = contentColor,

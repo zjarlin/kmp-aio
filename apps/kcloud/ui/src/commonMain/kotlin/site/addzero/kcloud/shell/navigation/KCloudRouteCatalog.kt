@@ -117,7 +117,9 @@ private fun buildScenes(
 
     orderedRoutes.forEach { route ->
         val sceneMeta = route.resolveSceneMeta()
-        sceneMetaById.putIfAbsent(sceneMeta.id, sceneMeta)
+        if (sceneMeta.id !in sceneMetaById) {
+            sceneMetaById[sceneMeta.id] = sceneMeta
+        }
         sceneMap.getOrPut(sceneMeta.id) { mutableListOf() }
             .add(route)
     }
@@ -292,7 +294,7 @@ private data class KCloudSceneMeta(
 
 private fun Route.resolveSceneMeta(): KCloudSceneMeta {
     val scene = placement.scene
-    val sceneName = scene.name.trim()
+    val sceneName = normalizeSceneName(scene.name.trim())
     if (sceneName.isBlank()) {
         return KCloudSceneMeta(
             id = UNASSIGNED_SCENE_ID,
@@ -307,6 +309,15 @@ private fun Route.resolveSceneMeta(): KCloudSceneMeta {
         iconName = scene.icon.ifBlank { "Apps" },
         sort = scene.order,
     )
+}
+
+private fun normalizeSceneName(
+    sceneName: String,
+): String {
+    return when (sceneName) {
+        "物联网上位机" -> "物联网"
+        else -> sceneName
+    }
 }
 
 private fun Route.resolveParentName(): String {

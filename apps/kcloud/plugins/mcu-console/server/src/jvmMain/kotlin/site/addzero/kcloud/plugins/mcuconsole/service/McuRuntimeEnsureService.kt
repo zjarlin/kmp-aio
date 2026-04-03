@@ -91,8 +91,6 @@ class McuRuntimeEnsureService(
                 McuFlashRequest(
                     profileId = bundle.defaultFlashProfileId,
                     firmwarePath = artifactPath,
-                    portPath = portPath,
-                    baudRate = baudRate,
                 ),
             )
             sessionService.openSession(
@@ -145,23 +143,7 @@ class McuRuntimeEnsureService(
     private suspend fun resolveArtifactPathForFlash(
         bundle: McuRuntimeBundleSummary,
     ): String {
-        return try {
-            assetExtractor.extractBundle(bundle.bundleId).artifactFile.absolutePath
-        } catch (throwable: IllegalArgumentException) {
-            if (bundle.runtimeKind != McuFlashRuntimeKind.MICROPYTHON ||
-                !throwable.message.orEmpty().contains("占位固件")
-            ) {
-                throw throwable
-            }
-            val download = flashService.downloadFirmware(
-                McuFlashDownloadRequest(
-                    profileId = bundle.defaultFlashProfileId,
-                ),
-            )
-            download.downloadPath
-                ?.takeIf { it.isNotBlank() }
-                ?: throw IllegalStateException("MicroPython 在线下载成功，但未返回固件路径")
-        }
+        return assetExtractor.extractBundle(bundle.bundleId).artifactFile.absolutePath
     }
 
     private suspend fun probeRuntime(): McuVmIncomingFrame? {

@@ -9,7 +9,6 @@ import site.addzero.kcloud.api.*
  * 仅聚合 controller2api 生成的接口，不扫描手写接口。
  */
 object ApiProvider {
-    @Volatile
     private var currentKtorfit: Ktorfit? = null
 
     fun configure(ktorfit: Ktorfit) {

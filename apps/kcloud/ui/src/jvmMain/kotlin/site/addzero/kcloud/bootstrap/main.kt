@@ -19,11 +19,14 @@ import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
+import site.addzero.kcloud.theme.KCloudUiPresets
+import site.addzero.kcloud.theme.LocalKCloudUiMetrics
 import java.awt.Container
 import javax.swing.JComponent
 
-private val macCaptionBarHeight = 56.dp
-private val macCaptionBarLeadingInset = 84.dp
+private val desktopUiMetrics = KCloudUiPresets.DesktopCompact
+private val macCaptionBarHeight = desktopUiMetrics.topBarHeight
+private val macCaptionBarLeadingInset = desktopUiMetrics.topBarLeadingInset
 
 fun main() {
     configureDesktopRuntime()
@@ -44,8 +47,8 @@ fun main() {
         }
 
         val windowState = rememberWindowState(
-            width = 1440.dp,
-            height = 920.dp,
+            width = desktopUiMetrics.defaultWindowWidth,
+            height = desktopUiMetrics.defaultWindowHeight,
         )
 
         Window(
@@ -56,7 +59,11 @@ fun main() {
             ProvideKCloudWindowFrame(
                 state = windowState,
             ) {
-                KCloudApp()
+                CompositionLocalProvider(
+                    LocalKCloudUiMetrics provides desktopUiMetrics,
+                ) {
+                    KCloudApp()
+                }
             }
         }
     }
@@ -65,6 +72,7 @@ fun main() {
 private fun configureLocalApiClients(
     baseUrl: String,
 ) {
+    configureKCloudApiClients(baseUrl)
     McuConsoleApiClient.configureBaseUrl(baseUrl)
 }
 

@@ -4,11 +4,12 @@ import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuFlashDownloadResponse
+import org.springframework.web.bind.annotation.RequestParam
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProbesResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
 import site.addzero.kcloud.plugins.mcuconsole.service.McuFlashService
 
 /**
@@ -24,8 +25,17 @@ fun listMcuFlashProfiles(): McuFlashProfilesResponse {
 }
 
 /**
- * 前端按钮: 烧录页“开始烧录”、烧录页“在线下载并烧录”。
- * 作用: 按当前能力包配置执行烧录。
+ * 前端按钮: 烧录页“刷新探针”。
+ * 作用: 枚举当前可用的 ST-Link 调试探针。
+ */
+@GetMapping("/api/mcu/flash/probes")
+fun listMcuFlashProbes(): McuFlashProbesResponse {
+    return flashService().listProbes()
+}
+
+/**
+ * 前端按钮: 烧录页“开始烧录”。
+ * 作用: 通过 ST-Link + SWD 执行烧录。
  */
 @PostMapping("/api/mcu/flash/start")
 suspend fun startMcuFlash(
@@ -44,14 +54,20 @@ fun getMcuFlashStatus(): McuFlashStatusResponse {
 }
 
 /**
- * 前端按钮: 烧录页“在线下载”、烧录页“在线下载并烧录”。
- * 作用: 在线下载固件并缓存到本机，供后续烧录复用。
+ * 前端按钮: 烧录页“复位设备”、控制台“设备复位”。
+ * 作用: 通过 ST-Link 脉冲复位 NRST。
  */
-@PostMapping("/api/mcu/flash/download")
-suspend fun downloadMcuFlashFirmware(
-    @RequestBody request: McuFlashDownloadRequest,
-): McuFlashDownloadResponse {
-    return flashService().downloadFirmware(request)
+@PostMapping("/api/mcu/flash/reset")
+suspend fun resetMcuFlashTarget(
+    @RequestBody request: McuResetRequest,
+    @RequestParam("profileId") profileId: String?,
+    @RequestParam("probeSerialNumber") probeSerialNumber: String?,
+): McuFlashStatusResponse {
+    return flashService().reset(
+        request = request,
+        profileId = profileId,
+        probeSerialNumber = probeSerialNumber,
+    )
 }
 
 private fun flashService(): McuFlashService {

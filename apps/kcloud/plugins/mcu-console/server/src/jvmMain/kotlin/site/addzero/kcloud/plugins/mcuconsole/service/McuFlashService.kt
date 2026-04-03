@@ -3,17 +3,28 @@ package site.addzero.kcloud.plugins.mcuconsole.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.mcuconsole.*
-import site.addzero.kcloud.plugins.mcuconsole.driver.serial.SerialPortGateway
+import site.addzero.kcloud.plugins.mcuconsole.McuEventKind
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProbeSummary
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProbesResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfilesResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashRequest
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashRunState
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
+import site.addzero.kcloud.plugins.mcuconsole.McuResetRequest
+import site.addzero.stm32.bootloader.StLinkConfig
+import site.addzero.stm32.bootloader.StLinkProbeInfo
+import site.addzero.stm32.bootloader.Stm32FlashRequest
+import site.addzero.stm32.bootloader.Stm32FlashStage
+import site.addzero.stm32.bootloader.Stm32StLinkProgrammer
 import java.io.File
 import java.time.Instant
+import kotlin.math.roundToInt
 
 @Single
 class McuFlashService(
-    private val gateway: SerialPortGateway,
     private val sessionService: McuConsoleSessionService,
     private val profileCatalog: McuFlashProfileCatalog,
-    private val commandRunner: McuFlashCommandRunner,
 ) {
     private val lock = Any()
     private var status = McuFlashStatusResponse()
@@ -22,142 +33,129 @@ class McuFlashService(
         return profileCatalog.listProfiles()
     }
 
-    suspend fun downloadFirmware(
-        request: McuFlashDownloadRequest,
-    ): McuFlashDownloadResponse = withContext(Dispatchers.IO) {
-        val profile = profileCatalog.resolve(request.profileId)
-        val requestedUrl = request.downloadUrl
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?: profile.defaultDownloadUrl
-                ?.trim()
-                ?.takeIf { it.isNotBlank() }
-            ?: throw IllegalArgumentException("当前烧录能力包没有默认在线固件，请填写下载地址")
-        val resolvedUrl = resolveOnlineFirmwareUrl(profile, requestedUrl)
-        val targetFile = resolveDownloadTargetFile(profile, resolvedUrl)
-        val commandLine = buildCurlDownloadCommand(
-            url = resolvedUrl,
-            targetFile = targetFile,
-        )
-
-        sessionService.appendEvent(
-            kind = McuEventKind.FLASH,
-            title = "开始下载固件",
-            message = profile.title,
-            raw = resolvedUrl,
-        )
-
-        targetFile.parentFile?.mkdirs()
-        targetFile.delete()
-
-        try {
-            val result = commandRunner.run(
-                commandLine = commandLine,
-                workingDirectory = targetFile.parentFile,
-            )
-            if (result.stdout.isNotBlank()) {
-                sessionService.appendEvent(
-                    kind = McuEventKind.FLASH,
-                    title = "下载输出",
-                    message = profile.title,
-                    raw = result.stdout.takeLast(1_500),
+    fun listProbes(): McuFlashProbesResponse {
+        return McuFlashProbesResponse(
+            items = Stm32StLinkProgrammer.listProbes().map { probe ->
+                McuFlashProbeSummary(
+                    serialNumber = probe.serialNumber,
+                    productName = probe.productName,
+                    manufacturerName = probe.manufacturerName,
+                    vendorId = probe.vendorId,
+                    productId = probe.productId,
                 )
-            }
-            if (result.stderr.isNotBlank()) {
-                sessionService.appendEvent(
-                    kind = if (result.exitCode == 0) McuEventKind.FLASH else McuEventKind.ERROR,
-                    title = if (result.exitCode == 0) "下载告警" else "下载错误",
-                    message = profile.title,
-                    raw = result.stderr.takeLast(1_500),
-                )
-            }
-            check(result.exitCode == 0) {
-                result.stderr.ifBlank { "固件下载命令退出码 ${result.exitCode}" }
-            }
-            require(targetFile.isFile && targetFile.length() > 0L) {
-                "固件下载失败: ${targetFile.absolutePath}"
-            }
-            sessionService.appendEvent(
-                kind = McuEventKind.FLASH,
-                title = "固件已下载",
-                message = targetFile.name,
-                raw = targetFile.absolutePath,
-            )
-            return@withContext McuFlashDownloadResponse(
-                profileId = profile.id,
-                profileTitle = profile.title,
-                runtimeKind = profile.runtimeKind,
-                resolvedUrl = resolvedUrl,
-                downloadPath = targetFile.absolutePath,
-                commandPreview = commandLine,
-                lastMessage = "固件已下载到 ${targetFile.absolutePath}",
-                updatedAt = Instant.now().toString(),
-            )
-        } catch (error: Throwable) {
-            targetFile.delete()
-            sessionService.appendEvent(
-                kind = McuEventKind.ERROR,
-                title = "固件下载失败",
-                message = error.message ?: "未知错误",
-                raw = resolvedUrl,
-            )
-            throw error
-        }
+            },
+        )
     }
 
     suspend fun flash(
         request: McuFlashRequest,
     ): McuFlashStatusResponse = withContext(Dispatchers.IO) {
         val profile = profileCatalog.resolve(request.profileId)
-        val target = resolveTarget(request, profile)
         val artifact = resolveArtifactFile(request.firmwarePath)
-        val commandPreview = resolveCommandPreview(
-            request = request,
-            profile = profile,
-            target = target,
-            artifact = artifact,
-        )
+        val startAddress = request.startAddress ?: profile.defaultStartAddress
+        val firmwareBytes = artifact.readBytes()
 
         updateStatus(
             state = McuFlashRunState.RUNNING,
             profile = profile,
-            portPath = target.portPath,
-            baudRate = target.baudRate,
+            probe = null,
+            targetChipId = null,
+            targetVoltageMillivolts = null,
+            flashStartAddress = startAddress,
             firmwarePath = artifact.absolutePath,
             bytesSent = 0,
-            totalBytes = artifact.length().toInt(),
-            commandPreview = commandPreview,
-            lastMessage = "烧录开始",
+            totalBytes = firmwareBytes.size,
+            progressPercent = 0.0,
+            lastMessage = "准备通过 ST-Link 连接目标",
         )
 
-        sessionService.closeSession("烧录前关闭当前串口会话")
+        sessionService.closeSession("SWD 烧录前关闭串口会话")
         sessionService.appendEvent(
             kind = McuEventKind.FLASH,
             title = "开始烧录",
-            message = buildString {
-                append(profile.title)
-                target.portPath?.takeIf { it.isNotBlank() }?.let { portPath ->
-                    append(" -> ")
-                    append(portPath)
-                }
-            },
-            raw = commandPreview,
+            message = profile.title,
+            raw = artifact.absolutePath,
         )
 
         try {
-            when (profile.strategyKind) {
-                McuFlashStrategyKind.SERIAL_ACK_STREAM -> flashBySerialAck(
+            val config = StLinkConfig(
+                serialNumber = request.probeSerialNumber?.trim()?.takeIf { it.isNotBlank() },
+                connectUnderReset = profile.connectUnderReset,
+            )
+            Stm32StLinkProgrammer(config).use { programmer ->
+                val targetInfo = programmer.connectTarget()
+                if (profile.supportedChipIds.isNotEmpty() && targetInfo.chipId !in profile.supportedChipIds) {
+                    val supportedChipIds = profile.supportedChipIds.joinToString { chipId ->
+                        "0x${chipId.toString(16).uppercase()}"
+                    }
+                    throw IllegalStateException(
+                        "当前配置仅支持 chipId=$supportedChipIds，检测到 0x${targetInfo.chipId.toString(16).uppercase()}",
+                    )
+                }
+                val geometry = programmer.readFlashGeometry(targetInfo)
+                updateStatus(
+                    state = McuFlashRunState.RUNNING,
                     profile = profile,
-                    target = target,
-                    artifact = artifact,
+                    probe = targetInfo.probe,
+                    targetChipId = targetInfo.chipId,
+                    targetVoltageMillivolts = targetInfo.targetVoltageMillivolts,
+                    flashStartAddress = startAddress,
+                    firmwarePath = artifact.absolutePath,
+                    bytesSent = 0,
+                    totalBytes = firmwareBytes.size,
+                    progressPercent = 0.0,
+                    lastMessage = "已连接 ${probeLabel(targetInfo.probe)} / chipId=0x${targetInfo.chipId.toString(16).uppercase()}",
+                )
+                sessionService.appendEvent(
+                    kind = McuEventKind.FLASH,
+                    title = "目标已连接",
+                    message = "chipId=0x${targetInfo.chipId.toString(16).uppercase()} / ${geometry.flashSizeBytes / 1024}KB Flash",
+                    raw = probeLabel(targetInfo.probe),
                 )
 
-                McuFlashStrategyKind.COMMAND_TEMPLATE -> flashByCommand(
-                    profile = profile,
-                    target = target,
-                    artifact = artifact,
-                    commandLine = commandPreview
-                        ?: throw IllegalArgumentException("烧录命令不能为空"),
+                var lastStage: Stm32FlashStage? = null
+                var lastPercentBucket = -1
+                programmer.flash(
+                    request = Stm32FlashRequest(
+                        startAddress = startAddress,
+                        firmware = firmwareBytes,
+                    ),
+                    targetInfo = targetInfo,
+                    geometry = geometry,
+                    progressListener = { progress ->
+                        val bytesSent = when (progress.stage) {
+                            Stm32FlashStage.WRITING -> progress.stageCompletedBytes.toInt()
+                            Stm32FlashStage.VERIFYING,
+                            Stm32FlashStage.STARTING_APPLICATION,
+                            Stm32FlashStage.COMPLETED -> firmwareBytes.size
+
+                            else -> 0
+                        }
+                        updateStatus(
+                            state = McuFlashRunState.RUNNING,
+                            profile = profile,
+                            probe = targetInfo.probe,
+                            targetChipId = targetInfo.chipId,
+                            targetVoltageMillivolts = targetInfo.targetVoltageMillivolts,
+                            flashStartAddress = startAddress,
+                            firmwarePath = artifact.absolutePath,
+                            bytesSent = bytesSent,
+                            totalBytes = firmwareBytes.size,
+                            progressPercent = progress.overallPercent,
+                            lastMessage = progress.message,
+                        )
+                        val currentBucket = (progress.overallPercent / 10.0).toInt()
+                        if (progress.stage != lastStage || currentBucket > lastPercentBucket) {
+                            lastStage = progress.stage
+                            lastPercentBucket = currentBucket
+                            sessionService.appendEvent(
+                                kind = McuEventKind.FLASH,
+                                title = "烧录进度",
+                                message = "${progress.stage.name} ${progress.overallPercent.roundToInt()}%",
+                                raw = progress.message,
+                            )
+                        }
+                    },
                 )
             }
 
@@ -166,35 +164,76 @@ class McuFlashService(
                 title = "烧录完成",
                 message = artifact.name,
             )
-            updateStatus(
-                state = McuFlashRunState.SUCCESS,
-                profile = profile,
-                portPath = target.portPath,
-                baudRate = target.baudRate,
-                firmwarePath = artifact.absolutePath,
-                bytesSent = artifact.length().toInt(),
-                totalBytes = artifact.length().toInt(),
-                commandPreview = commandPreview,
-                lastMessage = "烧录完成",
-            )
-            return@withContext getStatus()
+            synchronized(lock) {
+                status = status.copy(
+                    state = McuFlashRunState.SUCCESS,
+                    bytesSent = firmwareBytes.size,
+                    totalBytes = firmwareBytes.size,
+                    progressPercent = 100.0,
+                    lastMessage = "SWD 烧录完成",
+                    updatedAt = Instant.now().toString(),
+                )
+                return@withContext status
+            }
         } catch (error: Throwable) {
             sessionService.appendEvent(
                 kind = McuEventKind.ERROR,
                 title = "烧录失败",
                 message = error.message ?: "未知错误",
-                raw = commandPreview,
+                raw = artifact.absolutePath,
             )
-            updateStatus(
-                state = McuFlashRunState.ERROR,
-                profile = profile,
-                portPath = target.portPath,
-                baudRate = target.baudRate,
-                firmwarePath = artifact.absolutePath,
-                bytesSent = getStatus().bytesSent,
-                totalBytes = artifact.length().toInt(),
-                commandPreview = commandPreview,
-                lastMessage = error.message ?: "烧录失败",
+            synchronized(lock) {
+                status = status.copy(
+                    state = McuFlashRunState.ERROR,
+                    lastMessage = error.message ?: "烧录失败",
+                    updatedAt = Instant.now().toString(),
+                )
+            }
+            throw error
+        }
+    }
+
+    suspend fun reset(
+        request: McuResetRequest,
+        profileId: String?,
+        probeSerialNumber: String?,
+    ): McuFlashStatusResponse = withContext(Dispatchers.IO) {
+        val profile = profileCatalog.resolve(profileId)
+        val config = StLinkConfig(
+            serialNumber = probeSerialNumber?.trim()?.takeIf { it.isNotBlank() },
+            connectUnderReset = profile.connectUnderReset,
+        )
+        try {
+            val nextStatus = Stm32StLinkProgrammer(config).use { programmer ->
+                programmer.pulseReset(lowTimeMs = request.pulseMs.toLong())
+                val probe = programmer.probeInfo
+                sessionService.appendEvent(
+                    kind = McuEventKind.FLASH,
+                    title = "设备复位",
+                    message = "ST-Link NRST ${request.pulseMs}ms",
+                    raw = probeLabel(probe),
+                )
+                synchronized(lock) {
+                    status = status.copy(
+                        profileId = profile.id,
+                        profileTitle = profile.title,
+                        runtimeKind = profile.runtimeKind,
+                        strategyKind = profile.strategyKind,
+                        probeSerialNumber = probe.serialNumber,
+                        probeDescription = probeLabel(probe),
+                        progressPercent = if (status.state == McuFlashRunState.SUCCESS) 100.0 else status.progressPercent,
+                        lastMessage = "已通过 ST-Link 复位目标",
+                        updatedAt = Instant.now().toString(),
+                    )
+                    status
+                }
+            }
+            return@withContext nextStatus
+        } catch (error: Throwable) {
+            sessionService.appendEvent(
+                kind = McuEventKind.ERROR,
+                title = "复位失败",
+                message = error.message ?: "未知错误",
             )
             throw error
         }
@@ -206,124 +245,17 @@ class McuFlashService(
         }
     }
 
-    private fun flashBySerialAck(
-        profile: McuFlashProfileSummary,
-        target: FlashTarget,
-        artifact: File,
-    ) {
-        val portPath = target.portPath
-            ?: throw IllegalStateException("串口 Bootloader 模式必须选择串口")
-        gateway.openConnection(
-            portPath = portPath,
-            baudRate = target.baudRate,
-        ).use { connection ->
-            connection.writeUtf8("START_FLASH\r\n")
-            sessionService.appendEvent(
-                kind = McuEventKind.FLASH,
-                title = "烧录握手",
-                message = "${profile.title} 已发送 START_FLASH",
-            )
-            Thread.sleep(500)
-
-            val bytes = artifact.readBytes()
-            val progressStep = (bytes.size / 10).coerceAtLeast(1)
-            bytes.forEachIndexed { index, byte ->
-                connection.writeBytes(byteArrayOf(byte), 1)
-                readUntilContains(
-                    portPath = portPath,
-                    readBlock = { buffer -> connection.read(buffer, timeoutMs = 1200) },
-                    expected = "ACK",
-                    timeoutMs = 2_000,
-                )
-                val sent = index + 1
-                updateStatus(
-                    state = McuFlashRunState.RUNNING,
-                    profile = profile,
-                    portPath = target.portPath,
-                    baudRate = target.baudRate,
-                    firmwarePath = artifact.absolutePath,
-                    bytesSent = sent,
-                    totalBytes = bytes.size,
-                    commandPreview = null,
-                    lastMessage = "烧录中 $sent/${bytes.size}",
-                )
-                if (sent == bytes.size || sent % progressStep == 0) {
-                    sessionService.appendEvent(
-                        kind = McuEventKind.FLASH,
-                        title = "烧录进度",
-                        message = "$sent / ${bytes.size}",
-                    )
-                }
-            }
-
-            connection.writeUtf8("DONE\r\n")
-            val response = readUntilContains(
-                portPath = portPath,
-                readBlock = { buffer -> connection.read(buffer, timeoutMs = 1200) },
-                expected = "SUCCESS",
-                timeoutMs = 3_000,
-            )
-            check(response.contains("SUCCESS")) { "烧录失败: 未收到 SUCCESS" }
-        }
-    }
-
-    private fun flashByCommand(
-        profile: McuFlashProfileSummary,
-        target: FlashTarget,
-        artifact: File,
-        commandLine: String,
-    ) {
-        sessionService.appendEvent(
-            kind = McuEventKind.FLASH,
-            title = "执行命令",
-            message = profile.title,
-            raw = commandLine,
-        )
-        val result = commandRunner.run(
-            commandLine = commandLine,
-            workingDirectory = artifact.parentFile,
-        )
-        if (result.stdout.isNotBlank()) {
-            sessionService.appendEvent(
-                kind = McuEventKind.FLASH,
-                title = "命令输出",
-                message = profile.title,
-                raw = result.stdout.takeLast(1_500),
-            )
-        }
-        if (result.stderr.isNotBlank()) {
-            sessionService.appendEvent(
-                kind = McuEventKind.FLASH,
-                title = if (result.exitCode == 0) "命令告警" else "命令错误",
-                message = profile.title,
-                raw = result.stderr.takeLast(1_500),
-            )
-        }
-        check(result.exitCode == 0) {
-            result.stderr.ifBlank { "烧录命令退出码 ${result.exitCode}" }
-        }
-        updateStatus(
-            state = McuFlashRunState.RUNNING,
-            profile = profile,
-            portPath = target.portPath,
-            baudRate = target.baudRate,
-            firmwarePath = artifact.absolutePath,
-            bytesSent = artifact.length().toInt(),
-            totalBytes = artifact.length().toInt(),
-            commandPreview = commandLine,
-            lastMessage = "命令执行完成",
-        )
-    }
-
     private fun updateStatus(
         state: McuFlashRunState,
         profile: McuFlashProfileSummary,
-        portPath: String?,
-        baudRate: Int,
+        probe: StLinkProbeInfo?,
+        targetChipId: Int?,
+        targetVoltageMillivolts: Int?,
+        flashStartAddress: Long?,
         firmwarePath: String,
         bytesSent: Int,
         totalBytes: Int,
-        commandPreview: String?,
+        progressPercent: Double,
         lastMessage: String,
     ) {
         synchronized(lock) {
@@ -333,35 +265,19 @@ class McuFlashService(
                 profileTitle = profile.title,
                 runtimeKind = profile.runtimeKind,
                 strategyKind = profile.strategyKind,
-                portPath = portPath,
-                baudRate = baudRate,
+                probeSerialNumber = probe?.serialNumber,
+                probeDescription = probe?.let(::probeLabel),
+                targetChipId = targetChipId,
+                targetVoltageMillivolts = targetVoltageMillivolts,
+                flashStartAddress = flashStartAddress,
                 firmwarePath = firmwarePath,
                 bytesSent = bytesSent,
                 totalBytes = totalBytes,
-                commandPreview = commandPreview,
+                progressPercent = progressPercent,
                 lastMessage = lastMessage,
                 updatedAt = Instant.now().toString(),
             )
         }
-    }
-
-    private fun resolveTarget(
-        request: McuFlashRequest,
-        profile: McuFlashProfileSummary,
-    ): FlashTarget {
-        val session = sessionService.getSessionSnapshot()
-        val portPath = request.portPath?.takeIf { it.isNotBlank() }
-            ?: session.portPath
-        if (profile.requiresPort && portPath == null) {
-            throw IllegalArgumentException("请先选择串口")
-        }
-        val baudRate = request.baudRate
-            ?: session.baudRate.takeIf { it > 0 }
-            ?: profile.defaultBaudRate
-        return FlashTarget(
-            portPath = portPath,
-            baudRate = baudRate,
-        )
     }
 
     private fun resolveArtifactFile(
@@ -374,190 +290,17 @@ class McuFlashService(
         return file
     }
 
-    private fun resolveCommandPreview(
-        request: McuFlashRequest,
-        profile: McuFlashProfileSummary,
-        target: FlashTarget,
-        artifact: File,
-    ): String? {
-        if (profile.strategyKind != McuFlashStrategyKind.COMMAND_TEMPLATE) {
-            return null
-        }
-        val template = request.commandTemplate
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?: profile.commandTemplate
-            ?: throw IllegalArgumentException("烧录命令不能为空")
-        return renderTemplate(
-            template = template,
-            profile = profile,
-            target = target,
-            artifact = artifact,
-        )
-    }
-
-    private fun renderTemplate(
-        template: String,
-        profile: McuFlashProfileSummary,
-        target: FlashTarget,
-        artifact: File,
+    private fun probeLabel(
+        probe: StLinkProbeInfo,
     ): String {
-        return template
-            .replace("{esptoolCommand}", resolveEsptoolCommand())
-            .replace("{portPath}", target.portPath.orEmpty())
-            .replace("{baudRate}", target.baudRate.toString())
-            .replace("{firmwarePath}", artifact.absolutePath)
-            .replace("{firmwareName}", artifact.name)
-            .replace("{firmwareDir}", artifact.parentFile?.absolutePath.orEmpty())
-            .replace("{profileId}", profile.id)
-            .replace("{runtimeKind}", profile.runtimeKind.name.lowercase())
-            .replace("{mcuFamily}", profile.mcuFamily)
-    }
-
-    private fun resolveEsptoolCommand(): String {
-        System.getProperty("kcloud.mcu.esptool.cmd")
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?.let { return it }
-
-        val candidates = listOf(
-            EsptoolCommandCandidate(
-                command = "python3 -m esptool",
-                probePosix = "command -v python3 >/dev/null 2>&1 && python3 -m esptool version >/dev/null 2>&1",
-                probeWindows = "where python3 >nul 2>nul && python3 -m esptool version >nul 2>nul",
-            ),
-            EsptoolCommandCandidate(
-                command = "python -m esptool",
-                probePosix = "command -v python >/dev/null 2>&1 && python -m esptool version >/dev/null 2>&1",
-                probeWindows = "where python >nul 2>nul && python -m esptool version >nul 2>nul",
-            ),
-            EsptoolCommandCandidate(
-                command = "esptool.py",
-                probePosix = "command -v esptool.py >/dev/null 2>&1",
-                probeWindows = "where esptool.py >nul 2>nul",
-            ),
-            EsptoolCommandCandidate(
-                command = "esptool",
-                probePosix = "command -v esptool >/dev/null 2>&1",
-                probeWindows = "where esptool >nul 2>nul",
-            ),
-        )
-        return candidates.firstOrNull { candidate ->
-            val probeCommand = if (isWindows()) candidate.probeWindows else candidate.probePosix
-            commandRunner.run(commandLine = probeCommand).exitCode == 0
-        }?.command
-            ?: throw IllegalStateException(
-                "未找到可用的 esptool。请先安装 esptool，或通过 -Dkcloud.mcu.esptool.cmd 指定刷机命令，例如 python3 -m esptool、esptool 或 esptool.py",
-            )
-    }
-
-    private fun resolveOnlineFirmwareUrl(
-        profile: McuFlashProfileSummary,
-        requestedUrl: String,
-    ): String {
-        if (profile.runtimeKind == McuFlashRuntimeKind.MICROPYTHON && !requestedUrl.isDirectFirmwareUrl()) {
-            return resolveLatestMicroPythonFirmwareUrl(requestedUrl)
-        }
-        return requestedUrl
-    }
-
-    private fun resolveLatestMicroPythonFirmwareUrl(
-        catalogUrl: String,
-    ): String {
-        val commandLine = "curl -fsSL ${quoteShellArg(catalogUrl)}"
-        val result = commandRunner.run(commandLine = commandLine)
-        check(result.exitCode == 0) {
-            result.stderr.ifBlank { "无法读取 MicroPython 下载页: $catalogUrl" }
-        }
-        val relativePath = micropythonFirmwareRegex.findAll(result.stdout)
-            .map { match -> match.value }
-            .firstOrNull { path -> !path.contains(".app-bin") }
-            ?: throw IllegalStateException("未在 MicroPython 下载页解析到可用固件: $catalogUrl")
-        return when {
-            relativePath.startsWith("http://") || relativePath.startsWith("https://") -> relativePath
-            relativePath.startsWith("/") -> "https://micropython.org$relativePath"
-            else -> "https://micropython.org/$relativePath"
-        }
-    }
-
-    private fun resolveDownloadTargetFile(
-        profile: McuFlashProfileSummary,
-        resolvedUrl: String,
-    ): File {
-        val fileName = resolvedUrl.substringAfterLast('/')
-            .substringBefore('?')
-            .takeIf { it.isNotBlank() }
-            ?.sanitizeFileName()
-            ?: "${profile.id}.bin"
-        val rootDir = File(
-            System.getProperty("user.home"),
-            ".kcloud/mcu-downloads/${profile.id}",
-        )
-        return File(rootDir, fileName)
-    }
-
-    private fun buildCurlDownloadCommand(
-        url: String,
-        targetFile: File,
-    ): String {
-        return "curl -fL --retry 2 --connect-timeout 15 -o ${quoteShellArg(targetFile.absolutePath)} ${quoteShellArg(url)}"
-    }
-
-    private fun quoteShellArg(
-        value: String,
-    ): String {
-        return "'" + value.replace("'", "'\"'\"'") + "'"
-    }
-
-    private fun readUntilContains(
-        portPath: String,
-        readBlock: (ByteArray) -> Int,
-        expected: String,
-        timeoutMs: Int,
-    ): String {
-        val startedAt = System.currentTimeMillis()
-        val buffer = ByteArray(256)
-        val builder = StringBuilder()
-        while (System.currentTimeMillis() - startedAt < timeoutMs) {
-            val count = readBlock(buffer)
-            if (count <= 0) {
-                continue
+        return buildString {
+            append(probe.productName ?: "ST-Link")
+            probe.serialNumber?.takeIf { it.isNotBlank() }?.let { serial ->
+                append(" / ")
+                append(serial)
             }
-            builder.append(buffer.decodeToString(0, count))
-            val content = builder.toString()
-            if (content.contains(expected)) {
-                return content
-            }
+            append(" / 0x")
+            append(probe.productId.toString(16).uppercase().padStart(4, '0'))
         }
-        throw IllegalStateException("串口 $portPath 未收到 $expected")
     }
-
-    private data class FlashTarget(
-        val portPath: String?,
-        val baudRate: Int,
-    )
-
-    companion object {
-        private val micropythonFirmwareRegex = Regex("""/resources/firmware/[^"\s]+\.bin""")
-    }
-
-    private data class EsptoolCommandCandidate(
-        val command: String,
-        val probePosix: String,
-        val probeWindows: String,
-    )
-}
-
-private fun String.isDirectFirmwareUrl(): Boolean {
-    val normalized = substringBefore('?').substringBefore('#')
-    return normalized.endsWith(".bin", ignoreCase = true) || normalized.endsWith(".uf2", ignoreCase = true)
-}
-
-private fun String.sanitizeFileName(): String {
-    return replace(Regex("""[^A-Za-z0-9._-]"""), "_")
-}
-
-private fun isWindows(): Boolean {
-    return System.getProperty("os.name")
-        ?.contains("Windows", ignoreCase = true) == true
 }

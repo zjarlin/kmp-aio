@@ -23,7 +23,7 @@ object KCloudUiKoinApplication
 class KCloudUiScanKoinModule {
     @Single
     fun provideRouteCatalog(): KCloudRouteCatalog {
-        return KCloudRouteCatalog(RouteKeys.allMeta)
+        return KCloudRouteCatalog(filterKCloudRouteMeta(RouteKeys.allMeta))
     }
 }
 

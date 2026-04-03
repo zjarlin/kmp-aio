@@ -100,4 +100,4 @@ private fun String.toAvatarInitials(): String {
         .ifBlank { "U" }
 }
 
-private const val SYSTEM_SCENE_ID = "系统"
+private const val SYSTEM_SCENE_ID = "系统管理"

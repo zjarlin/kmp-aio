@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
+import site.addzero.kcloud.plugins.mcuconsole.McuFlashProbeSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
@@ -23,6 +24,7 @@ data class McuConsoleUiState(
     val transportProfiles: List<McuTransportProfileIso> = emptyList(),
     val transportDraft: McuTransportProfileIso = defaultTransportDraft(),
     val flashProfiles: List<McuFlashProfileSummary> = emptyList(),
+    val flashProbes: List<McuFlashProbeSummary> = emptyList(),
     val runtimeBundles: List<McuRuntimeBundleSummary> = emptyList(),
     val events: List<McuEventEnvelope> = emptyList(),
     val widgetInstances: List<McuWidgetInstanceState> = emptyList(),
@@ -48,6 +50,7 @@ data class McuConsoleSelectionState(
     val selectedPortPath: String? = null,
     val selectedPortDeviceKey: String? = null,
     val selectedFlashProfileId: String? = null,
+    val selectedFlashProbeSerialNumber: String? = null,
     val selectedRuntimeBundleId: String? = null,
     val selectedScriptExampleId: String? = null,
     val selectedAtomicCommandId: String? = null,
@@ -115,8 +118,6 @@ data class McuConsoleScriptEditorState(
 
 data class McuConsoleFlashEditorState(
     val firmwarePathText: String = "",
-    val firmwareDownloadUrlText: String = "",
-    val flashCommandTemplateText: String = "",
 )
 
 data class McuConsoleFeedbackState(

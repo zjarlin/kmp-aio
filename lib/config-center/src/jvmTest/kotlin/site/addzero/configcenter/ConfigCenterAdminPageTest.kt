@@ -38,6 +38,9 @@ class ConfigCenterAdminPageTest {
         val pageResponse = client.get("/config-center")
         assertEquals(HttpStatusCode.OK, pageResponse.status)
         assertContains(pageResponse.bodyAsText(), "Embedded Config Center")
+        assertContains(pageResponse.bodyAsText(), "新增配置")
+        assertContains(pageResponse.bodyAsText(), "<select id=\"edit-value-type\">")
+        assertContains(pageResponse.bodyAsText(), "<option value=\"kotlin.Boolean\">kotlin.Boolean</option>")
 
         val putResponse = client.put("/config-center/api/value") {
             contentType(ContentType.Application.Json)

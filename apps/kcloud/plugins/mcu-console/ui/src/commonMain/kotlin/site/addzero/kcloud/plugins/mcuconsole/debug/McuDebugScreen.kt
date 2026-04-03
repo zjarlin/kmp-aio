@@ -19,7 +19,7 @@ import site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino.*
     order = 20.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "设备",
+            name = "物联网上位机",
             icon = "Build",
             order = 0,
         ),

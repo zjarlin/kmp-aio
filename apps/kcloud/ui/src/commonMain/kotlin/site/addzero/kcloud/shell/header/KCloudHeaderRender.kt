@@ -3,23 +3,24 @@ package site.addzero.kcloud.shell.header
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
-import site.addzero.kcloud.shell.navigation.KCloudRouteEntry
-import site.addzero.kcloud.shell.navigation.rememberSelectedRoute
+import site.addzero.kcloud.shell.navigation.KCloudRouteScene
+import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.workbenchshell.spi.header.HeaderRender
 
 @Single
@@ -31,26 +32,21 @@ class KCloudHeaderRender(
     override fun Render(
         modifier: Modifier,
     ) {
-        val selectedRoute = rememberSelectedRoute(
-            routeCatalog = routeCatalog,
-            shellState = shellState,
-        )
-        val selectedScene = remember(routeCatalog, shellState.selectedSceneId) {
-            routeCatalog.findScene(shellState.selectedSceneId)
-        }
-
+        val selectedSceneId = shellState.selectedSceneId
+        val uiMetrics = currentKCloudUiMetrics()
         Row(
             modifier = modifier
-                .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            selectedScene?.routes.orEmpty().forEach { route ->
-                KCloudRouteTab(
-                    route = route,
-                    selected = selectedRoute?.routePath == route.routePath,
+            routeCatalog.scenes.forEach { scene ->
+                KCloudSceneTab(
+                    scene = scene,
+                    selected = selectedSceneId == scene.id,
+                    uiMetrics = uiMetrics,
                     onClick = {
-                        shellState.selectRoute(route.routePath)
+                        shellState.selectScene(scene.id)
                     },
                 )
             }
@@ -59,24 +55,48 @@ class KCloudHeaderRender(
 }
 
 @Composable
-private fun KCloudRouteTab(
-    route: KCloudRouteEntry,
+private fun KCloudSceneTab(
+    scene: KCloudRouteScene,
     selected: Boolean,
+    uiMetrics: site.addzero.kcloud.theme.KCloudUiMetrics,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(999.dp),
-        color = if (selected) colorScheme.onSurface else colorScheme.surfaceVariant.copy(alpha = 0.42f),
-        contentColor = if (selected) colorScheme.surface else colorScheme.onSurface,
-        tonalElevation = if (selected) 2.dp else 0.dp,
+        color = if (selected) {
+            colorScheme.primary
+        } else {
+            colorScheme.surfaceVariant.copy(alpha = 0.58f)
+        },
+        contentColor = if (selected) colorScheme.onPrimary else colorScheme.onSurface,
+        border = BorderStroke(
+            width = 1.dp,
+            color = if (selected) {
+                colorScheme.primary
+            } else {
+                colorScheme.outlineVariant.copy(alpha = 0.72f)
+            },
+        ),
+        tonalElevation = 0.dp,
     ) {
-        Text(
-            text = route.title,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-        )
+        Row(
+            modifier = Modifier.padding(
+                horizontal = uiMetrics.sceneTabHorizontalPadding,
+                vertical = uiMetrics.sceneTabVerticalPadding,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(
+                imageVector = scene.icon,
+                contentDescription = null,
+            )
+            Text(
+                text = scene.name,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            )
+        }
     }
 }

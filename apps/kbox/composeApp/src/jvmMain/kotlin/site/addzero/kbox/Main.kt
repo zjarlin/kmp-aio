@@ -59,36 +59,39 @@ fun main() = application {
         }
 
         KboxSystemTrayHost(
-            enabled = traySupported,
-            windowVisible = windowVisible,
-            syncState = syncState,
-            onToggleWindow = { windowVisible = !windowVisible },
-            onStartSync = {
-                scope.launch {
-                    syncState.start()
-                }
-            },
-            onPauseSync = {
-                scope.launch {
-                    syncState.pause()
-                }
-            },
-            onRefreshSync = {
-                scope.launch {
-                    syncState.refresh()
-                }
-            },
-            onReleaseLocalSpace = {
-                scope.launch {
-                    syncState.releaseReclaimableLocalCopies()
-                }
-            },
-            onExit = {
-                scope.launch {
-                    runCatching { syncCoordinator.stop() }
-                }
-                exitApplication()
-            },
+            kboxSystemTrayHostProps = KboxSystemTrayHostProps(
+                enabled = traySupported,
+                windowVisible = windowVisible,
+                syncState = syncState
+            ),
+            kboxSystemTrayHostEvents = KboxSystemTrayHostEvents(
+                onToggleWindow = { windowVisible = !windowVisible },
+                onStartSync = {
+                    scope.launch {
+                        syncState.start()
+                    }
+                },
+                onPauseSync = {
+                    scope.launch {
+                        syncState.pause()
+                    }
+                },
+                onRefreshSync = {
+                    scope.launch {
+                        syncState.refresh()
+                    }
+                },
+                onReleaseLocalSpace = {
+                    scope.launch {
+                        syncState.releaseReclaimableLocalCopies()
+                    }
+                },
+                onExit = {
+                    scope.launch {
+                        runCatching { syncCoordinator.stop() }
+                    }
+                    exitApplication()
+                })
         )
 
         if (windowVisible) {

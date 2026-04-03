@@ -93,6 +93,7 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
+            implementation(project(":lib:tool-jvm:tool-stm32-bootloader"))
             implementation(project(":lib:tool-jvm:tool-serial"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())

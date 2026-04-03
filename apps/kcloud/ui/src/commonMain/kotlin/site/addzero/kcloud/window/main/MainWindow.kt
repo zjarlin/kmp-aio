@@ -1,11 +1,18 @@
 package site.addzero.kcloud.window.main
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.appsidebar.AdminWorkbenchScaffold
@@ -18,9 +25,10 @@ import site.addzero.kcloud.shell.content.KCloudContentRender
 import site.addzero.kcloud.shell.header.KCloudHeaderRender
 import site.addzero.kcloud.shell.menu.KCloudShellActions
 import site.addzero.kcloud.shell.sidebar.KCloudSidebarRender
-import site.addzero.kcloud.theme.KCloudTheme
+import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeMode
 import site.addzero.kcloud.theme.ShellThemeState
+import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.kcloud.theme.resolveDarkTheme
 
 @Composable
@@ -33,10 +41,12 @@ fun MainWindow(
 ) {
     val themeMode = shellThemeState.themeMode
     val sidebarVisible = shellState.sidebarVisible
+    val uiMetrics = currentKCloudUiMetrics()
     val darkTheme = themeMode.resolveDarkTheme(
         systemDarkTheme = isSystemInDarkTheme(),
     )
-    KCloudTheme(
+
+    Theme(
         darkTheme = darkTheme,
     ) {
         val toggleTheme = {
@@ -62,11 +72,11 @@ fun MainWindow(
             page = adminWorkbenchPageConfig(pageTitle = "KCloud"),
             modifier = Modifier.fillMaxSize(),
             config = adminWorkbenchConfig(
-                brandLabel = "KCloud",
+                brandLabel = "OKMY DICS",
                 welcomeLabel = "",
-                defaultSidebarRatio = if (sidebarVisible) 0.22f else 0f,
-                minSidebarWidth = if (sidebarVisible) 248.dp else 0.dp,
-                maxSidebarWidth = if (sidebarVisible) 360.dp else 0.dp,
+                defaultSidebarRatio = if (sidebarVisible) uiMetrics.sidebarRatio else 0f,
+                minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
+                maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
                 contentPadding = PaddingValues(0.dp),
                 detailPadding = PaddingValues(0.dp),
                 isDarkTheme = darkTheme,
@@ -75,16 +85,32 @@ fun MainWindow(
                 onThemeToggle = toggleTheme,
             ),
             slots = adminWorkbenchSlots(
-                showContentHeader = true,
-                titleContent = {
+                brandContent = {
+                    KCloudBrandSlot()
                     headerRenderer.Render(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.weight(1f),
                     )
                 },
+                showContentHeader = false,
                 userContent = {
                     KCloudShellActions()
                 },
             ),
+        )
+    }
+}
+
+@Composable
+private fun RowScope.KCloudBrandSlot() {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = "OKMY DICS",
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.8.sp,
         )
     }
 }

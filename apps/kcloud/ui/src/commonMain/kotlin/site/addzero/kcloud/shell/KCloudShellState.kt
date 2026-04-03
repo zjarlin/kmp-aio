@@ -5,15 +5,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
-import site.addzero.generated.RouteKeys
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 
 @Single
 class KCloudShellState(
     private val routeCatalog: KCloudRouteCatalog,
 ) {
-    private val startupRoutePath = routeCatalog.findRoute(RouteKeys.MCU_CONTROL_SCREEN)?.routePath
-        ?: routeCatalog.defaultRoutePath
+    private val startupRoutePath = routeCatalog.defaultRoutePath
+        .ifBlank { routeCatalog.routeEntries.firstOrNull()?.routePath.orEmpty() }
 
     val backStack = mutableStateListOf(startupRoutePath)
 

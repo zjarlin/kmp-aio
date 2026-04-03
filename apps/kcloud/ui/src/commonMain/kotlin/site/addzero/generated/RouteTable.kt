@@ -13,11 +13,12 @@ object RouteTable {
      * 所有路由映射
      */
     val allRoutes: Map<String, RouteContent> = mutableMapOf<String, RouteContent>().apply {
-        put(RouteKeys.MCU_CONTROL_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.control.McuControlScreen() })
-        put(RouteKeys.MCU_FLASH_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.flash.McuFlashScreen() })
-        put(RouteKeys.MCU_MODBUS_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusScreen() })
-        put(RouteKeys.MCU_ONLINE_DEV_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.onlinedev.McuOnlineDevScreen() })
-        put(RouteKeys.MCU_DEBUG_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.debug.McuDebugScreen() })
+        put(RouteKeys.MCU_CONTROL_SCREEN, { site.addzero.kcloud.shell.routebridge.mcu.McuControlRouteScreen() })
+        put(RouteKeys.MCU_FLASH_SCREEN, { site.addzero.kcloud.shell.routebridge.mcu.McuFlashRouteScreen() })
+        put(RouteKeys.MCU_MODBUS_SCREEN, { site.addzero.kcloud.shell.routebridge.mcu.McuModbusRouteScreen() })
+        put(RouteKeys.MCU_ONLINE_DEV_SCREEN, { site.addzero.kcloud.shell.routebridge.mcu.McuOnlineDevRouteScreen() })
+        put(RouteKeys.MCU_DEBUG_SCREEN, { site.addzero.kcloud.shell.routebridge.mcu.McuDebugRouteScreen() })
+        put(RouteKeys.CONFIG_CENTER_PROJECTS_SCREEN, { site.addzero.kcloud.plugins.system.configcenter.screen.ConfigCenterProjectsScreen() })
     }
 
     /**

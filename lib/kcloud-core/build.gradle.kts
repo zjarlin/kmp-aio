@@ -18,7 +18,6 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.1")
             // 日志
             implementation("io.github.oshai:kotlin-logging:7.0.3")
-            implementation(project(":lib:spec:system-spec"))
         }
 
         jvmMain.dependencies {

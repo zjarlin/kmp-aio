@@ -18,6 +18,17 @@ private val configCenterJson = Json {
     ignoreUnknownKeys = true
 }
 
+private val commonConfigValueTypes = listOf(
+    "kotlin.String",
+    "kotlin.Boolean",
+    "kotlin.Int",
+    "kotlin.Long",
+    "kotlin.Float",
+    "kotlin.Double",
+    "kotlin.collections.List<kotlin.String>",
+    "kotlinx.serialization.json.JsonElement",
+)
+
 fun Application.installConfigCenterAdmin(
     settings: ConfigCenterJdbcSettings,
     adminSettings: ConfigCenterAdminSettings = ConfigCenterAdminSettings(),
@@ -299,7 +310,7 @@ private fun renderConfigCenterAdminPage(
           color: var(--muted);
           font-weight: 600;
         }
-        input, textarea {
+        input, textarea, select {
           width: 100%;
           border: 1px solid var(--line);
           border-radius: 12px;
@@ -425,6 +436,7 @@ private fun renderConfigCenterAdminPage(
                 </div>
               </div>
               <div class="actions" style="margin-top: 14px;">
+                <button class="secondary" id="new-button" type="button">新增配置</button>
                 <button class="primary" id="refresh-button" type="button">刷新</button>
               </div>
             </div>
@@ -474,7 +486,9 @@ private fun renderConfigCenterAdminPage(
                 </div>
                 <div class="field">
                   <label for="edit-value-type">值类型 ValueType</label>
-                  <input id="edit-value-type" value="kotlin.String" />
+                  <select id="edit-value-type">
+                    ${renderValueTypeOptions()}
+                  </select>
                 </div>
                 <div class="field wide checkbox">
                   <input id="edit-required" type="checkbox" />
@@ -501,6 +515,7 @@ private fun renderConfigCenterAdminPage(
           filterNamespace: document.getElementById("filter-namespace"),
           filterActive: document.getElementById("filter-active"),
           filterKeyword: document.getElementById("filter-keyword"),
+          newButton: document.getElementById("new-button"),
           refreshButton: document.getElementById("refresh-button"),
           valuesBody: document.getElementById("values-body"),
           tableStatus: document.getElementById("table-status"),
@@ -541,6 +556,18 @@ private fun renderConfigCenterAdminPage(
           }
         }
 
+        function ensureValueTypeOption(value) {
+          const normalized = (value || "kotlin.String").trim() || "kotlin.String";
+          const existing = Array.from(elements.editValueType.options).find((option) => option.value === normalized);
+          if (!existing) {
+            const option = document.createElement("option");
+            option.value = normalized;
+            option.textContent = `${'$'}{normalized}（历史/自定义）`;
+            elements.editValueType.appendChild(option);
+          }
+          return normalized;
+        }
+
         function populateEditor(item) {
           elements.editNamespace.value = item.namespace || "";
           elements.editActive.value = item.active || "dev";
@@ -548,7 +575,7 @@ private fun renderConfigCenterAdminPage(
           elements.editValue.value = item.value || "";
           elements.editComment.value = item.comment || "";
           elements.editDefaultValue.value = item.defaultValue || "";
-          elements.editValueType.value = item.valueType || "kotlin.String";
+          elements.editValueType.value = ensureValueTypeOption(item.valueType);
           elements.editRequired.checked = Boolean(item.required);
           setStatus(elements.editorStatus, "已加载选中的配置项。");
         }
@@ -560,9 +587,14 @@ private fun renderConfigCenterAdminPage(
           elements.editValue.value = "";
           elements.editComment.value = "";
           elements.editDefaultValue.value = "";
-          elements.editValueType.value = "kotlin.String";
+          elements.editValueType.value = ensureValueTypeOption("kotlin.String");
           elements.editRequired.checked = false;
-          setStatus(elements.editorStatus, "");
+          setStatus(elements.editorStatus, "当前是新增模式。填写右侧表单后点击“保存”即可新增配置。");
+        }
+
+        function startCreateValue() {
+          resetEditor();
+          elements.editKey.focus();
         }
 
         async function refreshValues() {
@@ -605,7 +637,7 @@ private fun renderConfigCenterAdminPage(
             value: elements.editValue.value,
             comment: elements.editComment.value.trim() || null,
             defaultValue: elements.editDefaultValue.value.trim() || null,
-            valueType: elements.editValueType.value.trim() || "kotlin.String",
+            valueType: ensureValueTypeOption(elements.editValueType.value),
             required: elements.editRequired.checked
           };
           setStatus(elements.editorStatus, "保存中...");
@@ -653,6 +685,7 @@ private fun renderConfigCenterAdminPage(
           }
         }
 
+        elements.newButton.addEventListener("click", startCreateValue);
         elements.refreshButton.addEventListener("click", refreshValues);
         elements.saveButton.addEventListener("click", saveValue);
         elements.deleteButton.addEventListener("click", deleteValue);
@@ -680,6 +713,12 @@ private fun jsonString(
     value: String,
 ): String {
     return configCenterJson.encodeToString(value)
+}
+
+private fun renderValueTypeOptions(): String {
+    return commonConfigValueTypes.joinToString(separator = "\n") { valueType ->
+        """<option value="${escapeHtml(valueType)}">${escapeHtml(valueType)}</option>"""
+    }
 }
 
 private suspend inline fun <reified T> io.ktor.server.application.ApplicationCall.receiveJson(): T {

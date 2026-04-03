@@ -35,8 +35,6 @@ ksp {
 }
 
 dependencies {
-    add("kspCommonMainMetadata", project(":lib:ksp:route:route-processor"))
-    add("kspJvm", project(":lib:ksp:route:route-processor"))
 }
 
 kotlin {
@@ -46,6 +44,7 @@ kotlin {
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")
             implementation("io.github.alexzhirkevich:cupertino-adaptive:0.1.0-alpha04")
+            implementation(project(":lib:compose:shadcn-compose-component"))
             implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
