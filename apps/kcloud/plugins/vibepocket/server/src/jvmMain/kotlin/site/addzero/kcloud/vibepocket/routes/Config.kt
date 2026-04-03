@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.configcenter.ConfigCenter
 import site.addzero.configcenter.ConfigCenterKeyDefinition
 import site.addzero.kcloud.config.KCloudConfigKeys
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
@@ -120,13 +121,13 @@ private suspend fun readConfigValue(
 }
 
 private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
-    val sqliteEnabled = propertyOrNull(KCloudConfigKeys.SQLITE_ENABLED)
-        ?.getString()
-        ?.toBoolean() == true
-    val postgresEnabled = propertyOrNull(KCloudConfigKeys.POSTGRES_ENABLED)
-        ?.getString()
-        ?.toBoolean() == true
-    val sqliteUrl = propertyOrNull(KCloudConfigKeys.SQLITE_URL)?.getString()
+    val env = ConfigCenter.getEnv(this)
+    val sqliteEnv = env.path("datasources", "sqlite")
+    val postgresEnv = env.path("datasources", "postgres")
+    val kcloudEnv = env.path("kcloud")
+    val sqliteEnabled = sqliteEnv.boolean("enabled", false) == true
+    val postgresEnabled = postgresEnv.boolean("enabled", false) == true
+    val sqliteUrl = sqliteEnv.string("url")
 
     return ConfigRuntimeInfo(
         storage = when {
@@ -135,8 +136,8 @@ private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
             else -> "unknown"
         },
         sqlitePath = sqliteUrl?.removePrefix("jdbc:sqlite:"),
-        dataDir = propertyOrNull(KCloudConfigKeys.DATA_DIR)?.getString(),
-        cacheDir = propertyOrNull(KCloudConfigKeys.CACHE_DIR)?.getString(),
+        dataDir = kcloudEnv.string("dataDir"),
+        cacheDir = kcloudEnv.string("cacheDir"),
     )
 }
 

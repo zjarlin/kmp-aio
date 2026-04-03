@@ -1,10 +1,20 @@
-package site.addzero.kcloud.plugins.mcuconsole.client
+package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusCommandConfig
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
 import kotlin.math.max
 
 @Single

@@ -1,13 +1,9 @@
-package site.addzero.kcloud.plugins.mcuconsole.client
+package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceProfileIso
 import site.addzero.kcloud.plugins.mcuconsole.McuEventEnvelope
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashProfileSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashStatusResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusAtomicAction
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusFrameFormat
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusGpioMode
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.McuPortSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeBundleSummary
 import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeStatusResponse
@@ -16,6 +12,10 @@ import site.addzero.kcloud.plugins.mcuconsole.McuScriptStatusResponse
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionSnapshot
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportKind
 import site.addzero.kcloud.plugins.mcuconsole.McuTransportProfileIso
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat
+import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 
 data class McuConsoleUiState(
     val devices: List<McuPortSummary> = emptyList(),

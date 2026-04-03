@@ -9,8 +9,7 @@ import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.boolean
-import site.addzero.configcenter.string
+import site.addzero.configcenter.ConfigCenter
 import site.addzero.kcloud.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.kcloud.jimmer.spi.DatabaseDriverSpi
 import site.addzero.kcloud.jimmer.spi.DatasourceBootstrapContext
@@ -154,10 +153,12 @@ private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): Dataso
         return null
     }
 
-    val sqliteUrl = config.string(DatasourceConfigKeys.urlDefinition("sqlite"))
+    val env = ConfigCenter.getEnv(config)
+    val sqliteConfig = env.path("datasources", "sqlite")
+    val sqliteUrl = sqliteConfig.string("url")
         ?.takeIf { it.isNotBlank() }
         ?: DEFAULT_EMBEDDED_SQLITE_URL
-    val sqliteDriver = config.string(DatasourceConfigKeys.driverDefinition("sqlite"))
+    val sqliteDriver = sqliteConfig.string("driver")
         ?.takeIf { it.isNotBlank() }
         ?: "org.sqlite.SQLiteDriver"
 
@@ -192,16 +193,17 @@ class DataSourceManager(
 
 private fun loadAllDatasources(config: ApplicationConfig): List<DatasourceProperties> {
     val datasources = mutableListOf<DatasourceProperties>()
-    val datasourceConfig = runCatching { config.config("datasources") }.getOrNull() ?: return emptyList()
-
-    for (name in datasourceConfig.toMap().keys) {
+    val env = ConfigCenter.getEnv(config)
+    val datasourceRoot = env.path("datasources")
+    for (name in datasourceRoot.keys()) {
+        val datasourceEnv = datasourceRoot.child(name)
         datasources += DatasourceProperties(
             name = name,
-            enabled = config.boolean(DatasourceConfigKeys.enabledDefinition(name)) == true,
-            url = config.string(DatasourceConfigKeys.urlDefinition(name)).orEmpty(),
-            driver = config.string(DatasourceConfigKeys.driverDefinition(name)).orEmpty(),
-            user = config.string(DatasourceConfigKeys.userDefinition(name)).orEmpty(),
-            password = config.string(DatasourceConfigKeys.passwordDefinition(name)).orEmpty(),
+            enabled = datasourceEnv.boolean("enabled", false) == true,
+            url = datasourceEnv.string("url").orEmpty(),
+            driver = datasourceEnv.string("driver").orEmpty(),
+            user = datasourceEnv.string("user").orEmpty(),
+            password = datasourceEnv.string("password").orEmpty(),
         )
     }
 

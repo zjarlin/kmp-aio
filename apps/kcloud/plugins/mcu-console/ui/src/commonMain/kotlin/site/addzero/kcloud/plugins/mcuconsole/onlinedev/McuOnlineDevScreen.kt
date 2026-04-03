@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.screen
+package site.addzero.kcloud.plugins.mcuconsole.onlinedev
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
@@ -25,7 +25,8 @@ import site.addzero.kcloud.plugins.mcuconsole.McuWidgetBinding
 import site.addzero.kcloud.plugins.mcuconsole.McuWidgetFieldKind
 import site.addzero.kcloud.plugins.mcuconsole.McuWidgetTemplate
 import site.addzero.kcloud.plugins.mcuconsole.McuWidgetTemplateKind
-import site.addzero.kcloud.plugins.mcuconsole.client.McuWidgetInstanceState
+import site.addzero.kcloud.plugins.mcuconsole.workbench.*
+import site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino.*
 
 @Route(
     value = "开发工具",
@@ -43,53 +44,53 @@ import site.addzero.kcloud.plugins.mcuconsole.client.McuWidgetInstanceState
 )
 @Composable
 fun McuOnlineDevScreen() {
-    val viewModel: McuOnlineDevViewModel = koinViewModel()
-    val state = rememberMcuWorkbenchState(viewModel.state)
+    val state: McuConsoleWorkbenchState = koinInject()
+    val workbenchState = rememberMcuWorkbenchState(state)
     val runAction = rememberMcuActionRunner()
 
     McuCupertinoScene {
         McuWorkbenchFrame(
-            state = state,
+            state = workbenchState,
             actions = {
                 McuCupertinoSecondaryButton(
                     text = "刷新",
                     onClick = {
                         runAction {
-                            state.refreshAll()
+                            workbenchState.refreshAll()
                         }
                     },
                 )
                 McuCupertinoSecondaryButton(
                     text = "确保运行时",
-                    enabled = state.hasActiveSession && state.selectedRuntimeBundle != null,
+                    enabled = workbenchState.hasActiveSession && workbenchState.selectedRuntimeBundle != null,
                     onClick = {
                         runAction {
-                            state.ensureRuntime(forceReflash = false)
+                            workbenchState.ensureRuntime(forceReflash = false)
                         }
                     },
                 )
                 McuCupertinoPrimaryButton(
                     text = "执行脚本",
-                    enabled = state.hasActiveSession && state.isRuntimeReady && !state.isScriptRunning,
+                    enabled = workbenchState.hasActiveSession && workbenchState.isRuntimeReady && !workbenchState.isScriptRunning,
                     onClick = {
                         runAction {
-                            state.executeScript()
+                            workbenchState.executeScript()
                         }
                     },
                 )
                 McuCupertinoSecondaryButton(
                     text = "停止脚本",
-                    enabled = state.hasActiveSession && state.isScriptRunning,
+                    enabled = workbenchState.hasActiveSession && workbenchState.isScriptRunning,
                     onClick = {
                         runAction {
-                            state.stopScript()
+                            workbenchState.stopScript()
                         }
                     },
                 )
                 McuCupertinoSecondaryButton(
                     text = "清空日志",
                     onClick = {
-                        state.clearVisibleEvents()
+                        workbenchState.clearVisibleEvents()
                     },
                 )
             },
@@ -108,40 +109,40 @@ fun McuOnlineDevScreen() {
                     ) {
                         item {
                             McuRuntimeBundleBrowser(
-                                bundles = state.runtimeBundles,
-                                selectedBundleId = state.selectedRuntimeBundleId,
-                                onSelect = { bundleId -> state.selectRuntimeBundle(bundleId) },
+                                bundles = workbenchState.runtimeBundles,
+                                selectedBundleId = workbenchState.selectedRuntimeBundleId,
+                                onSelect = { bundleId -> workbenchState.selectRuntimeBundle(bundleId) },
                                 modifier = Modifier.fillMaxWidth().height(160.dp),
                             )
                         }
                         item {
                             McuSummaryTable(
                                 rows = listOf(
-                                    "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
-                                    "运行时" to state.runtimeStatus.state.name,
-                                    "语言" to state.scriptLanguage,
-                                    "Profile" to (state.runtimeStatus.defaultFlashProfileId ?: state.selectedRuntimeBundle?.defaultFlashProfileId.orEmpty()),
+                                    "Bundle" to (workbenchState.runtimeStatus.bundleTitle ?: workbenchState.selectedRuntimeBundle?.title.orEmpty()),
+                                    "运行时" to workbenchState.runtimeStatus.state.name,
+                                    "语言" to workbenchState.scriptLanguage,
+                                    "Profile" to (workbenchState.runtimeStatus.defaultFlashProfileId ?: workbenchState.selectedRuntimeBundle?.defaultFlashProfileId.orEmpty()),
                                 ),
                             )
                         }
                         item {
                             McuAtomicCommandSection(
-                                commands = state.selectedRuntimeBundle?.atomicCommands.orEmpty(),
-                                selectedCommandId = state.selectedAtomicCommandId,
-                                onSelect = { commandId -> state.selectAtomicCommand(commandId) },
+                                commands = workbenchState.selectedRuntimeBundle?.atomicCommands.orEmpty(),
+                                selectedCommandId = workbenchState.selectedAtomicCommandId,
+                                onSelect = { commandId -> workbenchState.selectAtomicCommand(commandId) },
                             )
                         }
                         item {
                             McuScriptExampleSection(
-                                examples = state.selectedRuntimeBundle?.scriptExamples.orEmpty(),
-                                selectedExampleId = state.selectedScriptExampleId,
-                                onSelect = { exampleId -> state.selectScriptExample(exampleId) },
+                                examples = workbenchState.selectedRuntimeBundle?.scriptExamples.orEmpty(),
+                                selectedExampleId = workbenchState.selectedScriptExampleId,
+                                onSelect = { exampleId -> workbenchState.selectScriptExample(exampleId) },
                             )
                         }
                         item {
                             McuWidgetTemplateSection(
-                                templates = state.selectedRuntimeBundle?.widgetTemplates.orEmpty(),
-                                onAdd = { templateId -> state.addWidgetFromTemplate(templateId) },
+                                templates = workbenchState.selectedRuntimeBundle?.widgetTemplates.orEmpty(),
+                                onAdd = { templateId -> workbenchState.addWidgetFromTemplate(templateId) },
                             )
                         }
                     }
@@ -151,7 +152,7 @@ fun McuOnlineDevScreen() {
                     title = "控件面板",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 ) {
-                    if (state.widgetInstances.isEmpty()) {
+                    if (workbenchState.widgetInstances.isEmpty()) {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center,
@@ -168,21 +169,21 @@ fun McuOnlineDevScreen() {
                             verticalArrangement = Arrangement.spacedBy(10.dp),
                         ) {
                             items(
-                                items = state.widgetInstances,
+                                items = workbenchState.widgetInstances,
                                 key = { widget -> widget.instanceId },
                             ) { widget ->
                                 McuWidgetInstanceCard(
                                     widget = widget,
-                                    canExecute = state.canUseWidgets && !state.isScriptRunning,
-                                    scriptPreview = state.previewWidgetScript(widget.instanceId),
+                                    canExecute = workbenchState.canUseWidgets && !workbenchState.isScriptRunning,
+                                    scriptPreview = workbenchState.previewWidgetScript(widget.instanceId),
                                     onExecute = {
                                         runAction {
-                                            state.executeWidget(widget.instanceId)
+                                            workbenchState.executeWidget(widget.instanceId)
                                         }
                                     },
-                                    onRemove = { state.removeWidgetInstance(widget.instanceId) },
+                                    onRemove = { workbenchState.removeWidgetInstance(widget.instanceId) },
                                     onValueChange = { key, value ->
-                                        state.updateWidgetValue(widget.instanceId, key, value)
+                                        workbenchState.updateWidgetValue(widget.instanceId, key, value)
                                     },
                                 )
                             }
@@ -195,23 +196,23 @@ fun McuOnlineDevScreen() {
                     modifier = Modifier.width(420.dp).fillMaxHeight(),
                 ) {
                     McuCupertinoField(
-                        value = state.timeoutMsText,
-                        onValueChange = { state.timeoutMsText = it },
+                        value = workbenchState.timeoutMsText,
+                        onValueChange = { workbenchState.timeoutMsText = it },
                         label = "timeoutMs",
                     )
                     McuCupertinoSummarySection(
                         rows = listOf(
-                            "语言" to state.scriptLanguage,
-                            "会话" to if (state.session.isOpen) "OPEN" else "CLOSED",
-                            "运行时" to state.runtimeStatus.state.name,
-                            "脚本状态" to state.scriptStatus.state.name,
-                            "Frame" to state.scriptStatus.lastFrameType.orEmpty(),
+                            "语言" to workbenchState.scriptLanguage,
+                            "会话" to if (workbenchState.session.isOpen) "OPEN" else "CLOSED",
+                            "运行时" to workbenchState.runtimeStatus.state.name,
+                            "脚本状态" to workbenchState.scriptStatus.state.name,
+                            "Frame" to workbenchState.scriptStatus.lastFrameType.orEmpty(),
                         ),
                     )
                     McuCupertinoField(
-                        value = state.scriptText,
-                        onValueChange = { state.scriptText = it },
-                        label = state.scriptLanguage,
+                        value = workbenchState.scriptText,
+                        onValueChange = { workbenchState.scriptText = it },
+                        label = workbenchState.scriptLanguage,
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         singleLine = false,
                         minLines = 8,

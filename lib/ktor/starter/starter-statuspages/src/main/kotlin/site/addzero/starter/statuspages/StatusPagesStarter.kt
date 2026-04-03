@@ -5,7 +5,6 @@ import org.koin.core.annotation.*
 import site.addzero.starter.AppStarter
 
 @Module
-@Configuration("vibepocket")
 @ComponentScan("site.addzero.starter.statuspages")
 class StatusPagesStarterKoinModule
 

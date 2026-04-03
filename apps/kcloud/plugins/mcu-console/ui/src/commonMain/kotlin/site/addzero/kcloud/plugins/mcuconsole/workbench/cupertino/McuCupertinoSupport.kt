@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.screen
+package site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

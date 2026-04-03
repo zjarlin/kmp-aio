@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.screen
+package site.addzero.kcloud.plugins.mcuconsole.control
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -12,6 +12,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,19 +32,18 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.kcloud.plugins.mcuconsole.McuFlashRunState
 import site.addzero.kcloud.plugins.mcuconsole.McuRuntimeEnsureState
 import site.addzero.kcloud.plugins.mcuconsole.McuSerialLineEnding
-import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
-import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat
 import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
+import site.addzero.kcloud.plugins.mcuconsole.workbench.*
 
 @Route(
     value = "设备会话",
@@ -59,15 +62,16 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 )
 @Composable
 fun McuControlScreen() {
-    val viewModel: McuControlViewModel = koinViewModel()
-    val state = rememberMcuWorkbenchState(viewModel.state)
+    val state: McuConsoleWorkbenchState = koinInject()
+    var followLatestLogs by rememberSaveable { mutableStateOf(true) }
+    val workbenchState = rememberMcuWorkbenchState(state)
     val runAction = rememberMcuActionRunner()
 
     McuWorkbenchFrame(
-        state = state,
+        state = workbenchState,
         actions = {
             McuControlTopActions(
-                state = state,
+                state = workbenchState,
                 runAction = runAction,
             )
         },
@@ -77,10 +81,10 @@ fun McuControlScreen() {
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             McuDeviceTreeWorkspace(
-                state = state,
+                state = workbenchState,
                 onRefresh = {
                     runAction {
-                        state.refreshPorts()
+                        workbenchState.refreshPorts()
                     }
                 },
                 modifier = Modifier.width(360.dp).fillMaxHeight(),
@@ -90,7 +94,7 @@ fun McuControlScreen() {
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 McuDeviceOverviewPanel(
-                    state = state,
+                    state = workbenchState,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 188.dp, max = 228.dp),
                 )
                 Row(
@@ -98,12 +102,12 @@ fun McuControlScreen() {
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     McuConnectionConfigPanel(
-                        state = state,
+                        state = workbenchState,
                         runAction = runAction,
                         modifier = Modifier.weight(0.54f).fillMaxHeight(),
                     )
                     McuRuntimeOpsPanel(
-                        state = state,
+                        state = workbenchState,
                         runAction = runAction,
                         modifier = Modifier.weight(0.46f).fillMaxHeight(),
                     )
@@ -113,20 +117,20 @@ fun McuControlScreen() {
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     McuScriptWorkbenchPanel(
-                        state = state,
+                        state = workbenchState,
                         runAction = runAction,
                         modifier = Modifier.weight(0.58f).fillMaxHeight(),
                     )
                     McuModbusQuickPanel(
-                        state = state,
+                        state = workbenchState,
                         runAction = runAction,
                         modifier = Modifier.weight(0.42f).fillMaxHeight(),
                     )
                 }
                 McuTerminalPanel(
-                    state = state,
-                    followLatestLogs = viewModel.followLatestLogs,
-                    onFollowLatestChange = { viewModel.followLatestLogs = it },
+                    state = workbenchState,
+                    followLatestLogs = followLatestLogs,
+                    onFollowLatestChange = { followLatestLogs = it },
                     runAction = runAction,
                     modifier = Modifier.fillMaxWidth().weight(1.18f),
                 )

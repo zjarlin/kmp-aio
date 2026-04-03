@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.client
+package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders

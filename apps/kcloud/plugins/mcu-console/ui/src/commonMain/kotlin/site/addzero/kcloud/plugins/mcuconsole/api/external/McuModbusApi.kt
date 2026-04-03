@@ -2,11 +2,11 @@ package site.addzero.kcloud.plugins.mcuconsole.api.external
 
 import de.jensklingenberg.ktorfit.http.Body
 import de.jensklingenberg.ktorfit.http.POST
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusCommandResponse
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusGpioModeRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusGpioWriteRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusPwmDutyRequest
-import site.addzero.kcloud.plugins.mcuconsole.McuModbusServoAngleRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
 
 interface McuModbusApi {
     @POST("/api/mcu/modbus/rtu/automic-modbus/gpio-write")

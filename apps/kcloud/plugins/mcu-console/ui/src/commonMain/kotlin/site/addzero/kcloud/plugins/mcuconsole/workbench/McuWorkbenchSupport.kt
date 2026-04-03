@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.screen
+package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -40,8 +40,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.kcloud.plugins.mcuconsole.*
-import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
-import site.addzero.kcloud.plugins.mcuconsole.client.displayName
 
 @Composable
 internal fun rememberMcuWorkbenchState(

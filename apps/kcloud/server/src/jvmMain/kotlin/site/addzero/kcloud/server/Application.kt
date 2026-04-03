@@ -9,6 +9,7 @@ import io.ktor.server.netty.*
 import io.ktor.server.routing.*
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.configcenter.ConfigCenter
 import site.addzero.kcloud.config.KCloudConfigKeys
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.starter.installConfigCenterAdminIfEnabled
@@ -94,17 +95,17 @@ fun serverApplication(
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
         active = resolveConfigCenterActive(config),
     )
+    val env = ConfigCenter.getEnv(effectiveConfig)
+    val deploymentEnv = env.path("ktor", "deployment")
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_HOST)?.getString()
-        ?: KCloudConfigKeys.serverHost.defaultValue
+        ?: deploymentEnv.string("host", KCloudConfigKeys.serverHost.defaultValue)
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_PORT)?.getString()?.toIntOrNull()
-        ?: KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull()
+        ?: deploymentEnv.int("port", KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull())
         ?: 8080
 
     val environment = applicationEnvironment {
@@ -138,6 +139,8 @@ fun ktorApplication(
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
         active = resolveConfigCenterActive(config),
     )
+    val env = ConfigCenter.getEnv(effectiveConfig)
+    val deploymentEnv = env.path("ktor", "deployment")
     embeddedApplicationConfigOverride = effectiveConfig
     System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
@@ -146,14 +149,12 @@ fun ktorApplication(
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val requestedHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_HOST)?.getString()
-        ?: KCloudConfigKeys.serverHost.defaultValue
+        ?: deploymentEnv.string("host", KCloudConfigKeys.serverHost.defaultValue)
         ?: "0.0.0.0"
 
     val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: effectiveConfig.propertyOrNull(KCloudConfigKeys.SERVER_PORT)?.getString()?.toIntOrNull()
-        ?: KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull()
+        ?: deploymentEnv.int("port", KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull())
         ?: DEFAULT_EMBEDDED_DESKTOP_PORT
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
     embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
@@ -269,9 +270,9 @@ private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
 private fun resolveConfigCenterActive(
     config: ApplicationConfig,
 ): String {
+    val env = ConfigCenter.getEnv(config).path("ktor")
     return normalizeConfigCenterActive(
-        config.propertyOrNull(KCloudConfigKeys.KTOR_ENVIRONMENT)?.getString()
-            ?: KCloudConfigKeys.ktorEnvironment.defaultValue
+        env.string("environment", KCloudConfigKeys.ktorEnvironment.defaultValue)
             ?: System.getenv("KTOR_ENV")
             ?: DEFAULT_EMBEDDED_ENV,
     )

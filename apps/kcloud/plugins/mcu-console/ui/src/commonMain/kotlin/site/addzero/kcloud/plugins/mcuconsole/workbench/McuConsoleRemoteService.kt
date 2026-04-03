@@ -1,8 +1,13 @@
-package site.addzero.kcloud.plugins.mcuconsole.client
+package site.addzero.kcloud.plugins.mcuconsole.workbench
 
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
 
 @Single
 class McuConsoleRemoteService {

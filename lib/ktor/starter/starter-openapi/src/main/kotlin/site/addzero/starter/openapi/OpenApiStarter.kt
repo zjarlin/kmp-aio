@@ -5,13 +5,11 @@ import io.ktor.server.config.*
 import io.ktor.server.plugins.swagger.*
 import io.ktor.server.routing.*
 import org.koin.core.annotation.*
-import site.addzero.configcenter.boolean
-import site.addzero.configcenter.string
+import site.addzero.configcenter.ConfigCenter
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 
 @Module
-@Configuration("vibepocket")
 @ComponentScan("site.addzero.starter.openapi")
 class OpenApiStarterKoinModule
 
@@ -19,13 +17,15 @@ class OpenApiStarterKoinModule
 class OpenApiStarter : AppStarter {
 
     override fun Application.enable(): Boolean {
-        return effectiveConfig().boolean(OpenApiConfigKeys.enabled) != false
+        return ConfigCenter.getEnv(effectiveConfig())
+            .path("openapi")
+            .boolean("enabled", true) != false
     }
 
     override fun Application.onInstall() {
-        val config = effectiveConfig()
-        val path = config.string(OpenApiConfigKeys.path) ?: "/swagger"
-        val spec = config.string(OpenApiConfigKeys.spec) ?: "openapi/documentation.yaml"
+        val env = ConfigCenter.getEnv(effectiveConfig()).path("openapi")
+        val path = env.string("path", "/swagger") ?: "/swagger"
+        val spec = env.string("spec", "openapi/documentation.yaml") ?: "openapi/documentation.yaml"
         routing {
             swaggerUI(path, spec)
         }

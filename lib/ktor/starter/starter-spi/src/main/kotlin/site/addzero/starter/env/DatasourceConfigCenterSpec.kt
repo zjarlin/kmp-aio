@@ -1,4 +1,4 @@
-package site.addzero.kcloud.jimmer.di
+package site.addzero.starter.env
 
 import site.addzero.configcenter.ConfigCenterItem
 import site.addzero.configcenter.ConfigCenterNamespace

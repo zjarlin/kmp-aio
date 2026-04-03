@@ -1,13 +1,15 @@
-package site.addzero.kcloud.plugins.mcuconsole.screen
+package site.addzero.kcloud.plugins.mcuconsole.debug
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.plugins.mcuconsole.workbench.*
+import site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino.*
 
 @Route(
     value = "开发工具",
@@ -25,27 +27,27 @@ import site.addzero.annotation.RouteScene
 )
 @Composable
 fun McuDebugScreen() {
-    val viewModel: McuDebugViewModel = koinViewModel()
-    val state = rememberMcuWorkbenchState(viewModel.state)
+    val state: McuConsoleWorkbenchState = koinInject()
+    val workbenchState = rememberMcuWorkbenchState(state)
     val runAction = rememberMcuActionRunner()
 
     McuCupertinoScene {
         McuWorkbenchFrame(
-            state = state,
+            state = workbenchState,
             actions = {
                 McuCupertinoSecondaryButton(
                     text = "刷新",
                     onClick = {
                         runAction {
-                            state.loadRecentEvents()
-                            state.refreshRuntimeStatus()
+                            workbenchState.loadRecentEvents()
+                            workbenchState.refreshRuntimeStatus()
                         }
                     },
                 )
                 McuCupertinoSecondaryButton(
                     text = "清空日志",
                     onClick = {
-                        state.clearVisibleEvents()
+                        workbenchState.clearVisibleEvents()
                     },
                 )
             },
@@ -60,11 +62,11 @@ fun McuDebugScreen() {
                 ) {
                     McuCupertinoSummarySection(
                         rows = listOf(
-                            "串口" to (state.session.portPath ?: state.selectedPortPath.orEmpty()),
-                            "Bundle" to (state.runtimeStatus.bundleTitle ?: state.selectedRuntimeBundle?.title.orEmpty()),
-                            "运行时" to state.runtimeStatus.state.name,
-                            "烧录" to state.flashStatus.state.name,
-                            "消息" to state.runtimeStatus.lastMessage.orEmpty(),
+                            "串口" to (workbenchState.session.portPath ?: workbenchState.selectedPortPath.orEmpty()),
+                            "Bundle" to (workbenchState.runtimeStatus.bundleTitle ?: workbenchState.selectedRuntimeBundle?.title.orEmpty()),
+                            "运行时" to workbenchState.runtimeStatus.state.name,
+                            "烧录" to workbenchState.flashStatus.state.name,
+                            "消息" to workbenchState.runtimeStatus.lastMessage.orEmpty(),
                         ),
                     )
                 }
@@ -73,7 +75,7 @@ fun McuDebugScreen() {
                     title = "协议与串口日志",
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                 ) {
-                    McuEventFeed(events = state.events.takeLast(200))
+                    McuEventFeed(events = workbenchState.events.takeLast(200))
                 }
             }
         }

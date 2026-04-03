@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.mcuconsole.screen
+package site.addzero.kcloud.plugins.mcuconsole.modbus
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,16 +18,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.kcloud.plugins.mcuconsole.client.McuConsoleWorkbenchState
-import site.addzero.kcloud.plugins.mcuconsole.client.displayName
-import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat
-import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
+import site.addzero.kcloud.plugins.mcuconsole.workbench.*
+import site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino.*
 
 @Route(
     value = "开发工具",
@@ -45,37 +43,37 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 )
 @Composable
 fun McuModbusScreen() {
-    val viewModel: McuModbusViewModel = koinViewModel()
-    val state = rememberMcuWorkbenchState(viewModel.state)
+    val state: McuConsoleWorkbenchState = koinInject()
+    val workbenchState = rememberMcuWorkbenchState(state)
     val runAction = rememberMcuActionRunner()
 
     McuCupertinoScene {
         McuWorkbenchFrame(
-            state = state,
+            state = workbenchState,
             actions = {
                 McuCupertinoSecondaryButton(
                     text = "扫描串口",
                     onClick = {
                         runAction {
-                            state.refreshPorts()
+                            workbenchState.refreshPorts()
                         }
                     },
                 )
                 McuCupertinoPrimaryButton(
-                    text = "执行 ${state.selectedModbusAtomicAction.displayName()}",
-                    enabled = state.canExecuteSelectedModbusAction,
+                    text = "执行 ${workbenchState.selectedModbusAtomicAction.displayName()}",
+                    enabled = workbenchState.canExecuteSelectedModbusAction,
                     onClick = {
                         runAction {
-                            state.executeSelectedModbusAction()
+                            workbenchState.executeSelectedModbusAction()
                         }
                     },
                 )
                 McuCupertinoSecondaryButton(
                     text = "保存连接",
-                    enabled = !state.isSubmitting,
+                    enabled = !workbenchState.isSubmitting,
                     onClick = {
                         runAction {
-                            state.saveCurrentTransportProfile()
+                            workbenchState.saveCurrentTransportProfile()
                         }
                     },
                 )
@@ -94,31 +92,31 @@ fun McuModbusScreen() {
                         modifier = Modifier.fillMaxWidth().height(320.dp),
                     ) {
                         McuPortBrowser(
-                            state = state,
+                            state = workbenchState,
                             onRefresh = {
                                 runAction {
-                                    state.refreshPorts()
+                                    workbenchState.refreshPorts()
                                 }
                             },
                         )
                     }
                     McuTransportProfileList(
-                        state = state,
+                        state = workbenchState,
                         onSave = {
                             runAction {
-                                state.saveCurrentTransportProfile()
+                                workbenchState.saveCurrentTransportProfile()
                             }
                         },
                         onApply = { profileKey ->
-                            state.applyTransportProfile(profileKey)
+                            workbenchState.applyTransportProfile(profileKey)
                         },
                         onDelete = { profileKey ->
                             runAction {
-                                state.deleteTransportProfile(profileKey)
+                                workbenchState.deleteTransportProfile(profileKey)
                             }
                         },
                     )
-                    McuCupertinoSummarySection(rows = state.modbusConnectionSummaryRows())
+                    McuCupertinoSummarySection(rows = workbenchState.modbusConnectionSummaryRows())
                 }
 
                 Column(
@@ -128,10 +126,10 @@ fun McuModbusScreen() {
                     McuModbusConnectionEditor(
                         onExecute = {
                             runAction {
-                                state.executeSelectedModbusAction()
+                                workbenchState.executeSelectedModbusAction()
                             }
                         },
-                        state = state,
+                        state = workbenchState,
                     )
 
                     Row(
@@ -139,11 +137,11 @@ fun McuModbusScreen() {
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         McuModbusActionPanel(
-                            state = state,
+                            state = workbenchState,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                             onExecute = {
                                 runAction {
-                                    state.executeSelectedModbusAction()
+                                    workbenchState.executeSelectedModbusAction()
                                 }
                             },
                         )
@@ -153,7 +151,7 @@ fun McuModbusScreen() {
                             modifier = Modifier.width(330.dp).fillMaxHeight(),
                         ) {
                             McuInfoNotice("每次执行都会把当前 RTU 参数一起带上。右侧始终展示最近一次请求回包。")
-                            McuCupertinoSummarySection(rows = state.modbusLastResultRows())
+                            McuCupertinoSummarySection(rows = workbenchState.modbusLastResultRows())
                         }
                     }
                 }
