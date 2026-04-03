@@ -40,6 +40,7 @@ kotlin {
         commonMain.dependencies {
             implementation(project(":apps:kcloud:design"))
             api(project(":apps:kcloud:plugins:system:ai-chat:shared"))
+            implementation(project(":lib:compose:compose-native-component-chat"))
             implementation(project(":lib:ksp:route:route-core"))
         }
     }

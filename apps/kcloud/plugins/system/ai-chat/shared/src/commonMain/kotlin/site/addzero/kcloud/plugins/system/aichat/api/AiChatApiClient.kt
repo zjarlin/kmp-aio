@@ -43,6 +43,6 @@ object AiChatApiClient {
     ): String {
         return value.trim()
             .ifBlank { defaultBaseUrl }
-            .trimEnd('/') + "/"
+            .trimEnd('/')
     }
 }

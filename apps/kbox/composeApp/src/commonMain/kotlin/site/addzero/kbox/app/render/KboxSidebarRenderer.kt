@@ -285,24 +285,3 @@ private fun List<KboxSidebarNode>.flatten(): List<SidebarListItem> {
         collect(this@flatten, 0)
     }
 }
-
-private fun KboxSidebarNode.containsRoute(
-    routePath: String?,
-): Boolean {
-    if (routePath == null) {
-        return false
-    }
-    if (this.routePath == routePath) {
-        return true
-    }
-    return children.any { child -> child.containsRoute(routePath) }
-}
-
-private fun KboxSidebarNode.firstLeafRoutePath(): String? {
-    routePath?.let { route ->
-        return route
-    }
-    return children.firstNotNullOfOrNull { child ->
-        child.firstLeafRoutePath()
-    }
-}

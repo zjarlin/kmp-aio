@@ -50,13 +50,13 @@ interface KCloudConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "datasources.sqlite.url",
-        comment = "SQLite JDBC 地址。",
+        comment = "SQLite 数据源的 JDBC 连接地址。",
     )
     val sqliteUrl: String
 
     @ConfigCenterItem(
         key = "datasources.sqlite.driver",
-        comment = "SQLite JDBC Driver。",
+        comment = "SQLite 数据源的 JDBC 驱动类名。",
         defaultValue = "org.sqlite.JDBC",
     )
     val sqliteDriver: String
@@ -70,7 +70,7 @@ interface KCloudConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "datasources.postgres.url",
-        comment = "PostgreSQL JDBC 地址。",
+        comment = "PostgreSQL 数据源的 JDBC 连接地址。",
     )
     val postgresUrl: String
 
@@ -88,7 +88,7 @@ interface KCloudConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "datasources.postgres.driver",
-        comment = "PostgreSQL JDBC Driver。",
+        comment = "PostgreSQL 数据源的 JDBC 驱动类名。",
         defaultValue = "org.postgresql.Driver",
     )
     val postgresDriver: String

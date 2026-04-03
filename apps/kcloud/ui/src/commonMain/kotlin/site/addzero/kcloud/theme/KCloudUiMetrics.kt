@@ -38,7 +38,7 @@ data class KCloudUiMetrics(
     val contentPanelRadius: Dp = 28.dp,
     val contentPanelPadding: PaddingValues = PaddingValues(start = 4.dp, end = 12.dp, bottom = 12.dp),
     val contentInnerPadding: Dp = 12.dp,
-    val treeMetrics: AddTreeMetrics = AddTreeDefaults.G2Metrics,
+    val treeMetrics: AddTreeMetrics = AddTreeDefaults.AppleRoundedMetrics,
 )
 
 object KCloudUiPresets {
@@ -72,7 +72,7 @@ object KCloudUiPresets {
         contentPanelRadius = 22.dp,
         contentPanelPadding = PaddingValues(start = 2.dp, end = 10.dp, bottom = 10.dp),
         contentInnerPadding = 10.dp,
-        treeMetrics = AddTreeDefaults.CompactG2Metrics,
+        treeMetrics = AddTreeDefaults.CompactAppleRoundedMetrics,
     )
 }
 

@@ -23,21 +23,21 @@ interface FlywayConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "flyway.baseline-on-migrate",
-        comment = "Flyway baselineOnMigrate 开关。",
+        comment = "是否在迁移时自动执行 Flyway 基线初始化。",
         defaultValue = "false",
     )
     val baselineOnMigrate: Boolean
 
     @ConfigCenterItem(
         key = "flyway.baseline-version",
-        comment = "Flyway baselineVersion。",
+        comment = "Flyway 基线版本号。",
         defaultValue = "0",
     )
     val baselineVersion: String
 
     @ConfigCenterItem(
         key = "flyway.clean-disabled",
-        comment = "Flyway cleanDisabled 开关。",
+        comment = "是否禁用 Flyway clean 操作。",
         defaultValue = "true",
     )
     val cleanDisabled: Boolean
@@ -51,48 +51,48 @@ interface FlywayConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "flyway.group",
-        comment = "Flyway group 开关。",
+        comment = "是否将同一次运行中的待执行迁移分组提交。",
         defaultValue = "false",
     )
     val group: Boolean
 
     @ConfigCenterItem(
         key = "flyway.installed-by",
-        comment = "Flyway installedBy。",
+        comment = "Flyway 迁移记录中的安装人标识。",
     )
     val installedBy: String
 
     @ConfigCenterItem(
         key = "flyway.mixed",
-        comment = "Flyway mixed 开关。",
+        comment = "是否允许在同一迁移中混用事务型与非事务型语句。",
         defaultValue = "false",
     )
     val mixed: Boolean
 
     @ConfigCenterItem(
         key = "flyway.out-of-order",
-        comment = "Flyway outOfOrder 开关。",
+        comment = "是否允许乱序执行较旧版本的迁移脚本。",
         defaultValue = "false",
     )
     val outOfOrder: Boolean
 
     @ConfigCenterItem(
         key = "flyway.placeholder-replacement",
-        comment = "Flyway placeholderReplacement 开关。",
+        comment = "是否启用 Flyway 占位符替换。",
         defaultValue = "true",
     )
     val placeholderReplacement: Boolean
 
     @ConfigCenterItem(
         key = "flyway.placeholder-prefix",
-        comment = "Flyway placeholder 前缀。",
+        comment = "Flyway 占位符前缀。",
         defaultValue = "\${",
     )
     val placeholderPrefix: String
 
     @ConfigCenterItem(
         key = "flyway.placeholder-suffix",
-        comment = "Flyway placeholder 后缀。",
+        comment = "Flyway 占位符后缀。",
         defaultValue = "}",
     )
     val placeholderSuffix: String
@@ -105,47 +105,47 @@ interface FlywayConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "flyway.schemas",
-        comment = "Flyway schemas 列表。",
+        comment = "Flyway 管理的 schema 列表。",
     )
     val schemas: String
 
     @ConfigCenterItem(
         key = "flyway.skip-default-callbacks",
-        comment = "Flyway skipDefaultCallbacks 开关。",
+        comment = "是否跳过 Flyway 内置回调。",
         defaultValue = "false",
     )
     val skipDefaultCallbacks: Boolean
 
     @ConfigCenterItem(
         key = "flyway.skip-default-resolvers",
-        comment = "Flyway skipDefaultResolvers 开关。",
+        comment = "是否跳过 Flyway 内置解析器。",
         defaultValue = "false",
     )
     val skipDefaultResolvers: Boolean
 
     @ConfigCenterItem(
         key = "flyway.sql-migration-prefix",
-        comment = "Flyway SQL migration prefix。",
+        comment = "Flyway SQL 迁移脚本文件名前缀。",
         defaultValue = "V",
     )
     val sqlMigrationPrefix: String
 
     @ConfigCenterItem(
         key = "flyway.sql-migration-separator",
-        comment = "Flyway SQL migration separator。",
+        comment = "Flyway SQL 迁移脚本版本号与描述之间的分隔符。",
         defaultValue = "__",
     )
     val sqlMigrationSeparator: String
 
     @ConfigCenterItem(
         key = "flyway.sql-migration-suffixes",
-        comment = "Flyway SQL migration suffix 列表。",
+        comment = "Flyway SQL 迁移脚本文件后缀列表。",
     )
     val sqlMigrationSuffixes: String
 
     @ConfigCenterItem(
         key = "flyway.table",
-        comment = "Flyway schema history 表名。",
+        comment = "Flyway schema 历史表名称。",
         defaultValue = "flyway_schema_history",
     )
     val table: String
@@ -159,7 +159,7 @@ interface FlywayConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "flyway.validate-on-migrate",
-        comment = "Flyway validateOnMigrate 开关。",
+        comment = "是否在迁移前校验 Flyway 脚本。",
         defaultValue = "true",
     )
     val validateOnMigrate: Boolean

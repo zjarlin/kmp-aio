@@ -23,7 +23,7 @@ interface DatasourceConfigCenterSpec {
 
     @ConfigCenterItem(
         key = "datasources.{name}.driver",
-        comment = "数据源 {name} 的 JDBC Driver。",
+        comment = "数据源 {name} 的 JDBC 驱动类名。",
     )
     val driver: String
 

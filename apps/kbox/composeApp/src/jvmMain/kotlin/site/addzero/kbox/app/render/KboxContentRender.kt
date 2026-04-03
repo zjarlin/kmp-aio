@@ -88,10 +88,12 @@ class KboxContentRender(
                 )
             }
             ShellStatusBar(
-                currentScene = selectedScene?.name ?: "Workspace",
-                currentTitle = selectedRoute?.title ?: "No page selected",
-                pageCount = selectedScene?.routeCount() ?: 0,
-                modifier = Modifier.height(52.dp),
+                shellStatusBarProps = ShellStatusBarProps(
+                    currentScene = selectedScene?.name ?: "Workspace",
+                    currentTitle = selectedRoute?.title ?: "No page selected",
+                    pageCount = selectedScene?.routeCount() ?: 0,
+                    modifier = Modifier.height(52.dp)
+                )
             )
         }
     }
@@ -120,18 +122,20 @@ private fun ScreenContentEntry(
     }
 }
 
+data class ShellStatusBarProps(
+    val currentScene: String,
+    val currentTitle: String,
+    val pageCount: Int,
+    val modifier: Modifier = Modifier
+)
+
 @Composable
-private fun ShellStatusBar(
-    currentScene: String,
-    currentTitle: String,
-    pageCount: Int,
-    modifier: Modifier = Modifier,
-) {
+private fun ShellStatusBar(shellStatusBarProps: ShellStatusBarProps) {
     val colorScheme = MaterialTheme.colorScheme
     val darkThemeEnabled = colorScheme.background.luminance() < 0.5f
 
     Row(
-        modifier = modifier
+        modifier = shellStatusBarProps.modifier
             .fillMaxWidth()
             .statusBarFrame()
             .background(
@@ -144,13 +148,13 @@ private fun ShellStatusBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            text = "$currentScene / $currentTitle",
+            text = "${shellStatusBarProps.currentScene} / ${shellStatusBarProps.currentTitle}",
             style = MaterialTheme.typography.titleSmall,
             color = colorScheme.onSurfaceVariant,
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
-            text = "$pageCount pages in this scene",
+            text = "${shellStatusBarProps.pageCount} pages in this scene",
             style = MaterialTheme.typography.bodySmall,
             color = colorScheme.onSurfaceVariant.copy(alpha = 0.78f),
         )

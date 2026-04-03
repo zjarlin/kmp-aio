@@ -57,16 +57,6 @@ fun RowScope.KCloudShellActions(
                 contentDescription = null,
             )
         }
-        KCloudShellIconButton(
-            tooltip = if (shellState.sidebarVisible) "隐藏菜单" else "显示菜单",
-            onClick = shellState::toggleSidebar,
-            variant = if (shellState.sidebarVisible) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
-        ) {
-            Icon(
-                imageVector = Icons.Default.Menu,
-                contentDescription = null,
-            )
-        }
         KCloudUserMenu(shellState = shellState)
     }
 }
@@ -97,6 +87,27 @@ fun KCloudUserMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (shellState.sidebarVisible) {
+                            "隐藏菜单"
+                        } else {
+                            "显示菜单"
+                        },
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    shellState.toggleSidebar()
+                },
+            )
             items.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(item.name) },

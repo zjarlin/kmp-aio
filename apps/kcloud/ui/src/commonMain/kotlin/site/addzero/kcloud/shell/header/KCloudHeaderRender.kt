@@ -22,7 +22,11 @@ import site.addzero.kcloud.shell.navigation.KCloudRouteScene
 import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.workbenchshell.spi.header.HeaderRender
 
-@Single
+@Single(
+    binds = [
+        HeaderRender::class,
+    ],
+)
 class KCloudHeaderRender(
     private val routeCatalog: KCloudRouteCatalog,
     private val shellState: KCloudShellState,

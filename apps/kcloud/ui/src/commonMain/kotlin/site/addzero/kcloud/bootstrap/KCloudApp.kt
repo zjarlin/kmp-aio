@@ -1,9 +1,10 @@
 package site.addzero.kcloud.bootstrap
 
 import androidx.compose.runtime.Composable
-import site.addzero.kcloud.window.main.MainWindow
+import org.koin.compose.koinInject
+import site.addzero.kcloud.window.spi.MainWindowSpi
 
 @Composable
 fun KCloudApp() {
-    MainWindow()
+    koinInject<MainWindowSpi>().Render()
 }
