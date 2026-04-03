@@ -15,6 +15,8 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeReq
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse
 import kotlin.math.max
 
 @Single
@@ -271,6 +273,18 @@ class McuConsoleWorkbenchState(
         get() = uiState.runtimeStatus
         private set(value) {
             updateUiState { copy(runtimeStatus = value) }
+        }
+
+    var devicePowerLights: McuModbusPowerLightsResponse
+        get() = uiState.devicePowerLights
+        private set(value) {
+            updateUiState { copy(devicePowerLights = value) }
+        }
+
+    var deviceInfo: McuModbusDeviceInfoResponse
+        get() = uiState.deviceInfo
+        private set(value) {
+            updateUiState { copy(deviceInfo = value) }
         }
 
     var modbusLastExecution: McuModbusExecutionResult
@@ -812,6 +826,9 @@ class McuConsoleWorkbenchState(
                 baudRateText = session.baudRate.toString()
             }
             lastSeenSeq = max(lastSeenSeq, session.latestSeq)
+            if (!session.isOpen) {
+                clearDeviceOverview()
+            }
         } catch (throwable: Throwable) {
             reportError(throwable)
         }
@@ -1001,6 +1018,23 @@ class McuConsoleWorkbenchState(
         }
     }
 
+    suspend fun refreshDeviceOverview(
+        silent: Boolean = false,
+    ) {
+        if (!session.isOpen) {
+            clearDeviceOverview()
+            return
+        }
+        try {
+            devicePowerLights = remoteService.getDevicePowerLights()
+            deviceInfo = remoteService.getDeviceInfo()
+        } catch (throwable: Throwable) {
+            if (!silent) {
+                reportError(throwable)
+            }
+        }
+    }
+
     suspend fun refreshAll() {
         refreshPorts()
         refreshTransportProfiles()
@@ -1011,6 +1045,9 @@ class McuConsoleWorkbenchState(
         refreshFlashStatus()
         if (session.isOpen) {
             refreshRuntimeStatus()
+            refreshDeviceOverview()
+        } else {
+            clearDeviceOverview()
         }
         if (events.isEmpty()) {
             loadRecentEvents()
@@ -1068,6 +1105,7 @@ class McuConsoleWorkbenchState(
             runtimeStatus = McuRuntimeStatusResponse()
             scriptStatus = McuScriptStatusResponse()
             activeSessionTransportKind = McuTransportKind.SERIAL
+            clearDeviceOverview()
         }
     }
 
@@ -1568,6 +1606,7 @@ class McuConsoleWorkbenchState(
             )
             session = remoteService.getSession()
             refreshFlashStatus()
+            refreshDeviceOverview()
             pollEvents()
         }
         if (showSubmitting) {
@@ -1671,6 +1710,7 @@ class McuConsoleWorkbenchState(
         )
         refreshSession()
         refreshRuntimeStatus()
+        refreshDeviceOverview()
         loadRecentEvents()
     }
 
@@ -1979,6 +2019,7 @@ class McuConsoleWorkbenchState(
                 parameters = parameters,
                 response = response,
             )
+            refreshDeviceOverview(silent = true)
             updateFeedback(
                 response.summary.ifBlank { "${action.displayName()} 已下发" },
                 !response.accepted,
@@ -2029,6 +2070,7 @@ class McuConsoleWorkbenchState(
             }
             loadRecentEvents()
             refreshFlashStatus()
+            refreshDeviceOverview()
         } catch (throwable: Throwable) {
             reportError(throwable)
         } finally {
@@ -2052,6 +2094,11 @@ class McuConsoleWorkbenchState(
         selectedTransportKind = saved.transportKind
         transportProfiles = remoteService.listTransportProfiles()
         return saved
+    }
+
+    private fun clearDeviceOverview() {
+        devicePowerLights = McuModbusPowerLightsResponse()
+        deviceInfo = McuModbusDeviceInfoResponse()
     }
 
     private fun requirePositiveInt(

@@ -3,13 +3,12 @@ package site.addzero.kcloud.shell.header
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,6 +21,9 @@ import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.shell.navigation.KCloudRouteScene
 import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.workbenchshell.spi.header.HeaderRender
+import site.addzero.component.Button as ShadcnButton
+import site.addzero.component.ButtonSize as ShadcnButtonSize
+import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
 @Single
 class KCloudHeaderRender(
@@ -61,42 +63,21 @@ private fun KCloudSceneTab(
     uiMetrics: site.addzero.kcloud.theme.KCloudUiMetrics,
     onClick: () -> Unit,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
-    Surface(
+    ShadcnButton(
         onClick = onClick,
+        variant = if (selected) ShadcnButtonVariant.Default else ShadcnButtonVariant.Outline,
+        size = if (uiMetrics.compact) ShadcnButtonSize.Sm else ShadcnButtonSize.Default,
         shape = RoundedCornerShape(999.dp),
-        color = if (selected) {
-            colorScheme.primary
-        } else {
-            colorScheme.surfaceVariant.copy(alpha = 0.58f)
-        },
-        contentColor = if (selected) colorScheme.onPrimary else colorScheme.onSurface,
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) {
-                colorScheme.primary
-            } else {
-                colorScheme.outlineVariant.copy(alpha = 0.72f)
-            },
-        ),
-        tonalElevation = 0.dp,
     ) {
-        Row(
-            modifier = Modifier.padding(
-                horizontal = uiMetrics.sceneTabHorizontalPadding,
-                vertical = uiMetrics.sceneTabVerticalPadding,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(
-                imageVector = scene.icon,
-                contentDescription = null,
-            )
-            Text(
-                text = scene.name,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            )
-        }
+        Icon(
+            imageVector = scene.icon,
+            contentDescription = null,
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = scene.name,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+        )
     }
 }

@@ -129,10 +129,7 @@ private fun SceneSwitcher(
                         },
                     )
                     /* 文本 */
-
-
-                    )
-                    /** dasjdoaijdoiaj *//
+                    /** dasjdoaijdoiaj */
                     Text(
                         text = scene.routeCount.toString(),
                         style = MaterialTheme.typography.labelMedium,

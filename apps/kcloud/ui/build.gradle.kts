@@ -31,6 +31,7 @@ kotlin {
         implementation(project(":apps:kcloud:plugins:system:plugin-market:ui"))
         implementation(project(":apps:kcloud:plugins:system:rbac:ui"))
         implementation(project(":apps:kcloud:plugins:vibepocket:ui"))
+        implementation(project(":lib:compose:shadcn-compose-component"))
         implementation(project(":lib:tool-kmp:network-starter"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())

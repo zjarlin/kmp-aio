@@ -17,6 +17,8 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusFrameFormat
 import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse
 
 data class McuConsoleUiState(
     val devices: List<McuPortSummary> = emptyList(),
@@ -32,6 +34,8 @@ data class McuConsoleUiState(
     val scriptStatus: McuScriptStatusResponse = McuScriptStatusResponse(),
     val flashStatus: McuFlashStatusResponse = McuFlashStatusResponse(),
     val runtimeStatus: McuRuntimeStatusResponse = McuRuntimeStatusResponse(),
+    val devicePowerLights: McuModbusPowerLightsResponse = McuModbusPowerLightsResponse(),
+    val deviceInfo: McuModbusDeviceInfoResponse = McuModbusDeviceInfoResponse(),
     val modbusLastExecution: McuModbusExecutionResult = McuModbusExecutionResult(),
     val selection: McuConsoleSelectionState = McuConsoleSelectionState(),
     val modbus: McuConsoleModbusState = McuConsoleModbusState(),

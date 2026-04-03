@@ -10,7 +10,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -49,6 +51,15 @@ import site.addzero.component.Button as ShadcnButton
 import site.addzero.component.ButtonSize as ShadcnButtonSize
 import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
+private enum class McuControlTab(
+    val id: String,
+    val title: String,
+) {
+    SERIAL("serial", "串口终端"),
+    OVERVIEW("overview", "设备概览"),
+    RUNTIME("runtime", "运行监控"),
+}
+
 @Route(
     value = "设备会话",
     title = "控制台",
@@ -68,12 +79,14 @@ import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 fun McuControlScreen() {
     val state: McuConsoleWorkbenchState = koinInject()
     var followLatestLogs by rememberSaveable { mutableStateOf(true) }
+    var selectedTabId by rememberSaveable { mutableStateOf(McuControlTab.SERIAL.id) }
     val workbenchState = rememberMcuWorkbenchState(state)
     val runAction = rememberMcuActionRunner()
+    val contentScrollState = rememberScrollState()
+    val selectedTab = McuControlTab.entries.firstOrNull { it.id == selectedTabId } ?: McuControlTab.SERIAL
 
     McuWorkbenchFrame(
         state = workbenchState,
-
         actions = {
             McuControlTopActions(
                 state = workbenchState,
@@ -88,10 +101,10 @@ fun McuControlScreen() {
             McuProjectNavigatorPanel(
                 state = workbenchState,
                 runAction = runAction,
-                modifier = Modifier.width(360.dp).fillMaxHeight(),
+                modifier = Modifier.width(340.dp).fillMaxHeight(),
             )
             Column(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
+                modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(contentScrollState),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 McuWorkbenchHeroPanel(
@@ -99,39 +112,132 @@ fun McuControlScreen() {
                     runAction = runAction,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth().weight(0.96f),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    McuDevicePropertyEditorPanel(
-                        state = workbenchState,
-                        runAction = runAction,
-                        modifier = Modifier.weight(0.56f).fillMaxHeight(),
-                    )
-                    McuAssetBundlePanel(
-                        state = workbenchState,
-                        runAction = runAction,
-                        modifier = Modifier.weight(0.44f).fillMaxHeight(),
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth().weight(1.04f),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    McuCommandCatalogPanel(
-                        state = workbenchState,
-                        runAction = runAction,
-                        modifier = Modifier.weight(0.42f).fillMaxHeight(),
-                    )
-                    McuTerminalPanel(
+                McuControlTabSection(
+                    selectedTab = selectedTab,
+                    onSelect = { tab -> selectedTabId = tab.id },
+                )
+                when (selectedTab) {
+                    McuControlTab.SERIAL -> McuSerialWorkspaceTab(
                         state = workbenchState,
                         followLatestLogs = followLatestLogs,
                         onFollowLatestChange = { followLatestLogs = it },
                         runAction = runAction,
-                        modifier = Modifier.weight(0.58f).fillMaxHeight(),
+                    )
+                    McuControlTab.OVERVIEW -> McuOverviewWorkspaceTab(
+                        state = workbenchState,
+                        runAction = runAction,
+                    )
+                    McuControlTab.RUNTIME -> McuRuntimeWorkspaceTab(
+                        state = workbenchState,
+                        runAction = runAction,
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun McuControlTabSection(
+    selectedTab: McuControlTab,
+    onSelect: (McuControlTab) -> Unit,
+) {
+    McuPanel(
+        title = "工作台分区",
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        SecondaryTabRow(selectedTabIndex = selectedTab.ordinal) {
+            McuControlTab.entries.forEach { tab ->
+                Tab(
+                    selected = selectedTab == tab,
+                    onClick = { onSelect(tab) },
+                    text = { Text(tab.title) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun McuSerialWorkspaceTab(
+    state: McuConsoleWorkbenchState,
+    followLatestLogs: Boolean,
+    onFollowLatestChange: (Boolean) -> Unit,
+    runAction: (suspend () -> Unit) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            McuDevicePropertyEditorPanel(
+                state = state,
+                runAction = runAction,
+                modifier = Modifier.weight(0.42f).heightIn(min = 540.dp),
+            )
+            McuCommandCatalogPanel(
+                state = state,
+                runAction = runAction,
+                modifier = Modifier.weight(0.58f).heightIn(min = 540.dp),
+            )
+        }
+        McuTerminalPanel(
+            state = state,
+            followLatestLogs = followLatestLogs,
+            onFollowLatestChange = onFollowLatestChange,
+            runAction = runAction,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 500.dp),
+        )
+    }
+}
+
+@Composable
+private fun McuOverviewWorkspaceTab(
+    state: McuConsoleWorkbenchState,
+    runAction: (suspend () -> Unit) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        McuDeviceOverviewPanel(
+            state = state,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 480.dp),
+        )
+        McuRuntimeMonitorPanel(
+            state = state,
+            runAction = runAction,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+@Composable
+private fun McuRuntimeWorkspaceTab(
+    state: McuConsoleWorkbenchState,
+    runAction: (suspend () -> Unit) -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            McuAssetBundlePanel(
+                state = state,
+                runAction = runAction,
+                modifier = Modifier.weight(0.56f).heightIn(min = 620.dp),
+            )
+            McuRuntimeMonitorPanel(
+                state = state,
+                runAction = runAction,
+                modifier = Modifier.weight(0.44f).heightIn(min = 620.dp),
+            )
         }
     }
 }
@@ -458,6 +564,7 @@ private fun McuWorkbenchHeroPanel(
                                 runAction {
                                     state.refreshRuntimeStatus()
                                     state.refreshFlashStatus()
+                                    state.refreshDeviceOverview()
                                 }
                             },
                             enabled = !state.isSubmitting,
@@ -812,6 +919,7 @@ private fun McuDeviceOverviewPanel(
     modifier: Modifier = Modifier,
 ) {
     val selectedPort = state.selectedPort
+    val lightStates = List(24) { index -> state.devicePowerLights.lights.getOrNull(index) == true }
     McuPanel(
         title = "设备概览",
         modifier = modifier,
@@ -842,15 +950,28 @@ private fun McuDeviceOverviewPanel(
                     positive = state.flashStatus.state == McuFlashRunState.IDLE,
                     modifier = Modifier.weight(1f),
                 )
+                McuStatusChip(
+                    label = "24 通路",
+                    value = "${state.devicePowerLights.onCount}/24",
+                    positive = state.devicePowerLights.onCount > 0,
+                    modifier = Modifier.weight(1f),
+                )
             }
             McuSummaryTable(
                 rows = listOf(
                     "当前设备" to (state.selectedPortPath ?: "未选择"),
                     "设备键" to (selectedPort?.deviceKey ?: "未提供"),
                     "设备备注" to (selectedPort?.remark ?: "未填写"),
-                    "已保存连接" to state.transportProfiles.size.toString(),
-                    "运行时包" to state.runtimeBundles.size.toString(),
+                    "固件版本" to (state.deviceInfo.firmwareVersion ?: "-"),
+                    "CPU" to (state.deviceInfo.cpuModel ?: "-"),
+                    "Flash" to formatBytes(state.deviceInfo.flashSizeBytes),
+                    "MAC" to (state.deviceInfo.macAddress ?: "-"),
                 ),
+            )
+            McuPanelSectionTitle("24 通路状态")
+            McuPowerLightsGrid(
+                states = lightStates,
+                modifier = Modifier.fillMaxWidth(),
             )
             selectedPort?.let { port ->
                 McuInfoNotice(
@@ -859,7 +980,9 @@ private fun McuDeviceOverviewPanel(
                         port.descriptiveName,
                         port.description,
                         port.manufacturer,
+                        state.deviceInfo.updatedAt?.let { "更新时间 $it" },
                     )
+                        .filterNotNull()
                         .filter { it.isNotBlank() }
                         .joinToString(" / ")
                         .ifBlank { "当前设备没有更多可展示的硬件描述。" },
@@ -868,6 +991,160 @@ private fun McuDeviceOverviewPanel(
                 text = "先在左侧选择一个串口设备，再继续查看连接和终端详情。",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun McuRuntimeMonitorPanel(
+    state: McuConsoleWorkbenchState,
+    runAction: (suspend () -> Unit) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scrollState = rememberScrollState()
+    McuPanel(
+        title = "运行监控",
+        modifier = modifier,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            McuSummaryTable(
+                rows = listOf(
+                    "会话" to if (state.session.isOpen) "在线" else "离线",
+                    "运行时" to state.runtimeStatus.state.name,
+                    "脚本" to state.scriptStatus.state.name,
+                    "烧录" to state.flashStatus.state.name,
+                    "探针" to (state.selectedFlashProbe?.serialNumber ?: state.selectedFlashProbe?.productName ?: "未选择"),
+                    "芯片" to formatChipId(state.flashStatus.targetChipId),
+                    "电压" to formatVoltage(state.flashStatus.targetVoltageMillivolts),
+                    "功率通路" to "${state.devicePowerLights.onCount}/24",
+                    "事件缓存" to state.events.size.toString(),
+                    "最近消息" to (state.runtimeStatus.lastMessage
+                        ?: state.flashStatus.lastMessage
+                        ?: state.scriptStatus.lastMessage
+                        ?: state.devicePowerLights.lastMessage
+                        ?: "-"),
+                ),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ShadcnButton(
+                    onClick = {
+                        runAction {
+                            state.refreshRuntimeStatus()
+                            state.refreshFlashStatus()
+                            state.refreshDeviceOverview()
+                        }
+                    },
+                    enabled = !state.isSubmitting,
+                    modifier = Modifier.weight(1f).heightIn(min = 38.dp),
+                    variant = ShadcnButtonVariant.Outline,
+                    size = ShadcnButtonSize.Default,
+                    shape = RoundedCornerShape(12.dp),
+                    content = { Text("刷新监控") },
+                )
+                ShadcnButton(
+                    onClick = {
+                        runAction {
+                            state.ensureRuntime(forceReflash = false)
+                        }
+                    },
+                    enabled = state.canEnsureRuntime,
+                    modifier = Modifier.weight(1f).heightIn(min = 38.dp),
+                    variant = ShadcnButtonVariant.Default,
+                    size = ShadcnButtonSize.Default,
+                    shape = RoundedCornerShape(12.dp),
+                    content = { Text("确保运行时") },
+                )
+            }
+            McuPanelSectionTitle("设备信息")
+            McuSummaryTable(
+                rows = listOf(
+                    "串口" to (state.deviceInfo.portPath ?: state.selectedPortPath ?: "未选择"),
+                    "固件版本" to (state.deviceInfo.firmwareVersion ?: "-"),
+                    "CPU" to (state.deviceInfo.cpuModel ?: "-"),
+                    "晶振" to state.deviceInfo.xtalFrequencyHz?.let { "$it Hz" }.orEmpty().ifBlank { "-" },
+                    "Flash" to formatBytes(state.deviceInfo.flashSizeBytes),
+                    "MAC" to (state.deviceInfo.macAddress ?: "-"),
+                    "更新时间" to (state.deviceInfo.updatedAt ?: "-"),
+                ),
+            )
+            McuPanelSectionTitle("烧录进度")
+            McuSummaryTable(
+                rows = listOf(
+                    "文件" to (state.flashStatus.firmwarePath ?: state.firmwarePathText.ifBlank { "-" }),
+                    "地址" to state.flashStatus.flashStartAddress?.let { "0x${it.toString(16).uppercase()}" }.orEmpty().ifBlank { "-" },
+                    "进度" to "${state.flashStatus.progressPercent.toInt()}%",
+                    "字节" to "${state.flashStatus.bytesSent} / ${state.flashStatus.totalBytes}",
+                    "探针描述" to (state.flashStatus.probeDescription ?: "-"),
+                    "更新时间" to (state.flashStatus.updatedAt ?: "-"),
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun McuPowerLightsGrid(
+    states: List<Boolean>,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        states.chunked(6).forEachIndexed { rowIndex, row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                row.forEachIndexed { columnIndex, isOn ->
+                    val index = rowIndex * 6 + columnIndex
+                    McuPowerLightItem(
+                        index = index,
+                        isOn = isOn,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun McuPowerLightItem(
+    index: Int,
+    isOn: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val lightColor = if (isOn) {
+        Color(0xFF16A34A)
+    } else {
+        MaterialTheme.colorScheme.outline
+    }
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.26f),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(10.dp).background(lightColor, CircleShape),
+            )
+            Text(
+                text = "CH${(index + 1).toString().padStart(2, '0')}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontFamily = FontFamily.Monospace,
             )
         }
     }
@@ -1840,4 +2117,21 @@ private fun handleTerminalKeyEvent(
 
         else -> false
     }
+}
+
+private fun formatBytes(bytes: Int?): String {
+    val value = bytes ?: return "-"
+    return when {
+        value >= 1024 * 1024 -> String.format("%.1f MB", value / 1024f / 1024f)
+        value >= 1024 -> String.format("%.1f KB", value / 1024f)
+        else -> "$value B"
+    }
+}
+
+private fun formatChipId(chipId: Int?): String {
+    return chipId?.let { "0x${it.toString(16).uppercase()}" } ?: "-"
+}
+
+private fun formatVoltage(millivolts: Int?): String {
+    return millivolts?.let { String.format("%.2f V", it / 1000f) } ?: "-"
 }

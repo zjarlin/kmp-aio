@@ -8,6 +8,8 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeReq
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusPwmDutyRequest
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusServoAngleRequest
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusDeviceInfoResponse
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLightsResponse
 
 @Single
 class McuConsoleRemoteService {
@@ -141,6 +143,14 @@ class McuConsoleRemoteService {
 
     suspend fun getRuntimeStatus(): McuRuntimeStatusResponse {
         return McuConsoleApiClient.runtimeApi.getMcuRuntimeStatus()
+    }
+
+    suspend fun getDevicePowerLights(): McuModbusPowerLightsResponse {
+        return McuConsoleApiClient.modbusDeviceApi.getMcuModbusPowerLights()
+    }
+
+    suspend fun getDeviceInfo(): McuModbusDeviceInfoResponse {
+        return McuConsoleApiClient.modbusDeviceApi.getMcuModbusDeviceInfo()
     }
 
     suspend fun gpioWrite(

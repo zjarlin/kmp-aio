@@ -1,37 +1,67 @@
 package site.addzero.kcloud.shell.menu
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
-import site.addzero.appsidebar.WorkbenchUserButton
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.shell.navigation.firstLeafRoutePath
+import site.addzero.component.Button as ShadcnButton
+import site.addzero.component.ButtonSize as ShadcnButtonSize
+import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
 @Composable
 fun RowScope.KCloudShellActions(
+    darkTheme: Boolean,
+    onThemeToggle: () -> Unit,
     shellState: KCloudShellState = koinInject(),
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        OutlinedButton(
-            onClick = shellState::toggleSidebar,
+        KCloudShellIconButton(
+            tooltip = if (darkTheme) "切换到浅色" else "切换到深色",
+            onClick = onThemeToggle,
+            variant = if (darkTheme) ShadcnButtonVariant.Secondary else ShadcnButtonVariant.Outline,
         ) {
-            Text(if (shellState.sidebarVisible) "隐藏菜单" else "显示菜单")
+            Icon(
+                imageVector = if (darkTheme) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
+                contentDescription = null,
+            )
+        }
+        KCloudShellIconButton(
+            tooltip = if (shellState.sidebarVisible) "隐藏菜单" else "显示菜单",
+            onClick = shellState::toggleSidebar,
+            variant = if (shellState.sidebarVisible) ShadcnButtonVariant.Secondary else ShadcnButtonVariant.Outline,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = null,
+            )
         }
         KCloudUserMenu(shellState = shellState)
     }
@@ -46,17 +76,18 @@ fun KCloudUserMenu(
     val items = remember(routeCatalog) {
         routeCatalog.findScene(SYSTEM_SCENE_ID)?.menuNodes.orEmpty()
     }
-    val displayName = "本地工作台"
-    val avatarInitials = remember(displayName) {
-        displayName.toAvatarInitials()
-    }
 
     Box {
-        WorkbenchUserButton(
-            label = displayName,
-            avatarInitials = avatarInitials,
+        KCloudShellIconButton(
+            tooltip = "本地工作台",
             onClick = { expanded = !expanded },
-        )
+            variant = if (expanded) ShadcnButtonVariant.Secondary else ShadcnButtonVariant.Outline,
+        ) {
+            Icon(
+                imageVector = Icons.Default.Work,
+                contentDescription = null,
+            )
+        }
 
         DropdownMenu(
             expanded = expanded,
@@ -82,22 +113,33 @@ fun KCloudUserMenu(
     }
 }
 
-private fun String.toAvatarInitials(): String {
-    val trimmed = trim()
-    if (trimmed.isBlank()) {
-        return "U"
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun KCloudShellIconButton(
+    tooltip: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    variant: ShadcnButtonVariant = ShadcnButtonVariant.Outline,
+    content: @Composable RowScope.() -> Unit,
+) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = {
+            PlainTooltip {
+                Text(tooltip)
+            }
+        },
+        state = rememberTooltipState(),
+    ) {
+        ShadcnButton(
+            onClick = onClick,
+            modifier = modifier,
+            variant = variant,
+            size = ShadcnButtonSize.Icon,
+            shape = RoundedCornerShape(999.dp),
+            content = content,
+        )
     }
-    val segments = trimmed.substringBefore("@")
-        .split('.', '-', '_', ' ')
-        .filter(String::isNotBlank)
-    if (segments.isEmpty()) {
-        return trimmed.take(2).uppercase()
-    }
-    return segments.take(2)
-        .joinToString(separator = "") { part ->
-            part.take(1).uppercase()
-        }
-        .ifBlank { "U" }
 }
 
 private const val SYSTEM_SCENE_ID = "系统管理"

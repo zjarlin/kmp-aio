@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -27,6 +26,8 @@ import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
+import site.addzero.component.Button as ShadcnButton
+import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
 @Composable
 fun KCloudTrayPanelWindow(
@@ -94,23 +95,25 @@ fun KCloudTrayPanelWindow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        Button(
+                        ShadcnButton(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 primaryRoute?.routePath?.let(shellState::selectRoute)
                                 shellState.showWindow()
                                 shellState.hideTrayPanel()
                             },
+                            variant = ShadcnButtonVariant.Default,
                         ) {
                             Text(primaryRoute?.title ?: "工作台")
                         }
-                        Button(
+                        ShadcnButton(
                             modifier = Modifier.weight(1f),
                             onClick = {
                                 trailingRoute?.routePath?.let(shellState::selectRoute)
                                 shellState.showWindow()
                                 shellState.hideTrayPanel()
                             },
+                            variant = ShadcnButtonVariant.Outline,
                         ) {
                             Text(trailingRoute?.title ?: "最后页面")
                         }

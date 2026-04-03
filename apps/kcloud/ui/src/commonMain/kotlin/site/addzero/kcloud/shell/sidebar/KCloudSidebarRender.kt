@@ -5,14 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -59,7 +57,6 @@ class KCloudSidebarRender(
         }
 
         RouteSidebar(
-            title = selectedScene?.name ?: "KCloud",
             items = selectedScene?.menuNodes.orEmpty(),
             selectedRoutePath = selectedRoute?.routePath,
             onNodeClick = { node ->
@@ -75,7 +72,6 @@ class KCloudSidebarRender(
 
 @Composable
 private fun RouteSidebar(
-    title: String,
     items: List<KCloudSidebarNode>,
     selectedRoutePath: String?,
     onNodeClick: (KCloudSidebarNode) -> Unit,
@@ -139,34 +135,6 @@ private fun RouteSidebar(
                     .padding(uiMetrics.sidebarPanelInnerPadding),
                 verticalArrangement = Arrangement.spacedBy(uiMetrics.sidebarSectionGap),
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        if (title.isNotBlank()) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                        }
-                        Text(
-                            text = "功能目录",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    KCloudSidebarMetric(
-                        label = "页面",
-                        value = items.countLeafRoutes().toString(),
-                        compact = uiMetrics.compact,
-                    )
-                }
-
                 header()
 
                 if (searchEnabled) {
@@ -203,58 +171,13 @@ private fun RouteSidebar(
                             viewModel = treeViewModel,
                             modifier = Modifier.fillMaxSize(),
                             metrics = uiMetrics.treeMetrics,
+                            selectableLabel = true,
                         )
                     }
                 }
 
-                Text(
-                    text = "左侧菜单只负责场景内导航，不再和顶部场景切换重复。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
                 footer()
             }
-        }
-    }
-}
-
-@Composable
-private fun KCloudSidebarMetric(
-    label: String,
-    value: String,
-    compact: Boolean,
-) {
-    Surface(
-        shape = RoundedCornerShape(if (compact) 14.dp else 16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.76f),
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-    ) {
-        Column(
-            modifier = Modifier.padding(
-                horizontal = if (compact) 10.dp else 12.dp,
-                vertical = if (compact) 7.dp else 9.dp,
-            ),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-            )
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-            )
-        }
-    }
-}
-
-private fun List<KCloudSidebarNode>.countLeafRoutes(): Int {
-    return sumOf { node ->
-        if (node.children.isEmpty()) {
-            1
-        } else {
-            node.children.countLeafRoutes()
         }
     }
 }

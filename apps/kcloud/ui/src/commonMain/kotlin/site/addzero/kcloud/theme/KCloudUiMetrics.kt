@@ -66,7 +66,7 @@ object KCloudUiPresets {
         headerMetricPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
         sceneTabHorizontalPadding = 12.dp,
         sceneTabVerticalPadding = 7.dp,
-        searchFieldHeight = 42.dp,
+        searchFieldHeight = 46.dp,
         searchFieldSpacing = 8.dp,
         searchFieldCompactRefreshHidden = true,
         contentPanelRadius = 22.dp,

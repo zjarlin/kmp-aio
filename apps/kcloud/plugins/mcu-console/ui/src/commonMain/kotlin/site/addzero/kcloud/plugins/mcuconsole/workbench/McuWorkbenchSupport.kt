@@ -96,6 +96,7 @@ internal fun rememberMcuWorkbenchState(
                 if (state.activeSessionTransportKind == McuTransportKind.SERIAL) {
                     state.refreshScriptStatus()
                     state.refreshRuntimeStatus()
+                    state.refreshDeviceOverview(silent = true)
                 }
             }
             state.refreshFlashStatus()

@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.appsidebar.AdminWorkbenchScaffold
-import site.addzero.appsidebar.adminWorkbenchActions
 import site.addzero.appsidebar.adminWorkbenchConfig
 import site.addzero.appsidebar.adminWorkbenchPageConfig
 import site.addzero.appsidebar.adminWorkbenchSlots
@@ -81,9 +80,6 @@ fun MainWindow(
                 detailPadding = PaddingValues(0.dp),
                 isDarkTheme = darkTheme,
             ),
-            actions = adminWorkbenchActions(
-                onThemeToggle = toggleTheme,
-            ),
             slots = adminWorkbenchSlots(
                 brandContent = {
                     KCloudBrandSlot()
@@ -93,7 +89,10 @@ fun MainWindow(
                 },
                 showContentHeader = false,
                 userContent = {
-                    KCloudShellActions()
+                    KCloudShellActions(
+                        darkTheme = darkTheme,
+                        onThemeToggle = toggleTheme,
+                    )
                 },
             ),
         )
