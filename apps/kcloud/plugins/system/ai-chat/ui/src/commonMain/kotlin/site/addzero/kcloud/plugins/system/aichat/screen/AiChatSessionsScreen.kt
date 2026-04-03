@@ -9,9 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
-import site.addzero.annotation.Route
-import site.addzero.annotation.RoutePlacement
-import site.addzero.annotation.RouteScene
 import site.addzero.component.chat.AddChatConnectionConfig
 import site.addzero.component.chat.AddChatMessageItem
 import site.addzero.component.chat.AddChatMessageRole
@@ -24,21 +21,6 @@ import site.addzero.component.chat.AddChatVendor
 import site.addzero.component.chat.AddChatPanel as AddComposeChatPanel
 import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 
-@Route(
-    value = "AI对话",
-    title = "对话会话",
-    routePath = "system/ai-chat/sessions",
-    icon = "SmartToy",
-    order = 30.0,
-    enabled = false,
-    placement = RoutePlacement(
-        scene = RouteScene(
-            name = "系统管理",
-            icon = "AdminPanelSettings",
-            order = 100,
-        ),
-    ),
-)
 @Composable
 fun AiChatSessionsScreen() {
     val viewModel: AiChatSessionsViewModel = koinViewModel()

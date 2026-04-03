@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.shell.menu.KCloudShellActions
 import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeMode
 import site.addzero.kcloud.theme.ShellThemeState
@@ -97,11 +98,11 @@ class DefaultKCloudBrandSlot : KCloudBrandSlotSpi {
 class DefaultKCloudUserSlot(
 ) : KCloudUserSlotSpi {
     @Composable
-    override fun Render(
+    override fun RowScope.Render(
         darkTheme: Boolean,
         onThemeToggle: () -> Unit,
     ) {
-        site.addzero.kcloud.shell.menu.KCloudShellActions(
+        KCloudShellActions(
             darkTheme = darkTheme,
             onThemeToggle = onThemeToggle,
         )
