@@ -7,7 +7,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Button
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -21,6 +22,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.design.button.KCloudButton as Button
 
 @Route(
     value = "配置中心",
@@ -59,6 +61,57 @@ fun ConfigCenterProjectsScreen() {
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    Text(
+                        text = "AI 快捷配置",
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            selected = state.namespace == "kcloud.ai",
+                            onClick = { state.useAiNamespace() },
+                            label = { Text("kcloud.ai") },
+                        )
+                        FilterChip(
+                            selected = state.key == "provider" && state.value == "openai",
+                            onClick = { state.applyAiProviderPreset("openai") },
+                            label = { Text("OpenAI") },
+                        )
+                        FilterChip(
+                            selected = state.key == "provider" && state.value == "anthropic",
+                            onClick = { state.applyAiProviderPreset("anthropic") },
+                            label = { Text("Anthropic") },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        FilterChip(
+                            selected = state.key == "apiUrl" && state.value == "https://api.openai.com",
+                            onClick = { state.applyAiUrlPreset("openai") },
+                            label = { Text("OpenAI URL") },
+                        )
+                        FilterChip(
+                            selected = state.key == "apiUrl" && state.value == "https://api.anthropic.com",
+                            onClick = { state.applyAiUrlPreset("anthropic") },
+                            label = { Text("Anthropic URL") },
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        listOf("apiKey", "apiUrl", "provider", "model", "systemPrompt", "transport").forEach { preset ->
+                            FilterChip(
+                                selected = state.key == preset,
+                                onClick = { state.applyAiKeyPreset(preset) },
+                                label = { Text(preset) },
+                            )
+                        }
+                    }
                     OutlinedTextField(
                         value = state.namespace,
                         onValueChange = { state.namespace = it },

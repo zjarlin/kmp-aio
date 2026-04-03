@@ -1,5 +1,16 @@
 package site.addzero.kcloud.shell.navigation
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BugReport
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.Construction
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.PowerSettingsNew
+import androidx.compose.material.icons.outlined.SettingsApplications
+import androidx.compose.material.icons.outlined.SettingsEthernet
+import androidx.compose.material.icons.outlined.Terminal
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.ui.graphics.vector.ImageVector
 import site.addzero.annotation.Route
 import site.addzero.compose.icons.IconMap
@@ -94,6 +105,7 @@ data class KCloudRouteEntry(
     val parentName: String,
     val parentSegments: List<String>,
     val icon: ImageVector,
+    val sidebarIcon: ImageVector,
     val sort: Int,
 ) {
     val routePath: String
@@ -134,6 +146,11 @@ private fun buildScenes(
                 parentName = route.resolveParentName(),
                 parentSegments = emptyList(),
                 icon = resolveKCloudIcon(route.icon),
+                sidebarIcon = resolveKCloudSidebarLeafIcon(
+                    iconName = route.icon,
+                    routeTitle = route.title.ifBlank { route.simpleName.ifBlank { route.routePath } },
+                    parentName = route.resolveParentName(),
+                ),
                 sort = route.order.toRouteSort(),
             )
         }.sortedWith(
@@ -237,7 +254,7 @@ private fun buildSidebarNodes(
                 MutableSidebarNode(
                     id = nodeId,
                     name = name,
-                    icon = route.icon,
+                    icon = resolveKCloudSidebarGroupIcon(name),
                     sort = route.sort,
                 ).also { node ->
                     currentChildren += node
@@ -253,7 +270,7 @@ private fun buildSidebarNodes(
 
         val routeNode = findOrCreateNode(route.title)
         routeNode.sort = minOf(routeNode.sort, route.sort)
-        routeNode.icon = route.icon
+        routeNode.icon = route.sidebarIcon
         routeNode.routePath = route.routePath
     }
 
@@ -337,6 +354,39 @@ internal fun resolveKCloudIcon(
     } ?: IconMap.allIcons.firstOrNull { icon ->
         icon.iconKey == DEFAULT_KCLOUD_ICON_NAME && icon.iconType == DEFAULT_KCLOUD_ICON_TYPE
     }?.vector ?: error("compose-icon-map 缺少默认图标 $DEFAULT_KCLOUD_ICON_NAME")
+}
+
+private fun resolveKCloudSidebarGroupIcon(
+    groupName: String,
+): ImageVector {
+    return when {
+        groupName.contains("设备") || groupName.contains("会话") -> Icons.Outlined.Terminal
+        groupName.contains("开发") || groupName.contains("工具") -> Icons.Outlined.Construction
+        groupName.contains("配置") -> Icons.Outlined.SettingsApplications
+        else -> Icons.Outlined.Folder
+    }
+}
+
+private fun resolveKCloudSidebarLeafIcon(
+    iconName: String?,
+    routeTitle: String,
+    parentName: String,
+): ImageVector {
+    return when (iconName?.trim()) {
+        "PowerSettingsNew" -> Icons.Outlined.PowerSettingsNew
+        "Upload" -> Icons.Outlined.Upload
+        "SettingsInputComponent" -> Icons.Outlined.SettingsEthernet
+        "Code" -> Icons.Outlined.Code
+        "BugReport" -> Icons.Outlined.BugReport
+        "Key" -> Icons.Outlined.Key
+        else -> when {
+            routeTitle.contains("配置") -> Icons.Outlined.Key
+            routeTitle.contains("调试") -> Icons.Outlined.BugReport
+            routeTitle.contains("开发") -> Icons.Outlined.Code
+            parentName.contains("设备") || parentName.contains("会话") -> Icons.Outlined.Terminal
+            else -> resolveKCloudIcon(iconName)
+        }
+    }
 }
 
 private fun Double.toRouteSort(): Int {

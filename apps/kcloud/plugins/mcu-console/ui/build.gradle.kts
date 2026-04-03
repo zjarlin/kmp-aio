@@ -40,6 +40,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":apps:kcloud:design"))
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")

@@ -1,12 +1,9 @@
 package site.addzero.kcloud.shell.header
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -16,14 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.design.button.KCloudButtonSize as ShadcnButtonSize
+import site.addzero.kcloud.design.button.KCloudButtonVariant as ShadcnButtonVariant
+import site.addzero.kcloud.design.button.KCloudPillButton
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.shell.navigation.KCloudRouteScene
 import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.workbenchshell.spi.header.HeaderRender
-import site.addzero.component.Button as ShadcnButton
-import site.addzero.component.ButtonSize as ShadcnButtonSize
-import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
 @Single
 class KCloudHeaderRender(
@@ -37,8 +34,7 @@ class KCloudHeaderRender(
         val selectedSceneId = shellState.selectedSceneId
         val uiMetrics = currentKCloudUiMetrics()
         Row(
-            modifier = modifier
-                .horizontalScroll(rememberScrollState()),
+            modifier = modifier,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -63,11 +59,10 @@ private fun KCloudSceneTab(
     uiMetrics: site.addzero.kcloud.theme.KCloudUiMetrics,
     onClick: () -> Unit,
 ) {
-    ShadcnButton(
+    KCloudPillButton(
         onClick = onClick,
         variant = if (selected) ShadcnButtonVariant.Default else ShadcnButtonVariant.Outline,
         size = if (uiMetrics.compact) ShadcnButtonSize.Sm else ShadcnButtonSize.Default,
-        shape = RoundedCornerShape(999.dp),
     ) {
         Icon(
             imageVector = scene.icon,

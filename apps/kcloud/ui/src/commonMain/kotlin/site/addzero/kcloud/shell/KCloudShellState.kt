@@ -34,6 +34,9 @@ class KCloudShellState(
     var sidebarVisible by mutableStateOf(true)
         private set
 
+    var aiAssistantVisible by mutableStateOf(false)
+        private set
+
     fun selectRoute(
         routePath: String,
     ) {
@@ -89,6 +92,18 @@ class KCloudShellState(
 
     fun toggleSidebar() {
         sidebarVisible = !sidebarVisible
+    }
+
+    fun showAiAssistant() {
+        aiAssistantVisible = true
+    }
+
+    fun hideAiAssistant() {
+        aiAssistantVisible = false
+    }
+
+    fun toggleAiAssistant() {
+        aiAssistantVisible = !aiAssistantVisible
     }
 
     fun popNavigation() {

@@ -22,6 +22,7 @@ val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
 
 kotlin {
     dependencies {
+        implementation(project(":apps:kcloud:design"))
         implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
         implementation("site.addzero:compose-icon-map:2026.10329.10127")
         implementation(project(":apps:kcloud:shared"))

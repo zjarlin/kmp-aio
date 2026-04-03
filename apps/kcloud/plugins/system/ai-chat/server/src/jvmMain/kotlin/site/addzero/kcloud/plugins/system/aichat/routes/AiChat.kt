@@ -50,11 +50,11 @@ fun listAiChatMessages(
  * 写入消息并返回当前完整会话。
  */
 @PostMapping("/api/system/ai-chat/sessions/{sessionId}/messages")
-fun sendAiChatMessage(
+suspend fun sendAiChatMessage(
     @PathVariable("sessionId") sessionId: Long,
     @RequestBody request: AiChatMessageCreateRequest,
 ): AiChatConversationDto {
-    return service().sendMessage(sessionId, request.content)
+    return service().sendMessage(sessionId, request.content, request.provider)
 }
 
 private fun service(): AiChatService {

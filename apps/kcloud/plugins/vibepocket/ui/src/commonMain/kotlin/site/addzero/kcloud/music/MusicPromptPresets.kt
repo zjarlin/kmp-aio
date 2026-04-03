@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import site.addzero.kcloud.design.button.KCloudFilledTonalButton as FilledTonalButton
+import site.addzero.kcloud.design.button.KCloudOutlinedButton as OutlinedButton
 
 internal data class MusicPromptPreset(
     val id: String,

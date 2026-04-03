@@ -20,12 +20,13 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.component.button.AddButton
-import site.addzero.component.button.AddIconButton
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
+import site.addzero.kcloud.design.button.KCloudActionButton
+import site.addzero.kcloud.design.button.KCloudButtonVariant
+import site.addzero.kcloud.design.button.KCloudTextButton as TextButton
 import site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketWorkbenchState
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginActivationState
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeploymentJobDto
@@ -175,9 +176,10 @@ private fun PluginMarketTreePanel(
             modifier = Modifier.fillMaxWidth(),
             placeholder = "搜索插件、文件、构建任务",
             leftSloat = {
-                AddButton(
-                    displayName = "新建",
+                KCloudActionButton(
+                    text = "新建",
                     onClick = onCreate,
+                    variant = KCloudButtonVariant.Outline,
                 )
             },
         )
@@ -207,21 +209,46 @@ private fun PluginPackageEditorPanel(
         modifier = modifier,
         actions = {
             if (selectedPackage != null) {
-                AddIconButton(text = "保存元数据", imageVector = Icons.Default.Save, onClick = onSave)
-                AddIconButton(text = "导出安装", imageVector = Icons.Default.Upload, onClick = onDeploy)
+                KCloudActionButton(text = "保存元数据", imageVector = Icons.Default.Save, onClick = onSave)
+                KCloudActionButton(
+                    text = "导出安装",
+                    imageVector = Icons.Default.Upload,
+                    onClick = onDeploy,
+                    variant = KCloudButtonVariant.Outline,
+                )
                 if (selectedPackage.activationState == PluginActivationState.DISABLED || !selectedPackage.enabled) {
-                    AddIconButton(text = "启用", imageVector = Icons.Default.PlayCircle, onClick = onEnable)
+                    KCloudActionButton(text = "启用", imageVector = Icons.Default.PlayCircle, onClick = onEnable)
                 } else if (selectedPackage.activationState == PluginActivationState.ENABLED) {
-                    AddIconButton(text = "停用", imageVector = Icons.Default.PauseCircle, onClick = onDisable)
+                    KCloudActionButton(
+                        text = "停用",
+                        imageVector = Icons.Default.PauseCircle,
+                        onClick = onDisable,
+                        variant = KCloudButtonVariant.Outline,
+                    )
                 } else {
-                    AddIconButton(text = "启用", imageVector = Icons.Default.PlayCircle, onClick = onEnable)
+                    KCloudActionButton(text = "启用", imageVector = Icons.Default.PlayCircle, onClick = onEnable)
                 }
-                AddIconButton(text = "验证构建", imageVector = Icons.Default.Build, onClick = onBuild)
-                AddIconButton(text = "卸载", imageVector = Icons.Default.Delete, onClick = onDelete)
+                KCloudActionButton(
+                    text = "验证构建",
+                    imageVector = Icons.Default.Build,
+                    onClick = onBuild,
+                    variant = KCloudButtonVariant.Outline,
+                )
+                KCloudActionButton(
+                    text = "卸载",
+                    imageVector = Icons.Default.Delete,
+                    onClick = onDelete,
+                    variant = KCloudButtonVariant.Destructive,
+                )
             } else {
-                AddIconButton(text = "新建托管插件", imageVector = Icons.Default.Save, onClick = onSave)
+                KCloudActionButton(text = "新建托管插件", imageVector = Icons.Default.Save, onClick = onSave)
                 if (selectedDiscovery != null) {
-                    AddIconButton(text = "导入发现项", imageVector = Icons.Default.CloudDownload, onClick = onImport)
+                    KCloudActionButton(
+                        text = "导入发现项",
+                        imageVector = Icons.Default.CloudDownload,
+                        onClick = onImport,
+                        variant = KCloudButtonVariant.Outline,
+                    )
                 }
             }
         },
@@ -396,13 +423,18 @@ private fun PluginSourceEditorPanel(
         title = "源码文件",
         modifier = modifier,
         actions = {
-            AddIconButton(text = "刷新", imageVector = Icons.Default.Refresh, onClick = {
+            KCloudActionButton(text = "刷新", imageVector = Icons.Default.Refresh, onClick = {
                 state.selectedPackageId?.let {
                     state.selectedFileId?.let(state::selectFile)
                 }
-            })
-            AddIconButton(text = "保存文件", imageVector = Icons.Default.Save, onClick = onSave)
-            AddIconButton(text = "删除文件", imageVector = Icons.Default.Delete, onClick = onDelete)
+            }, variant = KCloudButtonVariant.Outline)
+            KCloudActionButton(text = "保存文件", imageVector = Icons.Default.Save, onClick = onSave)
+            KCloudActionButton(
+                text = "删除文件",
+                imageVector = Icons.Default.Delete,
+                onClick = onDelete,
+                variant = KCloudButtonVariant.Destructive,
+            )
         },
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -560,8 +592,8 @@ private fun PluginConfigEditor(
                     },
                 )
             }
-            AddButton(
-                displayName = "保存配置",
+            KCloudActionButton(
+                text = "保存配置",
                 onClick = { scope.launch { state.saveConfig() } },
             )
         }

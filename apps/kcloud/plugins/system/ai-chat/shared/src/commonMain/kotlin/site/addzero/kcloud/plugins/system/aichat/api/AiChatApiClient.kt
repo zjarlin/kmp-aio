@@ -23,9 +23,26 @@ object AiChatApiClient {
         baseUrl = value.ifBlank { defaultBaseUrl }
     }
 
-    val aiChatApi: AiChatApi
-        get() = buildAiChatApi(
-            baseUrl = baseUrl,
+    fun createApi(
+        customBaseUrl: String,
+    ): AiChatApi {
+        return buildAiChatApi(
+            baseUrl = normalizeBaseUrl(customBaseUrl),
             httpClient = httpClientFactory.get(httpClientProfile),
         )
+    }
+
+    val aiChatApi: AiChatApi
+        get() = buildAiChatApi(
+            baseUrl = normalizeBaseUrl(baseUrl),
+            httpClient = httpClientFactory.get(httpClientProfile),
+        )
+
+    private fun normalizeBaseUrl(
+        value: String,
+    ): String {
+        return value.trim()
+            .ifBlank { defaultBaseUrl }
+            .trimEnd('/') + "/"
+    }
 }

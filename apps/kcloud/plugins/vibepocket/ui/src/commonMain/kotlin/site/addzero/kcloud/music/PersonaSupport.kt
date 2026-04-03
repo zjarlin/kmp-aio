@@ -9,10 +9,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import site.addzero.kcloud.design.button.KCloudTextButton as TextButton
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.vibepocket.model.PersonaItem
 

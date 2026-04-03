@@ -39,9 +39,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import site.addzero.component.search_bar.AddSearchBar
-import site.addzero.component.Button as ShadcnButton
-import site.addzero.component.ButtonSize as ShadcnButtonSize
-import site.addzero.component.ButtonVariant as ShadcnButtonVariant
+import site.addzero.kcloud.design.button.KCloudButton as ShadcnButton
+import site.addzero.kcloud.design.button.KCloudButtonSize as ShadcnButtonSize
+import site.addzero.kcloud.design.button.KCloudButtonVariant as ShadcnButtonVariant
 import site.addzero.kcloud.plugins.mcuconsole.*
 
 /**

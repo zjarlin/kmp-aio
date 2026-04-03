@@ -21,9 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.alexzhirkevich.cupertino.ExperimentalCupertinoApi
 import io.github.alexzhirkevich.cupertino.CupertinoBorderedTextField
-import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveButton
 import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveSlider
-import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveTextButton
 import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveTheme
 import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveSwitch
 import io.github.alexzhirkevich.cupertino.adaptive.CupertinoThemeSpec
@@ -34,6 +32,8 @@ import io.github.alexzhirkevich.cupertino.section.CupertinoSection
 import io.github.alexzhirkevich.cupertino.section.ProvideSectionStyle
 import io.github.alexzhirkevich.cupertino.section.SectionItem
 import io.github.alexzhirkevich.cupertino.section.SectionStyle
+import site.addzero.kcloud.design.button.KCloudActionButton
+import site.addzero.kcloud.design.button.KCloudButtonVariant
 
 @OptIn(ExperimentalAdaptiveApi::class)
 @Composable
@@ -63,16 +63,15 @@ internal fun McuCupertinoPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    AdaptiveButton(
+    KCloudActionButton(
+        text = text,
         onClick = onClick,
-        enabled = enabled,
         modifier = modifier.heightIn(min = 38.dp),
-    ) {
-        Text(text)
-    }
+        variant = KCloudButtonVariant.Default,
+        enabled = enabled,
+    )
 }
 
-@OptIn(ExperimentalAdaptiveApi::class)
 @Composable
 internal fun McuCupertinoSecondaryButton(
     text: String,
@@ -80,13 +79,13 @@ internal fun McuCupertinoSecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    AdaptiveTextButton(
+    KCloudActionButton(
+        text = text,
         onClick = onClick,
-        enabled = enabled,
         modifier = modifier.heightIn(min = 38.dp),
-    ) {
-        Text(text)
-    }
+        variant = KCloudButtonVariant.Outline,
+        enabled = enabled,
+    )
 }
 
 @Composable

@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.control
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
@@ -34,6 +35,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.annotation.Route
@@ -47,9 +49,9 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 import site.addzero.kcloud.plugins.mcuconsole.workbench.*
-import site.addzero.component.Button as ShadcnButton
-import site.addzero.component.ButtonSize as ShadcnButtonSize
-import site.addzero.component.ButtonVariant as ShadcnButtonVariant
+import site.addzero.kcloud.design.button.KCloudButton as ShadcnButton
+import site.addzero.kcloud.design.button.KCloudButtonSize as ShadcnButtonSize
+import site.addzero.kcloud.design.button.KCloudButtonVariant as ShadcnButtonVariant
 
 private enum class McuControlTab(
     val id: String,
@@ -103,8 +105,9 @@ fun McuControlScreen() {
                 runAction = runAction,
                 modifier = Modifier.width(340.dp).fillMaxHeight(),
             )
-            Column(
-                modifier = Modifier.weight(1f).fillMaxHeight().verticalScroll(contentScrollState),
+            McuBoundedScrollColumn(
+                scrollState = contentScrollState,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 McuWorkbenchHeroPanel(
@@ -134,6 +137,29 @@ fun McuControlScreen() {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun McuBoundedScrollColumn(
+    scrollState: ScrollState,
+    modifier: Modifier = Modifier,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    BoxWithConstraints(
+        modifier = modifier,
+    ) {
+        val contentModifier = if (maxHeight != Dp.Infinity) {
+            Modifier.fillMaxSize().verticalScroll(scrollState)
+        } else {
+            Modifier.fillMaxWidth()
+        }
+        Column(
+            modifier = contentModifier,
+            verticalArrangement = verticalArrangement,
+            content = content,
+        )
     }
 }
 
@@ -614,8 +640,9 @@ private fun McuDevicePropertyEditorPanel(
         title = "属性编辑",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuPanelSectionTitle("设备元数据")
@@ -744,8 +771,9 @@ private fun McuAssetBundlePanel(
         title = "运行时与能力包",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuPanelSectionTitle("运行时包")
@@ -836,8 +864,9 @@ private fun McuCommandCatalogPanel(
         title = "协议与脚本",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuPanelSectionTitle("原子指令")
@@ -1007,8 +1036,9 @@ private fun McuRuntimeMonitorPanel(
         title = "运行监控",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuSummaryTable(
@@ -1197,8 +1227,9 @@ private fun McuRuntimeOpsPanel(
         title = "运行与烧录",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuPanelSectionTitle("会话状态")
@@ -1513,8 +1544,9 @@ private fun McuConnectionConfigPanel(
         title = "串口连接",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuCompactInput(
@@ -1592,8 +1624,9 @@ private fun McuScriptWorkbenchPanel(
         title = "脚本与控件",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuPanelSectionTitle("原子指令")
@@ -1683,8 +1716,9 @@ private fun McuModbusQuickPanel(
         title = "Modbus 快捷调试",
         modifier = modifier,
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(scrollState),
+        McuBoundedScrollColumn(
+            scrollState = scrollState,
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             McuSummaryTable(rows = state.modbusConnectionSummaryRows())

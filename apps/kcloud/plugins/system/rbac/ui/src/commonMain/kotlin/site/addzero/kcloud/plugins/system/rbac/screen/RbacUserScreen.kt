@@ -15,6 +15,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.design.button.KCloudButton as Button
 import site.addzero.kcloud.plugins.system.rbac.RbacWorkbenchState
 
 @Route(

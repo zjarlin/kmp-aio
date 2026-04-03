@@ -2,13 +2,13 @@ package site.addzero.kcloud.music
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import site.addzero.kcloud.design.button.KCloudButton as Button
 import site.addzero.kcloud.api.suno.SunoMusicCoverRequest
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 

@@ -118,6 +118,7 @@ private fun SceneSwitcher(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    /** 图标2 22222222222*/
                     Icon(
                         imageVector = scene.icon,
                         contentDescription = null,
@@ -128,8 +129,7 @@ private fun SceneSwitcher(
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
                     )
-                    /* 文本 */
-                    /** dasjdoaijdoiaj */
+                    /** joidajosidjoa */
                     Text(
                         text = scene.routeCount.toString(),
                         style = MaterialTheme.typography.labelMedium,
@@ -172,6 +172,7 @@ private fun ScreenHeader(
                             verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             if (breadcrumb.isNotEmpty()) {
+                                /** 2222222 */
                                 Text(
                                     text = breadcrumb.joinToString(" / "),
                                     style = MaterialTheme.typography.labelLarge,
@@ -198,11 +199,13 @@ private fun ScreenHeader(
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalArrangement = Arrangement.spacedBy(2.dp),
                             ) {
+                                /** 2222222222222 */
                                 Text(
                                     text = currentScene.ifBlank { "Workspace" },
                                     style = MaterialTheme.typography.titleSmall,
                                     color = MaterialTheme.colorScheme.onSurface,
                                 )
+                                /** 333333333 */
                                 Text(
                                     text = "$pageCount pages available",
                                     style = MaterialTheme.typography.bodySmall,

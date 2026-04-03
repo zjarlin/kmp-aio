@@ -3,22 +3,30 @@ package site.addzero.kcloud.plugins.system.aichat
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
+import org.koin.mp.KoinPlatform
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_DEFAULT_SYSTEM_PROMPT
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_TRANSPORT_HTTP
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENAI
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatMessage
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatSession
 import site.addzero.kcloud.plugins.system.aichat.model.by
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatConversationDto
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatDeleteResult
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatProviderConfigDto
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
+import site.addzero.kcloud.plugins.system.aichat.provider.AiChatCompletionGateway
+import site.addzero.kcloud.plugins.system.aichat.provider.AiChatCompletionRequest
+import site.addzero.kcloud.plugins.system.aichat.provider.AiChatTurn
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import java.util.*
 
 private const val DEFAULT_SESSION_TITLE = "新会话"
-private const val AI_PROVIDER_PLACEHOLDER =
-    "模型提供方尚未接通。请先在配置中心的 kcloud.ai 命名空间下补齐 provider 配置。"
 
 @Single
 class AiChatService(
     private val sqlClient: KSqlClient,
+    private val completionGateway: AiChatCompletionGateway,
 ) {
     fun listSessions(): List<AiChatSessionDto> {
         return allSessions()
@@ -59,14 +67,16 @@ class AiChatService(
             .map { it.toDto() }
     }
 
-    fun sendMessage(
+    suspend fun sendMessage(
         sessionId: Long,
         content: String,
+        provider: AiChatProviderConfigDto,
     ): AiChatConversationDto {
         val normalizedContent = content.trim()
         require(normalizedContent.isNotBlank()) { "消息不能为空" }
 
         val session = sessionOrThrow(sessionId)
+        val normalizedProvider = mergeProviderConfig(provider)
         sqlClient.save(
             new(AiChatMessage::class).by {
                 messageKey = UUID.randomUUID().toString()
@@ -75,12 +85,30 @@ class AiChatService(
                 this.content = normalizedContent
             },
         )
+        val assistantReply = completionGateway.complete(
+            AiChatCompletionRequest(
+                transport = normalizedProvider.transport,
+                vendor = normalizedProvider.vendor,
+                baseUrl = normalizedProvider.baseUrl,
+                apiKey = normalizedProvider.apiKey,
+                model = normalizedProvider.model,
+                systemPrompt = normalizedProvider.systemPrompt,
+                messages = listMessageEntities(sessionId)
+                    .sortedBy { it.createTime }
+                    .map { message ->
+                        AiChatTurn(
+                            role = message.role,
+                            content = message.content,
+                        )
+                    },
+            ),
+        )
         sqlClient.save(
             new(AiChatMessage::class).by {
                 messageKey = UUID.randomUUID().toString()
                 this.session = sessionRef(session.id)
                 role = "assistant"
-                this.content = AI_PROVIDER_PLACEHOLDER
+                this.content = assistantReply
             },
         )
 
@@ -132,6 +160,59 @@ class AiChatService(
         }.execute().filter { message ->
             message.session.id == sessionId
         }
+    }
+
+    /**
+     * 组件传来的配置优先，缺失项再回落到配置中心默认值。
+     */
+    private fun mergeProviderConfig(
+        override: AiChatProviderConfigDto,
+    ): AiChatProviderConfigDto {
+        val defaults = loadDefaultProviderConfig()
+        return AiChatProviderConfigDto(
+            transport = override.transport.trim().ifBlank { defaults.transport },
+            vendor = override.vendor.trim().ifBlank { defaults.vendor },
+            baseUrl = override.baseUrl.trim().ifBlank { defaults.baseUrl },
+            apiKey = override.apiKey.trim().ifBlank { defaults.apiKey },
+            model = override.model.trim().ifBlank { defaults.model },
+            systemPrompt = override.systemPrompt.trim().ifBlank { defaults.systemPrompt },
+        )
+    }
+
+    private fun loadDefaultProviderConfig(): AiChatProviderConfigDto {
+        return AiChatProviderConfigDto(
+            transport = readFirstConfigValue("transport", "apiTransport").ifBlank { AI_CHAT_TRANSPORT_HTTP },
+            vendor = readFirstConfigValue("vendor", "provider", "apiVendor", "apiProvider").ifBlank {
+                AI_CHAT_VENDOR_OPENAI
+            },
+            baseUrl = readFirstConfigValue("apiUrl", "baseUrl"),
+            apiKey = readFirstConfigValue("apiKey", "token"),
+            model = readConfigValue("model"),
+            systemPrompt = readConfigValue("systemPrompt").ifBlank { AI_CHAT_DEFAULT_SYSTEM_PROMPT },
+        )
+    }
+
+    private fun readFirstConfigValue(
+        vararg keys: String,
+    ): String {
+        return keys.firstNotNullOfOrNull { key ->
+            readConfigValue(key).takeIf { it.isNotBlank() }
+        }.orEmpty()
+    }
+
+    private fun readConfigValue(
+        key: String,
+    ): String {
+        val service = runCatching {
+            KoinPlatform.getKoin().get<ConfigValueServiceSpi>()
+        }.getOrNull() ?: return ""
+        return runCatching {
+            service.readValue(
+                namespace = "kcloud.ai",
+                key = key,
+                active = "dev",
+            ).value.orEmpty()
+        }.getOrDefault("")
     }
 }
 

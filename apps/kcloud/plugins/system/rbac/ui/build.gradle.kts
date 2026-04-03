@@ -38,6 +38,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":apps:kcloud:design"))
             api(project(":apps:kcloud:plugins:system:rbac:shared"))
             implementation(project(":lib:ksp:route:route-core"))
         }

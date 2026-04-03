@@ -5,7 +5,11 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_DEFAULT_SYSTEM_PROMPT
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_TRANSPORT_HTTP
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENAI
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatProviderConfigDto
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
 
 @Single
@@ -17,6 +21,14 @@ class AiChatWorkbenchState(
 
     var selectedSessionId by mutableStateOf<Long?>(null)
         private set
+
+    var serverBaseUrl by mutableStateOf("")
+    var providerTransport by mutableStateOf(AI_CHAT_TRANSPORT_HTTP)
+    var providerVendor by mutableStateOf(AI_CHAT_VENDOR_OPENAI)
+    var providerBaseUrl by mutableStateOf("")
+    var providerApiKey by mutableStateOf("")
+    var providerModel by mutableStateOf("")
+    var providerSystemPrompt by mutableStateOf(AI_CHAT_DEFAULT_SYSTEM_PROMPT)
 
     var draftMessage by mutableStateOf("")
     var statusMessage by mutableStateOf("")
@@ -36,7 +48,7 @@ class AiChatWorkbenchState(
 
     suspend fun refreshSessions() {
         runBusy("已刷新会话") {
-            val loadedSessions = remoteService.listSessions()
+            val loadedSessions = remoteService.listSessions(serverBaseUrl = serverBaseUrl)
             sessions.replaceAll(loadedSessions)
             val nextId = selectedSessionId?.takeIf { currentId ->
                 loadedSessions.any { session -> session.id == currentId }
@@ -52,7 +64,10 @@ class AiChatWorkbenchState(
 
     suspend fun createSession() {
         runBusy("已创建新会话") {
-            val created = remoteService.createSession("新会话")
+            val created = remoteService.createSession(
+                title = "新会话",
+                serverBaseUrl = serverBaseUrl,
+            )
             sessions.add(0, created)
             selectSession(created.id)
         }
@@ -61,7 +76,10 @@ class AiChatWorkbenchState(
     suspend fun deleteSelectedSession() {
         val sessionId = selectedSessionId ?: return
         runBusy("已删除会话") {
-            remoteService.deleteSession(sessionId)
+            remoteService.deleteSession(
+                sessionId = sessionId,
+                serverBaseUrl = serverBaseUrl,
+            )
             selectedSessionId = null
             refreshSessions()
         }
@@ -71,7 +89,10 @@ class AiChatWorkbenchState(
         sessionId: Long,
     ) {
         selectedSessionId = sessionId
-        val loadedMessages = remoteService.listMessages(sessionId)
+        val loadedMessages = remoteService.listMessages(
+            sessionId = sessionId,
+            serverBaseUrl = serverBaseUrl,
+        )
         messages.replaceAll(loadedMessages)
     }
 
@@ -82,16 +103,35 @@ class AiChatWorkbenchState(
             return
         }
         runBusy("消息已写入会话") {
-            val sessionId = selectedSessionId ?: remoteService.createSession("新会话").also { created ->
+            val sessionId = selectedSessionId ?: remoteService.createSession(
+                title = "新会话",
+                serverBaseUrl = serverBaseUrl,
+            ).also { created ->
                 sessions.add(0, created)
                 selectedSessionId = created.id
             }.id
-            val conversation = remoteService.sendMessage(sessionId, content)
+            val conversation = remoteService.sendMessage(
+                sessionId = sessionId,
+                content = content,
+                serverBaseUrl = serverBaseUrl,
+                provider = currentProviderConfig(),
+            )
             upsertSession(conversation.session)
             messages.replaceAll(conversation.messages)
             selectedSessionId = conversation.session.id
             draftMessage = ""
         }
+    }
+
+    private fun currentProviderConfig(): AiChatProviderConfigDto {
+        return AiChatProviderConfigDto(
+            transport = providerTransport,
+            vendor = providerVendor,
+            baseUrl = providerBaseUrl,
+            apiKey = providerApiKey,
+            model = providerModel,
+            systemPrompt = providerSystemPrompt,
+        )
     }
 
     private fun upsertSession(

@@ -41,6 +41,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":apps:kcloud:design"))
             implementation(project(":apps:kcloud:plugins:vibepocket"))
             implementation(project(":lib:compose:media-playlist-player"))
             implementation(project(":lib:api:api-music-spi"))

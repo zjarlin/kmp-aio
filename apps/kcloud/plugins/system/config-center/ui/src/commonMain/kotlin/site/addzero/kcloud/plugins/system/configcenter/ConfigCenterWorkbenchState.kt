@@ -22,6 +22,49 @@ class ConfigCenterWorkbenchState(
     var isBusy by mutableStateOf(false)
         private set
 
+    fun useAiNamespace() {
+        namespace = "kcloud.ai"
+    }
+
+    fun applyAiKeyPreset(
+        preset: String,
+    ) {
+        useAiNamespace()
+        key = preset
+        if (preset == "transport" && value.isBlank()) {
+            value = "http"
+        }
+    }
+
+    fun applyAiProviderPreset(
+        provider: String,
+    ) {
+        useAiNamespace()
+        when (provider.lowercase()) {
+            "openai" -> {
+                key = "provider"
+                value = "openai"
+            }
+
+            "anthropic" -> {
+                key = "provider"
+                value = "anthropic"
+            }
+        }
+    }
+
+    fun applyAiUrlPreset(
+        provider: String,
+    ) {
+        useAiNamespace()
+        key = "apiUrl"
+        value = when (provider.lowercase()) {
+            "openai" -> "https://api.openai.com"
+            "anthropic" -> "https://api.anthropic.com"
+            else -> value
+        }
+    }
+
     suspend fun readValue() {
         require(namespace.isNotBlank()) { "namespace 不能为空" }
         require(key.isNotBlank()) { "key 不能为空" }

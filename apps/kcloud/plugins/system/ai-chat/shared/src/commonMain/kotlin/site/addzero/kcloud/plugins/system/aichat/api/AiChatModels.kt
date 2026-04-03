@@ -31,6 +31,17 @@ data class AiChatMessageDto(
 @Serializable
 data class AiChatMessageCreateRequest(
     val content: String,
+    val provider: AiChatProviderConfigDto = AiChatProviderConfigDto(),
+)
+
+@Serializable
+data class AiChatProviderConfigDto(
+    val transport: String = AI_CHAT_TRANSPORT_HTTP,
+    val vendor: String = AI_CHAT_VENDOR_OPENAI,
+    val baseUrl: String = "",
+    val apiKey: String = "",
+    val model: String = "",
+    val systemPrompt: String = AI_CHAT_DEFAULT_SYSTEM_PROMPT,
 )
 
 @Serializable
@@ -43,3 +54,17 @@ data class AiChatConversationDto(
 data class AiChatDeleteResult(
     val ok: Boolean = true,
 )
+
+const val AI_CHAT_TRANSPORT_HTTP = "http"
+const val AI_CHAT_TRANSPORT_ACP = "acp"
+
+const val AI_CHAT_VENDOR_OPENAI = "openai"
+const val AI_CHAT_VENDOR_OPENAI_COMPATIBLE = "openai-compatible"
+const val AI_CHAT_VENDOR_OPENROUTER = "openrouter"
+const val AI_CHAT_VENDOR_DEEPSEEK = "deepseek"
+const val AI_CHAT_VENDOR_ANTHROPIC = "anthropic"
+const val AI_CHAT_VENDOR_GOOGLE = "google"
+const val AI_CHAT_VENDOR_GEMINI = "gemini"
+const val AI_CHAT_VENDOR_OLLAMA = "ollama"
+
+const val AI_CHAT_DEFAULT_SYSTEM_PROMPT = "你是一个可靠、直接、简洁的中文助手。"

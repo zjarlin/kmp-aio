@@ -39,6 +39,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":apps:kcloud:design"))
             api(project(":apps:kcloud:plugins:system:plugin-market:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation(project(":lib:ksp:route:route-core"))

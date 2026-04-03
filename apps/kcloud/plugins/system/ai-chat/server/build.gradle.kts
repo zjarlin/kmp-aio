@@ -30,7 +30,10 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:system:ai-chat:shared"))
+            implementation(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(libs.findLibrary("ai-koog-koog-agents").get())
+            implementation(libs.findLibrary("io-ktor-ktor-client-cio").get())
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation(libs.findLibrary("spring2ktor-server-core").get())

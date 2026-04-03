@@ -21,13 +21,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import site.addzero.kcloud.design.button.KCloudButton as ShadcnButton
+import site.addzero.kcloud.design.button.KCloudButtonVariant as ShadcnButtonVariant
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
-import site.addzero.component.Button as ShadcnButton
-import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
 @Composable
 fun KCloudTrayPanelWindow(

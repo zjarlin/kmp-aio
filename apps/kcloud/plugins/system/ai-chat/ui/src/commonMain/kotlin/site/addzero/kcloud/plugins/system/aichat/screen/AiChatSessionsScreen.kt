@@ -14,7 +14,16 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.design.button.KCloudButton as Button
 import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_TRANSPORT_ACP
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_TRANSPORT_HTTP
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_ANTHROPIC
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_DEEPSEEK
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_GOOGLE
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OLLAMA
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENAI
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENROUTER
 
 @Route(
     value = "AI对话",
@@ -34,12 +43,13 @@ import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 @Composable
 fun AiChatSessionsScreen() {
     val viewModel: AiChatSessionsViewModel = koinViewModel()
-    AiChatSessionsContent(state = viewModel.state)
+    AiChatPanel(state = viewModel.state)
 }
 
 @Composable
-private fun AiChatSessionsContent(
+fun AiChatPanel(
     state: AiChatWorkbenchState,
+    modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -48,7 +58,7 @@ private fun AiChatSessionsContent(
     }
 
     Row(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
+        modifier = modifier.fillMaxSize().padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Card(
@@ -134,10 +144,11 @@ private fun AiChatSessionsContent(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = "当前版本只持久化会话和消息，助手回复会返回“未接通模型提供方”的占位结果。",
+                    text = "组件现在支持把后台地址、厂商、模型 Base URL、API Key、模型名直接带进请求；HTTP transport 会真实调用 Koog provider，ACP transport 已预留网关入口。",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                AiChatProviderConfigCard(state = state)
                 if (state.statusMessage.isNotBlank()) {
                     Text(
                         text = state.statusMessage,
@@ -195,4 +206,172 @@ private fun AiChatSessionsContent(
             }
         }
     }
+}
+
+@Composable
+private fun AiChatProviderConfigCard(
+    state: AiChatWorkbenchState,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
+        ),
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = "连接配置",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            OutlinedTextField(
+                value = state.serverBaseUrl,
+                onValueChange = { state.serverBaseUrl = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("KCloud 后端 URL") },
+                placeholder = { Text("http://localhost:18080/") },
+                singleLine = true,
+            )
+            Text(
+                text = "传输协议",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                TransportChoice(
+                    selected = state.providerTransport == AI_CHAT_TRANSPORT_HTTP,
+                    label = "HTTP",
+                ) {
+                    state.providerTransport = AI_CHAT_TRANSPORT_HTTP
+                }
+                TransportChoice(
+                    selected = state.providerTransport == AI_CHAT_TRANSPORT_ACP,
+                    label = "ACP",
+                ) {
+                    state.providerTransport = AI_CHAT_TRANSPORT_ACP
+                }
+            }
+            Text(
+                text = "模型厂商",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ProviderChip(
+                    selected = state.providerVendor == AI_CHAT_VENDOR_OPENAI,
+                    label = "OpenAI",
+                ) {
+                    state.providerVendor = AI_CHAT_VENDOR_OPENAI
+                }
+                ProviderChip(
+                    selected = state.providerVendor == AI_CHAT_VENDOR_OPENROUTER,
+                    label = "OpenRouter",
+                ) {
+                    state.providerVendor = AI_CHAT_VENDOR_OPENROUTER
+                }
+                ProviderChip(
+                    selected = state.providerVendor == AI_CHAT_VENDOR_DEEPSEEK,
+                    label = "DeepSeek",
+                ) {
+                    state.providerVendor = AI_CHAT_VENDOR_DEEPSEEK
+                }
+                ProviderChip(
+                    selected = state.providerVendor == AI_CHAT_VENDOR_ANTHROPIC,
+                    label = "Anthropic",
+                ) {
+                    state.providerVendor = AI_CHAT_VENDOR_ANTHROPIC
+                }
+                ProviderChip(
+                    selected = state.providerVendor == AI_CHAT_VENDOR_GOOGLE,
+                    label = "Google",
+                ) {
+                    state.providerVendor = AI_CHAT_VENDOR_GOOGLE
+                }
+                ProviderChip(
+                    selected = state.providerVendor == AI_CHAT_VENDOR_OLLAMA,
+                    label = "Ollama",
+                ) {
+                    state.providerVendor = AI_CHAT_VENDOR_OLLAMA
+                }
+            }
+            OutlinedTextField(
+                value = state.providerBaseUrl,
+                onValueChange = { state.providerBaseUrl = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("模型 Base URL") },
+                placeholder = { Text("留空则按厂商默认地址") },
+                singleLine = true,
+            )
+            OutlinedTextField(
+                value = state.providerApiKey,
+                onValueChange = { state.providerApiKey = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("API Key") },
+                placeholder = { Text("Ollama 可留空") },
+                singleLine = true,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OutlinedTextField(
+                    value = state.providerModel,
+                    onValueChange = { state.providerModel = it },
+                    modifier = Modifier.weight(1f),
+                    label = { Text("模型名") },
+                    placeholder = { Text("留空则按厂商默认模型") },
+                    singleLine = true,
+                )
+                OutlinedTextField(
+                    value = state.providerVendor,
+                    onValueChange = { state.providerVendor = it },
+                    modifier = Modifier.weight(0.75f),
+                    label = { Text("厂商标识") },
+                    singleLine = true,
+                )
+            }
+            OutlinedTextField(
+                value = state.providerSystemPrompt,
+                onValueChange = { state.providerSystemPrompt = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("系统提示词") },
+                minLines = 2,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProviderChip(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+    )
+}
+
+@Composable
+private fun TransportChoice(
+    selected: Boolean,
+    label: String,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+    )
 }

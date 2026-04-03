@@ -18,10 +18,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.koin.core.annotation.Single
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.AddTree
+import site.addzero.component.tree.AddTreeColors
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.kcloud.shell.KCloudShellState
@@ -84,6 +86,22 @@ private fun RouteSidebar(
 ) {
     val currentOnNodeClick by rememberUpdatedState(onNodeClick)
     val uiMetrics = currentKCloudUiMetrics()
+    val colorScheme = MaterialTheme.colorScheme
+    val treePanelColor = colorScheme.surfaceVariant.copy(alpha = 0.18f)
+    val treeColors = remember(colorScheme) {
+        AddTreeColors(
+            rowContainer = Color.Transparent,
+            rowSelectedContainer = colorScheme.surfaceVariant.copy(alpha = 0.26f),
+            rowSelectedBorder = colorScheme.outlineVariant.copy(alpha = 0.58f),
+            rowSelectedIndicator = colorScheme.onSurface,
+            content = colorScheme.onSurface,
+            contentSelected = colorScheme.onSurface,
+            secondaryContent = colorScheme.onSurfaceVariant,
+            badgeContainer = colorScheme.surface.copy(alpha = 0.84f),
+            badgeBorder = colorScheme.outlineVariant.copy(alpha = 0.56f),
+            badgeContent = colorScheme.onSurfaceVariant,
+        )
+    }
 
     LaunchedEffect(treeViewModel) {
         treeViewModel.configure(
@@ -160,7 +178,7 @@ private fun RouteSidebar(
                         .fillMaxWidth()
                         .weight(1f),
                     shape = RoundedCornerShape(uiMetrics.sidebarTreePanelRadius),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.28f),
+                    color = treePanelColor,
                 ) {
                     Box(
                         modifier = Modifier
@@ -171,6 +189,7 @@ private fun RouteSidebar(
                             viewModel = treeViewModel,
                             modifier = Modifier.fillMaxSize(),
                             metrics = uiMetrics.treeMetrics,
+                            colors = treeColors,
                             selectableLabel = true,
                         )
                     }

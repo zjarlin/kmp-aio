@@ -4,21 +4,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,12 +22,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import site.addzero.kcloud.design.button.KCloudButtonVariant
+import site.addzero.kcloud.design.button.KCloudIconButton
 import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.shell.navigation.firstLeafRoutePath
-import site.addzero.component.Button as ShadcnButton
-import site.addzero.component.ButtonSize as ShadcnButtonSize
-import site.addzero.component.ButtonVariant as ShadcnButtonVariant
 
 @Composable
 fun RowScope.KCloudShellActions(
@@ -44,9 +38,19 @@ fun RowScope.KCloudShellActions(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         KCloudShellIconButton(
+            tooltip = if (shellState.aiAssistantVisible) "关闭 AI 助手" else "打开 AI 助手",
+            onClick = shellState::toggleAiAssistant,
+            variant = if (shellState.aiAssistantVisible) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
+        ) {
+            Icon(
+                imageVector = Icons.Default.SmartToy,
+                contentDescription = null,
+            )
+        }
+        KCloudShellIconButton(
             tooltip = if (darkTheme) "切换到浅色" else "切换到深色",
             onClick = onThemeToggle,
-            variant = if (darkTheme) ShadcnButtonVariant.Secondary else ShadcnButtonVariant.Outline,
+            variant = if (darkTheme) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
         ) {
             Icon(
                 imageVector = if (darkTheme) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
@@ -56,7 +60,7 @@ fun RowScope.KCloudShellActions(
         KCloudShellIconButton(
             tooltip = if (shellState.sidebarVisible) "隐藏菜单" else "显示菜单",
             onClick = shellState::toggleSidebar,
-            variant = if (shellState.sidebarVisible) ShadcnButtonVariant.Secondary else ShadcnButtonVariant.Outline,
+            variant = if (shellState.sidebarVisible) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
         ) {
             Icon(
                 imageVector = Icons.Default.Menu,
@@ -81,7 +85,7 @@ fun KCloudUserMenu(
         KCloudShellIconButton(
             tooltip = "本地工作台",
             onClick = { expanded = !expanded },
-            variant = if (expanded) ShadcnButtonVariant.Secondary else ShadcnButtonVariant.Outline,
+            variant = if (expanded) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
         ) {
             Icon(
                 imageVector = Icons.Default.Work,
@@ -113,33 +117,21 @@ fun KCloudUserMenu(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun KCloudShellIconButton(
     tooltip: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    variant: ShadcnButtonVariant = ShadcnButtonVariant.Outline,
+    variant: KCloudButtonVariant = KCloudButtonVariant.Outline,
     content: @Composable RowScope.() -> Unit,
 ) {
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = {
-            PlainTooltip {
-                Text(tooltip)
-            }
-        },
-        state = rememberTooltipState(),
-    ) {
-        ShadcnButton(
-            onClick = onClick,
-            modifier = modifier,
-            variant = variant,
-            size = ShadcnButtonSize.Icon,
-            shape = RoundedCornerShape(999.dp),
-            content = content,
-        )
-    }
+    KCloudIconButton(
+        onClick = onClick,
+        modifier = modifier,
+        tooltip = tooltip,
+        variant = variant,
+        content = content,
+    )
 }
 
 private const val SYSTEM_SCENE_ID = "系统管理"
