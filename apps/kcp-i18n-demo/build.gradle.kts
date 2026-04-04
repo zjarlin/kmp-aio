@@ -3,19 +3,24 @@
 import java.io.File
 
 buildscript {
-    val localAddzeroLibJvmDir = rootDir.resolve("../addzero-lib-jvm")
+    val localAddzeroLibJvmDir = listOf(
+        rootDir.resolve("../addzero-lib-jvm"),
+        rootDir.resolve("addzero-lib-jvm"),
+    ).firstOrNull { candidateDir -> candidateDir.resolve("settings.gradle.kts").isFile }
     val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
-        .resolve("gradle.properties")
-        .takeIf { file -> file.isFile }
+        ?.resolve("gradle.properties")
+        ?.takeIf { file -> file.isFile }
         ?.readLines()
         ?.firstOrNull { line -> line.startsWith("version=") }
         ?.substringAfter("=")
         ?.trim()
         ?.takeIf(String::isNotBlank)
-        ?: "2026.10329.10127"
+    val resolvedAddzeroLibJvmVersion = project.providers.gradleProperty("addzeroLibJvmVersion")
+        .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
+        .get()
     val localI18nPluginJar = localAddzeroLibJvmDir
-        .resolve("lib/kcp/kcp-i18n-gradle-plugin/build/libs")
-        .takeIf(File::isDirectory)
+        ?.resolve("lib/kcp/kcp-i18n-gradle-plugin/build/libs")
+        ?.takeIf { directory -> directory.isDirectory }
         ?.listFiles()
         ?.firstOrNull { file ->
             file.isFile &&
@@ -36,7 +41,7 @@ buildscript {
             classpath(files(localI18nPluginJar))
             classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20-RC")
         } else {
-            classpath("site.addzero.kcp.i18n:site.addzero.kcp.i18n.gradle.plugin:$localAddzeroLibJvmVersion")
+            classpath("site.addzero.kcp.i18n:site.addzero.kcp.i18n.gradle.plugin:$resolvedAddzeroLibJvmVersion")
         }
     }
 }

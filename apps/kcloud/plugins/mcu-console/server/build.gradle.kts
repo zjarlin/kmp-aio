@@ -10,20 +10,26 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val localAddzeroLibJvmVersion = rootDir
-    .resolve("../addzero-lib-jvm/gradle.properties")
-    .takeIf { file -> file.isFile }
+val localAddzeroLibJvmDir = listOf(
+    rootDir.resolve("../addzero-lib-jvm"),
+    rootDir.resolve("addzero-lib-jvm"),
+).firstOrNull { candidateDir -> candidateDir.resolve("settings.gradle.kts").isFile }
+val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
+    ?.resolve("gradle.properties")
+    ?.takeIf { file -> file.isFile }
     ?.readLines()
     ?.firstOrNull { line -> line.startsWith("version=") }
     ?.substringAfter("=")
     ?.trim()
     ?.takeIf(String::isNotBlank)
-    ?: "2026.10329.10127"
-val hasLocalAddzeroLibJvm = rootDir.resolve("../addzero-lib-jvm/settings.gradle.kts").isFile
+val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion")
+    .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
+    .get()
+val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir != null
 val localJimmerExternalProcessorPom = file(
     System.getProperty("user.home") +
-        "/.m2/repository/site/addzero/jimmer-entity-external-processor/$localAddzeroLibJvmVersion/" +
-        "jimmer-entity-external-processor-$localAddzeroLibJvmVersion.pom",
+        "/.m2/repository/site/addzero/jimmer-entity-external-processor/$addzeroLibJvmVersion/" +
+        "jimmer-entity-external-processor-$addzeroLibJvmVersion.pom",
 )
 val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:shared")
     .projectDir
@@ -49,7 +55,7 @@ dependencies {
     if (hasLocalAddzeroLibJvm) {
         add("kspJvm", project(":lib:ksp:metadata:jimmer-entity-external-processor"))
     } else if (localJimmerExternalProcessorPom.isFile) {
-        add("kspJvm", "site.addzero:jimmer-entity-external-processor:$localAddzeroLibJvmVersion")
+        add("kspJvm", "site.addzero:jimmer-entity-external-processor:$addzeroLibJvmVersion")
     }
     add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
     add("kspJvm", libs.findLibrary("site-addzero-controller2api-processor").get())

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -35,34 +36,54 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.delay
-import org.koin.core.annotation.Single
+import org.koin.compose.koinInject
 import site.addzero.kcloud.design.button.KCloudButtonVariant
 import site.addzero.kcloud.design.button.KCloudIconButton
 import site.addzero.kcloud.plugins.system.aichat.AiChatWorkbenchState
 import site.addzero.kcloud.plugins.system.aichat.screen.AiChatPanel
 import site.addzero.kcloud.shell.KCloudShellState
-import site.addzero.kcloud.window.spi.KCloudOverlaySlotSpi
+import site.addzero.kcloud.shell.menu.KCloudShellActions
 
-@Single(
-    binds = [
-        KCloudOverlaySlotSpi::class,
-    ],
-)
-class DefaultKCloudOverlaySlot(
-    private val shellState: KCloudShellState,
-    private val aiChatState: AiChatWorkbenchState,
-) : KCloudOverlaySlotSpi {
-    @Composable
-    override fun Render() {
-        KCloudAiAssistantDialog(
-            visible = shellState.aiAssistantVisible,
-            state = aiChatState,
-            onDismiss = shellState::hideAiAssistant,
+@Composable
+internal fun RowScope.KCloudDefaultBrandSlot() {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(
+            text = "OKMY DICS",
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 1.8.sp,
         )
     }
+}
+
+@Composable
+internal fun RowScope.KCloudDefaultUserActions(
+    darkTheme: Boolean,
+    onThemeToggle: () -> Unit,
+) {
+    KCloudShellActions(
+        darkTheme = darkTheme,
+        onThemeToggle = onThemeToggle,
+    )
+}
+
+@Composable
+internal fun KCloudDefaultOverlay(
+    shellState: KCloudShellState = koinInject(),
+    aiChatState: AiChatWorkbenchState = koinInject(),
+) {
+    KCloudAiAssistantDialog(
+        visible = shellState.aiAssistantVisible,
+        state = aiChatState,
+        onDismiss = shellState::hideAiAssistant,
+    )
 }
 
 @Composable

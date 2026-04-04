@@ -1,110 +1,67 @@
 package site.addzero.kcloud.window.main
 
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
-import org.koin.core.annotation.Single
-import site.addzero.kcloud.shell.menu.KCloudShellActions
+import site.addzero.kcloud.shell.KCloudShellState
 import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeMode
 import site.addzero.kcloud.theme.ShellThemeState
+import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.kcloud.theme.resolveDarkTheme
-import site.addzero.kcloud.window.spi.KCloudBrandSlotSpi
-import site.addzero.kcloud.window.spi.KCloudOverlaySlotSpi
-import site.addzero.kcloud.window.spi.KCloudUserSlotSpi
-import site.addzero.kcloud.window.spi.KCloudWorkbenchScaffoldingSpi
-import site.addzero.kcloud.window.spi.MainWindowSpi
+import site.addzero.workbenchshell.RenderAdminScaffolding
 
-@Single(
-    binds = [
-        MainWindowSpi::class,
-    ],
-)
-class KCloudMainWindow(
-    private val shellThemeState: ShellThemeState,
-    private val scaffolding: KCloudWorkbenchScaffoldingSpi,
-    private val overlaySlot: KCloudOverlaySlotSpi,
-) : MainWindowSpi {
-    @Composable
-    override fun Render() {
-        val themeMode = shellThemeState.themeMode
-        val darkTheme = themeMode.resolveDarkTheme(
-            systemDarkTheme = isSystemInDarkTheme(),
-        )
-        val toggleTheme = remember(shellThemeState, darkTheme) {
-            {
-                shellThemeState.updateThemeMode(
-                    if (darkTheme) {
-                        ShellThemeMode.LIGHT
-                    } else {
-                        ShellThemeMode.DARK
-                    },
-                )
-            }
-        }
-
-        Theme(
-            darkTheme = darkTheme,
-        ) {
-            scaffolding.Render(
-                darkTheme = darkTheme,
-                onThemeToggle = toggleTheme,
+@Composable
+fun RenderKCloudWindow(
+    scaffolding: ScaffoldingImpl,
+    shellThemeState: ShellThemeState = org.koin.compose.koinInject(),
+) {
+    val themeMode = shellThemeState.themeMode
+    val darkTheme = themeMode.resolveDarkTheme(
+        systemDarkTheme = isSystemInDarkTheme(),
+    )
+    val toggleTheme = remember(shellThemeState, darkTheme) {
+        {
+            shellThemeState.updateThemeMode(
+                if (darkTheme) {
+                    ShellThemeMode.LIGHT
+                } else {
+                    ShellThemeMode.DARK
+                },
             )
-            overlaySlot.Render()
         }
+    }
+
+    Theme(
+        darkTheme = darkTheme,
+    ) {
+        KCloudWorkbenchFrame(
+            scaffolding = scaffolding,
+            darkTheme = darkTheme,
+            onThemeToggle = toggleTheme,
+        )
+        scaffolding.RenderOverlay()
     }
 }
 
 @Composable
-private fun RowScope.KCloudBrandSlot() {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Text(
-            text = "OKMY DICS",
-            color = MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.8.sp,
-        )
-    }
-}
+private fun KCloudWorkbenchFrame(
+    scaffolding: ScaffoldingImpl,
+    darkTheme: Boolean,
+    onThemeToggle: () -> Unit,
+    shellState: KCloudShellState = org.koin.compose.koinInject(),
+) {
+    val uiMetrics = currentKCloudUiMetrics()
+    val sidebarVisible = shellState.sidebarVisible
 
-@Single(
-    binds = [
-        KCloudBrandSlotSpi::class,
-    ],
-)
-class DefaultKCloudBrandSlot : KCloudBrandSlotSpi {
-    @Composable
-    override fun RowScope.Render() {
-        KCloudBrandSlot()
-    }
-}
-
-@Single(
-    binds = [
-        KCloudUserSlotSpi::class,
-    ],
-)
-class DefaultKCloudUserSlot(
-) : KCloudUserSlotSpi {
-    @Composable
-    override fun RowScope.Render(
-        darkTheme: Boolean,
-        onThemeToggle: () -> Unit,
-    ) {
-        KCloudShellActions(
-            darkTheme = darkTheme,
-            onThemeToggle = onThemeToggle,
-        )
-    }
+    RenderAdminScaffolding(
+        scaffolding = scaffolding,
+        darkTheme = darkTheme,
+        onThemeToggle = onThemeToggle,
+        sidebarVisible = sidebarVisible,
+        defaultSidebarRatio = uiMetrics.sidebarRatio,
+        minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
+        maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
+    )
 }

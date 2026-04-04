@@ -7,44 +7,68 @@ pluginManagement {
         maven(url = "https://repo.spring.io/milestone/")
         maven(url = "https://plugins.gradle.org/m2/")
     }
+    val localAddzeroLibJvmCandidateDirs = listOf(
+        file("../addzero-lib-jvm"),
+        file("addzero-lib-jvm"),
+    )
     val localBuildLogicDir = file("checkouts/build-logic")
-    val fallbackBuildLogicDir = file("../addzero-lib-jvm/checkouts/build-logic")
-    val resolvedBuildLogicDir = listOf(localBuildLogicDir, fallbackBuildLogicDir)
+    val fallbackBuildLogicDirs = localAddzeroLibJvmCandidateDirs.map { it.resolve("checkouts/build-logic") }
+    val resolvedBuildLogicDir = listOf(localBuildLogicDir, *fallbackBuildLogicDirs.toTypedArray())
+        .distinctBy { it.absoluteFile.normalize().path }
         .firstOrNull { buildLogicDir -> buildLogicDir.resolve("src/main/kotlin").isDirectory }
     if (resolvedBuildLogicDir != null) {
         includeBuild(resolvedBuildLogicDir) {
             name = "build-logic"
         }
     }
-    val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+    val localAddzeroLibJvmDir = localAddzeroLibJvmCandidateDirs
+        .firstOrNull { candidateDir -> candidateDir.resolve("settings.gradle.kts").isFile }
     val useLocalAddzeroLibJvmPluginBuild = providers.gradleProperty("useLocalAddzeroLibJvmPluginBuild")
         .map(String::toBoolean)
         .orElse(false)
         .get()
-    if (useLocalAddzeroLibJvmPluginBuild && localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile) {
+    if (useLocalAddzeroLibJvmPluginBuild && localAddzeroLibJvmDir != null) {
         includeBuild(localAddzeroLibJvmDir) {
             name = "addzero-lib-jvm-plugin-build"
         }
     }
     val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
-        .resolve("gradle.properties")
-        .takeIf { file -> file.isFile }
+        ?.resolve("gradle.properties")
+        ?.takeIf { file -> file.isFile }
         ?.readLines()
         ?.firstOrNull { line -> line.startsWith("version=") }
         ?.substringAfter("=")
         ?.trim()
         ?.takeIf(String::isNotBlank)
-        ?: "2026.10329.10127"
+    val resolvedAddzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion")
+        .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
+        .get()
     plugins {
-        id("site.addzero.kcp.i18n") version localAddzeroLibJvmVersion
-        id("site.addzero.ksp.modbus-rtu") version localAddzeroLibJvmVersion
-        id("site.addzero.ksp.modbus-tcp") version localAddzeroLibJvmVersion
+        id("site.addzero.kcp.i18n") version resolvedAddzeroLibJvmVersion
+        id("site.addzero.ksp.modbus-rtu") version resolvedAddzeroLibJvmVersion
+        id("site.addzero.ksp.modbus-tcp") version resolvedAddzeroLibJvmVersion
     }
 }
 
-val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
-val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir.resolve("checkouts/build-logic/gradle/libs.versions.toml")
-val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion").orNull ?: "2026.10329.10127"
+val localAddzeroLibJvmCandidateDirs = listOf(
+    file("../addzero-lib-jvm"),
+    file("addzero-lib-jvm"),
+)
+val localAddzeroLibJvmDir = localAddzeroLibJvmCandidateDirs
+    .firstOrNull { candidateDir -> candidateDir.resolve("settings.gradle.kts").isFile }
+val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir
+    ?.resolve("checkouts/build-logic/gradle/libs.versions.toml")
+val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
+    ?.resolve("gradle.properties")
+    ?.takeIf { file -> file.isFile }
+    ?.readLines()
+    ?.firstOrNull { line -> line.startsWith("version=") }
+    ?.substringAfter("=")
+    ?.trim()
+    ?.takeIf(String::isNotBlank)
+val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion")
+    .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
+    .get()
 
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -104,16 +128,18 @@ fun Settings.includeLocalModules() {
 
 includeLocalModules()
 
-val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir.resolve("settings.gradle.kts").isFile
+val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir != null
 
 if (!hasLocalAddzeroLibJvm) {
     apply(plugin = "site.addzero.gradle.plugin.addzero-git-dependency")
 }
 
 if (hasLocalAddzeroLibJvm) {
+    val resolvedLocalAddzeroLibJvmDir = checkNotNull(localAddzeroLibJvmDir)
+
     fun remapExternalProject(projectPath: String, relativeDir: String) {
         include(projectPath)
-        project(projectPath).projectDir = localAddzeroLibJvmDir.resolve(relativeDir)
+        project(projectPath).projectDir = resolvedLocalAddzeroLibJvmDir.resolve(relativeDir)
     }
 
     remapExternalProject(":lib:api", "lib/api")
@@ -283,7 +309,7 @@ if (hasLocalAddzeroLibJvm) {
 }
 
 dependencyResolutionManagement {
-    if (localAddzeroBuildLogicCatalogFile.isFile) {
+    if (localAddzeroBuildLogicCatalogFile?.isFile == true) {
         versionCatalogs {
             create("libs") {
                 from(files(localAddzeroBuildLogicCatalogFile))
