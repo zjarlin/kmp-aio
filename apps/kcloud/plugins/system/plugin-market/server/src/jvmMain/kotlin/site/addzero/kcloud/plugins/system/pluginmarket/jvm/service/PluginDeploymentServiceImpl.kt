@@ -15,11 +15,7 @@ import java.nio.file.Paths
 import kotlin.io.path.createDirectories
 import kotlin.io.path.writeText
 
-@Single(
-    binds = [
-        PluginDeploymentService::class,
-    ],
-)
+@Single
 class PluginDeploymentServiceImpl(
     private val sqlClient: KSqlClient,
     private val catalog: PluginMarketCatalogSupport,

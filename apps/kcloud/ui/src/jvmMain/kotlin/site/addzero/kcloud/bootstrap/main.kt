@@ -19,12 +19,12 @@ import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
-import site.addzero.kcloud.theme.KCloudUiPresets
-import site.addzero.kcloud.theme.LocalKCloudUiMetrics
+import site.addzero.workbench.shell.metrics.LocalWorkbenchMetrics
+import site.addzero.workbench.shell.metrics.WorkbenchPresets
 import java.awt.Container
 import javax.swing.JComponent
 
-private val desktopUiMetrics = KCloudUiPresets.DesktopCompact
+private val desktopUiMetrics = WorkbenchPresets.DesktopCompact
 private val macCaptionBarHeight = desktopUiMetrics.topBarHeight
 private val macCaptionBarLeadingInset = desktopUiMetrics.topBarLeadingInset
 
@@ -34,7 +34,7 @@ fun main() {
         val embeddedServer = remember {
             startEmbeddedDesktopServer(
                 configureKoin = {
-                    withConfiguration<KCloudUiKoinApplication>()
+                    withConfiguration<UiKoinApplication>()
                 },
             )
         }
@@ -57,13 +57,13 @@ fun main() {
             title = "kcloud",
             state = windowState,
         ) {
-            ProvideKCloudWindowFrame(
+            ProvideWorkbenchWindowFrame(
                 state = windowState,
             ) {
                 CompositionLocalProvider(
-                    LocalKCloudUiMetrics provides desktopUiMetrics,
+                    LocalWorkbenchMetrics provides desktopUiMetrics,
                 ) {
-                    KCloudApp()
+                    App()
                 }
             }
         }
@@ -73,12 +73,12 @@ fun main() {
 private fun configureLocalApiClients(
     baseUrl: String,
 ) {
-    configureKCloudApiClients(baseUrl)
+    configureApiClients(baseUrl)
     McuConsoleApiClient.configureBaseUrl(baseUrl)
 }
 
 @Composable
-private fun FrameWindowScope.ProvideKCloudWindowFrame(
+private fun FrameWindowScope.ProvideWorkbenchWindowFrame(
     state: WindowState,
     content: @Composable () -> Unit,
 ) {

@@ -12,9 +12,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import site.addzero.kcloud.design.button.KCloudButton as Button
-import site.addzero.kcloud.design.button.KCloudFilledTonalButton as FilledTonalButton
-import site.addzero.kcloud.design.button.KCloudOutlinedButton as OutlinedButton
+import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
+import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 

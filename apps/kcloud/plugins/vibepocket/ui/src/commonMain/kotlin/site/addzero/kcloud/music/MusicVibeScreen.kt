@@ -16,9 +16,9 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
-import site.addzero.kcloud.design.button.KCloudButton as Button
-import site.addzero.kcloud.design.button.KCloudFilledTonalButton as FilledTonalButton
-import site.addzero.kcloud.design.button.KCloudOutlinedButton as OutlinedButton
+import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
+import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SunoGenerateRequest
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.vibepocket.model.PersonaItem

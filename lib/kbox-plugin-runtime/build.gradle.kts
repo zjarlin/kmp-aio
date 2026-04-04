@@ -9,7 +9,7 @@ dependencies {
 }
 
 tasks.named<Test>("test") {
-    dependsOn(":apps:kbox:runtime-fixtures:hello-plugin:packageRuntimePlugin")
+    dependsOn(":lib:kbox-plugin-runtime-fixture-hello:packageRuntimePlugin")
     javaLauncher.set(
         javaToolchains.launcherFor {
             languageVersion.set(JavaLanguageVersion.of(17))
@@ -17,6 +17,6 @@ tasks.named<Test>("test") {
     )
     systemProperty(
         "kbox.runtimeFixtureDir",
-        rootProject.file("apps/kbox/runtime-fixtures/hello-plugin/build/runtime-plugin/hello-runtime").absolutePath,
+        rootProject.file("lib/kbox-plugin-runtime-fixture-hello/build/runtime-plugin/hello-runtime").absolutePath,
     )
 }

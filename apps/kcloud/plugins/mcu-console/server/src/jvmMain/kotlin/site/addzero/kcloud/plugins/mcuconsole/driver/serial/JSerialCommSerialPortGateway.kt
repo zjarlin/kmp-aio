@@ -7,11 +7,7 @@ import site.addzero.serial.SerialPortConfig
 import site.addzero.serial.SerialPortDescriptor
 import site.addzero.serial.SerialPortTool
 
-@Single(
-    binds = [
-        SerialPortGateway::class,
-    ],
-)
+@Single
 class JSerialCommSerialPortGateway : SerialPortGateway {
     override fun listPorts(): List<McuPortSummary> {
         return SerialPortTool.listPorts()

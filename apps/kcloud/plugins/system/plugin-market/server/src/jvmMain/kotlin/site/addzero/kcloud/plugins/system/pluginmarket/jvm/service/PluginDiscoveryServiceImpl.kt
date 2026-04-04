@@ -10,11 +10,7 @@ import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginMarketSearchR
 import site.addzero.kcloud.plugins.system.pluginmarket.service.PluginDiscoveryService
 import java.nio.file.Paths
 
-@Single(
-    binds = [
-        PluginDiscoveryService::class,
-    ],
-)
+@Single
 class PluginDiscoveryServiceImpl(
     private val sqlClient: KSqlClient,
     private val catalog: PluginMarketCatalogSupport,

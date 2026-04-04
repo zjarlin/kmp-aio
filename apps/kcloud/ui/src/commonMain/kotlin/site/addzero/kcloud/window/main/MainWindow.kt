@@ -2,48 +2,35 @@ package site.addzero.kcloud.window.main
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
-import site.addzero.kcloud.shell.KCloudShellState
+import org.koin.compose.koinInject
+import site.addzero.kcloud.shell.ShellState
 import site.addzero.kcloud.theme.Theme
-import site.addzero.kcloud.theme.ShellThemeMode
 import site.addzero.kcloud.theme.ShellThemeState
-import site.addzero.kcloud.theme.currentKCloudUiMetrics
 import site.addzero.kcloud.theme.resolveDarkTheme
+import site.addzero.workbench.shell.metrics.currentWorkbenchMetrics
 import site.addzero.workbenchshell.RenderAdminScaffolding
 
 @Composable
-fun RenderKCloudWindow(
+fun RenderWorkbenchWindow(
     scaffolding: ScaffoldingImpl,
-    shellThemeState: ShellThemeState = org.koin.compose.koinInject(),
-    shellState: KCloudShellState = org.koin.compose.koinInject(),
+    shellThemeState: ShellThemeState = koinInject(),
+    shellState: ShellState = koinInject(),
 ) {
     val themeMode = shellThemeState.themeMode
     val darkTheme = themeMode.resolveDarkTheme(
         systemDarkTheme = isSystemInDarkTheme(),
     )
-    val uiMetrics = currentKCloudUiMetrics()
+    val uiMetrics = currentWorkbenchMetrics()
     val sidebarVisible = shellState.sidebarVisible
-    val toggleTheme = remember(shellThemeState, darkTheme) {
-        {
-            shellThemeState.updateThemeMode(
-                if (darkTheme) {
-                    ShellThemeMode.LIGHT
-                } else {
-                    ShellThemeMode.DARK
-                },
-            )
-        }
-    }
 
     Theme(
         darkTheme = darkTheme,
     ) {
         RenderAdminScaffolding(
             scaffolding = scaffolding,
-            darkTheme = darkTheme,
-            onThemeToggle = toggleTheme,
             sidebarVisible = sidebarVisible,
+            onSidebarToggle = shellState::toggleSidebar,
             defaultSidebarRatio = uiMetrics.sidebarRatio,
             minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
             maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,

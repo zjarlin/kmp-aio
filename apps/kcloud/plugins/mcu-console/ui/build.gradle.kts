@@ -7,6 +7,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
+val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
 val addzeroLibJvmVersion: String by project
 val sharedSourceDir = project(":apps:kcloud:shared")
     .extensions
@@ -39,8 +40,11 @@ dependencies {
 
 kotlin {
     sourceSets {
+        commonMain {
+            kotlin.srcDir(generatedApiSourceDir)
+        }
         commonMain.dependencies {
-            implementation(project(":apps:kcloud:design"))
+            implementation(project(":lib:compose:compose-workbench-design"))
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")

@@ -8,11 +8,7 @@ import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginSourceFileDto
 import site.addzero.kcloud.plugins.system.pluginmarket.model.SavePluginSourceFileRequest
 import site.addzero.kcloud.plugins.system.pluginmarket.service.PluginSourceFileService
 
-@Single(
-    binds = [
-        PluginSourceFileService::class,
-    ],
-)
+@Single
 class PluginSourceFileServiceImpl(
     private val sqlClient: KSqlClient,
     private val catalog: PluginMarketCatalogSupport,

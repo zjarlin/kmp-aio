@@ -123,7 +123,7 @@ abstract class AbstractPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class HomebrewFormulaPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -160,7 +160,7 @@ class HomebrewFormulaPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class HomebrewCaskPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -196,7 +196,7 @@ class HomebrewCaskPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class WingetPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -290,7 +290,7 @@ class WingetPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class ChocolateyPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -326,7 +326,7 @@ class ChocolateyPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class AptPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -358,7 +358,7 @@ class AptPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class DnfPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -396,7 +396,7 @@ class DnfPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class PacmanPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -428,7 +428,7 @@ class PacmanPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class FlatpakPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
@@ -460,7 +460,7 @@ class FlatpakPackageManagerAdapter(
     }
 }
 
-@Single(binds = [KboxPackageManagerAdapter::class])
+@Single
 class SnapPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {

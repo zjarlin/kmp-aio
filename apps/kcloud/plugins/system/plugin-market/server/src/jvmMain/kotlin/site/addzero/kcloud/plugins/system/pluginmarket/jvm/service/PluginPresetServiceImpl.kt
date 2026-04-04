@@ -9,11 +9,7 @@ import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPackageDto
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginPresetKind
 import site.addzero.kcloud.plugins.system.pluginmarket.service.PluginPresetService
 
-@Single(
-    binds = [
-        PluginPresetService::class,
-    ],
-)
+@Single
 class PluginPresetServiceImpl(
     private val sqlClient: KSqlClient,
     private val catalog: PluginMarketCatalogSupport,

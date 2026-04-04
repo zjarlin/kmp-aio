@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.kcloud.design.button.KCloudButton as Button
+import site.addzero.workbench.design.button.WorkbenchButton as Button
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoWavRequest
 

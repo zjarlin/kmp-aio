@@ -11,7 +11,7 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.configcenter.ConfigCenter
 import site.addzero.configcenter.CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY
-import site.addzero.kcloud.config.KCloudConfigKeys
+import site.addzero.kcloud.config.AppConfigKeys
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.starter.installConfigCenterAdminIfEnabled
 import site.addzero.starter.installEffectiveConfig
@@ -102,12 +102,12 @@ fun serverApplication(
 
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: deploymentEnv.string("host", KCloudConfigKeys.serverHost.defaultValue)
+        ?: deploymentEnv.string("host", AppConfigKeys.serverHost.defaultValue)
         ?: "0.0.0.0"
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: deploymentEnv.int("port", KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull())
+        ?: deploymentEnv.int("port", AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
         ?: 8080
 
     val environment = applicationEnvironment {
@@ -151,12 +151,12 @@ fun ktorApplication(
     // 优先级：参数 > 环境变量 > 配置文件 > 默认值
     val requestedHost = host
         ?: System.getenv("SERVER_HOST")
-        ?: deploymentEnv.string("host", KCloudConfigKeys.serverHost.defaultValue)
+        ?: deploymentEnv.string("host", AppConfigKeys.serverHost.defaultValue)
         ?: "0.0.0.0"
 
     val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: deploymentEnv.int("port", KCloudConfigKeys.serverPort.defaultValue?.toIntOrNull())
+        ?: deploymentEnv.int("port", AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
         ?: DEFAULT_EMBEDDED_DESKTOP_PORT
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
     embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
@@ -279,7 +279,7 @@ private fun resolveConfigCenterActive(
 ): String {
     val env = ConfigCenter.getEnv(config).path("ktor")
     return normalizeConfigCenterActive(
-        env.string("environment", KCloudConfigKeys.ktorEnvironment.defaultValue)
+        env.string("environment", AppConfigKeys.ktorEnvironment.defaultValue)
             ?: System.getenv("KTOR_ENV")
             ?: DEFAULT_EMBEDDED_ENV,
     )
@@ -388,13 +388,13 @@ private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
 
 private fun embeddedDesktopRuntimeOverrides(paths: EmbeddedDesktopPaths) =
     ConfigFactory.empty()
-        .withValue(KCloudConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(true))
-        .withValue(KCloudConfigKeys.SQLITE_URL, ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
+        .withValue(AppConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(true))
+        .withValue(AppConfigKeys.SQLITE_URL, ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
         .withValue(
-            KCloudConfigKeys.SQLITE_DRIVER,
-            ConfigValueFactory.fromAnyRef(KCloudConfigKeys.sqliteDriver.defaultValue ?: "org.sqlite.JDBC"),
+            AppConfigKeys.SQLITE_DRIVER,
+            ConfigValueFactory.fromAnyRef(AppConfigKeys.sqliteDriver.defaultValue ?: "org.sqlite.JDBC"),
         )
-        .withValue(KCloudConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(false))
+        .withValue(AppConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(false))
         .withValue("kcloud.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
         .withValue("kcloud.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))
         .withValue("kcloud.runtime.cacheDir", ConfigValueFactory.fromAnyRef(paths.cacheDir.absolutePath))

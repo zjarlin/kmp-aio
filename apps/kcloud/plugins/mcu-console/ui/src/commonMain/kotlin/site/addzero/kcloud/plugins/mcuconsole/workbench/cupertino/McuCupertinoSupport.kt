@@ -32,8 +32,8 @@ import io.github.alexzhirkevich.cupertino.section.CupertinoSection
 import io.github.alexzhirkevich.cupertino.section.ProvideSectionStyle
 import io.github.alexzhirkevich.cupertino.section.SectionItem
 import io.github.alexzhirkevich.cupertino.section.SectionStyle
-import site.addzero.kcloud.design.button.KCloudActionButton
-import site.addzero.kcloud.design.button.KCloudButtonVariant
+import site.addzero.workbench.design.button.WorkbenchActionButton
+import site.addzero.workbench.design.button.WorkbenchButtonVariant
 
 @OptIn(ExperimentalAdaptiveApi::class)
 @Composable
@@ -63,11 +63,11 @@ internal fun McuCupertinoPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    KCloudActionButton(
+    WorkbenchActionButton(
         text = text,
         onClick = onClick,
         modifier = modifier.heightIn(min = 38.dp),
-        variant = KCloudButtonVariant.Default,
+        variant = WorkbenchButtonVariant.Default,
         enabled = enabled,
     )
 }
@@ -79,11 +79,11 @@ internal fun McuCupertinoSecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    KCloudActionButton(
+    WorkbenchActionButton(
         text = text,
         onClick = onClick,
         modifier = modifier.heightIn(min = 38.dp),
-        variant = KCloudButtonVariant.Outline,
+        variant = WorkbenchButtonVariant.Outline,
         enabled = enabled,
     )
 }

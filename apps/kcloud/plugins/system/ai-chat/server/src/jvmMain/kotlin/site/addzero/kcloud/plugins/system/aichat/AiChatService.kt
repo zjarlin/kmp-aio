@@ -1,6 +1,5 @@
 package site.addzero.kcloud.plugins.system.aichat
 
-import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
 import org.koin.mp.KoinPlatform
@@ -37,13 +36,13 @@ class AiChatService(
     fun createSession(
         title: String,
     ): AiChatSessionDto {
-        val saved = sqlClient.save(
-            new(AiChatSession::class).by {
-                sessionKey = UUID.randomUUID().toString()
-                this.title = title.trim().ifBlank { DEFAULT_SESSION_TITLE }
-                archived = false
-            },
-        ).modifiedEntity
+        val session = AiChatSession {
+            sessionKey = UUID.randomUUID().toString()
+            this.title = title.trim().ifBlank { DEFAULT_SESSION_TITLE }
+            archived = false
+        }
+        val saveResult = sqlClient.save(session)
+        val saved = saveResult.modifiedEntity
         return saved.toDto()
     }
 
@@ -77,14 +76,13 @@ class AiChatService(
 
         val session = sessionOrThrow(sessionId)
         val normalizedProvider = mergeProviderConfig(provider)
-        sqlClient.save(
-            new(AiChatMessage::class).by {
-                messageKey = UUID.randomUUID().toString()
-                this.session = sessionRef(session.id)
-                role = "user"
-                this.content = normalizedContent
-            },
-        )
+        val userMessage = AiChatMessage {
+            messageKey = UUID.randomUUID().toString()
+            this.session = sessionRef(session.id)
+            role = "user"
+            this.content = normalizedContent
+        }
+        sqlClient.save(userMessage)
         val assistantReply = completionGateway.complete(
             AiChatCompletionRequest(
                 transport = normalizedProvider.transport,
@@ -103,27 +101,26 @@ class AiChatService(
                     },
             ),
         )
-        sqlClient.save(
-            new(AiChatMessage::class).by {
-                messageKey = UUID.randomUUID().toString()
-                this.session = sessionRef(session.id)
-                role = "assistant"
-                this.content = assistantReply
-            },
-        )
+        val assistantMessage = AiChatMessage {
+            messageKey = UUID.randomUUID().toString()
+            this.session = sessionRef(session.id)
+            role = "assistant"
+            this.content = assistantReply
+        }
+        sqlClient.save(assistantMessage)
 
-        val savedSession = sqlClient.save(
-            new(AiChatSession::class).by {
-                id = session.id
-                sessionKey = session.sessionKey
-                title = resolveSessionTitle(
-                    existingTitle = session.title,
-                    latestMessage = normalizedContent,
-                )
-                archived = session.archived
-                createTime = session.createTime
-            },
-        ).modifiedEntity
+        val updatedSession = AiChatSession {
+            id = session.id
+            sessionKey = session.sessionKey
+            title = resolveSessionTitle(
+                existingTitle = session.title,
+                latestMessage = normalizedContent,
+            )
+            archived = session.archived
+            createTime = session.createTime
+        }
+        val sessionSaveResult = sqlClient.save(updatedSession)
+        val savedSession = sessionSaveResult.modifiedEntity
 
         return AiChatConversationDto(
             session = savedSession.toDto(),
@@ -147,7 +144,7 @@ class AiChatService(
     private fun sessionRef(
         sessionId: Long,
     ): AiChatSession {
-        return new(AiChatSession::class).by {
+        return AiChatSession {
             id = sessionId
         }
     }

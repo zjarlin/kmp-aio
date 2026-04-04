@@ -34,15 +34,15 @@ class PluginManagedIntegrationSupport {
             """:apps:kcloud:plugins:vibepocket:ui:compileKotlinJvm""",
         )
         val fixedComposeModules = listOf(
-            "site.addzero.kcloud.bootstrap.KCloudUiScanKoinModule::class",
-            "site.addzero.kcloud.bootstrap.KCloudUiSupportKoinModule::class",
+            "site.addzero.kcloud.bootstrap.UiScanModule::class",
+            "site.addzero.kcloud.bootstrap.UiSupportModule::class",
         )
         val fixedDesktopModules = listOf(
-            "site.addzero.kcloud.bootstrap.KCloudUiScanKoinModule::class",
-            "site.addzero.kcloud.bootstrap.KCloudUiSupportKoinModule::class",
+            "site.addzero.kcloud.bootstrap.UiScanModule::class",
+            "site.addzero.kcloud.bootstrap.UiSupportModule::class",
         )
         val fixedServerModules = listOf(
-            "site.addzero.kcloud.server.KCloudServerScanKoinModule::class",
+            "site.addzero.kcloud.server.ServerScanModule::class",
             "site.addzero.kcloud.jimmer.di.JimmerKoinModule::class",
             "site.addzero.kcloud.plugins.mcuconsole.McuConsoleServerKoinModule::class",
             "site.addzero.kcloud.plugins.system.configcenter.ConfigCenterServerKoinModule::class",

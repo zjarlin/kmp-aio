@@ -49,9 +49,9 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 import site.addzero.kcloud.plugins.mcuconsole.workbench.*
-import site.addzero.kcloud.design.button.KCloudButton as ShadcnButton
-import site.addzero.kcloud.design.button.KCloudButtonSize as ShadcnButtonSize
-import site.addzero.kcloud.design.button.KCloudButtonVariant as ShadcnButtonVariant
+import site.addzero.workbench.design.button.WorkbenchButton as ShadcnButton
+import site.addzero.workbench.design.button.WorkbenchButtonSize as ShadcnButtonSize
+import site.addzero.workbench.design.button.WorkbenchButtonVariant as ShadcnButtonVariant
 
 private enum class McuControlTab(
     val id: String,

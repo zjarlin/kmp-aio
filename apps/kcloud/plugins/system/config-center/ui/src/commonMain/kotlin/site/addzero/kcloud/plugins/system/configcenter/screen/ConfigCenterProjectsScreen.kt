@@ -22,7 +22,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.kcloud.design.button.KCloudButton as Button
+import site.addzero.workbench.design.button.WorkbenchButton as Button
 
 @Route(
     value = "配置中心",
@@ -33,9 +33,9 @@ import site.addzero.kcloud.design.button.KCloudButton as Button
     enabled = true,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "系统管理",
-            icon = "AdminPanelSettings",
-            order = 100,
+            name = "配置中心",
+            icon = "Key",
+            order = 90,
         ),
     ),
 )

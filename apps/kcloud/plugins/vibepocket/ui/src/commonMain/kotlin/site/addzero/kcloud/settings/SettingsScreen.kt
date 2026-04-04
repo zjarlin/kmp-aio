@@ -9,8 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.viewmodel.koinViewModel
-import site.addzero.kcloud.design.button.KCloudButton as Button
-import site.addzero.kcloud.design.button.KCloudOutlinedButton as OutlinedButton
+import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
 import site.addzero.kcloud.screens.settings.SettingsViewModel
 import site.addzero.kcloud.ui.StudioEmptyState

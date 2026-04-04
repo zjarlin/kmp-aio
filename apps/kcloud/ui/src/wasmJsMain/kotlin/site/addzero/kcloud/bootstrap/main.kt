@@ -6,15 +6,8 @@ import kotlinx.browser.window
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    configureKCloudApiClients(resolveBrowserBaseUrl())
     ComposeViewport {
-        KCloudApp()
+        App()
     }
 }
 
-private fun resolveBrowserBaseUrl(): String {
-    val origin = window.location.origin
-        .takeUnless { value -> value.isBlank() || value == "null" }
-        ?: "http://localhost:18080"
-    return origin.trimEnd('/') + "/"
-}

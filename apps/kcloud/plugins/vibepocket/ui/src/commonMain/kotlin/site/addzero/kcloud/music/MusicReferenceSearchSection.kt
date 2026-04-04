@@ -13,8 +13,8 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import kotlinx.coroutines.launch
-import site.addzero.kcloud.design.button.KCloudButton as Button
-import site.addzero.kcloud.design.button.KCloudFilledTonalButton as FilledTonalButton
+import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
 import site.addzero.kcloud.api.music.MusicLyric
 import site.addzero.kcloud.api.music.MusicResolvedAsset
 import site.addzero.kcloud.api.music.MusicTrack

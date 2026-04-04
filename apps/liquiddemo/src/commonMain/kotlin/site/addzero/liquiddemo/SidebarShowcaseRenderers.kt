@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import org.koin.core.annotation.Single
 import site.addzero.appsidebar.*
+import site.addzero.appsidebar.spi.scaffoldConfig
 
 @Single
 class SidebarShowcaseWorkbenchRenderer(
@@ -37,19 +38,23 @@ class SidebarShowcaseWorkbenchRenderer(
         }
         WorkbenchScaffold(
             modifier = modifier.fillMaxSize(),
-            contentHeaderScrollable = false,
-            contentPadding = PaddingValues(18.dp),
-            detailPadding = PaddingValues(18.dp),
             sidebar = {
                 SidebarShowcaseSidebar(state = state)
-            },
-            contentHeader = {
-                SidebarShowcaseWorkbenchHeader(state = state)
             },
             content = {
                 SidebarShowcaseContent(state = state)
             },
-            detail = detailPanel,
+            config = scaffoldConfig(
+                contentHeaderScrollable = false,
+                contentPadding = PaddingValues(18.dp),
+                detailPadding = PaddingValues(18.dp),
+            ),
+            slots = workbenchScaffoldSlots(
+                contentHeader = {
+                    SidebarShowcaseWorkbenchHeader(state = state)
+                },
+                detail = detailPanel,
+            ),
         )
     }
 }
@@ -72,35 +77,53 @@ class SidebarShowcaseAdminWorkbenchRenderer(
         }
         AdminWorkbenchScaffold(
             modifier = modifier.fillMaxSize(),
-            breadcrumb = state.breadcrumb,
-            pageTitle = state.activeLeafNode.name,
-            pageSubtitle = activeScene.config.subtitle,
-            contentPadding = PaddingValues(18.dp),
-            detailPadding = PaddingValues(18.dp),
             sidebar = {
                 SidebarShowcaseSidebar(state = state)
             },
             content = {
                 SidebarShowcaseContent(state = state)
             },
-            detail = detailPanel,
-            titleContent = {
-                SidebarShowcaseHeaderTitle(state = state)
-            },
-            pageActions = {
-                SidebarShowcaseHeaderActions(state = state)
-            },
-            onGlobalSearchClick = null,
-            githubLabel = state.githubLabel,
-            onGithubClick = state::openGithub,
-            languageLabel = state.languageToggleLabel,
-            onLanguageClick = state::toggleLanguage,
-            isDarkTheme = state.isDarkTheme,
-            onThemeToggle = state::toggleTheme,
-            notificationCount = activeScene.config.notificationCount,
-            onNotificationsClick = state::openNotifications,
-            userLabel = activeScene.config.userLabel,
-            onUserClick = state::openUserProfile,
+            page = adminWorkbenchPageConfig(
+                breadcrumb = state.breadcrumb,
+                pageTitle = state.activeLeafNode.name,
+                pageSubtitle = activeScene.config.subtitle,
+            ),
+            config = adminWorkbenchConfig(
+                contentPadding = PaddingValues(18.dp),
+                detailPadding = PaddingValues(18.dp),
+                isDarkTheme = state.isDarkTheme,
+            ),
+            slots = adminWorkbenchSlots(
+                detail = detailPanel,
+                titleContent = {
+                    SidebarShowcaseHeaderTitle(state = state)
+                },
+                pageActions = {
+                    SidebarShowcaseHeaderActions(state = state)
+                },
+                topBarActions = {
+                    WorkbenchGitHubButton(
+                        label = state.githubLabel,
+                        onClick = state::openGithub,
+                    )
+                    WorkbenchLanguageButton(
+                        label = state.languageToggleLabel,
+                        onClick = state::toggleLanguage,
+                    )
+                    WorkbenchThemeToggleButton(
+                        isDarkTheme = state.isDarkTheme,
+                        onClick = state::toggleTheme,
+                    )
+                    WorkbenchNotificationButton(
+                        count = activeScene.config.notificationCount,
+                        onClick = state::openNotifications,
+                    )
+                    WorkbenchUserButton(
+                        label = activeScene.config.userLabel,
+                        onClick = state::openUserProfile,
+                    )
+                },
+            ),
         )
     }
 }

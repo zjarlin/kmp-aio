@@ -21,11 +21,7 @@ interface PluginBuildCommandRunner {
     ): PluginBuildCommandResult
 }
 
-@Single(
-    binds = [
-        PluginBuildCommandRunner::class,
-    ],
-)
+@Single
 class JvmPluginBuildCommandRunner : PluginBuildCommandRunner {
     override fun run(
         commandLine: String,

@@ -17,8 +17,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.kcloud.design.button.KCloudIconButton as IconButton
-import site.addzero.kcloud.design.button.KCloudOutlinedButton as OutlinedButton
+import site.addzero.workbench.design.button.WorkbenchIconButton as IconButton
+import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.vibepocket.model.FavoriteRequest

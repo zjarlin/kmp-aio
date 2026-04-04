@@ -31,7 +31,7 @@ val localJimmerExternalProcessorPom = file(
         "/.m2/repository/site/addzero/jimmer-entity-external-processor/$addzeroLibJvmVersion/" +
         "jimmer-entity-external-processor-$addzeroLibJvmVersion.pom",
 )
-val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:shared")
+val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:ui")
     .projectDir
     .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external")
     .absolutePath

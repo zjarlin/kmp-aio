@@ -8,11 +8,7 @@ import site.addzero.kcloud.plugins.system.pluginmarket.service.PluginMarketConfi
 
 private const val CONFIG_NAMESPACE = "kcloud-plugin-market"
 
-@Single(
-    binds = [
-        PluginMarketConfigService::class,
-    ],
-)
+@Single
 class PluginMarketConfigServiceImpl(
     private val configValueService: ConfigValueServiceSpi,
 ) : PluginMarketConfigService {

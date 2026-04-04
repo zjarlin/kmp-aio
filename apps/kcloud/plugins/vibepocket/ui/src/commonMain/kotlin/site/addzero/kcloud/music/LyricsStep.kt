@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.kcloud.design.button.KCloudFilledTonalButton as FilledTonalButton
+import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
 import site.addzero.kcloud.api.suno.SunoLyricItem
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard

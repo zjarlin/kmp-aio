@@ -34,11 +34,7 @@ import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENROUTER
 /**
  * 基于 Koog 的模型网关实现。
  */
-@Single(
-    binds = [
-        AiChatCompletionGateway::class,
-    ],
-)
+@Single
 class KoogAiChatCompletionGateway : AiChatCompletionGateway {
     /**
      * 共享 HTTP 客户端，避免每次请求重复建连。

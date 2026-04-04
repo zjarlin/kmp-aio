@@ -4,7 +4,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
-import site.addzero.kcloud.design.button.KCloudButton as Button
+import site.addzero.workbench.design.button.WorkbenchButton as Button
 import site.addzero.kcloud.api.suno.SunoBoostStyleData
 import site.addzero.kcloud.api.suno.SunoBoostStyleRequest
 

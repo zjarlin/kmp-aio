@@ -8,7 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.kcloud.design.button.KCloudButton as Button
+import site.addzero.workbench.design.button.WorkbenchButton as Button
 import site.addzero.kcloud.api.suno.SunoReplaceSectionRequest
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 

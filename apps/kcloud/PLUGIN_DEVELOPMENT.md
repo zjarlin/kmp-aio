@@ -175,8 +175,8 @@ dependencies {
 当前约定改为：
 
 - `controller2api-processor` 同时生成每个 `*Api` 接口
-- `controller2api-processor` 同时生成共享聚合类 `ApiProvider`
-- `ApiProvider` 只聚合 **本次由 controller2api 生成出来的 API**
+- `controller2api-processor` 同时生成共享聚合类 `Apis`
+- `Apis` 只聚合 **本次由 controller2api 生成出来的 API**
 - 不再扫描手写 Ktorfit interface
 - 不再使用 `site.addzero.ksp.apiprovider`
 
@@ -198,15 +198,16 @@ ksp {
 
 - 生成包名：取 `apiClientPackageName`
 - 输出目录：取 `apiClientOutputDir`
-- 生成对象名：`ApiProvider`
-- 每个由 controller / 顶层 route 生成出的 `*Api` 都会在 `ApiProvider` 上有一个 lowerCamel 属性
-- 属性通过对应的 `ktorfit.create<SomeApi>()` 创建
+- 生成对象名：默认是 `Apis`，可通过 processor 配置项覆盖
+- 聚合风格：默认是 `koin`，通过 `apiClientAggregatorStyle` 切换；可选 `koin` / `singleton`
+- 每个由 controller / 顶层 route 生成出的 `*Api` 都会在 `Apis` 上有一个 lowerCamel 属性
+- 属性通过对应的 `ktorfit.createSomeApi()` 扩展函数创建
 
-所以，只有当插件本身已经在跑 `controller2api` 时，才会得到 `ApiProvider`。如果没有 controller2api 生成结果，就不会凭空生成聚合入口。
+所以，只有当插件本身已经在跑 `controller2api` 时，才会得到 `Apis`。如果没有 controller2api 生成结果，就不会凭空生成聚合入口。
 
 ### 5. KCloud API Client 包装器模式
 
-在 `kcloud` 内部，除了纯 `ApiProvider` 之外，还反复出现另一种模式：
+在 `kcloud` 内部，除了纯 `Apis` 之外，还反复出现另一种模式：
 
 - `object XxxApiClient`
 - `configureBaseUrl(...)`
@@ -226,7 +227,7 @@ ksp {
 - 保存 `baseUrl`
 - 选择一个 `HttpClientFactory` profile
 - 调用 `Ktorfit.Builder().baseUrl(...).httpClient(...).build()`
-- 以属性形式暴露 `create<SomeApi>()` 结果
+- 以属性形式暴露 `createSomeApi()` 结果
 
 后续如果继续做生成器，应把这种包装器本身当成真正的生成目标，而不是把注意力只放在 remote service 调用层。
 
@@ -245,7 +246,7 @@ ksp {
 
 `controller2api` 当前状态：
 
-- 已经能生成普通的 `site.addzero.generated.api.ApiProvider`
+- 已经能生成普通的 `site.addzero.generated.api.Apis`
 - **还不能** 生成 `object XxxApiClient` 这类包装对象
 - **还没有** 覆盖 `configureBaseUrl(...)`、`HttpClientFactory` profile 选择和分组缓存 API
 
@@ -253,7 +254,7 @@ ksp {
 
 1. 继续扫描 controller / 顶层 route 元数据，并把它们映射到包装器分组
 2. 为包装器名称、基础 URL、HTTP client profile 增加类型化参数
-3. 生成 `XxxApiClient` 包装对象，而不是只生成全局 `ApiProvider`
+3. 生成 `XxxApiClient` 包装对象，而不是只生成全局 `Apis`
 4. 在需要时支持多 API 分组包装器
 
 评估一个类是否还要手写时，遵循这条规则：如果它只是一个薄薄的 Ktorfit wrapper，就应优先把它视为未来的 KSP 生成目标，而不是继续保留手工样板代码。
@@ -266,7 +267,7 @@ Server 聚合是可选的。只有插件需要提供后端 API、存储或本地
 
 显式的 server Koin 模块不是强制要求。
 
-壳层已经内置了 `KCloudServerScanKoinModule`，其中包含 `@ComponentScan("site.addzero")`。这意味着，只要插件内部使用了普通的 `@Single`、`@Factory` 之类注解，通常就能被发现，而不必额外套一层包装模块。
+壳层已经内置了 `ServerScanModule`，其中包含 `@ComponentScan("site.addzero")`。这意味着，只要插件内部使用了普通的 `@Single`、`@Factory` 之类注解，通常就能被发现，而不必额外套一层包装模块。
 
 只有当你确实需要显式模块组合时，才添加专门的 server Koin 模块。如果要加，聚合器会扫描 `server/src/jvmMain/kotlin` 下名称以 `ServerKoinModule` 结尾的类。
 

@@ -23,14 +23,7 @@ import kotlin.io.path.writeText
 private const val managedAnnotationImport = "site.addzero.coding.playground.annotations.GeneratedManagedDeclaration"
 private const val generatedIndexPackage = "site.addzero.coding.playground.annotations"
 
-@Single(
-    binds = [
-        CodeRenderService::class,
-        ManagedArtifactService::class,
-        SyncService::class,
-        KspIndexService::class,
-    ],
-)
+@Single
 class CodeRenderAndSyncServiceImpl(
     private val support: MetadataPersistenceSupport,
     private val pathResolver: CodegenPathResolver,

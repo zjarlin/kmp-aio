@@ -14,3 +14,9 @@
 - `kmp-aio` 应优先承担 app、集成、样例、验证和业务编排职责；通用组件、工具、client、starter、spi、runtime、processor 等应尽量收敛到 `addzero-lib-jvm`。
 - 发版目标默认是中央仓库发布链路，优先复用 `addzero-lib-jvm` 里现有的 `publish-buddy`、`publishToMavenCentral`、README 和模块布局，不要在 `kmp-aio` 里单独再造一套发布体系。
 - 在迁移任何 `lib/` 模块之前，先确认它已经去掉 app 专属依赖、仓库内部循环依赖和临时兼容层；不能发布的模块先解耦，再迁移，再发布。
+
+## Naming And Navigation Rules
+
+- 在 `apps/kcloud` 及后续可抽库代码中，命名默认技术优先、能力优先，不要再给可复用壳层、主题、脚手架、路由、设计组件起 `KCloud*` 这类业务前缀名。
+- 如果一段代码预期未来进入组件库或共享模块，优先使用 `Workbench*`、`Shell*`、`Route*`、`Sidebar*`、`Theme*`、`Overlay*` 这类泛化命名。
+- `nav3/navigation3` 写法默认采用 `NavDisplay(backStack) { key -> when (key) { ... NavEntry(key) { ... } } }` 这种声明式分发风格，不回退到旧的菜单树或额外壳层导航抽象。

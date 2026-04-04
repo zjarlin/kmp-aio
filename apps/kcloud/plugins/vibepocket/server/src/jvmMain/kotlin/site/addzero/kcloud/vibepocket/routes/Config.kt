@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import site.addzero.configcenter.ConfigCenter
 import site.addzero.configcenter.ConfigCenterKeyDefinition
-import site.addzero.kcloud.config.KCloudConfigKeys
+import site.addzero.kcloud.config.AppConfigKeys
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.kcloud.vibepocket.dto.OkResponse
 import site.addzero.kcloud.vibepocket.config.VibepocketConfigKeys

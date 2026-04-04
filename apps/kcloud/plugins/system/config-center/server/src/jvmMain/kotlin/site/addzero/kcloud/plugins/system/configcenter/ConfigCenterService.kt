@@ -13,11 +13,7 @@ import site.addzero.kcloud.plugins.system.configcenter.model.ConfigCenterValue
 import site.addzero.kcloud.plugins.system.configcenter.model.by
 import java.util.UUID
 
-@Single(
-    binds = [
-        ConfigValueServiceSpi::class,
-    ],
-)
+@Single
 class ConfigCenterService(
     private val sqlClient: KSqlClient,
 ) : ConfigValueServiceSpi {
