@@ -4,7 +4,7 @@ import site.addzero.configcenter.ConfigCenterKeyDefinition
 import site.addzero.starter.flyway.DatasourceFlywayConfigKeys as GeneratedDatasourceFlywayConfigKeys
 
 object DatasourceFlywayEnvAccessor {
-    val NAMESPACE: String = GeneratedDatasourceFlywayConfigKeys.NAMESPACE
+    val NAMESPACE = GeneratedDatasourceFlywayConfigKeys.NAMESPACE
 
     fun enabled(name: String): String = GeneratedDatasourceFlywayConfigKeys.enabled(name)
 
@@ -135,5 +135,5 @@ object DatasourceFlywayEnvAccessor {
         GeneratedDatasourceFlywayConfigKeys.validateOnMigrateDefinition(name)
 }
 
-val Envs.DatasourceConfig.DatasourceFlywayConfigKeys: DatasourceFlywayEnvAccessor
+val Envs.DatasourceConfig.DatasourceFlywayConfigKeys
     get() = DatasourceFlywayEnvAccessor

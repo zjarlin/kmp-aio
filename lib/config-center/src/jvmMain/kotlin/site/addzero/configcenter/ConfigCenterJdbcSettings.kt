@@ -30,7 +30,7 @@ data class ConfigCenterAdminSettings(
     val path: String = "/config-center",
     val title: String = "Config Center",
 ) {
-    val normalizedPath: String
+    val normalizedPath
         get() = path.trim().ifBlank { "/config-center" }.let { raw ->
             if (raw.startsWith("/")) raw else "/$raw"
         }.removeSuffix("/").ifBlank { "/config-center" }

@@ -187,7 +187,7 @@ private fun callbackPayloadConfigKey(requestId: String): String {
 }
 
 private fun JsonElement.stringValue(vararg keys: String): String? {
-    var current: JsonElement = this
+    var current = this
     keys.forEach { key ->
         current = current.jsonObject[key] ?: return null
     }
@@ -195,7 +195,7 @@ private fun JsonElement.stringValue(vararg keys: String): String? {
 }
 
 private fun JsonElement.intValue(vararg keys: String): Int? {
-    var current: JsonElement = this
+    var current = this
     keys.forEach { key ->
         current = current.jsonObject[key] ?: return null
     }

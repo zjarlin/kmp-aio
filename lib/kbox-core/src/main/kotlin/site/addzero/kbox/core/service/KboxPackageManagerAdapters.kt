@@ -14,7 +14,7 @@ import kotlin.io.path.createTempFile
 abstract class AbstractPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : KboxPackageManagerAdapter {
-    protected val currentOsName: String
+    protected val currentOsName
         get() = System.getProperty("os.name").orEmpty()
 
     final override fun detect(): KboxDetectedPackageManager {
@@ -127,8 +127,8 @@ abstract class AbstractPackageManagerAdapter(
 class HomebrewFormulaPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "homebrew-formula"
-    override val displayName: String = "Homebrew Formula"
+    override val managerId = "homebrew-formula"
+    override val displayName = "Homebrew Formula"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Mac", ignoreCase = true)
@@ -164,8 +164,8 @@ class HomebrewFormulaPackageManagerAdapter(
 class HomebrewCaskPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "homebrew-cask"
-    override val displayName: String = "Homebrew Cask"
+    override val managerId = "homebrew-cask"
+    override val displayName = "Homebrew Cask"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Mac", ignoreCase = true)
@@ -204,8 +204,8 @@ class WingetPackageManagerAdapter(
         ignoreUnknownKeys = true
     }
 
-    override val managerId: String = "winget"
-    override val displayName: String = "Winget"
+    override val managerId = "winget"
+    override val displayName = "Winget"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Windows", ignoreCase = true)
@@ -294,8 +294,8 @@ class WingetPackageManagerAdapter(
 class ChocolateyPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "chocolatey"
-    override val displayName: String = "Chocolatey"
+    override val managerId = "chocolatey"
+    override val displayName = "Chocolatey"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Windows", ignoreCase = true)
@@ -330,8 +330,8 @@ class ChocolateyPackageManagerAdapter(
 class AptPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "apt"
-    override val displayName: String = "APT"
+    override val managerId = "apt"
+    override val displayName = "APT"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Linux", ignoreCase = true)
@@ -362,8 +362,8 @@ class AptPackageManagerAdapter(
 class DnfPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "dnf"
-    override val displayName: String = "DNF"
+    override val managerId = "dnf"
+    override val displayName = "DNF"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Linux", ignoreCase = true)
@@ -400,8 +400,8 @@ class DnfPackageManagerAdapter(
 class PacmanPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "pacman"
-    override val displayName: String = "Pacman"
+    override val managerId = "pacman"
+    override val displayName = "Pacman"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Linux", ignoreCase = true)
@@ -432,8 +432,8 @@ class PacmanPackageManagerAdapter(
 class FlatpakPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "flatpak"
-    override val displayName: String = "Flatpak"
+    override val managerId = "flatpak"
+    override val displayName = "Flatpak"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Linux", ignoreCase = true)
@@ -464,8 +464,8 @@ class FlatpakPackageManagerAdapter(
 class SnapPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    override val managerId: String = "snap"
-    override val displayName: String = "Snap"
+    override val managerId = "snap"
+    override val displayName = "Snap"
 
     override fun supportsCurrentOs(): Boolean {
         return currentOsName.contains("Linux", ignoreCase = true)

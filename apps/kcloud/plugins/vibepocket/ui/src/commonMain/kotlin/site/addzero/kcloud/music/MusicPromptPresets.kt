@@ -22,7 +22,7 @@ internal data class MusicPromptPreset(
     val suggestedStyle: String = "",
 )
 
-internal val musicPromptPresets: List<MusicPromptPreset> = listOf(
+internal val musicPromptPresets = listOf(
     MusicPromptPreset(
         id = "black-gospel",
         title = "黑人福音男声",

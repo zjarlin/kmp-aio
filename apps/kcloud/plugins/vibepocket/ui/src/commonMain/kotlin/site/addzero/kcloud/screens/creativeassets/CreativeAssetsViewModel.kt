@@ -46,17 +46,17 @@ class CreativeAssetsViewModel(
             return state.items.filter { item -> item.matchesKeyword(normalizedKeyword) }
         }
 
-    val selectedItem: SunoTaskResourceItem?
+    val selectedItem
         get() = filteredItems.firstOrNull { it.taskId == state.selectedTaskId }
             ?: filteredItems.firstOrNull()
 
-    val successCount: Int
+    val successCount
         get() = state.items.count { it.isSuccessStatus() }
 
-    val failedCount: Int
+    val failedCount
         get() = state.items.count { it.isFailedStatus() }
 
-    val runningCount: Int
+    val runningCount
         get() = state.items.count { it.isRunningStatus() }
 
     init {

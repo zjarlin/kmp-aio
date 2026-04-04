@@ -51,7 +51,7 @@ class S3KoinModule {
 @Named("s3Starter")
 @Single
 class S3Starter : AppStarter {
-    override val order: Int get() = 60
+    override val order get() = 60
 
     override fun Application.enable(): Boolean {
         return ConfigCenter.getEnv(effectiveConfig())

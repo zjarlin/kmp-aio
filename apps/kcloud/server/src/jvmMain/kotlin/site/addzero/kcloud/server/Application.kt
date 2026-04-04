@@ -24,6 +24,7 @@ import org.koin.core.KoinApplication as CoreKoinApplication
 import org.koin.core.module.Module as KoinModule
 
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
+/**  */
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
 private const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
 @Volatile
@@ -159,7 +160,6 @@ fun ktorApplication(
     )
     embeddedApplicationConfigOverride = effectiveConfig
     System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
-    System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     embeddedDesktopBaseUrl = buildEmbeddedDesktopBaseUrl(
         publicHost = runtimeSettings.desktopServerPublicHost,
@@ -222,7 +222,7 @@ fun startEmbeddedDesktopServer(
     }
 
     return object : EmbeddedDesktopServerHandle {
-        override val baseUrl: String = baseUrl
+        override val baseUrl = baseUrl
 
         override fun close() {
             server.stop(
@@ -233,8 +233,6 @@ fun startEmbeddedDesktopServer(
             embeddedApplicationConfigOverride = null
             embeddedDesktopBaseUrl = null
             System.clearProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
-            System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
-            System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
         }
     }
 }
@@ -370,7 +368,7 @@ private data class EmbeddedDesktopPaths(
     val cacheDir: File,
     val sqliteFile: File,
 ) {
-    val sqliteJdbcUrl: String
+    val sqliteJdbcUrl
         get() = "jdbc:sqlite:${sqliteFile.absolutePath}"
 }
 

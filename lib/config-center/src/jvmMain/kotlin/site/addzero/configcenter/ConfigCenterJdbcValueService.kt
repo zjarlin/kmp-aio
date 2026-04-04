@@ -9,7 +9,7 @@ import java.util.UUID
 class JdbcConfigCenterValueService(
     private val settings: ConfigCenterJdbcSettings,
 ) : ConfigCenterAdminService {
-    private val dialect: ConfigCenterJdbcDialect = settings.detectDialect()
+    private val dialect = settings.detectDialect()
 
     init {
         settings.driver?.let { driver ->
@@ -1119,7 +1119,7 @@ private data class StoredDefinition(
     val createTimeMillis: Long?,
     val updateTimeMillis: Long?,
 ) {
-    val isTemplate: Boolean
+    val isTemplate
         get() = TEMPLATE_KEY_REGEX.containsMatchIn(key)
 
     fun toEntry(

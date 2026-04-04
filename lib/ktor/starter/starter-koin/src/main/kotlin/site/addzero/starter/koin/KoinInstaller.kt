@@ -33,7 +33,7 @@ fun Application.installKoin(configure: KoinApplication.() -> Unit = {}) {
 fun Application.runStarters() {
     fun execute(stage: String) {
         if (attributes.getOrNull(startersExecutedKey) == true) return
-        val app: Application = this
+        val app = this
         val koin = app.getKoin()
         val starters = koin
             .getAll<AppStarter>()

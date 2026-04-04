@@ -23,12 +23,12 @@ object ApiProvider {
     /**
      * RbacApi 服务实例
      */
-    val rbacApi: RbacApi
+    val rbacApi
         get() = requireKtorfit().create<RbacApi>()
 
     /**
      * UserCenterApi 服务实例
      */
-    val userCenterApi: UserCenterApi
+    val userCenterApi
         get() = requireKtorfit().create<UserCenterApi>()
 }

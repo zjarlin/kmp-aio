@@ -15,48 +15,48 @@ object Apis {
     /**
      * McuDeviceInfoApi 服务实例
      */
-    val mcuDeviceInfoApi: McuDeviceInfoApi
+    val mcuDeviceInfoApi
         get() = ktorfit().createMcuDeviceInfoApi()
 
     /**
      * McuFlashApi 服务实例
      */
-    val mcuFlashApi: McuFlashApi
+    val mcuFlashApi
         get() = ktorfit().createMcuFlashApi()
 
     /**
      * McuModbusDeviceRoutesApi 服务实例
      */
-    val mcuModbusDeviceRoutesApi: McuModbusDeviceRoutesApi
+    val mcuModbusDeviceRoutesApi
         get() = ktorfit().createMcuModbusDeviceRoutesApi()
 
     /**
      * McuModbusDeviceWriteApi 服务实例
      */
-    val mcuModbusDeviceWriteApi: McuModbusDeviceWriteApi
+    val mcuModbusDeviceWriteApi
         get() = ktorfit().createMcuModbusDeviceWriteApi()
 
     /**
      * McuRuntimeApi 服务实例
      */
-    val mcuRuntimeApi: McuRuntimeApi
+    val mcuRuntimeApi
         get() = ktorfit().createMcuRuntimeApi()
 
     /**
      * McuScriptApi 服务实例
      */
-    val mcuScriptApi: McuScriptApi
+    val mcuScriptApi
         get() = ktorfit().createMcuScriptApi()
 
     /**
      * McuSessionApi 服务实例
      */
-    val mcuSessionApi: McuSessionApi
+    val mcuSessionApi
         get() = ktorfit().createMcuSessionApi()
 
     /**
      * McuSettingsApi 服务实例
      */
-    val mcuSettingsApi: McuSettingsApi
+    val mcuSettingsApi
         get() = ktorfit().createMcuSettingsApi()
 }

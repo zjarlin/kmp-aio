@@ -13,23 +13,12 @@ import site.addzero.configcenter.ConfigCenter
 import site.addzero.kcloud.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.kcloud.jimmer.spi.DatabaseDriverSpi
 import site.addzero.kcloud.jimmer.spi.DatasourceBootstrapContext
+import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.JimmerDatasourceBootstrapSpi
 import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
 private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:jimmer-embedded.db"
-
-/**
- * 数据源属性（从配置中心覆盖后的 datasources.xxx 读取）
- */
-data class DatasourceProperties(
-    val name: String = "",
-    val enabled: Boolean = false,
-    val url: String = "",
-    val driver: String = "",
-    val user: String = "",
-    val password: String = "",
-)
 
 @Module
 @ComponentScan("site.addzero.kcloud.jimmer")
@@ -89,8 +78,8 @@ class DatasourceRegistry(
     private val driverResolver: DatabaseDriverResolver,
     private val datasourceBootstrappers: List<JimmerDatasourceBootstrapSpi>,
 ) {
-    private val runtimesByName: LinkedHashMap<String, DatasourceRuntime> = buildRuntimeMap(config)
-    private val defaultRuntime: DatasourceRuntime = runtimesByName.values.firstOrNull()
+    private val runtimesByName = buildRuntimeMap(config)
+    private val defaultRuntime = runtimesByName.values.firstOrNull()
         ?: throw IllegalStateException(
             "No enabled datasource configured. Please configure at least one datasources.*.enabled=true entry.",
         )

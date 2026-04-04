@@ -63,7 +63,7 @@ class CodeRenderAndSyncServiceImpl(
     override suspend fun get(id: String): ManagedArtifactMetaDto = support.artifactOrThrow(id).toDto()
 
     override suspend fun export(request: SyncExportRequest): SyncExportResultDto {
-        val fileIds: List<String> = when {
+        val fileIds = when {
             request.fileId != null -> listOf(requireNotNull(request.fileId))
             request.targetId != null -> support.listFiles(request.targetId).map { it.id }
             else -> support.listFiles().map { it.id }

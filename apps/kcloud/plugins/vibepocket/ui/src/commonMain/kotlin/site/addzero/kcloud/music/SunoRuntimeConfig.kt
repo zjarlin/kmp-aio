@@ -14,10 +14,10 @@ data class SunoRuntimeConfig(
     val baseUrl: String = SunoApiClient.DEFAULT_BASE_URL,
     val callbackUrl: String = "",
 ) {
-    val hasToken: Boolean
+    val hasToken
         get() = apiToken.isNotBlank()
 
-    val hasCallbackUrl: Boolean
+    val hasCallbackUrl
         get() = callbackUrl.isNotBlank()
 
     fun callbackUrlOrNull(): String? {

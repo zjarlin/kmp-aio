@@ -65,10 +65,10 @@ data class QueueProgress(
 class ProgressTracker {
     private val order = TransferStage.entries
     private val _tasks = MutableStateFlow<Map<String, TaskProgress>>(emptyMap())
-    val tasks: StateFlow<Map<String, TaskProgress>> = _tasks.asStateFlow()
+    val tasks = _tasks.asStateFlow()
 
     private val _queueProgress = MutableStateFlow<QueueProgress?>(null)
-    val queueProgress: StateFlow<QueueProgress?> = _queueProgress.asStateFlow()
+    val queueProgress = _queueProgress.asStateFlow()
 
     fun update(event: StageUpdate) {
         val normalized = event.stageProgress.coerceIn(0.0, 1.0)

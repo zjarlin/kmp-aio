@@ -10,7 +10,7 @@ import site.addzero.appsidebar.AppSidebarScaffoldShell
 class SidebarShowcaseState(
     private val catalog: SidebarShowcaseCatalog,
 ) {
-    val scenes: List<SidebarShowcaseSceneDefinition> = catalog.scenes
+    val scenes = catalog.scenes
 
     init {
         require(scenes.isNotEmpty()) {
@@ -33,25 +33,25 @@ class SidebarShowcaseState(
     var isChinese by mutableStateOf(true)
         private set
 
-    val activeScene: SidebarShowcaseSceneDefinition
+    val activeScene
         get() = catalog.findScene(selectedSceneId) ?: scenes.first()
 
-    val currentShell: AppSidebarScaffoldShell
+    val currentShell
         get() = activeScene.config.shell
 
-    val sceneLeaves: List<SidebarShowcaseLeaf>
+    val sceneLeaves
         get() = activeScene.leaves
 
-    val activeLeafNode: SidebarShowcaseLeaf
+    val activeLeafNode
         get() = resolveActiveLeafNode()
 
-    val breadcrumb: List<String>
+    val breadcrumb
         get() = catalog.breadcrumbNamesFor(activeLeafNode.id)
 
-    val languageToggleLabel: String
+    val languageToggleLabel
         get() = if (isChinese) "中文" else "EN"
 
-    val githubLabel: String
+    val githubLabel
         get() = "github.com/addzero"
 
     fun selectScene(sceneId: String) {

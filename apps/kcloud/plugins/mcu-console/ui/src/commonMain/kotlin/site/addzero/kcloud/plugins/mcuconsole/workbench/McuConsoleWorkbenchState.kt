@@ -26,122 +26,122 @@ class McuConsoleWorkbenchState(
     var uiState by mutableStateOf(McuConsoleUiState())
         private set
 
-    var ports: List<McuPortSummary>
+    var ports
         get() = uiState.devices
         private set(value) {
             updateUiState { copy(devices = value) }
         }
 
-    var deviceDraft: McuDeviceProfileIso?
+    var deviceDraft
         get() = uiState.deviceDraft
         private set(value) {
             updateUiState { copy(deviceDraft = value) }
         }
 
-    var transportProfiles: List<McuTransportProfileIso>
+    var transportProfiles
         get() = uiState.transportProfiles
         private set(value) {
             updateUiState { copy(transportProfiles = value) }
         }
 
-    var transportDraft: McuTransportProfileIso
+    var transportDraft
         get() = uiState.transportDraft
         private set(value) {
             updateUiState { copy(transportDraft = value) }
         }
 
-    var flashProfiles: List<McuFlashProfileSummary>
+    var flashProfiles
         get() = uiState.flashProfiles
         private set(value) {
             updateUiState { copy(flashProfiles = value) }
         }
 
-    var flashProbes: List<McuFlashProbeSummary>
+    var flashProbes
         get() = uiState.flashProbes
         private set(value) {
             updateUiState { copy(flashProbes = value) }
         }
 
-    var runtimeBundles: List<McuRuntimeBundleSummary>
+    var runtimeBundles
         get() = uiState.runtimeBundles
         private set(value) {
             updateUiState { copy(runtimeBundles = value) }
         }
 
-    var portQuery: String
+    var portQuery
         get() = uiState.selection.portQuery
         private set(value) {
             updateSelection { copy(portQuery = value) }
         }
 
-    var selectedPortPath: String?
+    var selectedPortPath
         get() = uiState.selection.selectedPortPath
         private set(value) {
             updateSelection { copy(selectedPortPath = value) }
         }
 
-    var selectedPortDeviceKey: String?
+    var selectedPortDeviceKey
         get() = uiState.selection.selectedPortDeviceKey
         private set(value) {
             updateSelection { copy(selectedPortDeviceKey = value) }
         }
 
-    var selectedPortRemarkDraft: String
+    var selectedPortRemarkDraft
         get() = uiState.deviceDraft?.remark.orEmpty()
         private set(value) {
             val nextDraft = (deviceDraft ?: selectedPort.toDeviceDraft()).copy(remark = value)
             deviceDraft = nextDraft
         }
 
-    var selectedFlashProfileId: String?
+    var selectedFlashProfileId
         get() = uiState.selection.selectedFlashProfileId
         private set(value) {
             updateSelection { copy(selectedFlashProfileId = value) }
         }
 
-    var selectedFlashProbeSerialNumber: String?
+    var selectedFlashProbeSerialNumber
         get() = uiState.selection.selectedFlashProbeSerialNumber
         private set(value) {
             updateSelection { copy(selectedFlashProbeSerialNumber = value) }
         }
 
-    var selectedRuntimeBundleId: String?
+    var selectedRuntimeBundleId
         get() = uiState.selection.selectedRuntimeBundleId
         private set(value) {
             updateSelection { copy(selectedRuntimeBundleId = value) }
         }
 
-    var selectedScriptExampleId: String?
+    var selectedScriptExampleId
         get() = uiState.selection.selectedScriptExampleId
         private set(value) {
             updateSelection { copy(selectedScriptExampleId = value) }
         }
 
-    var selectedAtomicCommandId: String?
+    var selectedAtomicCommandId
         get() = uiState.selection.selectedAtomicCommandId
         private set(value) {
             updateSelection { copy(selectedAtomicCommandId = value) }
         }
 
-    var selectedTransportKind: McuTransportKind
+    var selectedTransportKind
         get() = uiState.selection.selectedTransportKind
         private set(value) {
             updateSelection { copy(selectedTransportKind = value) }
         }
 
-    var selectedModbusAtomicAction: McuModbusAtomicAction
+    var selectedModbusAtomicAction
         get() = uiState.selection.selectedModbusAtomicAction
         private set(value) {
             updateSelection { copy(selectedModbusAtomicAction = value) }
         }
 
-    var activeSessionTransportKind: McuTransportKind
+    var activeSessionTransportKind
         get() = uiState.selection.activeSessionTransportKind
         private set(value) {
             updateSelection { copy(activeSessionTransportKind = value) }
         }
 
-    var modbusConnectionNameText: String
+    var modbusConnectionNameText
         get() = transportDraft.name
         private set(value) {
             mutateTransportDraft {
@@ -149,271 +149,271 @@ class McuConsoleWorkbenchState(
             }
         }
 
-    var baudRateText: String
+    var baudRateText
         get() = transportDraft.baudRate?.toString().orEmpty()
         private set(value) {
             mutateTransportDraft { copy(baudRate = value.toIntOrNull()) }
         }
 
-    var modbusRtuUnitIdText: String
+    var modbusRtuUnitIdText
         get() = transportDraft.unitId?.toString().orEmpty()
         private set(value) {
             mutateTransportDraft { copy(unitId = value.toIntOrNull()) }
         }
 
-    var modbusRtuTimeoutMsText: String
+    var modbusRtuTimeoutMsText
         get() = transportDraft.timeoutMs?.toString().orEmpty()
         private set(value) {
             mutateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
         }
 
-    var modbusRtuDataBitsText: String
+    var modbusRtuDataBitsText
         get() = transportDraft.dataBits?.toString().orEmpty()
         private set(value) {
             mutateTransportDraft { copy(dataBits = value.toIntOrNull()) }
         }
 
-    var modbusRtuStopBitsText: String
+    var modbusRtuStopBitsText
         get() = transportDraft.stopBits?.toString().orEmpty()
         private set(value) {
             mutateTransportDraft { copy(stopBits = value.toIntOrNull()) }
         }
 
-    var modbusRtuParity: McuModbusSerialParity
+    var modbusRtuParity
         get() = transportDraft.parity ?: McuModbusSerialParity.NONE
         private set(value) {
             mutateTransportDraft { copy(parity = value) }
         }
 
-    var modbusFrameFormat: McuModbusFrameFormat
+    var modbusFrameFormat
         get() = uiState.modbus.frameFormat
         private set(value) {
             updateModbusState { copy(frameFormat = value) }
         }
 
-    var modbusRtuRetriesText: String
+    var modbusRtuRetriesText
         get() = transportDraft.retries?.toString().orEmpty()
         private set(value) {
             mutateTransportDraft { copy(retries = value.toIntOrNull()) }
         }
 
-    var modbusGpioWritePinText: String
+    var modbusGpioWritePinText
         get() = uiState.modbus.gpioWritePinText
         private set(value) {
             updateModbusState { copy(gpioWritePinText = value) }
         }
 
-    var modbusGpioWriteHigh: Boolean
+    var modbusGpioWriteHigh
         get() = uiState.modbus.gpioWriteHigh
         private set(value) {
             updateModbusState { copy(gpioWriteHigh = value) }
         }
 
-    var modbusGpioModePinText: String
+    var modbusGpioModePinText
         get() = uiState.modbus.gpioModePinText
         private set(value) {
             updateModbusState { copy(gpioModePinText = value) }
         }
 
-    var modbusGpioMode: McuModbusGpioMode
+    var modbusGpioMode
         get() = uiState.modbus.gpioMode
         private set(value) {
             updateModbusState { copy(gpioMode = value) }
         }
 
-    var modbusPwmPinText: String
+    var modbusPwmPinText
         get() = uiState.modbus.pwmPinText
         private set(value) {
             updateModbusState { copy(pwmPinText = value) }
         }
 
-    var modbusPwmDutyText: String
+    var modbusPwmDutyText
         get() = uiState.modbus.pwmDutyText
         private set(value) {
             updateModbusState { copy(pwmDutyText = value) }
         }
 
-    var modbusServoPinText: String
+    var modbusServoPinText
         get() = uiState.modbus.servoPinText
         private set(value) {
             updateModbusState { copy(servoPinText = value) }
         }
 
-    var modbusServoAngleText: String
+    var modbusServoAngleText
         get() = uiState.modbus.servoAngleText
         private set(value) {
             updateModbusState { copy(servoAngleText = value) }
         }
 
-    var scriptLanguage: String
+    var scriptLanguage
         get() = uiState.scriptEditor.language
         private set(value) {
             updateScriptEditor { copy(language = value) }
         }
 
-    var session: McuSessionSnapshot
+    var session
         get() = uiState.session
         private set(value) {
             updateUiState { copy(session = value) }
         }
 
-    var scriptStatus: McuScriptStatusResponse
+    var scriptStatus
         get() = uiState.scriptStatus
         private set(value) {
             updateUiState { copy(scriptStatus = value) }
         }
 
-    var flashStatus: McuFlashStatusResponse
+    var flashStatus
         get() = uiState.flashStatus
         private set(value) {
             updateUiState { copy(flashStatus = value) }
         }
 
-    var runtimeStatus: McuRuntimeStatusResponse
+    var runtimeStatus
         get() = uiState.runtimeStatus
         private set(value) {
             updateUiState { copy(runtimeStatus = value) }
         }
 
-    var devicePowerLights: McuModbusPowerLightsResponse
+    var devicePowerLights
         get() = uiState.devicePowerLights
         private set(value) {
             updateUiState { copy(devicePowerLights = value) }
         }
 
-    var deviceInfo: McuModbusDeviceInfoResponse
+    var deviceInfo
         get() = uiState.deviceInfo
         private set(value) {
             updateUiState { copy(deviceInfo = value) }
         }
 
-    var modbusLastExecution: McuModbusExecutionResult
+    var modbusLastExecution
         get() = uiState.modbusLastExecution
         private set(value) {
             updateUiState { copy(modbusLastExecution = value) }
         }
 
-    var events: List<McuEventEnvelope>
+    var events
         get() = uiState.events
         private set(value) {
             updateUiState { copy(events = value) }
         }
 
-    var widgetInstances: List<McuWidgetInstanceState>
+    var widgetInstances
         get() = uiState.widgetInstances
         private set(value) {
             updateUiState { copy(widgetInstances = value) }
         }
 
-    var scriptText: String
+    var scriptText
         get() = uiState.scriptEditor.scriptText
         private set(value) {
             updateScriptEditor { copy(scriptText = value) }
         }
 
-    var serialCommandText: String
+    var serialCommandText
         get() = uiState.serialConsole.commandText
         private set(value) {
             updateSerialConsoleState { copy(commandText = value) }
         }
 
-    var serialCommandAppendLineEnding: Boolean
+    var serialCommandAppendLineEnding
         get() = uiState.serialConsole.appendLineEnding
         private set(value) {
             updateSerialConsoleState { copy(appendLineEnding = value) }
         }
 
-    var serialCommandLineEnding: McuSerialLineEnding
+    var serialCommandLineEnding
         get() = uiState.serialConsole.lineEnding
         private set(value) {
             updateSerialConsoleState { copy(lineEnding = value) }
         }
 
-    var panelControlModuleText: String
+    var panelControlModuleText
         get() = uiState.panelControl.moduleText
         private set(value) {
             updatePanelControlState { copy(moduleText = value) }
         }
 
-    var panelDisplayValueText: String
+    var panelDisplayValueText
         get() = uiState.panelControl.displayValueText
         private set(value) {
             updatePanelControlState { copy(displayValueText = value) }
         }
 
-    var panelBeepTimesText: String
+    var panelBeepTimesText
         get() = uiState.panelControl.beepTimesText
         private set(value) {
             updatePanelControlState { copy(beepTimesText = value) }
         }
 
-    var panelLedIndexText: String
+    var panelLedIndexText
         get() = uiState.panelControl.ledIndexText
         private set(value) {
             updatePanelControlState { copy(ledIndexText = value) }
         }
 
-    var customSerialActions: List<McuCustomSerialActionState>
+    var customSerialActions
         get() = uiState.customSerialActions
         private set(value) {
             updateUiState { copy(customSerialActions = value) }
         }
 
-    var probePinMapFilesText: String
+    var probePinMapFilesText
         get() = uiState.probe.pinMapFilesText
         private set(value) {
             updateProbeState { copy(pinMapFilesText = value) }
         }
 
-    var probeGpioSnapshotPinsText: String
+    var probeGpioSnapshotPinsText
         get() = uiState.probe.gpioSnapshotPinsText
         private set(value) {
             updateProbeState { copy(gpioSnapshotPinsText = value) }
         }
 
-    var probeI2cSdaText: String
+    var probeI2cSdaText
         get() = uiState.probe.i2cSdaText
         private set(value) {
             updateProbeState { copy(i2cSdaText = value) }
         }
 
-    var probeI2cSclText: String
+    var probeI2cSclText
         get() = uiState.probe.i2cSclText
         private set(value) {
             updateProbeState { copy(i2cSclText = value) }
         }
 
-    var firmwarePathText: String
+    var firmwarePathText
         get() = uiState.flashEditor.firmwarePathText
         private set(value) {
             updateFlashEditor { copy(firmwarePathText = value) }
         }
 
-    var timeoutMsText: String
+    var timeoutMsText
         get() = uiState.scriptEditor.timeoutMsText
         private set(value) {
             updateScriptEditor { copy(timeoutMsText = value) }
         }
 
-    var feedbackMessage: String?
+    var feedbackMessage
         get() = uiState.feedback.message
         private set(value) {
             updateFeedbackState { copy(message = value) }
         }
 
-    var feedbackIsError: Boolean
+    var feedbackIsError
         get() = uiState.feedback.isError
         private set(value) {
             updateFeedbackState { copy(isError = value) }
         }
 
-    var isLoadingPorts: Boolean
+    var isLoadingPorts
         get() = uiState.loading.isLoadingPorts
         private set(value) {
             updateLoadingState { copy(isLoadingPorts = value) }
         }
 
-    var isSubmitting: Boolean
+    var isSubmitting
         get() = uiState.loading.isSubmitting
         private set(value) {
             updateLoadingState { copy(isSubmitting = value) }
@@ -606,72 +606,72 @@ class McuConsoleWorkbenchState(
             }
         }
 
-    val selectedPort: McuPortSummary?
+    val selectedPort
         get() = ports.firstOrNull { it.portPath == selectedPortPath }
 
-    val selectedFlashProfile: McuFlashProfileSummary?
+    val selectedFlashProfile
         get() = flashProfiles.firstOrNull { it.id == selectedFlashProfileId }
 
-    val selectedFlashProbe: McuFlashProbeSummary?
+    val selectedFlashProbe
         get() = flashProbes.firstOrNull { it.serialNumber == selectedFlashProbeSerialNumber }
             ?: flashProbes.singleOrNull()
 
-    val selectedRuntimeBundle: McuRuntimeBundleSummary?
+    val selectedRuntimeBundle
         get() = runtimeBundles.firstOrNull { it.bundleId == selectedRuntimeBundleId }
 
-    val selectedScriptExample: McuScriptExample?
+    val selectedScriptExample
         get() = selectedRuntimeBundle?.scriptExamples?.firstOrNull { it.id == selectedScriptExampleId }
 
-    val selectedAtomicCommand: McuAtomicCommandDefinition?
+    val selectedAtomicCommand
         get() = selectedRuntimeBundle?.atomicCommands?.firstOrNull { it.id == selectedAtomicCommandId }
 
-    val hasActiveSession: Boolean
+    val hasActiveSession
         get() = session.isOpen
 
-    val isScriptRunning: Boolean
+    val isScriptRunning
         get() = scriptStatus.state == McuScriptRunState.RUNNING || scriptStatus.state == McuScriptRunState.STOPPING
 
-    val isRuntimeReady: Boolean
+    val isRuntimeReady
         get() = runtimeStatus.state == McuRuntimeEnsureState.READY &&
             runtimeStatus.bundleId == selectedRuntimeBundleId
 
-    val canUseWidgets: Boolean
+    val canUseWidgets
         get() = hasActiveSession &&
             activeSessionTransportKind == McuTransportKind.SERIAL &&
             isRuntimeReady &&
             !isSubmitting
 
-    val supportsSelectedTransportConnection: Boolean
+    val supportsSelectedTransportConnection
         get() = selectedTransportKind == McuTransportKind.SERIAL
 
-    val canOpenSelectedTransportSession: Boolean
+    val canOpenSelectedTransportSession
         get() = !isSubmitting &&
             !session.isOpen &&
             selectedPortPath != null &&
             baudRateText.toIntOrNull() != null
 
-    val openSessionActionLabel: String
+    val openSessionActionLabel
         get() = "打开串口终端"
 
-    val canEnsureRuntime: Boolean
+    val canEnsureRuntime
         get() = session.isOpen &&
             activeSessionTransportKind == McuTransportKind.SERIAL &&
             selectedRuntimeBundle != null &&
             flashProfiles.any { it.id == selectedRuntimeBundle?.defaultFlashProfileId }
 
-    val canControlSerialLines: Boolean
+    val canControlSerialLines
         get() = session.isOpen &&
             activeSessionTransportKind == McuTransportKind.SERIAL
 
-    val canResetDevice: Boolean
+    val canResetDevice
         get() = !isSubmitting && (canControlSerialLines || selectedFlashProbe != null)
 
-    val canSendDirectSerialText: Boolean
+    val canSendDirectSerialText
         get() = session.isOpen &&
             activeSessionTransportKind == McuTransportKind.SERIAL &&
             !isSubmitting
 
-    val selectedTransportNotice: String
+    val selectedTransportNotice
         get() = "控制台只保留本机串口自动发现；Modbus 页面复用当前串口参数执行独立 RTU 原子操作。"
 
     val canStartFlash: Boolean
@@ -682,7 +682,7 @@ class McuConsoleWorkbenchState(
                 firmwarePathText.isNotBlank()
         }
 
-    val canExecuteSelectedModbusAction: Boolean
+    val canExecuteSelectedModbusAction
         get() = !isSubmitting &&
             modbusFrameFormat == McuModbusFrameFormat.RTU &&
             hasValidModbusRtuConfigForSubmit() &&

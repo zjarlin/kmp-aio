@@ -42,15 +42,15 @@ class FailoverStorageClient(
 
     private val _currentBackend = MutableStateFlow(primaryType)
     @Suppress("unused")
-    val currentBackend: StateFlow<StorageBackendType> = _currentBackend.asStateFlow()
+    val currentBackend = _currentBackend.asStateFlow()
 
     private val _backendStates = MutableStateFlow<Map<StorageBackendType, StorageBackendState>>(emptyMap())
     @Suppress("unused")
-    val backendStates: StateFlow<Map<StorageBackendType, StorageBackendState>> = _backendStates.asStateFlow()
+    val backendStates = _backendStates.asStateFlow()
 
     private val _isFailoverActive = MutableStateFlow(false)
     @Suppress("unused")
-    val isFailoverActive: StateFlow<Boolean> = _isFailoverActive.asStateFlow()
+    val isFailoverActive = _isFailoverActive.asStateFlow()
 
     private var healthCheckJob: Job? = null
     private val mutex = Any()

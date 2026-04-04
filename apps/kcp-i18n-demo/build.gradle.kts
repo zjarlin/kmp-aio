@@ -65,7 +65,7 @@ data class JvmMainEntryPoint(
     val packageName: String,
     val facadeClassName: String,
 ) {
-    val mainClassName: String
+    val mainClassName
         get() = "$packageName.$facadeClassName"
 }
 

@@ -21,7 +21,7 @@ import kotlin.math.roundToInt
 class RouteCatalog(
     screenRegistry: ScreenRegistry,
 ) {
-    val routeMeta: List<Screen> = screenRegistry.screens
+    val routeMeta = screenRegistry.screens
     val scenes = buildScenes(
         routeMeta = routeMeta,
     )
@@ -85,7 +85,7 @@ data class RouteScene(
     val menuNodes: List<SidebarNode>,
     val defaultRoutePath: String?,
 ) {
-    val routeCount: Int
+    val routeCount
         get() = routes.size
 }
 
@@ -97,7 +97,7 @@ data class SidebarNode(
     val routePath: String? = null,
     val sort: Int = Int.MAX_VALUE,
 ) {
-    val isLeaf: Boolean
+    val isLeaf
         get() = routePath != null && children.isEmpty()
 }
 
@@ -111,10 +111,10 @@ data class RouteEntry(
     val sidebarIcon: ImageVector,
     val sort: Int,
 ) {
-    val routePath: String
+    val routePath
         get() = route.routePath
 
-    val title: String
+    val title
         get() = route.title.ifBlank { route.simpleName.ifBlank { route.routePath } }
 }
 

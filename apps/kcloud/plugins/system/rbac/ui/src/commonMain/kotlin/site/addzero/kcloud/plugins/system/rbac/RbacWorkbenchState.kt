@@ -28,7 +28,7 @@ class RbacWorkbenchState(
 
     private var loaded = false
 
-    val selectedRole: RbacRoleDto?
+    val selectedRole
         get() = roles.firstOrNull { role -> role.id == selectedRoleId }
 
     suspend fun ensureLoaded() {

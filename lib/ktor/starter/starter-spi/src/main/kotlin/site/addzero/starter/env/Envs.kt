@@ -4,7 +4,7 @@ import site.addzero.configcenter.ConfigCenterKeyDefinition
 
 object Envs {
     object DatasourceConfig {
-        val NAMESPACE: String = DatasourceConfigKeys.NAMESPACE
+        val NAMESPACE = DatasourceConfigKeys.NAMESPACE
 
         fun enabled(name: String): String = DatasourceConfigKeys.enabled(name)
 

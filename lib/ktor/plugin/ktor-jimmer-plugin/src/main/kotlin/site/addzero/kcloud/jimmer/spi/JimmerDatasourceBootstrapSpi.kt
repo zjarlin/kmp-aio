@@ -10,7 +10,7 @@ data class DatasourceBootstrapContext(
 )
 
 interface JimmerDatasourceBootstrapSpi {
-    val order: Int
+    val order
         get() = 0
 
     fun supports(

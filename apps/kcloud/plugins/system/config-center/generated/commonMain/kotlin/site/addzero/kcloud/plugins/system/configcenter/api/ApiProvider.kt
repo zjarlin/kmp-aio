@@ -23,6 +23,6 @@ object ApiProvider {
     /**
      * ConfigCenterApi 服务实例
      */
-    val configCenterApi: ConfigCenterApi
+    val configCenterApi
         get() = requireKtorfit().create<ConfigCenterApi>()
 }

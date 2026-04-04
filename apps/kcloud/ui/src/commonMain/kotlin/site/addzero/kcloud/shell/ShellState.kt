@@ -18,10 +18,10 @@ class ShellState(
         NavRoute(routePath = startupRoutePath),
     )
 
-    val selectedRoutePath: String
+    val selectedRoutePath
         get() = backStack.lastOrNull()?.routePath ?: startupRoutePath
 
-    val selectedSceneId: String
+    val selectedSceneId
         get() = routeCatalog.sceneIdFor(selectedRoutePath)
 
     var windowVisible by mutableStateOf(true)

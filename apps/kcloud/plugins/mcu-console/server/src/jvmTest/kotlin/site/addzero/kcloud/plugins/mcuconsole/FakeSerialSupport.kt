@@ -19,7 +19,7 @@ internal class FakeSerialPortGateway(
     val openedConnections = mutableListOf<FakeSerialPortConnection>()
 
     @Volatile
-    var runtimeInstalled: Boolean = runtimeInstalledInitially
+    var runtimeInstalled = runtimeInstalledInitially
 
     override fun listPorts(): List<McuPortSummary> = ports
 
@@ -42,7 +42,7 @@ internal class FakeSerialPortConnection(
     override val portPath: String,
     override val baudRate: Int,
 ) : SerialPortConnection {
-    override val portName: String = "Fake-$portPath"
+    override val portName = "Fake-$portPath"
 
     private val pendingReads = ArrayDeque<ByteArray>()
     private var flashMode = false
@@ -50,13 +50,13 @@ internal class FakeSerialPortConnection(
     val textWrites = mutableListOf<String>()
     val byteWrites = mutableListOf<Byte>()
 
-    override var isOpen: Boolean = true
+    override var isOpen = true
         private set
 
-    var dtrEnabled: Boolean = false
+    var dtrEnabled = false
         private set
 
-    var rtsEnabled: Boolean = false
+    var rtsEnabled = false
         private set
 
     override fun writeUtf8(

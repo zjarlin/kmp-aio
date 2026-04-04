@@ -72,13 +72,13 @@ class KboxSyncCoordinator(
     private val recentTransfers = ArrayDeque<KboxSyncTransferTask>()
 
     private val _entries = MutableStateFlow<List<KboxSyncEntry>>(emptyList())
-    val entries: StateFlow<List<KboxSyncEntry>> = _entries.asStateFlow()
+    val entries = _entries.asStateFlow()
 
     private val _runState = MutableStateFlow(KboxSyncRunState())
-    val runState: StateFlow<KboxSyncRunState> = _runState.asStateFlow()
+    val runState = _runState.asStateFlow()
 
     private val _transferQueue = MutableStateFlow(KboxSyncTransferQueueState())
-    val transferQueue: StateFlow<KboxSyncTransferQueueState> = _transferQueue.asStateFlow()
+    val transferQueue = _transferQueue.asStateFlow()
 
     private var currentSettings: KboxSettings? = null
     private var paused = false

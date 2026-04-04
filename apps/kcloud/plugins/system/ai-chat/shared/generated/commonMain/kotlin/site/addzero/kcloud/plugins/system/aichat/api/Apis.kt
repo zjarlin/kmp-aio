@@ -15,6 +15,6 @@ object Apis {
     /**
      * AiChatApi 服务实例
      */
-    val aiChatApi: AiChatApi
+    val aiChatApi
         get() = ktorfit().createAiChatApi()
 }

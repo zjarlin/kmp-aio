@@ -55,10 +55,10 @@ class PluginMarketWorkbenchState(
     var config by mutableStateOf(PluginMarketConfigDto())
         private set
 
-    val selectedPackage: PluginPackageDto?
+    val selectedPackage
         get() = packages.firstOrNull { it.id == selectedPackageId }
 
-    val selectedDiscovery: PluginDiscoveryItemDto?
+    val selectedDiscovery
         get() = discoveries.firstOrNull { it.discoveryId == selectedDiscoveryId }
 
     fun updateConfig(transform: (PluginMarketConfigDto) -> PluginMarketConfigDto) {

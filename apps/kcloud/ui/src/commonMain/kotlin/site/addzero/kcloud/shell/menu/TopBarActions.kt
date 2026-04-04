@@ -37,7 +37,7 @@ class TopBarActionsRenderer(
 class AiAssistantTopBarActionContributor(
     private val aiOverlayState: AddChatOverlayState,
 ) : WorkbenchTopBarActionContributor {
-    override val order: Int = 10
+    override val order = 10
 
     @Composable
     override fun RowScope.Render() {
@@ -62,7 +62,7 @@ class AiAssistantTopBarActionContributor(
 class ThemeToggleTopBarActionContributor(
     private val shellThemeState: ShellThemeState,
 ) : WorkbenchTopBarActionContributor {
-    override val order: Int = 20
+    override val order = 20
 
     @Composable
     override fun RowScope.Render() {

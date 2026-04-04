@@ -17,8 +17,8 @@ import site.addzero.workbenchshell.spi.scaffolding.ScaffoldingSpi
 class ScaffoldingImpl(
     private val topBarActionsRenderer: TopBarActionsRenderer,
 ) : ScaffoldingSpi {
-    override val pageTitle: String = "KCloud"
-    override val brandLabel: String = "OKMY DICS"
+    override val pageTitle = "KCloud"
+    override val brandLabel = "OKMY DICS"
 
     @Composable
     override fun RowScope.RenderBrand() {

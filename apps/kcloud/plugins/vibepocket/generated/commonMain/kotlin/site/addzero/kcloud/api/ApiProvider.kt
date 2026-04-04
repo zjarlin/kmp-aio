@@ -23,42 +23,42 @@ object ApiProvider {
     /**
      * ConfigApi 服务实例
      */
-    val configApi: ConfigApi
+    val configApi
         get() = requireKtorfit().create<ConfigApi>()
 
     /**
      * FavoriteApi 服务实例
      */
-    val favoriteApi: FavoriteApi
+    val favoriteApi
         get() = requireKtorfit().create<FavoriteApi>()
 
     /**
      * HistoryApi 服务实例
      */
-    val historyApi: HistoryApi
+    val historyApi
         get() = requireKtorfit().create<HistoryApi>()
 
     /**
      * MusicSearchApi 服务实例
      */
-    val musicSearchApi: MusicSearchApi
+    val musicSearchApi
         get() = requireKtorfit().create<MusicSearchApi>()
 
     /**
      * PersonaApi 服务实例
      */
-    val personaApi: PersonaApi
+    val personaApi
         get() = requireKtorfit().create<PersonaApi>()
 
     /**
      * SunoRoutesApi 服务实例
      */
-    val sunoRoutesApi: SunoRoutesApi
+    val sunoRoutesApi
         get() = requireKtorfit().create<SunoRoutesApi>()
 
     /**
      * SunoTaskResourceApi 服务实例
      */
-    val sunoTaskResourceApi: SunoTaskResourceApi
+    val sunoTaskResourceApi
         get() = requireKtorfit().create<SunoTaskResourceApi>()
 }

@@ -10,7 +10,7 @@ data class KboxAppDataMigrationPlan(
     val blockers: List<String> = emptyList(),
     val warnings: List<String> = emptyList(),
 ) {
-    val canMigrate: Boolean
+    val canMigrate
         get() = blockers.isEmpty()
 }
 
@@ -98,10 +98,10 @@ data class KboxCommandResult(
     val timedOut: Boolean,
     val durationMillis: Long,
 ) {
-    val success: Boolean
+    val success
         get() = !timedOut && exitCode == 0
 
-    val output: String
+    val output
         get() = buildString {
             if (stdout.isNotBlank()) {
                 append(stdout.trim())
@@ -162,7 +162,7 @@ data class KboxPackageImportEntryResult(
     val failedPackages: List<String> = emptyList(),
     val output: String = "",
 ) {
-    val success: Boolean
+    val success
         get() = failedPackages.isEmpty()
 }
 

@@ -45,8 +45,8 @@ class KboxPackageProfileServiceTest {
     }
 
     private class FakePackageManagerAdapter : KboxPackageManagerAdapter {
-        override val managerId: String = "fake"
-        override val displayName: String = "Fake Manager"
+        override val managerId = "fake"
+        override val displayName = "Fake Manager"
 
         var reportedInstalledPackages = linkedSetOf("pkg-a", "pkg-b")
         val installedBatches = mutableListOf<List<String>>()

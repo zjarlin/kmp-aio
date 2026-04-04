@@ -25,11 +25,13 @@ data class SyncPlan(
     val modifiedLocal: List<FileChange.ModifiedLocal> = emptyList(),
     val modifiedRemote: List<FileChange.ModifiedRemote> = emptyList()
 ) {
-    val isEmpty: Boolean get() = toUpload.isEmpty() && toDownload.isEmpty() &&
+    val isEmpty
+        get() = toUpload.isEmpty() && toDownload.isEmpty() &&
             toDeleteLocal.isEmpty() && toDeleteRemote.isEmpty() &&
             conflicts.isEmpty() && modifiedLocal.isEmpty() && modifiedRemote.isEmpty()
 
-    val totalOperations: Int get() = toUpload.size + toDownload.size +
+    val totalOperations
+        get() = toUpload.size + toDownload.size +
             toDeleteLocal.size + toDeleteRemote.size + conflicts.size +
             modifiedLocal.size + modifiedRemote.size
 }
@@ -61,7 +63,7 @@ class SyncEngine(
     private var currentJob: Job? = null
 
     private val _isSyncing = MutableStateFlow(false)
-    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+    val isSyncing = _isSyncing.asStateFlow()
 
     /**
      * 启动同步引擎

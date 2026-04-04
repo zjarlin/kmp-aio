@@ -79,7 +79,7 @@ class AutomicModbusServiceTest {
         val registry = ModbusRtuConfigRegistry(
             listOf(
                 object : ModbusRtuConfigProvider {
-                    override val serviceId: String = "automic-modbus"
+                    override val serviceId = "automic-modbus"
 
                     override fun defaultConfig(): ModbusRtuEndpointConfig {
                         return ModbusRtuEndpointConfig(

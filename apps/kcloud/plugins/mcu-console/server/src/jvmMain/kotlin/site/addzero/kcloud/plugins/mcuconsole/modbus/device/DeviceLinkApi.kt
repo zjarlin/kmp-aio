@@ -88,5 +88,5 @@ object DeviceLinkPollingContract {
      * - 第 2 次失败: 再重试
      * - 第 3 次失败: 判定当前线路不可用，切备用线路
      */
-    const val DEFAULT_MAX_CONSECUTIVE_FAILURES_BEFORE_SWITCH: Int = 3
+    const val DEFAULT_MAX_CONSECUTIVE_FAILURES_BEFORE_SWITCH = 3
 }

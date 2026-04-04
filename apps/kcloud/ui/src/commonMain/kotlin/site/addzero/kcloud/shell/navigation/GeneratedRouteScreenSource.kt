@@ -9,7 +9,7 @@ import site.addzero.workbenchshell.spi.screen.ScreenSource
 
 @Single
 class GeneratedRouteScreenSource : ScreenSource {
-    override val priority: Int = 100
+    override val priority = 100
 
     override fun listScreens(): List<Screen> {
         return RouteKeys.allMeta.map(Route::toScreen)

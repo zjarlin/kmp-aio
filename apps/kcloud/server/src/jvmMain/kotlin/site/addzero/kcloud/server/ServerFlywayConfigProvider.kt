@@ -12,7 +12,7 @@ import site.addzero.starter.flyway.FlywayDefaults
 class ServerFlywayConfigProvider(
     private val config: ApplicationConfig,
 ) : FlywayConfigSpi {
-    override val order: Int = 0
+    override val order = 0
 
     override fun plan(): FlywayConfigPlan {
         val env = ConfigCenter.getEnv(config)

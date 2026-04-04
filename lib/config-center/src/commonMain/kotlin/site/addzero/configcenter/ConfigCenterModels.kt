@@ -2,7 +2,7 @@ package site.addzero.configcenter
 
 import kotlinx.serialization.Serializable
 
-const val DEFAULT_CONFIG_CENTER_ACTIVE: String = "dev"
+const val DEFAULT_CONFIG_CENTER_ACTIVE = "dev"
 
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)

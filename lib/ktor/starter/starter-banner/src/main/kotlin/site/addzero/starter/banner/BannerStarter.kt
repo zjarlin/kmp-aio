@@ -10,14 +10,10 @@ import site.addzero.ktor.banner.Banner
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 
-@Module
-@ComponentScan("site.addzero.starter.banner")
-class BannerStarterKoinModule
 
-@Named("bannerStarter")
 @Single
-class BannerStarter : AppStarter {
-    override val order: Int get() = 30
+class BannerStarter : AppStarter<Application> {
+    override val order get() = 30
 
     override fun Application.onInstall() {
         val env = ConfigCenter.getEnv(effectiveConfig()).path("banner")

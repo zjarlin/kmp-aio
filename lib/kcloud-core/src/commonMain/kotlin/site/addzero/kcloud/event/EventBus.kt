@@ -94,7 +94,7 @@ enum class NotificationType {
  */
 object EventBus {
     private val _events = MutableSharedFlow<UIEvent>(extraBufferCapacity = 64)
-    val events: SharedFlow<UIEvent> = _events.asSharedFlow()
+    val events = _events.asSharedFlow()
 
     private val scope = CoroutineScope(Dispatchers.Default)
 

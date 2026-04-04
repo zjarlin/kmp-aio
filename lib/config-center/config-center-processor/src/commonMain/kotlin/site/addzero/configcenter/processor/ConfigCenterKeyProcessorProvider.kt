@@ -233,10 +233,10 @@ private data class ConfigItemModel(
     val required: Boolean,
     val valueType: String,
 ) {
-    val templatePropertyName: String
+    val templatePropertyName
         get() = "${propertyName}Template"
 
-    val definitionFunctionName: String
+    val definitionFunctionName
         get() = "${propertyName}Definition"
 
     fun definitionInitializerCode(
@@ -253,7 +253,7 @@ private data class ConfigItemModel(
         )
     }
 
-    val templateParameters: List<String>
+    val templateParameters
         get() = key.findTemplateParameters()
 }
 

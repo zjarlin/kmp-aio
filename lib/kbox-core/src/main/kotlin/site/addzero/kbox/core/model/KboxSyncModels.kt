@@ -70,7 +70,7 @@ data class KboxSyncEntry(
     val lastSyncedAtMillis: Long = 0,
     val autoExecutable: Boolean = false,
 ) {
-    val entryId: String = "$mappingId::$relativePath"
+    val entryId = "$mappingId::$relativePath"
 }
 
 enum class KboxSyncStatus {
@@ -112,7 +112,7 @@ data class KboxSyncTransferTask(
     val detail: String = "",
     val error: String = "",
 ) {
-    val progressFraction: Float
+    val progressFraction
         get() = when {
             totalBytes > 0 -> (bytesTransferred.toDouble() / totalBytes.toDouble())
                 .coerceIn(0.0, 1.0)
@@ -127,19 +127,19 @@ data class KboxSyncTransferQueueState(
     val recentTasks: List<KboxSyncTransferTask> = emptyList(),
     val lastUpdatedAtMillis: Long = 0,
 ) {
-    val queuedCount: Int
+    val queuedCount
         get() = activeTasks.count { task -> task.status == KboxSyncTransferStatus.QUEUED }
 
-    val runningCount: Int
+    val runningCount
         get() = activeTasks.count { task -> task.status == KboxSyncTransferStatus.RUNNING }
 
-    val completedCount: Int
+    val completedCount
         get() = recentTasks.count { task -> task.status == KboxSyncTransferStatus.COMPLETED }
 
-    val failedCount: Int
+    val failedCount
         get() = recentTasks.count { task -> task.status == KboxSyncTransferStatus.FAILED }
 
-    val currentTask: KboxSyncTransferTask?
+    val currentTask
         get() = activeTasks.firstOrNull { task -> task.status == KboxSyncTransferStatus.RUNNING }
             ?: activeTasks.firstOrNull()
 

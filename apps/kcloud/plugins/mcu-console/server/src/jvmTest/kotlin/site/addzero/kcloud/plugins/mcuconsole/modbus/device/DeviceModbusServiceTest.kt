@@ -132,7 +132,7 @@ class DeviceModbusServiceTest {
         val registry = ModbusRtuConfigRegistry(
             listOf(
                 object : ModbusRtuConfigProvider {
-                    override val serviceId: String = "device"
+                    override val serviceId = "device"
 
                     override fun defaultConfig(): ModbusRtuEndpointConfig {
                         return ModbusRtuEndpointConfig(

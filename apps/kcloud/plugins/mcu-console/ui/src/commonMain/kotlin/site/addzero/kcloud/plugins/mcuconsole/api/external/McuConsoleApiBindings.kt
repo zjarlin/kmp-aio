@@ -10,7 +10,7 @@ private const val httpClientProfile = "kcloud-mcu-console"
 
 private object McuConsoleApiRuntime {
     @Volatile
-    private var baseUrl: String = defaultBaseUrl
+    private var baseUrl = defaultBaseUrl
 
     fun configureBaseUrl(
         value: String,

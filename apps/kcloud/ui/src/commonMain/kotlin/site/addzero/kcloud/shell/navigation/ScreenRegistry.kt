@@ -9,6 +9,6 @@ import site.addzero.workbenchshell.spi.screen.mergeScreens
 class ScreenRegistry(
     private val screenSources: List<ScreenSource>,
 ) {
-    val screens: List<Screen>
+    val screens
         get() = mergeScreens(screenSources)
 }

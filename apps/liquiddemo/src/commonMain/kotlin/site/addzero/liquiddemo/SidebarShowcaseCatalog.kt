@@ -57,20 +57,20 @@ data class SidebarShowcaseSceneDefinition(
 
 @Single
 class SidebarShowcaseCatalog {
-    val scenes: List<SidebarShowcaseSceneDefinition> = listOf(
+    val scenes = listOf(
         createGlassScene(),
         createAdminScene(),
     )
 
-    private val scenesById: Map<String, SidebarShowcaseSceneDefinition> = scenes.associateBy { scene ->
+    private val scenesById = scenes.associateBy { scene ->
         scene.id
     }
-    private val leavesById: Map<String, SidebarShowcaseLeaf> = scenes
+    private val leavesById = scenes
         .flatMap { scene ->
             scene.leaves.map { leaf -> leaf.id to leaf }
         }
         .toMap()
-    private val sceneIdByLeafId: Map<String, String> = scenes
+    private val sceneIdByLeafId = scenes
         .flatMap { scene ->
             scene.leaves.map { leaf -> leaf.id to scene.id }
         }
@@ -80,8 +80,8 @@ class SidebarShowcaseCatalog {
         validateScenes()
     }
 
-    val defaultSceneId: String = scenes.firstOrNull()?.id.orEmpty()
-    val defaultLeafId: String = scenes.firstOrNull()?.let { scene ->
+    val defaultSceneId = scenes.firstOrNull()?.id.orEmpty()
+    val defaultLeafId = scenes.firstOrNull()?.let { scene ->
         scene.config.initialLeafId
             .takeIf(String::isNotBlank)
             ?.takeIf { leafId -> scene.leaves.any { leaf -> leaf.id == leafId } }

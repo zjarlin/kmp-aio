@@ -52,7 +52,7 @@ class AiChatPanelPresenter(
             statusText = state.statusMessage,
         )
 
-    val panelActions: AddChatPanelActions = AddChatPanelActions(
+    val panelActions = AddChatPanelActions(
         onCreateSession = {
             scope.launch {
                 state.createSession()

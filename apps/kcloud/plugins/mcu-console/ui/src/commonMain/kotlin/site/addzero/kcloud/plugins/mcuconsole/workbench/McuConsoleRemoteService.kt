@@ -17,7 +17,7 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLights
 
 @Single
 class McuConsoleRemoteService {
-    private val modbusApi: McuModbusApi
+    private val modbusApi
         get() = KoinPlatform.getKoin().get<Ktorfit>().createMcuModbusApi()
 
     suspend fun listPorts() = Apis.mcuSessionApi.listMcuPorts().items

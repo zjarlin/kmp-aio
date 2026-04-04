@@ -11,13 +11,11 @@ import io.ktor.server.application.*
  * 设计为框架无关：接口本身不绑定 Koin 或 ServiceLoader，
  * 未来可无缝切换到 KMP 标准 SPI。
  */
-interface AppStarter {
+interface AppStarter<T> {
     /** 排序值，越小越先执行 */
     val order get() = Int.MAX_VALUE
-
-    /** 条件判断，返回 false 则跳过此 Starter */
-    fun Application.enable() = true
+    val enable get() = true
 
     /** 执行安装逻辑 */
-    fun Application.onInstall()
+    fun T.onInstall()
 }

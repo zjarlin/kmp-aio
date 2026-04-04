@@ -52,8 +52,9 @@ data class AppState(
     val isMainWindowVisible: Boolean = false,
     val activeWindow: ActiveWindow = ActiveWindow.MAIN
 ) {
-    val hasConflicts: Boolean get() = conflictCount > 0
-    val isBusy: Boolean get() = syncStatus in setOf(
+    val hasConflicts get() = conflictCount > 0
+    val isBusy
+        get() = syncStatus in setOf(
         SyncStatus.SCANNING, SyncStatus.UPLOADING, SyncStatus.DOWNLOADING
     )
 }
@@ -63,7 +64,7 @@ data class AppState(
  */
 object AppStateManager {
     private val _state = MutableStateFlow(AppState())
-    val state: StateFlow<AppState> = _state.asStateFlow()
+    val state = _state.asStateFlow()
 
     // 状态更新方法
     fun updateSyncStatus(status: SyncStatus, message: String? = null) {
@@ -134,9 +135,9 @@ object AppStateManager {
     }
 
     // 便捷属性
-    val currentState: AppState get() = _state.value
-    val hasConflicts: Boolean get() = _state.value.hasConflicts
-    val isBusy: Boolean get() = _state.value.isBusy
+    val currentState get() = _state.value
+    val hasConflicts get() = _state.value.hasConflicts
+    val isBusy get() = _state.value.isBusy
 }
 
 /**

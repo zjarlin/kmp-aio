@@ -23,6 +23,6 @@ object ApiProvider {
     /**
      * KnowledgeBaseApi 服务实例
      */
-    val knowledgeBaseApi: KnowledgeBaseApi
+    val knowledgeBaseApi
         get() = requireKtorfit().create<KnowledgeBaseApi>()
 }

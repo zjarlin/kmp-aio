@@ -31,10 +31,10 @@ class KboxRuntimePluginManager(
     private val pathService: KboxPathService,
     private val json: Json,
 ) : KboxPluginManagerService {
-    override val dynamicRoutes: StateFlow<List<KboxRouteContribution>>
+    override val dynamicRoutes
         get() = dynamicRoutesState.asStateFlow()
 
-    override val installedPlugins: StateFlow<List<KboxInstalledPluginSnapshot>>
+    override val installedPlugins
         get() = installedPluginsState.asStateFlow()
 
     private val lock = Mutex()
