@@ -13,17 +13,16 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.robinpcrd.cupertino.CupertinoBorderedTextField
-import io.github.robinpcrd.cupertino.CupertinoSlider
-import io.github.robinpcrd.cupertino.CupertinoSwitch
-import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
-import io.github.robinpcrd.cupertino.section.CupertinoSection
-import io.github.robinpcrd.cupertino.section.SectionItem
-import io.github.robinpcrd.cupertino.section.SectionStyle
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import site.addzero.cupertino.workbench.form.WorkbenchBorderedTextField
+import site.addzero.cupertino.workbench.form.WorkbenchSlider
+import site.addzero.cupertino.workbench.form.WorkbenchSwitch
 import site.addzero.cupertino.workbench.material3.MaterialTheme
 import site.addzero.cupertino.workbench.material3.Text
+import site.addzero.cupertino.workbench.section.WorkbenchSection
+import site.addzero.cupertino.workbench.section.WorkbenchSectionItem
+import site.addzero.cupertino.workbench.section.WorkbenchSectionStyle
 import site.addzero.cupertino.workbench.theme.CupertinoWorkbenchTheme
 
 @Composable
@@ -67,7 +66,6 @@ internal fun McuCupertinoSecondaryButton(
     )
 }
 
-@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoField(
     value: String,
@@ -89,7 +87,7 @@ internal fun McuCupertinoField(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Medium,
         )
-        CupertinoBorderedTextField(
+        WorkbenchBorderedTextField(
             value = value,
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
@@ -122,7 +120,6 @@ internal fun McuCupertinoField(
     }
 }
 
-@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoSwitchRow(
     label: String,
@@ -140,14 +137,13 @@ internal fun McuCupertinoSwitchRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        CupertinoSwitch(
+        WorkbenchSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
         )
     }
 }
 
-@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoSliderField(
     label: String,
@@ -165,7 +161,7 @@ internal fun McuCupertinoSliderField(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        CupertinoSlider(
+        WorkbenchSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
@@ -174,18 +170,17 @@ internal fun McuCupertinoSliderField(
     }
 }
 
-@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoSummarySection(
     rows: List<Pair<String, String>>,
     modifier: Modifier = Modifier,
 ) {
-    CupertinoSection(
+    WorkbenchSection(
         modifier = modifier.fillMaxWidth(),
-        style = SectionStyle.InsetGrouped,
+        style = WorkbenchSectionStyle.InsetGrouped,
     ) {
         rows.forEach { (label, value) ->
-            SectionItem(
+            WorkbenchSectionItem(
                 title = {
                     Text(
                         text = label,
