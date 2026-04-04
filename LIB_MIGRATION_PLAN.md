@@ -122,7 +122,7 @@ Recommended cleanup:
 Why not Wave 1:
 
 - Reusable enough, but still product-branded
-- `kbox-plugin-runtime` test wiring depends on `apps/kbox/runtime-fixtures`
+- `kbox-plugin-runtime` test wiring depends on `lib/kbox-plugin-runtime-fixture-hello`
 - Module boundary is publishable, but test and naming cleanup should happen first
 
 Recommended cleanup:
