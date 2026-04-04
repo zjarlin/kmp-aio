@@ -8,6 +8,7 @@ import site.addzero.core.network.ApiClientSpi
 import site.addzero.core.network.ApiClients
 import site.addzero.core.network.HttpClientFactory
 import site.addzero.generated.RouteKeys
+import site.addzero.component.chat.AddChatOverlayState
 import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 
 @KoinApplication(
@@ -29,6 +30,11 @@ class KCloudUiScanKoinModule {
 
 @Module
 class KCloudUiSupportKoinModule {
+    @Single
+    fun provideAiAssistantOverlayState(): AddChatOverlayState {
+        return AddChatOverlayState()
+    }
+
     @Single
     fun provideHttpClientFactory(): HttpClientFactory {
         return HttpClientFactory()

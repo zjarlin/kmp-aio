@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import site.addzero.component.chat.AddChatOverlayState
 import site.addzero.kcloud.design.button.KCloudButtonVariant
 import site.addzero.kcloud.design.button.KCloudIconButton
 import site.addzero.kcloud.shell.KCloudShellState
@@ -33,14 +34,15 @@ fun RowScope.KCloudShellActions(
     darkTheme: Boolean,
     onThemeToggle: () -> Unit,
     shellState: KCloudShellState = koinInject(),
+    aiOverlayState: AddChatOverlayState = koinInject(),
 ) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         KCloudShellIconButton(
-            tooltip = if (shellState.aiAssistantVisible) "关闭 AI 助手" else "打开 AI 助手",
-            onClick = shellState::toggleAiAssistant,
-            variant = if (shellState.aiAssistantVisible) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
+            tooltip = if (aiOverlayState.visible) "关闭 AI 助手" else "打开 AI 助手",
+            onClick = aiOverlayState::toggle,
+            variant = if (aiOverlayState.visible) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
         ) {
             Icon(
                 imageVector = Icons.Default.SmartToy,

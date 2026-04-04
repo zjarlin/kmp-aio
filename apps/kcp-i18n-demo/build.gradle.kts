@@ -15,8 +15,8 @@ buildscript {
         ?.substringAfter("=")
         ?.trim()
         ?.takeIf(String::isNotBlank)
-    val resolvedAddzeroLibJvmVersion = project.providers.gradleProperty("addzeroLibJvmVersion")
-        .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
+    val resolvedKcpI18nVersion = project.providers.gradleProperty("addzeroKcpI18nVersion")
+        .orElse(localAddzeroLibJvmVersion ?: "2026.10330.12238")
         .get()
     val localI18nPluginJar = localAddzeroLibJvmDir
         ?.resolve("lib/kcp/kcp-i18n-gradle-plugin/build/libs")
@@ -41,7 +41,7 @@ buildscript {
             classpath(files(localI18nPluginJar))
             classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.20-RC")
         } else {
-            classpath("site.addzero.kcp.i18n:site.addzero.kcp.i18n.gradle.plugin:$resolvedAddzeroLibJvmVersion")
+            classpath("site.addzero.kcp.i18n:site.addzero.kcp.i18n.gradle.plugin:$resolvedKcpI18nVersion")
         }
     }
 }

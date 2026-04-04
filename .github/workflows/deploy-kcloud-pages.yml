@@ -34,6 +34,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout addzero-lib-jvm
+        uses: actions/checkout@v4
+        with:
+          repository: zjarlin/addzero-lib-jvm
+          path: addzero-lib-jvm
+          fetch-depth: 1
+
+      - name: Prepare shared build-logic checkouts
+        shell: bash
+        run: |
+          rm -rf checkouts/build-logic addzero-lib-jvm/checkouts/build-logic
+          mkdir -p checkouts addzero-lib-jvm/checkouts
+          git clone --depth 1 https://gitee.com/zjarlin/build-logic.git checkouts/build-logic
+          python - <<'PY'
+          from pathlib import Path
+
+          catalog = Path("checkouts/build-logic/gradle/libs.versions.toml")
+          text = catalog.read_text()
+          if 'jna = "5.14.0"' not in text:
+              text = text.replace('jimmer-ksp-version = "0.9.120"\n', 'jimmer-ksp-version = "0.9.120"\njna = "5.14.0"\n')
+          alias = 'net-java-dev-jna-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }\n'
+          marker = 'javazoom-jlayer = { group = "javazoom", name = "jlayer", version.ref = "javazoom-jlayer" }\n'
+          if alias not in text:
+              text = text.replace(marker, marker + alias)
+          catalog.write_text(text)
+          PY
+          cp -R checkouts/build-logic addzero-lib-jvm/checkouts/build-logic
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:

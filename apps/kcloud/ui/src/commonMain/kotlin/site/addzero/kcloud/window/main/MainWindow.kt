@@ -16,11 +16,14 @@ import site.addzero.workbenchshell.RenderAdminScaffolding
 fun RenderKCloudWindow(
     scaffolding: ScaffoldingImpl,
     shellThemeState: ShellThemeState = org.koin.compose.koinInject(),
+    shellState: KCloudShellState = org.koin.compose.koinInject(),
 ) {
     val themeMode = shellThemeState.themeMode
     val darkTheme = themeMode.resolveDarkTheme(
         systemDarkTheme = isSystemInDarkTheme(),
     )
+    val uiMetrics = currentKCloudUiMetrics()
+    val sidebarVisible = shellState.sidebarVisible
     val toggleTheme = remember(shellThemeState, darkTheme) {
         {
             shellThemeState.updateThemeMode(
@@ -36,32 +39,15 @@ fun RenderKCloudWindow(
     Theme(
         darkTheme = darkTheme,
     ) {
-        KCloudWorkbenchFrame(
+        RenderAdminScaffolding(
             scaffolding = scaffolding,
             darkTheme = darkTheme,
             onThemeToggle = toggleTheme,
+            sidebarVisible = sidebarVisible,
+            defaultSidebarRatio = uiMetrics.sidebarRatio,
+            minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
+            maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
         )
         scaffolding.RenderOverlay()
     }
-}
-
-@Composable
-private fun KCloudWorkbenchFrame(
-    scaffolding: ScaffoldingImpl,
-    darkTheme: Boolean,
-    onThemeToggle: () -> Unit,
-    shellState: KCloudShellState = org.koin.compose.koinInject(),
-) {
-    val uiMetrics = currentKCloudUiMetrics()
-    val sidebarVisible = shellState.sidebarVisible
-
-    RenderAdminScaffolding(
-        scaffolding = scaffolding,
-        darkTheme = darkTheme,
-        onThemeToggle = onThemeToggle,
-        sidebarVisible = sidebarVisible,
-        defaultSidebarRatio = uiMetrics.sidebarRatio,
-        minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
-        maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
-    )
 }

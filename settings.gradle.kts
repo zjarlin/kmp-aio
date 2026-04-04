@@ -40,11 +40,14 @@ pluginManagement {
         ?.substringAfter("=")
         ?.trim()
         ?.takeIf(String::isNotBlank)
+    val resolvedKcpI18nVersion = providers.gradleProperty("addzeroKcpI18nVersion")
+        .orElse(localAddzeroLibJvmVersion ?: "2026.10330.12238")
+        .get()
     val resolvedAddzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion")
         .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
         .get()
     plugins {
-        id("site.addzero.kcp.i18n") version resolvedAddzeroLibJvmVersion
+        id("site.addzero.kcp.i18n") version resolvedKcpI18nVersion
         id("site.addzero.ksp.modbus-rtu") version resolvedAddzeroLibJvmVersion
         id("site.addzero.ksp.modbus-tcp") version resolvedAddzeroLibJvmVersion
     }
@@ -56,8 +59,10 @@ val localAddzeroLibJvmCandidateDirs = listOf(
 )
 val localAddzeroLibJvmDir = localAddzeroLibJvmCandidateDirs
     .firstOrNull { candidateDir -> candidateDir.resolve("settings.gradle.kts").isFile }
-val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir
-    ?.resolve("checkouts/build-logic/gradle/libs.versions.toml")
+val preferredBuildLogicCatalogFile = listOf(
+    file("checkouts/build-logic/gradle/libs.versions.toml"),
+    localAddzeroLibJvmDir?.resolve("checkouts/build-logic/gradle/libs.versions.toml"),
+).firstOrNull { catalogFile -> catalogFile?.isFile == true }
 val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
     ?.resolve("gradle.properties")
     ?.takeIf { file -> file.isFile }
@@ -69,6 +74,20 @@ val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
 val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion")
     .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
     .get()
+val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir != null
+val hasLocalBuildLogicCheckout = file("checkouts/build-logic/settings.gradle.kts").isFile
+val includeKcpI18nDemo = providers.gradleProperty("includeKcpI18nDemo")
+    .map(String::toBoolean)
+    .orElse(false)
+    .get()
+val includeLiquidDemo = providers.gradleProperty("includeLiquidDemo")
+    .map(String::toBoolean)
+    .orElse(hasLocalAddzeroLibJvm)
+    .get()
+val optionalModuleScanDecisions = mapOf(
+    "apps/kcp-i18n-demo" to includeKcpI18nDemo,
+    "apps/liquiddemo" to includeLiquidDemo,
+)
 
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
@@ -89,6 +108,7 @@ fun File.shouldSkipModuleScan(rootDir: File): Boolean {
 
     val relativePath = relativeTo(rootDir).invariantSeparatorsPath
     if (relativePath == "checkouts" || relativePath.startsWith("checkouts/")) return true
+    if (relativePath == "addzero-lib-jvm" || relativePath.startsWith("addzero-lib-jvm/")) return true
     if (relativePath.split('/').any { segment -> segment.startsWith(".") }) return true
     return false
 }
@@ -105,7 +125,12 @@ fun Settings.includeLocalModules() {
     val includedModules = root
         .walkTopDown()
         .onEnter { dir -> !dir.shouldSkipModuleScan(root) }
-        .filter { dir -> dir != root && dir.isDirectory && dir.resolve("build.gradle.kts").isFile }
+        .filter { dir ->
+            dir != root &&
+                dir.isDirectory &&
+                dir.resolve("build.gradle.kts").isFile &&
+                optionalModuleScanDecisions[dir.relativeTo(root).invariantSeparatorsPath] != false
+        }
         .map { dir -> dir.toGradleProjectPath(root) }
         .toList()
 
@@ -128,9 +153,7 @@ fun Settings.includeLocalModules() {
 
 includeLocalModules()
 
-val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir != null
-
-if (!hasLocalAddzeroLibJvm) {
+if (!hasLocalAddzeroLibJvm && !hasLocalBuildLogicCheckout) {
     apply(plugin = "site.addzero.gradle.plugin.addzero-git-dependency")
 }
 
@@ -309,10 +332,10 @@ if (hasLocalAddzeroLibJvm) {
 }
 
 dependencyResolutionManagement {
-    if (localAddzeroBuildLogicCatalogFile?.isFile == true) {
+    if (preferredBuildLogicCatalogFile?.isFile == true) {
         versionCatalogs {
             create("libs") {
-                from(files(localAddzeroBuildLogicCatalogFile))
+                from(files(preferredBuildLogicCatalogFile))
             }
         }
     }

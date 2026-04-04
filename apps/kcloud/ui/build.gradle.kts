@@ -34,6 +34,7 @@ kotlin {
         implementation(project(":apps:kcloud:plugins:vibepocket:ui"))
         implementation(project(":lib:compose:shadcn-compose-component"))
         implementation(project(":lib:tool-kmp:network-starter"))
+        implementation(project(":lib:compose:compose-native-component-chat"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
     }
