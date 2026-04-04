@@ -8,15 +8,22 @@ pluginManagement {
         maven(url = "https://plugins.gradle.org/m2/")
     }
     val localBuildLogicDir = file("checkouts/build-logic")
-    val fallbackBuildLogicDir = file("../addzero-lib-jvm/checkouts/build-logic")
-    val resolvedBuildLogicDir = listOf(localBuildLogicDir, fallbackBuildLogicDir)
+    val fallbackBuildLogicDirs = listOf(
+        file("../addzero-lib-jvm/checkouts/build-logic"),
+        file("addzero-lib-jvm/checkouts/build-logic"),
+    )
+    val resolvedBuildLogicDir = (listOf(localBuildLogicDir) + fallbackBuildLogicDirs)
         .firstOrNull { buildLogicDir -> buildLogicDir.resolve("src/main/kotlin").isDirectory }
     if (resolvedBuildLogicDir != null) {
         includeBuild(resolvedBuildLogicDir) {
             name = "build-logic"
         }
     }
-    val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+    val localAddzeroLibJvmDir = listOf(
+        file("../addzero-lib-jvm"),
+        file("addzero-lib-jvm"),
+    ).firstOrNull { candidate -> candidate.resolve("settings.gradle.kts").isFile }
+        ?: file("../addzero-lib-jvm")
     val useLocalAddzeroLibJvmPluginBuild = providers.gradleProperty("useLocalAddzeroLibJvmPluginBuild")
         .map(String::toBoolean)
         .orElse(false)
@@ -42,7 +49,11 @@ pluginManagement {
     }
 }
 
-val localAddzeroLibJvmDir = file("../addzero-lib-jvm")
+val localAddzeroLibJvmDir = listOf(
+    file("../addzero-lib-jvm"),
+    file("addzero-lib-jvm"),
+).firstOrNull { candidate -> candidate.resolve("settings.gradle.kts").isFile }
+    ?: file("../addzero-lib-jvm")
 val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir.resolve("checkouts/build-logic/gradle/libs.versions.toml")
 val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion").orNull ?: "2026.10329.10127"
 
@@ -55,7 +66,7 @@ plugins {
     id("site.addzero.gradle.plugin.addzero-git-dependency") version "+" apply false
 }
 
-val ignoredModuleScanDirNames = setOf("build", "generated", "out", "node_modules")
+val ignoredModuleScanDirNames = setOf("build", "generated", "out", "node_modules", "addzero-lib-jvm")
 
 fun File.shouldSkipModuleScan(rootDir: File): Boolean {
     if (!isDirectory) return true
@@ -126,6 +137,7 @@ if (hasLocalAddzeroLibJvm) {
     remapExternalProject(":lib:kcp:kcp-i18n-runtime", "lib/kcp/kcp-i18n-runtime")
     remapExternalProject(":lib:compose", "lib/compose")
     remapExternalProject(":lib:compose:app-sidebar", "lib/compose/app-sidebar")
+    remapExternalProject(":lib:compose:compose-apple-corner", "lib/compose/compose-apple-corner")
     remapExternalProject(":lib:compose:compose-icon-map", "lib/compose/compose-icon-map")
     remapExternalProject(":lib:compose:compose-native-component-high-level", "lib/compose/compose-native-component-high-level")
     remapExternalProject(":lib:compose:compose-native-component-button", "lib/compose/compose-native-component-button")

@@ -86,17 +86,28 @@ private fun RouteSidebar(
 ) {
     val currentOnNodeClick by rememberUpdatedState(onNodeClick)
     val uiMetrics = currentKCloudUiMetrics()
+    val treeMetrics = remember(uiMetrics.treeMetrics) {
+        uiMetrics.treeMetrics.copy(
+            rowHorizontalPadding = 10.dp,
+            contentSpacing = 8.dp,
+            toggleSlotWidth = 14.dp,
+            selectedIndicatorSpacing = 8.dp,
+        )
+    }
     val colorScheme = MaterialTheme.colorScheme
     val treePanelColor = colorScheme.surfaceVariant.copy(alpha = 0.18f)
     val treeColors = remember(colorScheme) {
         AddTreeColors(
             rowContainer = Color.Transparent,
+            rowHoveredContainer = Color(0xFF111111),
             rowSelectedContainer = colorScheme.surfaceVariant.copy(alpha = 0.26f),
             rowSelectedBorder = colorScheme.outlineVariant.copy(alpha = 0.58f),
             rowSelectedIndicator = colorScheme.onSurface,
             content = colorScheme.onSurface,
+            contentHovered = Color.White,
             contentSelected = colorScheme.onSurface,
             secondaryContent = colorScheme.onSurfaceVariant,
+            secondaryContentHovered = Color.White,
             badgeContainer = colorScheme.surface.copy(alpha = 0.84f),
             badgeBorder = colorScheme.outlineVariant.copy(alpha = 0.56f),
             badgeContent = colorScheme.onSurfaceVariant,
@@ -188,7 +199,7 @@ private fun RouteSidebar(
                         AddTree(
                             viewModel = treeViewModel,
                             modifier = Modifier.fillMaxSize(),
-                            metrics = uiMetrics.treeMetrics,
+                            metrics = treeMetrics,
                             colors = treeColors,
                             selectableLabel = true,
                         )

@@ -18,6 +18,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout addzero-lib-jvm
+        uses: actions/checkout@v4
+        with:
+          repository: zjarlin/addzero-lib-jvm
+          path: addzero-lib-jvm
+          fetch-depth: 1
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -60,6 +67,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout addzero-lib-jvm
+        uses: actions/checkout@v4
+        with:
+          repository: zjarlin/addzero-lib-jvm
+          path: addzero-lib-jvm
+          fetch-depth: 1
 
       - name: Setup Java
         uses: actions/setup-java@v4
