@@ -41,12 +41,10 @@ jobs:
           path: addzero-lib-jvm
           fetch-depth: 1
 
-      - name: Checkout build-logic
-        uses: actions/checkout@v4
-        with:
-          repository: zjarlin/build-logic
-          path: addzero-lib-jvm/checkouts/build-logic
-          fetch-depth: 1
+      - name: Fetch build-logic
+        run: |
+          mkdir -p addzero-lib-jvm/checkouts
+          git clone --depth 1 https://gitee.com/zjarlin/build-logic.git addzero-lib-jvm/checkouts/build-logic
 
       - name: Setup Java
         uses: actions/setup-java@v4
