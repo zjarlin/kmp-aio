@@ -55,6 +55,9 @@ val localAddzeroLibJvmDir = listOf(
 ).firstOrNull { candidate -> candidate.resolve("settings.gradle.kts").isFile }
     ?: file("../addzero-lib-jvm")
 val localAddzeroBuildLogicCatalogFile = localAddzeroLibJvmDir.resolve("checkouts/build-logic/gradle/libs.versions.toml")
+val localAddzeroBuildLogicCatalogText = localAddzeroBuildLogicCatalogFile
+    .takeIf { file -> file.isFile }
+    ?.readText()
 val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion").orNull ?: "2026.10329.10127"
 
 rootProject.name = rootDir.name
@@ -263,6 +266,10 @@ dependencyResolutionManagement {
         versionCatalogs {
             create("libs") {
                 from(files(localAddzeroBuildLogicCatalogFile))
+                if (localAddzeroBuildLogicCatalogText?.contains("net-java-dev-jna-jna") != true) {
+                    version("jna", "5.14.0")
+                    library("net-java-dev-jna-jna", "net.java.dev.jna", "jna").versionRef("jna")
+                }
             }
         }
     }
