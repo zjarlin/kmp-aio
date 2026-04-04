@@ -11,98 +11,98 @@ interface AppConfigSpec {
     @ConfigCenterItem(
         key = "ktor.deployment.host",
         comment = "KCloud 服务监听地址。",
-        defaultValue = "0.0.0.0",
+        required = true,
     )
     val serverHost: String
 
     @ConfigCenterItem(
         key = "ktor.deployment.port",
         comment = "KCloud 服务监听端口。",
-        defaultValue = "8080",
+        required = true,
     )
     val serverPort: Int
 
     @ConfigCenterItem(
         key = "ktor.environment",
         comment = "KCloud 当前环境标识，用于映射 dev/prod 等配置中心 active。",
-        defaultValue = "dev",
+        required = true,
     )
     val ktorEnvironment: String
 
     @ConfigCenterItem(
         key = "desktop.server.publicHost",
         comment = "桌面内嵌服务回写给 UI 使用的主机名。",
-        defaultValue = "localhost",
+        required = true,
     )
     val desktopServerPublicHost: String
 
     @ConfigCenterItem(
         key = "desktop.server.defaultPort",
         comment = "桌面内嵌服务默认端口。",
-        defaultValue = "18080",
+        required = true,
     )
     val desktopServerPort: Int
 
     @ConfigCenterItem(
         key = "desktop.app.directoryName",
         comment = "桌面端数据与缓存目录的应用目录名。",
-        defaultValue = "KCloud",
+        required = true,
     )
     val desktopAppDirectoryName: String
 
     @ConfigCenterItem(
         key = "desktop.sqlite.fileName",
         comment = "桌面端 SQLite 文件名。",
-        defaultValue = "kcloud.db",
+        required = true,
     )
     val desktopSqliteFileName: String
 
     @ConfigCenterItem(
         key = "desktop.banner.text",
         comment = "桌面内嵌服务 Banner 标题。",
-        defaultValue = "KCLOUD [DESKTOP]",
+        required = true,
     )
     val desktopBannerText: String
 
     @ConfigCenterItem(
         key = "desktop.banner.subtitle",
         comment = "桌面内嵌服务 Banner 副标题。",
-        defaultValue = "Embedded Dev Server",
+        required = true,
     )
     val desktopBannerSubtitle: String
 
     @ConfigCenterItem(
         key = "desktop.openapi.enabled",
         comment = "桌面内嵌服务是否启用 OpenAPI。",
-        defaultValue = "false",
+        required = true,
     )
     val desktopOpenapiEnabled: Boolean
 
     @ConfigCenterItem(
         key = "desktop.openapi.path",
         comment = "桌面内嵌服务 OpenAPI 页面路径。",
-        defaultValue = "/swagger",
+        required = true,
     )
     val desktopOpenapiPath: String
 
     @ConfigCenterItem(
         key = "desktop.openapi.spec",
         comment = "桌面内嵌服务 OpenAPI 文档路径。",
-        defaultValue = "openapi/documentation.yaml",
+        required = true,
     )
     val desktopOpenapiSpec: String
 
     @ConfigCenterItem(
         key = "desktop.flyway.enabled",
         comment = "桌面内嵌服务是否启用 Flyway。",
-        defaultValue = "false",
+        required = true,
     )
     val desktopFlywayEnabled: Boolean
 
     @ConfigCenterItem(
         key = "desktop.s3.enabled",
         comment = "桌面内嵌服务是否启用 S3。",
-        defaultValue = "false",
+        required = true,
     )
     val desktopS3Enabled: Boolean
 
@@ -121,7 +121,7 @@ interface AppConfigSpec {
     @ConfigCenterItem(
         key = "datasources.sqlite.enabled",
         comment = "是否启用 SQLite 数据源。",
-        defaultValue = "true",
+        required = true,
     )
     val sqliteEnabled: Boolean
 
@@ -134,14 +134,14 @@ interface AppConfigSpec {
     @ConfigCenterItem(
         key = "datasources.sqlite.driver",
         comment = "SQLite 数据源的 JDBC 驱动类名。",
-        defaultValue = "org.sqlite.JDBC",
+        required = true,
     )
     val sqliteDriver: String
 
     @ConfigCenterItem(
         key = "datasources.postgres.enabled",
         comment = "是否启用 PostgreSQL 数据源。",
-        defaultValue = "false",
+        required = true,
     )
     val postgresEnabled: Boolean
 

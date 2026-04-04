@@ -9,13 +9,12 @@ import io.ktor.server.netty.*
 import io.ktor.server.routing.*
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.configcenter.ConfigCenter
-import site.addzero.configcenter.CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY
 import site.addzero.kcloud.config.AppConfigKeys
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.starter.installConfigCenterAdminIfEnabled
 import site.addzero.starter.installEffectiveConfig
 import site.addzero.starter.normalizeConfigCenterActive
+import site.addzero.starter.readConfigCenterValues
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import site.addzero.starter.withConfigCenterOverrides
@@ -32,10 +31,7 @@ private var embeddedApplicationConfigOverride: ApplicationConfig? = null
 @Volatile
 private var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
 @Volatile
-private var embeddedDesktopBaseUrl: String = buildEmbeddedDesktopBaseUrl(
-    publicHost = defaultDesktopPublicHost(),
-    port = defaultDesktopPort(),
-)
+private var embeddedDesktopBaseUrl: String? = null
 
 interface EmbeddedDesktopServerHandle : AutoCloseable {
     val baseUrl: String
@@ -55,7 +51,7 @@ fun main(args: Array<String>) {
 }
 
 /**
- * 由 application.conf 中 ktor.application.modules 指定调用。
+ * 由 Ktor 启动配置指定调用。
  */
 fun Application.module(
     overrideModules: List<KoinModule> = emptyList(),
@@ -90,27 +86,26 @@ fun serverApplication(
     host: String? = null,
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+    require(host == null && port == null) {
+        "host/port 覆盖已禁用，请改为从配置中心提供 ${AppConfigKeys.SERVER_HOST} 与 ${AppConfigKeys.SERVER_PORT}。"
+    }
     embeddedApplicationConfigOverride = null
     embeddedDesktopKoinConfigurer = null
-    System.clearProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
     val config = loadServerConfig(configPath)
-
-    val effectiveConfig = config.withConfigCenterOverrides(
-        namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
-        active = resolveConfigCenterActive(config),
+    val active = resolveConfigCenterActive(config)
+    val runtimeSettings = resolveRuntimeSettings(
+        config = config,
+        active = active,
     )
-    val env = ConfigCenter.getEnv(effectiveConfig)
-    val deploymentEnv = env.path("ktor", "deployment")
 
-    val finalHost = host
-        ?: System.getenv("SERVER_HOST")
-        ?: deploymentEnv.string("host", AppConfigKeys.serverHost.defaultValue)
-        ?: defaultServerHost()
-
-    val finalPort = port
-        ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: deploymentEnv.int("port", AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
-        ?: defaultServerPort()
+    val effectiveConfig = HoconApplicationConfig(
+        serverRuntimeOverrides().resolve(),
+    ).withFallback(
+        config.withConfigCenterOverrides(
+            namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+            active = active,
+        ),
+    )
 
     val environment = applicationEnvironment {
         this.config = effectiveConfig
@@ -121,8 +116,8 @@ fun serverApplication(
         environment = environment,
         configure = {
             connectors += EngineConnectorBuilder().apply {
-                this.host = finalHost
-                this.port = finalPort
+                this.host = runtimeSettings.serverHost
+                this.port = runtimeSettings.serverPort
             }
         },
         module = Application::module,
@@ -131,43 +126,44 @@ fun serverApplication(
 
 /**
  * 桌面端内嵌启动入口（非阻塞），返回 server 实例。
- * 从 application.conf 读取端口配置，支持环境变量覆盖。
+ * 从配置中心读取桌面端内嵌启动参数。
  */
 fun ktorApplication(
     configPath: String? = null,
     host: String? = null,
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+    require(host == null && port == null) {
+        "host/port 覆盖已禁用，请改为从配置中心提供 ${AppConfigKeys.SERVER_HOST} 与 ${AppConfigKeys.DESKTOP_SERVER_PORT}。"
+    }
     val config = loadEmbeddedConfig(configPath)
-    val effectiveConfig = config.withConfigCenterOverrides(
-        namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
-        active = resolveConfigCenterActive(config),
+    val active = resolveConfigCenterActive(config)
+    val runtimeSettings = resolveRuntimeSettings(
+        config = config,
+        active = active,
     )
-    val env = ConfigCenter.getEnv(effectiveConfig)
-    val deploymentEnv = env.path("ktor", "deployment")
+    ensurePortAvailable(runtimeSettings.desktopServerPort)
+    val desktopPaths = resolveEmbeddedDesktopPaths(runtimeSettings)
+    val effectiveConfig = HoconApplicationConfig(
+        embeddedDesktopRuntimeOverrides(
+            paths = desktopPaths,
+            settings = runtimeSettings,
+        ).withFallback(
+            embeddedDesktopOverrides(),
+        ).resolve(),
+    ).withFallback(
+        config.withConfigCenterOverrides(
+            namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+            active = active,
+        ),
+    )
     embeddedApplicationConfigOverride = effectiveConfig
     System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
-
-    // 优先级：参数 > 环境变量 > 配置文件 > 默认值
-    val requestedHost = host
-        ?: System.getenv("SERVER_HOST")
-        ?: deploymentEnv.string("host", AppConfigKeys.serverHost.defaultValue)
-        ?: defaultServerHost()
-
-    val requestedPort = port
-        ?: System.getenv("SERVER_PORT")?.toIntOrNull()
-        ?: deploymentEnv.int("port", AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
-        ?: defaultDesktopPort()
-    val finalPort = resolveEmbeddedDesktopPort(requestedPort)
     embeddedDesktopBaseUrl = buildEmbeddedDesktopBaseUrl(
-        publicHost = defaultDesktopPublicHost(),
-        port = finalPort,
-    )
-    System.setProperty(
-        CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY,
-        embeddedDesktopBaseUrl.removeSuffix("/"),
+        publicHost = runtimeSettings.desktopServerPublicHost,
+        port = runtimeSettings.desktopServerPort,
     )
 
     val environment = applicationEnvironment {
@@ -179,8 +175,8 @@ fun ktorApplication(
         environment = environment,
         configure = {
             connectors += EngineConnectorBuilder().apply {
-                this.host = requestedHost
-                this.port = finalPort
+                this.host = runtimeSettings.serverHost
+                this.port = runtimeSettings.desktopServerPort
             }
         },
         module = Application::module,
@@ -188,18 +184,15 @@ fun ktorApplication(
     return embeddedServer
 }
 
-private fun resolveEmbeddedDesktopPort(
-    requestedPort: Int,
-): Int {
-    if (isLoopbackPortAvailable(requestedPort)) {
-        return requestedPort
-    }
-    return ServerSocket(0).use { socket ->
-        socket.localPort
+private fun ensurePortAvailable(
+    port: Int,
+) {
+    check(isPortAvailable(port)) {
+        "配置中心中的桌面端端口 ${AppConfigKeys.DESKTOP_SERVER_PORT}=$port 当前不可用，请调整配置后重试。"
     }
 }
 
-private fun isLoopbackPortAvailable(
+private fun isPortAvailable(
     port: Int,
 ): Boolean {
     return runCatching {
@@ -224,7 +217,9 @@ fun startEmbeddedDesktopServer(
         host = host,
         port = port,
     ).start(wait = false)
-    val baseUrl = embeddedDesktopBaseUrl
+    val baseUrl = requireNotNull(embeddedDesktopBaseUrl) {
+        "embeddedDesktopBaseUrl 尚未初始化。"
+    }
 
     return object : EmbeddedDesktopServerHandle {
         override val baseUrl: String = baseUrl
@@ -236,32 +231,21 @@ fun startEmbeddedDesktopServer(
             )
             embeddedDesktopKoinConfigurer = null
             embeddedApplicationConfigOverride = null
+            embeddedDesktopBaseUrl = null
             System.clearProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
             System.clearProperty(EMBEDDED_DESKTOP_MODE_PROPERTY)
             System.clearProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY)
-            System.clearProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
         }
     }
 }
 
 private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
-    val desktopPaths = resolveEmbeddedDesktopPaths()
     val resolvedConfig = configPath?.let { path ->
-        ConfigFactory.parseFile(resolveConfigFile(path))
-    } ?: run {
-        val env = System.getenv("KTOR_ENV")
-            ?.trim()
-            ?.ifBlank { null }
-            ?: defaultKtorEnvironment()
-        ConfigFactory
-            .parseResources("application-$env.conf")
-            .withFallback(embeddedDesktopDefaults())
-            .withFallback(ConfigFactory.load())
-    }
+        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
+    } ?: ConfigFactory.load()
 
     return HoconApplicationConfig(
-        embeddedDesktopRuntimeOverrides(desktopPaths)
-            .withFallback(embeddedDesktopOverrides())
+        embeddedDesktopOverrides()
             .withFallback(resolvedConfig)
             .resolve()
     )
@@ -282,10 +266,11 @@ private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
 private fun resolveConfigCenterActive(
     config: ApplicationConfig,
 ): String {
-    val env = ConfigCenter.getEnv(config).path("ktor")
-    val active = env.string("environment", AppConfigKeys.ktorEnvironment.defaultValue)
-        ?: System.getenv("KTOR_ENV")
-        ?: defaultKtorEnvironment()
+    val active = config.propertyOrNull(AppConfigKeys.KTOR_ENVIRONMENT)
+        ?.getString()
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: error("缺少启动配置 ${AppConfigKeys.KTOR_ENVIRONMENT}，无法确定配置中心 active。")
     return normalizeConfigCenterActive(active)
 }
 
@@ -341,45 +326,6 @@ private fun serverRuntimeOverrides() = ConfigFactory.parseString(
     """.trimIndent()
 )
 
-private fun embeddedDesktopDefaults() = ConfigFactory.parseString(
-    """
-    ktor {
-      deployment {
-        port = ${defaultDesktopPort()}
-        host = "${defaultServerHost()}"
-      }
-      application {
-        modules = [site.addzero.kcloud.ApplicationKt.module]
-      }
-    }
-    banner {
-      text = "${defaultDesktopBannerText()}"
-      subtitle = "${defaultDesktopBannerSubtitle()}"
-    }
-    openapi {
-      enabled = ${defaultDesktopOpenapiEnabled()}
-      path = "${defaultDesktopOpenapiPath()}"
-      spec = "${defaultDesktopOpenapiSpec()}"
-    }
-    flyway {
-      enabled = ${defaultDesktopFlywayEnabled()}
-    }
-    datasources {
-      sqlite {
-        enabled = ${defaultSqliteEnabled()}
-        url = "jdbc:sqlite:${defaultDesktopSqliteFileName()}"
-        driver = "${defaultSqliteDriver()}"
-      }
-      postgres {
-        enabled = ${defaultPostgresEnabled()}
-      }
-    }
-    s3 {
-      enabled = ${defaultDesktopS3Enabled()}
-    }
-    """.trimIndent()
-)
-
 private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
     """
     ktor {
@@ -390,15 +336,31 @@ private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
     """.trimIndent()
 )
 
-private fun embeddedDesktopRuntimeOverrides(paths: EmbeddedDesktopPaths) =
+private fun embeddedDesktopRuntimeOverrides(
+    paths: EmbeddedDesktopPaths,
+    settings: KCloudRuntimeSettings,
+) =
     ConfigFactory.empty()
-        .withValue(AppConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(defaultSqliteEnabled()))
+        .withValue(AppConfigKeys.SERVER_HOST, ConfigValueFactory.fromAnyRef(settings.serverHost))
+        .withValue(AppConfigKeys.SERVER_PORT, ConfigValueFactory.fromAnyRef(settings.desktopServerPort))
+        .withValue(AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST, ConfigValueFactory.fromAnyRef(settings.desktopServerPublicHost))
+        .withValue(AppConfigKeys.DESKTOP_SERVER_PORT, ConfigValueFactory.fromAnyRef(settings.desktopServerPort))
+        .withValue(AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME, ConfigValueFactory.fromAnyRef(settings.desktopAppDirectoryName))
+        .withValue(AppConfigKeys.DESKTOP_SQLITE_FILE_NAME, ConfigValueFactory.fromAnyRef(settings.desktopSqliteFileName))
+        .withValue("banner.text", ConfigValueFactory.fromAnyRef(settings.desktopBannerText))
+        .withValue("banner.subtitle", ConfigValueFactory.fromAnyRef(settings.desktopBannerSubtitle))
+        .withValue("openapi.enabled", ConfigValueFactory.fromAnyRef(settings.desktopOpenapiEnabled))
+        .withValue("openapi.path", ConfigValueFactory.fromAnyRef(settings.desktopOpenapiPath))
+        .withValue("openapi.spec", ConfigValueFactory.fromAnyRef(settings.desktopOpenapiSpec))
+        .withValue("flyway.enabled", ConfigValueFactory.fromAnyRef(settings.desktopFlywayEnabled))
+        .withValue(AppConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(settings.sqliteEnabled))
         .withValue(AppConfigKeys.SQLITE_URL, ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
         .withValue(
             AppConfigKeys.SQLITE_DRIVER,
-            ConfigValueFactory.fromAnyRef(defaultSqliteDriver()),
+            ConfigValueFactory.fromAnyRef(settings.sqliteDriver),
         )
-        .withValue(AppConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(defaultPostgresEnabled()))
+        .withValue(AppConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(settings.postgresEnabled))
+        .withValue("s3.enabled", ConfigValueFactory.fromAnyRef(settings.desktopS3Enabled))
         .withValue("kcloud.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
         .withValue("kcloud.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))
         .withValue("kcloud.runtime.cacheDir", ConfigValueFactory.fromAnyRef(paths.cacheDir.absolutePath))
@@ -412,11 +374,63 @@ private data class EmbeddedDesktopPaths(
         get() = "jdbc:sqlite:${sqliteFile.absolutePath}"
 }
 
-private fun resolveEmbeddedDesktopPaths(): EmbeddedDesktopPaths {
-    val dataDir = preferredDesktopDataDir().ensureDirectory()
-    val cacheDir = preferredDesktopCacheDir().ensureDirectory()
-    val sqliteFile = File(dataDir, defaultDesktopSqliteFileName()).absoluteFile
-    migrateLegacyDatabaseIfNeeded(sqliteFile)
+private data class KCloudRuntimeSettings(
+    val serverHost: String,
+    val serverPort: Int,
+    val desktopServerPublicHost: String,
+    val desktopServerPort: Int,
+    val desktopAppDirectoryName: String,
+    val desktopSqliteFileName: String,
+    val desktopBannerText: String,
+    val desktopBannerSubtitle: String,
+    val desktopOpenapiEnabled: Boolean,
+    val desktopOpenapiPath: String,
+    val desktopOpenapiSpec: String,
+    val desktopFlywayEnabled: Boolean,
+    val desktopS3Enabled: Boolean,
+    val sqliteEnabled: Boolean,
+    val sqliteDriver: String,
+    val postgresEnabled: Boolean,
+)
+
+private fun resolveRuntimeSettings(
+    config: ApplicationConfig,
+    active: String,
+): KCloudRuntimeSettings {
+    val values = config.readConfigCenterValues(
+        namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+        active = active,
+    )
+    return KCloudRuntimeSettings(
+        serverHost = values.requireNonBlank(AppConfigKeys.SERVER_HOST, active),
+        serverPort = values.requireInt(AppConfigKeys.SERVER_PORT, active),
+        desktopServerPublicHost = values.requireNonBlank(AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST, active),
+        desktopServerPort = values.requireInt(AppConfigKeys.DESKTOP_SERVER_PORT, active),
+        desktopAppDirectoryName = values.requireNonBlank(AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME, active),
+        desktopSqliteFileName = values.requireNonBlank(AppConfigKeys.DESKTOP_SQLITE_FILE_NAME, active),
+        desktopBannerText = values.requireNonBlank(AppConfigKeys.DESKTOP_BANNER_TEXT, active),
+        desktopBannerSubtitle = values.requireNonBlank(AppConfigKeys.DESKTOP_BANNER_SUBTITLE, active),
+        desktopOpenapiEnabled = values.requireBoolean(AppConfigKeys.DESKTOP_OPENAPI_ENABLED, active),
+        desktopOpenapiPath = values.requireNonBlank(AppConfigKeys.DESKTOP_OPENAPI_PATH, active),
+        desktopOpenapiSpec = values.requireNonBlank(AppConfigKeys.DESKTOP_OPENAPI_SPEC, active),
+        desktopFlywayEnabled = values.requireBoolean(AppConfigKeys.DESKTOP_FLYWAY_ENABLED, active),
+        desktopS3Enabled = values.requireBoolean(AppConfigKeys.DESKTOP_S3_ENABLED, active),
+        sqliteEnabled = values.requireBoolean(AppConfigKeys.SQLITE_ENABLED, active),
+        sqliteDriver = values.requireNonBlank(AppConfigKeys.SQLITE_DRIVER, active),
+        postgresEnabled = values.requireBoolean(AppConfigKeys.POSTGRES_ENABLED, active),
+    )
+}
+
+private fun resolveEmbeddedDesktopPaths(
+    settings: KCloudRuntimeSettings,
+): EmbeddedDesktopPaths {
+    val dataDir = preferredDesktopDataDir(settings.desktopAppDirectoryName).ensureDirectory()
+    val cacheDir = preferredDesktopCacheDir(settings.desktopAppDirectoryName).ensureDirectory()
+    val sqliteFile = File(dataDir, settings.desktopSqliteFileName).absoluteFile
+    migrateLegacyDatabaseIfNeeded(
+        targetFile = sqliteFile,
+        sqliteFileName = settings.desktopSqliteFileName,
+    )
     return EmbeddedDesktopPaths(
         dataDir = dataDir,
         cacheDir = cacheDir,
@@ -424,10 +438,11 @@ private fun resolveEmbeddedDesktopPaths(): EmbeddedDesktopPaths {
     )
 }
 
-private fun preferredDesktopDataDir(): File {
+private fun preferredDesktopDataDir(
+    appDirectoryName: String,
+): File {
     val userHome = desktopUserHome()
     val osName = System.getProperty("os.name").orEmpty()
-    val appDirectoryName = defaultDesktopAppDirectoryName()
 
     return when {
         osName.contains("Mac", ignoreCase = true) -> {
@@ -452,10 +467,11 @@ private fun preferredDesktopDataDir(): File {
     }
 }
 
-private fun preferredDesktopCacheDir(): File {
+private fun preferredDesktopCacheDir(
+    appDirectoryName: String,
+): File {
     val userHome = desktopUserHome()
     val osName = System.getProperty("os.name").orEmpty()
-    val appDirectoryName = defaultDesktopAppDirectoryName()
 
     return when {
         osName.contains("Mac", ignoreCase = true) -> {
@@ -498,12 +514,15 @@ private fun desktopUserHome(): String {
     return System.getProperty("user.home").orEmpty()
 }
 
-private fun migrateLegacyDatabaseIfNeeded(targetFile: File) {
+private fun migrateLegacyDatabaseIfNeeded(
+    targetFile: File,
+    sqliteFileName: String,
+) {
     if (targetFile.exists()) {
         return
     }
 
-    val legacySource = legacyDatabaseCandidates()
+    val legacySource = legacyDatabaseCandidates(sqliteFileName)
         .firstOrNull { candidate ->
             candidate.exists() &&
                 candidate.isFile &&
@@ -519,14 +538,15 @@ private fun migrateLegacyDatabaseIfNeeded(targetFile: File) {
     }
 }
 
-private fun legacyDatabaseCandidates(): List<File> {
+private fun legacyDatabaseCandidates(
+    sqliteFileName: String,
+): List<File> {
     val workingDir = File(System.getProperty("user.dir").orEmpty()).absoluteFile
     val parentDir = workingDir.parentFile
-    val desktopSqliteFileName = defaultDesktopSqliteFileName()
 
     return buildList {
         add(File(workingDir, "kcloud-dev.db"))
-        add(File(workingDir, desktopSqliteFileName))
+        add(File(workingDir, sqliteFileName))
         add(File(workingDir, "kcloud-desktop.db"))
         add(File(workingDir, "server/kcloud.db"))
         add(File(workingDir, "vibepocket-dev.db"))
@@ -535,7 +555,7 @@ private fun legacyDatabaseCandidates(): List<File> {
         add(File(workingDir, "server/vibepocket.db"))
         if (parentDir != null) {
             add(File(parentDir, "kcloud-dev.db"))
-            add(File(parentDir, desktopSqliteFileName))
+            add(File(parentDir, sqliteFileName))
             add(File(parentDir, "kcloud-desktop.db"))
             add(File(parentDir, "vibepocket-dev.db"))
             add(File(parentDir, "vibepocket.db"))
@@ -551,70 +571,31 @@ private fun buildEmbeddedDesktopBaseUrl(
     return "http://$publicHost:$port/"
 }
 
-private fun defaultServerHost(): String {
-    return requireNotNull(AppConfigKeys.serverHost.defaultValue)
+private fun Map<String, String>.requireNonBlank(
+    key: String,
+    active: String,
+): String {
+    return this[key]
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: error("配置中心缺少必填项 namespace=$KCLOUD_CONFIG_CENTER_NAMESPACE active=$active key=$key")
 }
 
-private fun defaultServerPort(): Int {
-    return requireNotNull(AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
+private fun Map<String, String>.requireInt(
+    key: String,
+    active: String,
+): Int {
+    return requireNonBlank(key, active).toIntOrNull()
+        ?: error("配置中心项格式错误 namespace=$KCLOUD_CONFIG_CENTER_NAMESPACE active=$active key=$key，期望 Int。")
 }
 
-private fun defaultKtorEnvironment(): String {
-    return requireNotNull(AppConfigKeys.ktorEnvironment.defaultValue)
-}
-
-private fun defaultDesktopPublicHost(): String {
-    return requireNotNull(AppConfigKeys.desktopServerPublicHost.defaultValue)
-}
-
-private fun defaultDesktopPort(): Int {
-    return AppConfigKeys.desktopServerPort.defaultValue?.toIntOrNull() ?: defaultServerPort()
-}
-
-private fun defaultDesktopAppDirectoryName(): String {
-    return requireNotNull(AppConfigKeys.desktopAppDirectoryName.defaultValue)
-}
-
-private fun defaultDesktopSqliteFileName(): String {
-    return requireNotNull(AppConfigKeys.desktopSqliteFileName.defaultValue)
-}
-
-private fun defaultDesktopBannerText(): String {
-    return requireNotNull(AppConfigKeys.desktopBannerText.defaultValue)
-}
-
-private fun defaultDesktopBannerSubtitle(): String {
-    return requireNotNull(AppConfigKeys.desktopBannerSubtitle.defaultValue)
-}
-
-private fun defaultDesktopOpenapiEnabled(): Boolean {
-    return AppConfigKeys.desktopOpenapiEnabled.defaultValue?.toBooleanStrictOrNull() ?: false
-}
-
-private fun defaultDesktopOpenapiPath(): String {
-    return requireNotNull(AppConfigKeys.desktopOpenapiPath.defaultValue)
-}
-
-private fun defaultDesktopOpenapiSpec(): String {
-    return requireNotNull(AppConfigKeys.desktopOpenapiSpec.defaultValue)
-}
-
-private fun defaultDesktopFlywayEnabled(): Boolean {
-    return AppConfigKeys.desktopFlywayEnabled.defaultValue?.toBooleanStrictOrNull() ?: false
-}
-
-private fun defaultDesktopS3Enabled(): Boolean {
-    return AppConfigKeys.desktopS3Enabled.defaultValue?.toBooleanStrictOrNull() ?: false
-}
-
-private fun defaultSqliteEnabled(): Boolean {
-    return AppConfigKeys.sqliteEnabled.defaultValue?.toBooleanStrictOrNull() ?: true
-}
-
-private fun defaultSqliteDriver(): String {
-    return requireNotNull(AppConfigKeys.sqliteDriver.defaultValue)
-}
-
-private fun defaultPostgresEnabled(): Boolean {
-    return AppConfigKeys.postgresEnabled.defaultValue?.toBooleanStrictOrNull() ?: false
+private fun Map<String, String>.requireBoolean(
+    key: String,
+    active: String,
+): Boolean {
+    return when (requireNonBlank(key, active).lowercase()) {
+        "true" -> true
+        "false" -> false
+        else -> error("配置中心项格式错误 namespace=$KCLOUD_CONFIG_CENTER_NAMESPACE active=$active key=$key，期望 Boolean。")
+    }
 }

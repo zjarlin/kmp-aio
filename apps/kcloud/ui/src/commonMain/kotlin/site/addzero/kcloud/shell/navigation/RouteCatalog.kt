@@ -12,13 +12,16 @@ import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.ui.graphics.vector.ImageVector
-import site.addzero.annotation.Route
+import org.koin.core.annotation.Single
 import site.addzero.compose.icons.IconMap
+import site.addzero.workbenchshell.spi.screen.Screen
 import kotlin.math.roundToInt
 
+@Single
 class RouteCatalog(
-    val routeMeta: List<Route>,
+    screenRegistry: ScreenRegistry,
 ) {
+    val routeMeta: List<Screen> = screenRegistry.screens
     val scenes = buildScenes(
         routeMeta = routeMeta,
     )
@@ -99,7 +102,7 @@ data class SidebarNode(
 }
 
 data class RouteEntry(
-    val route: Route,
+    val route: Screen,
     val sceneId: String,
     val sceneName: String,
     val parentName: String,
@@ -116,15 +119,15 @@ data class RouteEntry(
 }
 
 private fun buildScenes(
-    routeMeta: List<Route>,
+    routeMeta: List<Screen>,
 ): List<RouteScene> {
     val orderedRoutes = routeMeta.sortedWith(
-        compareBy<Route> { route -> route.order }
+        compareBy<Screen> { route -> route.order }
             .thenBy { route -> route.title }
             .thenBy { route -> route.routePath },
     )
 
-    val sceneMap = linkedMapOf<String, MutableList<Route>>()
+    val sceneMap = linkedMapOf<String, MutableList<Screen>>()
     val sceneMetaById = linkedMapOf<String, SceneMeta>()
 
     orderedRoutes.forEach { route ->
@@ -170,7 +173,7 @@ private fun buildScenes(
                 routes = finalizedRoutes,
             ),
             defaultRoutePath = finalizedRoutes.firstOrNull { route ->
-                route.route.placement.defaultInScene
+                route.route.defaultInScene
             }?.routePath ?: finalizedRoutes.firstOrNull()?.routePath,
         )
     }.sortedWith(
@@ -309,9 +312,8 @@ private data class SceneMeta(
     val sort: Int,
 )
 
-private fun Route.resolveSceneMeta(): SceneMeta {
-    val scene = placement.scene
-    val sceneName = normalizeSceneName(scene.name.trim())
+private fun Screen.resolveSceneMeta(): SceneMeta {
+    val sceneName = normalizeSceneName(sceneName.trim())
     if (sceneName.isBlank()) {
         return SceneMeta(
             id = UNASSIGNED_SCENE_ID,
@@ -323,8 +325,8 @@ private fun Route.resolveSceneMeta(): SceneMeta {
     return SceneMeta(
         id = sceneName,
         name = sceneName,
-        iconName = scene.icon.ifBlank { "Apps" },
-        sort = scene.order,
+        iconName = sceneIcon.ifBlank { "Apps" },
+        sort = sceneOrder,
     )
 }
 
@@ -337,7 +339,7 @@ private fun normalizeSceneName(
     }
 }
 
-private fun Route.resolveParentName(): String {
+private fun Screen.resolveParentName(): String {
     return value.trim()
 }
 

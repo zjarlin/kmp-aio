@@ -29,6 +29,10 @@ data class ConfigCenterKeyDefinition(
     val comment: String? = null,
     val defaultValue: String? = null,
     val required: Boolean = false,
+    val source: String? = null,
+    val builtin: Boolean = false,
+    val editable: Boolean = true,
+    val deletable: Boolean = true,
 )
 
 interface ConfigCenterDefinitionProvider {
@@ -71,6 +75,10 @@ data class ConfigCenterEntryDto(
     val defaultValue: String? = null,
     val valueType: String = "kotlin.String",
     val required: Boolean = false,
+    val source: String? = null,
+    val builtin: Boolean = false,
+    val editable: Boolean = true,
+    val deletable: Boolean = true,
     val createTimeMillis: Long? = null,
     val updateTimeMillis: Long? = null,
 )

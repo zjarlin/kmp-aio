@@ -1,17 +1,27 @@
 package site.addzero.kcloud.plugins.system.aichat.workbench
 
+import de.jensklingenberg.ktorfit.Ktorfit
+import org.koin.mp.KoinPlatform
 import org.koin.core.annotation.Single
+import site.addzero.core.network.HttpClientFactory
 import site.addzero.kcloud.plugins.system.aichat.api.*
 
 @Single
 class AiChatRemoteService {
+    private val httpClientFactory: HttpClientFactory
+        get() = KoinPlatform.getKoin().get()
+
     private fun resolveApi(
         serverBaseUrl: String,
     ): AiChatApi {
         return if (serverBaseUrl.isBlank()) {
-            AiChatApiClient.aiChatApi
+            Apis.aiChatApi
         } else {
-            AiChatApiClient.createApi(serverBaseUrl)
+            Ktorfit.Builder()
+                .baseUrl(serverBaseUrl.trim().trimEnd('/') + "/")
+                .httpClient(httpClientFactory.get("kcloud-system"))
+                .build()
+                .createAiChatApi()
         }
     }
 

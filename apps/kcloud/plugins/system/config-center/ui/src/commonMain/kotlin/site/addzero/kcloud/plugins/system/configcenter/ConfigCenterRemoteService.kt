@@ -1,7 +1,7 @@
 package site.addzero.kcloud.plugins.system.configcenter
 
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterApiClient
+import site.addzero.kcloud.plugins.system.configcenter.api.Apis
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
 
@@ -12,7 +12,7 @@ class ConfigCenterRemoteService {
         key: String,
         active: String = "dev",
     ): ConfigCenterValueDto {
-        return ConfigCenterApiClient.configCenterApi.getConfigCenterValue(
+        return Apis.configCenterApi.getConfigCenterValue(
             namespace = namespace,
             key = key,
             active = active,
@@ -22,6 +22,6 @@ class ConfigCenterRemoteService {
     suspend fun writeValue(
         request: ConfigCenterValueWriteRequest,
     ): ConfigCenterValueDto {
-        return ConfigCenterApiClient.configCenterApi.putConfigCenterValue(request)
+        return Apis.configCenterApi.putConfigCenterValue(request)
     }
 }
