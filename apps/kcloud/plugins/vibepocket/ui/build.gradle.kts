@@ -1,5 +1,5 @@
 plugins {
-    id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.cmp-lib-cupertino")
     id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
@@ -41,7 +41,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:compose:compose-workbench-design"))
+            implementation(project(":lib:compose:compose-cupertino-workbench"))
             implementation(project(":apps:kcloud:plugins:vibepocket"))
             implementation(project(":lib:compose:media-playlist-player"))
             implementation(project(":lib:api:api-music-spi"))

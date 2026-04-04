@@ -4,10 +4,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.*
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
-import site.addzero.kcloud.music.SunoRuntimeConfig
-import site.addzero.kcloud.music.SunoWorkflowService
+import site.addzero.kcloud.music.MusicStudioService
 
 data class MusicStudioScreenState(
     val selectedTab: MusicStudioTab = MusicStudioTab.COVER,
@@ -16,9 +16,9 @@ data class MusicStudioScreenState(
 )
 
 @KoinViewModel
-class MusicStudioViewModel : ViewModel() {
-    private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
+class MusicStudioViewModel(
+    private val musicStudioService: MusicStudioService,
+) : ViewModel() {
     var state by mutableStateOf(MusicStudioScreenState())
         private set
 
@@ -33,9 +33,8 @@ class MusicStudioViewModel : ViewModel() {
     }
 
     fun refreshCredits() {
-        screenScope.launch {
-            val runtimeConfig = runCatching { SunoWorkflowService.loadConfig() }
-                .getOrDefault(SunoRuntimeConfig())
+        viewModelScope.launch {
+            val runtimeConfig = musicStudioService.loadConfig()
             if (!runtimeConfig.hasToken) {
                 state = state.copy(
                     credits = null,
@@ -46,15 +45,10 @@ class MusicStudioViewModel : ViewModel() {
 
             state = state.copy(isLoadingCredits = true)
             try {
-                state = state.copy(credits = SunoWorkflowService.getCreditsOrNull())
+                state = state.copy(credits = musicStudioService.getCreditsOrNull())
             } finally {
                 state = state.copy(isLoadingCredits = false)
             }
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        screenScope.cancel()
     }
 }

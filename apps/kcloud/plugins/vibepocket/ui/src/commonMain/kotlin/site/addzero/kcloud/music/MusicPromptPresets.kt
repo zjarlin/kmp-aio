@@ -5,14 +5,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
-import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
+import site.addzero.cupertino.workbench.button.WorkbenchFilledTonalButton as FilledTonalButton
+import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
 
 internal data class MusicPromptPreset(
     val id: String,

@@ -1,61 +1,40 @@
 package site.addzero.kcloud.plugins.mcuconsole.workbench.cupertino
 
-import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import io.github.alexzhirkevich.cupertino.ExperimentalCupertinoApi
-import io.github.alexzhirkevich.cupertino.CupertinoBorderedTextField
-import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveSlider
-import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveTheme
-import io.github.alexzhirkevich.cupertino.adaptive.AdaptiveSwitch
-import io.github.alexzhirkevich.cupertino.adaptive.CupertinoThemeSpec
-import io.github.alexzhirkevich.cupertino.adaptive.ExperimentalAdaptiveApi
-import io.github.alexzhirkevich.cupertino.adaptive.MaterialThemeSpec
-import io.github.alexzhirkevich.cupertino.adaptive.Theme as AdaptiveThemeTarget
-import io.github.alexzhirkevich.cupertino.section.CupertinoSection
-import io.github.alexzhirkevich.cupertino.section.ProvideSectionStyle
-import io.github.alexzhirkevich.cupertino.section.SectionItem
-import io.github.alexzhirkevich.cupertino.section.SectionStyle
-import site.addzero.workbench.design.button.WorkbenchActionButton
-import site.addzero.workbench.design.button.WorkbenchButtonVariant
+import io.github.robinpcrd.cupertino.CupertinoBorderedTextField
+import io.github.robinpcrd.cupertino.CupertinoSlider
+import io.github.robinpcrd.cupertino.CupertinoSwitch
+import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
+import io.github.robinpcrd.cupertino.section.CupertinoSection
+import io.github.robinpcrd.cupertino.section.SectionItem
+import io.github.robinpcrd.cupertino.section.SectionStyle
+import site.addzero.cupertino.workbench.button.WorkbenchActionButton
+import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.Text
+import site.addzero.cupertino.workbench.theme.CupertinoWorkbenchTheme
 
-@OptIn(ExperimentalAdaptiveApi::class)
 @Composable
 internal fun McuCupertinoScene(
     content: @Composable () -> Unit,
 ) {
-    AdaptiveTheme(
-        target = AdaptiveThemeTarget.Cupertino,
-        material = MaterialThemeSpec.Default(),
-        cupertino = CupertinoThemeSpec.Default(),
-        content = {
-            // compose-cupertino 0.1.0-alpha04 仍会通过 LocalIndication 暴露旧版
-            // Indication；Compose Desktop 的默认 clickable 在这里会直接抛错。
-            CompositionLocalProvider(
-                LocalIndication provides ripple(),
-                content = content,
-            )
-        },
+    CupertinoWorkbenchTheme(
+        content = content,
     )
 }
 
-@OptIn(ExperimentalAdaptiveApi::class)
 @Composable
 internal fun McuCupertinoPrimaryButton(
     text: String,
@@ -88,6 +67,7 @@ internal fun McuCupertinoSecondaryButton(
     )
 }
 
+@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoField(
     value: String,
@@ -118,6 +98,7 @@ internal fun McuCupertinoField(
             maxLines = maxLines,
             textStyle = MaterialTheme.typography.bodyMedium.copy(
                 fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurface,
             ),
             placeholder = {
                 Text(
@@ -141,7 +122,7 @@ internal fun McuCupertinoField(
     }
 }
 
-@OptIn(ExperimentalAdaptiveApi::class)
+@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoSwitchRow(
     label: String,
@@ -149,7 +130,7 @@ internal fun McuCupertinoSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    androidx.compose.foundation.layout.Row(
+    Row(
         modifier = modifier.fillMaxWidth().padding(vertical = 2.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
@@ -159,14 +140,14 @@ internal fun McuCupertinoSwitchRow(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
-        AdaptiveSwitch(
+        CupertinoSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
         )
     }
 }
 
-@OptIn(ExperimentalAdaptiveApi::class)
+@OptIn(ExperimentalCupertinoApi::class)
 @Composable
 internal fun McuCupertinoSliderField(
     label: String,
@@ -184,7 +165,7 @@ internal fun McuCupertinoSliderField(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        AdaptiveSlider(
+        CupertinoSlider(
             value = value,
             onValueChange = onValueChange,
             valueRange = valueRange,
@@ -199,42 +180,41 @@ internal fun McuCupertinoSummarySection(
     rows: List<Pair<String, String>>,
     modifier: Modifier = Modifier,
 ) {
-    ProvideSectionStyle(SectionStyle.InsetGrouped) {
-        CupertinoSection(
-            modifier = modifier.fillMaxWidth(),
-        ) {
-            rows.forEach { (label, value) ->
-                SectionItem(
-                    title = {
-                        Text(
-                            text = label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                    trailingContent = {
-                        Text(
-                            text = value.ifBlank { "-" },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontFamily = if (
-                                value.contains('/') ||
-                                    value.contains('\\') ||
-                                    value.contains('{') ||
-                                    value.contains(':')
-                            ) {
-                                FontFamily.Monospace
-                            } else {
-                                FontFamily.Default
-                            },
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    },
-                )
-            }
+    CupertinoSection(
+        modifier = modifier.fillMaxWidth(),
+        style = SectionStyle.InsetGrouped,
+    ) {
+        rows.forEach { (label, value) ->
+            SectionItem(
+                title = {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                trailingContent = {
+                    Text(
+                        text = value.ifBlank { "-" },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontFamily = if (
+                            value.contains('/') ||
+                                value.contains('\\') ||
+                                value.contains('{') ||
+                                value.contains(':')
+                        ) {
+                            FontFamily.Monospace
+                        } else {
+                            FontFamily.Default
+                        },
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+            )
         }
     }
 }

@@ -4,7 +4,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,8 +18,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import site.addzero.workbench.design.button.WorkbenchButton as Button
-import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SUNO_MODELS
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoUploadCoverRequest

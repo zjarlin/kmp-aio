@@ -4,21 +4,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.*
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
-import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTaskDetail
-import site.addzero.kcloud.vibepocket.model.SunoTaskResourceItem
-import site.addzero.kcloud.music.SunoRuntimeConfig
-import site.addzero.kcloud.music.SunoWorkflowService
+import site.addzero.kcloud.music.CreativeAssetsService
 import site.addzero.kcloud.music.isFailedStatus
 import site.addzero.kcloud.music.isRunningStatus
 import site.addzero.kcloud.music.isSuccessStatus
 import site.addzero.kcloud.music.matchesKeyword
-import site.addzero.kcloud.music.reconcileTaskResourcesWithSuno
-import site.addzero.kcloud.music.refreshSunoTaskSnapshotById
 import site.addzero.kcloud.music.replaceTaskResource
-import site.addzero.kcloud.music.toTaskResourceItem
+import site.addzero.kcloud.vibepocket.model.SunoTaskResourceItem
 
 data class CreativeAssetsScreenState(
     val keyword: String = "",
@@ -32,8 +29,9 @@ data class CreativeAssetsScreenState(
 )
 
 @KoinViewModel
-class CreativeAssetsViewModel : ViewModel() {
-    private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+class CreativeAssetsViewModel(
+    private val creativeAssetsService: CreativeAssetsService,
+) : ViewModel() {
     private var taskRefreshJob: Job? = null
 
     var state by mutableStateOf(CreativeAssetsScreenState())
@@ -79,28 +77,20 @@ class CreativeAssetsViewModel : ViewModel() {
     }
 
     fun refreshTaskResources() {
-        screenScope.launch {
+        viewModelScope.launch {
             state = state.copy(
                 isLoading = true,
                 errorMessage = null,
             )
             try {
-                val loaded = ServerApiClient.sunoTaskResourceApi.list()
-                    .map { response -> response.toTaskResourceItem() }
-                val runtimeConfig = runCatching { SunoWorkflowService.loadConfig() }
-                    .getOrDefault(SunoRuntimeConfig())
-                val mergedItems = if (runtimeConfig.hasToken) {
-                    loaded.reconcileTaskResourcesWithSuno { partial ->
-                        state = state.copy(items = partial)
-                    }
-                } else {
-                    loaded
+                val mergedItems = creativeAssetsService.loadTaskResources { partial ->
+                    state = state.copy(items = partial)
                 }
                 state = state.copy(items = mergedItems)
                 syncSelectionWithFilter(forceRefreshCurrent = true)
             } catch (error: Exception) {
                 state = state.copy(
-                    errorMessage = SunoWorkflowService.errorMessage(error),
+                    errorMessage = creativeAssetsService.errorMessage(error),
                 )
             } finally {
                 state = state.copy(isLoading = false)
@@ -111,7 +101,7 @@ class CreativeAssetsViewModel : ViewModel() {
     fun refreshSelectedTaskFromSuno() {
         val currentItem = selectedItem ?: return
         taskRefreshJob?.cancel()
-        taskRefreshJob = screenScope.launch {
+        taskRefreshJob = viewModelScope.launch {
             refreshTaskFromSuno(
                 currentItem = currentItem,
                 manual = true,
@@ -150,7 +140,7 @@ class CreativeAssetsViewModel : ViewModel() {
 
         taskRefreshJob?.cancel()
         val currentItem = selectedItem ?: return
-        taskRefreshJob = screenScope.launch {
+        taskRefreshJob = viewModelScope.launch {
             refreshTaskFromSuno(
                 currentItem = currentItem,
                 manual = false,
@@ -161,7 +151,7 @@ class CreativeAssetsViewModel : ViewModel() {
     private fun refreshSelectedTaskFromSunoSilently() {
         val currentItem = selectedItem ?: return
         taskRefreshJob?.cancel()
-        taskRefreshJob = screenScope.launch {
+        taskRefreshJob = viewModelScope.launch {
             refreshTaskFromSuno(
                 currentItem = currentItem,
                 manual = false,
@@ -186,7 +176,7 @@ class CreativeAssetsViewModel : ViewModel() {
         }
 
         try {
-            val refreshedSnapshot = refreshSunoTaskSnapshotById(
+            val refreshedSnapshot = creativeAssetsService.refreshTaskSnapshotById(
                 taskId = requestedTaskId,
                 fallbackType = currentItem.type,
                 requestJson = currentItem.requestJson,
@@ -212,7 +202,7 @@ class CreativeAssetsViewModel : ViewModel() {
                 state = state.copy(
                     liveSyncMessage = buildString {
                         append(if (manual) "按 taskId 查询失败：" else "自动按 taskId 回查失败：")
-                        append(SunoWorkflowService.errorMessage(error))
+                        append(creativeAssetsService.errorMessage(error))
                     },
                 )
             }
@@ -221,11 +211,5 @@ class CreativeAssetsViewModel : ViewModel() {
                 state = state.copy(isRefreshingLiveDetail = false)
             }
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        taskRefreshJob?.cancel()
-        screenScope.cancel()
     }
 }

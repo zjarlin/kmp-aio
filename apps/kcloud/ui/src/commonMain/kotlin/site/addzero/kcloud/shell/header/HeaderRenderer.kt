@@ -5,7 +5,7 @@ import androidx.compose.ui.Modifier
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.shell.ShellState
 import site.addzero.kcloud.shell.navigation.RouteCatalog
-import site.addzero.workbench.shell.header.WorkbenchSceneTabs
+import site.addzero.cupertino.workbench.header.WorkbenchSceneTabs
 import site.addzero.workbenchshell.spi.header.HeaderRender
 
 @Single

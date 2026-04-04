@@ -9,10 +9,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.FilterChip
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.OutlinedTextField
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -22,7 +22,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 
 @Route(
     value = "配置中心",

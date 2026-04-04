@@ -15,7 +15,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import java.io.File
 
 plugins {
-    id("site.addzero.buildlogic.kmp.cmp-app")
+    id("site.addzero.buildlogic.kmp.cmp-app-cupertino")
     id("site.addzero.buildlogic.kmp.cmp-wasm")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-json")
@@ -33,8 +33,7 @@ val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
 
 kotlin {
     dependencies {
-        implementation(project(":lib:compose:compose-workbench-design"))
-        implementation(project(":lib:compose:compose-workbench-shell"))
+        implementation(project(":lib:compose:compose-cupertino-workbench"))
         implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
         implementation("site.addzero:compose-icon-map:2026.10329.10127")
         implementation(project(":apps:kcloud:shared"))
@@ -44,7 +43,6 @@ kotlin {
         implementation(project(":apps:kcloud:plugins:system:plugin-market:ui"))
         implementation(project(":apps:kcloud:plugins:system:rbac:ui"))
         implementation(project(":apps:kcloud:plugins:vibepocket:ui"))
-        implementation(project(":lib:compose:shadcn-compose-component"))
         implementation(project(":lib:tool-kmp:network-starter"))
         implementation(project(":lib:compose:compose-native-component-chat"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

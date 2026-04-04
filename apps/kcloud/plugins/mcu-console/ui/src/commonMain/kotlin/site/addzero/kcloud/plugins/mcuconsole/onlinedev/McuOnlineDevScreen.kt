@@ -5,9 +5,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.Surface
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -197,7 +197,9 @@ fun McuOnlineDevScreen() {
                 ) {
                     McuCupertinoField(
                         value = workbenchState.timeoutMsText,
-                        onValueChange = { workbenchState.timeoutMsText = it },
+                        onValueChange = { value ->
+                            workbenchState.updateScriptEditorDraft { copy(timeoutMsText = value) }
+                        },
                         label = "timeoutMs",
                     )
                     McuCupertinoSummarySection(
@@ -211,7 +213,9 @@ fun McuOnlineDevScreen() {
                     )
                     McuCupertinoField(
                         value = workbenchState.scriptText,
-                        onValueChange = { workbenchState.scriptText = it },
+                        onValueChange = { value ->
+                            workbenchState.updateScriptEditorDraft { copy(scriptText = value) }
+                        },
                         label = workbenchState.scriptLanguage,
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         singleLine = false,

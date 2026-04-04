@@ -2,12 +2,12 @@ package site.addzero.kcloud.music
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoWavRequest
 

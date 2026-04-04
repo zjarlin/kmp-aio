@@ -4,13 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.*
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
-import site.addzero.kcloud.api.ServerApiClient
-import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
-import site.addzero.kcloud.music.SunoWorkflowService
+import site.addzero.kcloud.music.SettingsService
 import site.addzero.kcloud.music.SunoRuntimeConfig
 import site.addzero.kcloud.platform.DirectoryLauncher
+import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
 
 data class SettingsFeedbackState(
     val message: String? = null,
@@ -26,9 +26,9 @@ data class SettingsScreenState(
 )
 
 @KoinViewModel
-class SettingsViewModel : ViewModel() {
-    private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
+class SettingsViewModel(
+    private val settingsService: SettingsService,
+) : ViewModel() {
     var state by mutableStateOf(SettingsScreenState())
         private set
 
@@ -61,13 +61,13 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun reloadFromServer() {
-        screenScope.launch {
+        viewModelScope.launch {
             reloadFromServerInternal()
         }
     }
 
     fun reloadWithFeedback() {
-        screenScope.launch {
+        viewModelScope.launch {
             reloadFromServerInternal()
             state = state.copy(
                 feedback = SettingsFeedbackState(
@@ -79,11 +79,11 @@ class SettingsViewModel : ViewModel() {
     }
 
     fun saveConfig() {
-        screenScope.launch {
+        viewModelScope.launch {
             state = state.copy(isSaving = true)
             try {
                 val runtimeConfig = state.runtimeConfig
-                SunoWorkflowService.saveConfig(
+                settingsService.saveConfig(
                     apiToken = runtimeConfig.apiToken,
                     baseUrl = runtimeConfig.baseUrl,
                     callbackUrl = runtimeConfig.callbackUrl,
@@ -137,16 +137,10 @@ class SettingsViewModel : ViewModel() {
     }
 
     private suspend fun reloadFromServerInternal() {
-        val runtimeConfig = SunoWorkflowService.loadConfig()
         state = state.copy(
-            runtimeConfig = runtimeConfig,
-            runtimeInfo = runCatching { ServerApiClient.configApi.getRuntimeInfo() }.getOrNull(),
+            runtimeConfig = settingsService.loadConfig(),
+            runtimeInfo = settingsService.getRuntimeInfo(),
             loaded = true,
         )
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        screenScope.cancel()
     }
 }

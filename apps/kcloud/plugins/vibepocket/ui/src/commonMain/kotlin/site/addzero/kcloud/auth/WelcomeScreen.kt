@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.OutlinedTextField
+import site.addzero.cupertino.workbench.material3.OutlinedTextFieldDefaults
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier

@@ -15,10 +15,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.OutlinedTextField
+import site.addzero.cupertino.workbench.material3.Surface
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -39,9 +39,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import site.addzero.component.search_bar.AddSearchBar
-import site.addzero.workbench.design.button.WorkbenchButton as ShadcnButton
-import site.addzero.workbench.design.button.WorkbenchButtonSize as ShadcnButtonSize
-import site.addzero.workbench.design.button.WorkbenchButtonVariant as ShadcnButtonVariant
+import site.addzero.cupertino.workbench.button.WorkbenchButton as ShadcnButton
+import site.addzero.cupertino.workbench.button.WorkbenchButtonSize as ShadcnButtonSize
+import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant as ShadcnButtonVariant
 import site.addzero.kcloud.plugins.mcuconsole.*
 
 /**
@@ -261,7 +261,7 @@ internal fun McuPortBrowser(
     ) {
         AddSearchBar(
             keyword = state.portQuery,
-            onKeyWordChanged = { state.portQuery = it },
+            onKeyWordChanged = { state.updatePortQuery(it) },
             onSearch = onRefresh,
             placeholder = "串口 / 描述",
             modifier = Modifier.fillMaxWidth(),

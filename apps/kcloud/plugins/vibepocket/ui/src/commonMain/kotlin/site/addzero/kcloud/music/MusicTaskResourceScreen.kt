@@ -19,7 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -32,8 +32,8 @@ import androidx.compose.ui.unit.dp
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import org.koin.compose.viewmodel.koinViewModel
-import site.addzero.workbench.design.button.WorkbenchButton as Button
-import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.vibepocket.model.SunoTaskResourceItem
 import site.addzero.kcloud.screens.creativeassets.CreativeAssetsViewModel

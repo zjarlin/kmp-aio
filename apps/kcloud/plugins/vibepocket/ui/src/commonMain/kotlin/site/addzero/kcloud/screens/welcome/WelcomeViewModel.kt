@@ -4,14 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.music.SunoRuntimeConfig
-import site.addzero.kcloud.music.persistSunoRuntimeConfig
+import site.addzero.kcloud.music.WelcomeSetupService
 
 enum class WelcomeStep {
     INTRO,
@@ -24,9 +21,9 @@ data class WelcomeScreenState(
 )
 
 @KoinViewModel
-class WelcomeViewModel : ViewModel() {
-    private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
+class WelcomeViewModel(
+    private val welcomeSetupService: WelcomeSetupService,
+) : ViewModel() {
     var state by mutableStateOf(WelcomeScreenState())
         private set
 
@@ -50,9 +47,9 @@ class WelcomeViewModel : ViewModel() {
         onSetupComplete: (token: String, baseUrl: String) -> Unit,
     ) {
         val runtimeConfig = state.runtimeConfig
-        screenScope.launch {
+        viewModelScope.launch {
             runCatching {
-                persistSunoRuntimeConfig(
+                welcomeSetupService.completeSetup(
                     apiToken = runtimeConfig.apiToken,
                     baseUrl = runtimeConfig.baseUrl,
                     callbackUrl = runtimeConfig.callbackUrl,
@@ -60,10 +57,5 @@ class WelcomeViewModel : ViewModel() {
             }
             onSetupComplete(runtimeConfig.apiToken, runtimeConfig.baseUrl)
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        screenScope.cancel()
     }
 }

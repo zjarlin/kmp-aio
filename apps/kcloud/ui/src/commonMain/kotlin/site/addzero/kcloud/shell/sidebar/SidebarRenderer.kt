@@ -11,7 +11,7 @@ import site.addzero.kcloud.shell.navigation.SidebarNode
 import site.addzero.kcloud.shell.navigation.firstLeafRoutePath
 import site.addzero.kcloud.shell.navigation.rememberSelectedRoute
 import site.addzero.kcloud.shell.navigation.resolveSelectedId
-import site.addzero.workbench.shell.sidebar.WorkbenchTreeSidebar
+import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
 @Single(

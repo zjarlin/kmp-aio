@@ -19,8 +19,8 @@ import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
 import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
-import site.addzero.workbench.shell.metrics.LocalWorkbenchMetrics
-import site.addzero.workbench.shell.metrics.WorkbenchPresets
+import site.addzero.cupertino.workbench.metrics.LocalWorkbenchMetrics
+import site.addzero.cupertino.workbench.metrics.WorkbenchPresets
 import java.awt.Container
 import javax.swing.JComponent
 

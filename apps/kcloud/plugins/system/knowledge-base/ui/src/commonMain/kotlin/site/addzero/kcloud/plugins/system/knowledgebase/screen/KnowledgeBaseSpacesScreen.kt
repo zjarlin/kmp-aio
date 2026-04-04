@@ -3,7 +3,7 @@ package site.addzero.kcloud.plugins.system.knowledgebase.screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberCoroutineScope
@@ -14,7 +14,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.workbench.design.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 import site.addzero.kcloud.plugins.system.knowledgebase.KnowledgeBaseWorkbenchState
 
 @Route(

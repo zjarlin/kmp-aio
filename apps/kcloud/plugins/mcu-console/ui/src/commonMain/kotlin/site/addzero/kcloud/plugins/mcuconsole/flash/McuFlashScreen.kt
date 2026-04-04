@@ -115,7 +115,9 @@ fun McuFlashScreen() {
                     )
                     McuCupertinoField(
                         value = workbenchState.firmwarePathText,
-                        onValueChange = { workbenchState.firmwarePathText = it },
+                        onValueChange = { value ->
+                            workbenchState.updateFlashEditorDraft { copy(firmwarePathText = value) }
+                        },
                         label = workbenchState.selectedFlashProfile?.artifactLabel ?: "firmware.bin",
                         supportingText = workbenchState.runtimeStatus.artifactPath
                             ?: workbenchState.selectedFlashProfile?.artifactHint,

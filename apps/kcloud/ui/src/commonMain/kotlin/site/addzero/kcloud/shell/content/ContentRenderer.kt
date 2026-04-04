@@ -2,8 +2,8 @@ package site.addzero.kcloud.shell.content
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -14,7 +14,7 @@ import site.addzero.kcloud.shell.NavRoute
 import site.addzero.kcloud.shell.ShellState
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 import site.addzero.kcloud.shell.navigation.RouteEntry
-import site.addzero.workbench.shell.content.WorkbenchContentSurface
+import site.addzero.cupertino.workbench.content.WorkbenchContentSurface
 import site.addzero.workbenchshell.spi.content.ContentRender
 
 @Single

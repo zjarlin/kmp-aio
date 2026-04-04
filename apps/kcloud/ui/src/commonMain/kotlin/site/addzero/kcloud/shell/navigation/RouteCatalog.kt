@@ -19,14 +19,14 @@ import kotlin.math.roundToInt
 class RouteCatalog(
     val routeMeta: List<Route>,
 ) {
-    val scenes: List<RouteScene> = buildScenes(
+    val scenes = buildScenes(
         routeMeta = routeMeta,
     )
-    val routeEntries: List<RouteEntry> = scenes.flatMap { scene -> scene.routes }
-    private val scenesById: Map<String, RouteScene> = scenes.associateBy { scene -> scene.id }
-    private val routesByPath: Map<String, RouteEntry> = routeEntries.associateBy { route -> route.routePath }
+    val routeEntries = scenes.flatMap { scene -> scene.routes }
+    private val scenesById = scenes.associateBy { scene -> scene.id }
+    private val routesByPath = routeEntries.associateBy { route -> route.routePath }
 
-    val defaultRoutePath: String = scenes.firstNotNullOfOrNull { scene ->
+    val defaultRoutePath = scenes.firstNotNullOfOrNull { scene ->
         scene.defaultRoutePath
     }.orEmpty()
 

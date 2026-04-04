@@ -8,8 +8,8 @@ import site.addzero.kcloud.shell.ShellState
 import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
-import site.addzero.workbench.shell.metrics.currentWorkbenchMetrics
-import site.addzero.workbenchshell.RenderAdminScaffolding
+import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
+import site.addzero.cupertino.workbench.scaffolding.RenderCupertinoWorkbenchScaffolding
 
 @Composable
 fun RenderWorkbenchWindow(
@@ -27,7 +27,7 @@ fun RenderWorkbenchWindow(
     Theme(
         darkTheme = darkTheme,
     ) {
-        RenderAdminScaffolding(
+        RenderCupertinoWorkbenchScaffolding(
             scaffolding = scaffolding,
             sidebarVisible = sidebarVisible,
             onSidebarToggle = shellState::toggleSidebar,

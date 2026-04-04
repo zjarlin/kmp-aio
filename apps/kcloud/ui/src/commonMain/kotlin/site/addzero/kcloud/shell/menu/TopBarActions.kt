@@ -3,7 +3,7 @@ package site.addzero.kcloud.shell.menu
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
-import androidx.compose.material3.Icon
+import site.addzero.cupertino.workbench.material3.Icon
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SmartToy
@@ -13,10 +13,10 @@ import site.addzero.component.chat.AddChatOverlayState
 import site.addzero.kcloud.theme.ShellThemeMode
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
-import site.addzero.workbench.design.button.WorkbenchButtonVariant
-import site.addzero.workbench.design.button.WorkbenchIconButton
-import site.addzero.workbench.shell.menu.WorkbenchTopBarActionContributor
-import site.addzero.workbench.shell.menu.WorkbenchTopBarActionsHost
+import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import site.addzero.cupertino.workbench.button.WorkbenchIconButton
+import site.addzero.cupertino.workbench.menu.WorkbenchTopBarActionContributor
+import site.addzero.cupertino.workbench.menu.WorkbenchTopBarActionsHost
 
 /**
  * 壳层动作聚合器。

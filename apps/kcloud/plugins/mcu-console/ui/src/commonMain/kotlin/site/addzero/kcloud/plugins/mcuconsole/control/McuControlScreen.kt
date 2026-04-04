@@ -8,13 +8,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.HorizontalDivider
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.OutlinedTextField
+import site.addzero.cupertino.workbench.material3.SecondaryTabRow
+import site.addzero.cupertino.workbench.material3.Surface
+import site.addzero.cupertino.workbench.material3.Tab
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,9 +49,9 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.McuModbusSerialParity
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusAtomicAction
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioMode
 import site.addzero.kcloud.plugins.mcuconsole.workbench.*
-import site.addzero.workbench.design.button.WorkbenchButton as ShadcnButton
-import site.addzero.workbench.design.button.WorkbenchButtonSize as ShadcnButtonSize
-import site.addzero.workbench.design.button.WorkbenchButtonVariant as ShadcnButtonVariant
+import site.addzero.cupertino.workbench.button.WorkbenchButton as ShadcnButton
+import site.addzero.cupertino.workbench.button.WorkbenchButtonSize as ShadcnButtonSize
+import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant as ShadcnButtonVariant
 
 private enum class McuControlTab(
     val id: String,
@@ -696,7 +696,9 @@ private fun McuDevicePropertyEditorPanel(
             McuPanelSectionTitle("串口连接")
             McuCompactInput(
                 value = state.baudRateText,
-                onValueChange = { state.baudRateText = it },
+                onValueChange = { value ->
+                    state.updateTransportDraft { copy(baudRate = value.toIntOrNull()) }
+                },
                 label = "baudRate",
                 supportingText = "常用值例如 115200。",
             )
@@ -709,7 +711,9 @@ private fun McuDevicePropertyEditorPanel(
                 items = McuSerialLineEnding.entries,
                 selectedItem = state.serialCommandLineEnding,
                 labelOf = { lineEnding -> lineEnding.displayName() },
-                onSelect = { lineEnding -> state.serialCommandLineEnding = lineEnding },
+                onSelect = { lineEnding ->
+                    state.updateSerialConsoleDraft { copy(lineEnding = lineEnding) }
+                },
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -799,7 +803,9 @@ private fun McuAssetBundlePanel(
             )
             McuCompactInput(
                 value = state.firmwarePathText,
-                onValueChange = { state.firmwarePathText = it },
+                onValueChange = { value ->
+                    state.updateFlashEditorDraft { copy(firmwarePathText = value) }
+                },
                 label = state.selectedFlashProfile?.artifactLabel ?: "firmware.bin",
                 supportingText = state.runtimeStatus.artifactPath
                     ?: state.selectedFlashProfile?.artifactHint,
@@ -1422,7 +1428,9 @@ private fun McuRuntimeOpsPanel(
             )
             McuCompactInput(
                 value = state.firmwarePathText,
-                onValueChange = { state.firmwarePathText = it },
+                onValueChange = { value ->
+                    state.updateFlashEditorDraft { copy(firmwarePathText = value) }
+                },
                 label = state.selectedFlashProfile?.artifactLabel ?: "firmware.bin",
                 supportingText = state.runtimeStatus.artifactPath
                     ?: state.selectedFlashProfile?.artifactHint,
@@ -1551,7 +1559,9 @@ private fun McuConnectionConfigPanel(
         ) {
             McuCompactInput(
                 value = state.baudRateText,
-                onValueChange = { state.baudRateText = it },
+                onValueChange = { value ->
+                    state.updateTransportDraft { copy(baudRate = value.toIntOrNull()) }
+                },
                 label = "baudRate",
                 supportingText = "常用值例如 115200。",
             )
@@ -1565,7 +1575,7 @@ private fun McuConnectionConfigPanel(
                 selectedItem = state.serialCommandLineEnding,
                 labelOf = { lineEnding -> lineEnding.displayName() },
                 onSelect = { lineEnding ->
-                    state.serialCommandLineEnding = lineEnding
+                    state.updateSerialConsoleDraft { copy(lineEnding = lineEnding) }
                 },
             )
             McuSummaryTable(
@@ -1642,12 +1652,16 @@ private fun McuScriptWorkbenchPanel(
             McuPanelSectionTitle("脚本编辑")
             McuCompactInput(
                 value = state.timeoutMsText,
-                onValueChange = { state.timeoutMsText = it },
+                onValueChange = { value ->
+                    state.updateScriptEditorDraft { copy(timeoutMsText = value) }
+                },
                 label = "timeoutMs",
             )
             OutlinedTextField(
                 value = state.scriptText,
-                onValueChange = { state.scriptText = it },
+                onValueChange = { value ->
+                    state.updateScriptEditorDraft { copy(scriptText = value) }
+                },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 200.dp),
                 textStyle = MaterialTheme.typography.bodyMedium.copy(
                     fontFamily = FontFamily.Monospace,
@@ -1732,17 +1746,23 @@ private fun McuModbusQuickPanel(
                 items = McuModbusFrameFormat.entries,
                 selectedItem = state.modbusFrameFormat,
                 labelOf = { frameFormat -> frameFormat.displayName() },
-                onSelect = { frameFormat -> state.modbusFrameFormat = frameFormat },
+                onSelect = { frameFormat ->
+                    state.updateModbusDraft { copy(frameFormat = frameFormat) }
+                },
             )
             McuCompactInput(
                 value = state.modbusRtuUnitIdText,
-                onValueChange = { state.modbusRtuUnitIdText = it },
+                onValueChange = { value ->
+                    state.updateTransportDraft { copy(unitId = value.toIntOrNull()) }
+                },
                 label = "站号 UnitId",
                 supportingText = "1..247",
             )
             McuCompactInput(
                 value = state.modbusRtuTimeoutMsText,
-                onValueChange = { state.modbusRtuTimeoutMsText = it },
+                onValueChange = { value ->
+                    state.updateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
+                },
                 label = "超时(ms)",
             )
             Row(
@@ -1751,13 +1771,17 @@ private fun McuModbusQuickPanel(
             ) {
                 McuCompactInput(
                     value = state.modbusRtuDataBitsText,
-                    onValueChange = { state.modbusRtuDataBitsText = it },
+                    onValueChange = { value ->
+                        state.updateTransportDraft { copy(dataBits = value.toIntOrNull()) }
+                    },
                     label = "数据位",
                     modifier = Modifier.weight(1f),
                 )
                 McuCompactInput(
                     value = state.modbusRtuStopBitsText,
-                    onValueChange = { state.modbusRtuStopBitsText = it },
+                    onValueChange = { value ->
+                        state.updateTransportDraft { copy(stopBits = value.toIntOrNull()) }
+                    },
                     label = "停止位",
                     modifier = Modifier.weight(1f),
                 )
@@ -1766,46 +1790,60 @@ private fun McuModbusQuickPanel(
                 items = McuModbusSerialParity.entries,
                 selectedItem = state.modbusRtuParity,
                 labelOf = { parity -> parity.displayName() },
-                onSelect = { parity -> state.modbusRtuParity = parity },
+                onSelect = { parity ->
+                    state.updateTransportDraft { copy(parity = parity) }
+                },
             )
             when (state.selectedModbusAtomicAction) {
                 McuModbusAtomicAction.GPIO_WRITE -> {
                     McuCompactInput(
                         value = state.modbusGpioWritePinText,
-                        onValueChange = { state.modbusGpioWritePinText = it },
+                        onValueChange = { value ->
+                            state.updateModbusDraft { copy(gpioWritePinText = value) }
+                        },
                         label = "GPIO 引脚",
                     )
                     McuChoiceChipRow(
                         items = listOf(true, false),
                         selectedItem = state.modbusGpioWriteHigh,
                         labelOf = { high -> if (high) "HIGH" else "LOW" },
-                        onSelect = { high -> state.modbusGpioWriteHigh = high },
+                        onSelect = { high ->
+                            state.updateModbusDraft { copy(gpioWriteHigh = high) }
+                        },
                     )
                 }
 
                 McuModbusAtomicAction.GPIO_MODE -> {
                     McuCompactInput(
                         value = state.modbusGpioModePinText,
-                        onValueChange = { state.modbusGpioModePinText = it },
+                        onValueChange = { value ->
+                            state.updateModbusDraft { copy(gpioModePinText = value) }
+                        },
                         label = "GPIO 引脚",
                     )
                     McuChoiceChipRow(
                         items = McuModbusGpioMode.entries,
                         selectedItem = state.modbusGpioMode,
                         labelOf = { mode -> mode.displayName() },
-                        onSelect = { mode -> state.modbusGpioMode = mode },
+                        onSelect = { mode ->
+                            state.updateModbusDraft { copy(gpioMode = mode) }
+                        },
                     )
                 }
 
                 McuModbusAtomicAction.PWM_DUTY -> {
                     McuCompactInput(
                         value = state.modbusPwmPinText,
-                        onValueChange = { state.modbusPwmPinText = it },
+                        onValueChange = { value ->
+                            state.updateModbusDraft { copy(pwmPinText = value) }
+                        },
                         label = "PWM 引脚",
                     )
                     McuCompactInput(
                         value = state.modbusPwmDutyText,
-                        onValueChange = { state.modbusPwmDutyText = it },
+                        onValueChange = { value ->
+                            state.updateModbusDraft { copy(pwmDutyText = value) }
+                        },
                         label = "dutyU16",
                         supportingText = "合法范围 0..65535",
                     )
@@ -1814,12 +1852,16 @@ private fun McuModbusQuickPanel(
                 McuModbusAtomicAction.SERVO_ANGLE -> {
                     McuCompactInput(
                         value = state.modbusServoPinText,
-                        onValueChange = { state.modbusServoPinText = it },
+                        onValueChange = { value ->
+                            state.updateModbusDraft { copy(servoPinText = value) }
+                        },
                         label = "舵机引脚",
                     )
                     McuCompactInput(
                         value = state.modbusServoAngleText,
-                        onValueChange = { state.modbusServoAngleText = it },
+                        onValueChange = { value ->
+                            state.updateModbusDraft { copy(servoAngleText = value) }
+                        },
                         label = "目标角度",
                         supportingText = "合法范围 0..180",
                     )
@@ -2074,7 +2116,9 @@ private fun McuTerminalPanel(
                 )
                 OutlinedTextField(
                     value = state.serialCommandText,
-                    onValueChange = { state.serialCommandText = it },
+                    onValueChange = { value ->
+                        state.updateSerialConsoleDraft { copy(commandText = value) }
+                    },
                     modifier = Modifier.weight(1f).onPreviewKeyEvent { keyEvent ->
                         handleTerminalKeyEvent(
                             keyEvent = keyEvent,

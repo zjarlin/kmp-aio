@@ -3,7 +3,7 @@ package site.addzero.kcloud.music
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -11,7 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
+import site.addzero.cupertino.workbench.button.WorkbenchFilledTonalButton as FilledTonalButton
 import site.addzero.kcloud.api.suno.SunoLyricItem
 import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard

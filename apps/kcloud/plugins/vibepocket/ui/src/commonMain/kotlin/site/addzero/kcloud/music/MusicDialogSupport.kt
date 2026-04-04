@@ -4,7 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,9 +12,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import site.addzero.workbench.design.button.WorkbenchButton as Button
-import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
-import site.addzero.workbench.design.button.WorkbenchOutlinedButton as OutlinedButton
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchFilledTonalButton as FilledTonalButton
+import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
 

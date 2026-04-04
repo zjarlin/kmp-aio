@@ -1,5 +1,5 @@
 plugins {
-    id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.cmp-lib-cupertino")
     id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
@@ -44,12 +44,9 @@ kotlin {
             kotlin.srcDir(generatedApiSourceDir)
         }
         commonMain.dependencies {
-            implementation(project(":lib:compose:compose-workbench-design"))
+            implementation(project(":lib:compose:compose-cupertino-workbench"))
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
-            implementation("io.github.alexzhirkevich:cupertino:0.1.0-alpha04")
-            implementation("io.github.alexzhirkevich:cupertino-adaptive:0.1.0-alpha04")
-            implementation(project(":lib:compose:shadcn-compose-component"))
             implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

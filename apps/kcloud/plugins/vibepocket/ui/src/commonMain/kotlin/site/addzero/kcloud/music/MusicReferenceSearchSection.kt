@@ -3,7 +3,7 @@ package site.addzero.kcloud.music
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,8 +13,8 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import kotlinx.coroutines.launch
-import site.addzero.workbench.design.button.WorkbenchButton as Button
-import site.addzero.workbench.design.button.WorkbenchFilledTonalButton as FilledTonalButton
+import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
+import site.addzero.cupertino.workbench.button.WorkbenchFilledTonalButton as FilledTonalButton
 import site.addzero.kcloud.api.music.MusicLyric
 import site.addzero.kcloud.api.music.MusicResolvedAsset
 import site.addzero.kcloud.api.music.MusicTrack

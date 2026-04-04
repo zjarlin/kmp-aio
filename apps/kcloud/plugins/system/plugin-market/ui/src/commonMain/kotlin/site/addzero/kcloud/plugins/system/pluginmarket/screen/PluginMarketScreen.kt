@@ -9,7 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import site.addzero.cupertino.workbench.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,9 +24,9 @@ import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.component.tree.rememberTreeViewModel
-import site.addzero.workbench.design.button.WorkbenchActionButton
-import site.addzero.workbench.design.button.WorkbenchButtonVariant
-import site.addzero.workbench.design.button.WorkbenchTextButton as TextButton
+import site.addzero.cupertino.workbench.button.WorkbenchActionButton
+import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import site.addzero.cupertino.workbench.button.WorkbenchTextButton as TextButton
 import site.addzero.kcloud.plugins.system.pluginmarket.PluginMarketWorkbenchState
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginActivationState
 import site.addzero.kcloud.plugins.system.pluginmarket.model.PluginDeploymentJobDto

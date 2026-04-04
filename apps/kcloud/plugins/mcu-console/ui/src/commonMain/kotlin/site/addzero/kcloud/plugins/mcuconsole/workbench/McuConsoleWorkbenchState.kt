@@ -70,7 +70,7 @@ class McuConsoleWorkbenchState(
 
     var portQuery: String
         get() = uiState.selection.portQuery
-        set(value) {
+        private set(value) {
             updateSelection { copy(portQuery = value) }
         }
 
@@ -88,7 +88,7 @@ class McuConsoleWorkbenchState(
 
     var selectedPortRemarkDraft: String
         get() = uiState.deviceDraft?.remark.orEmpty()
-        set(value) {
+        private set(value) {
             val nextDraft = (deviceDraft ?: selectedPort.toDeviceDraft()).copy(remark = value)
             deviceDraft = nextDraft
         }
@@ -143,111 +143,111 @@ class McuConsoleWorkbenchState(
 
     var modbusConnectionNameText: String
         get() = transportDraft.name
-        set(value) {
-            updateTransportDraft {
+        private set(value) {
+            mutateTransportDraft {
                 copy(name = value.ifBlank { selectedTransportKind.defaultDraftName() })
             }
         }
 
     var baudRateText: String
         get() = transportDraft.baudRate?.toString().orEmpty()
-        set(value) {
-            updateTransportDraft { copy(baudRate = value.toIntOrNull()) }
+        private set(value) {
+            mutateTransportDraft { copy(baudRate = value.toIntOrNull()) }
         }
 
     var modbusRtuUnitIdText: String
         get() = transportDraft.unitId?.toString().orEmpty()
-        set(value) {
-            updateTransportDraft { copy(unitId = value.toIntOrNull()) }
+        private set(value) {
+            mutateTransportDraft { copy(unitId = value.toIntOrNull()) }
         }
 
     var modbusRtuTimeoutMsText: String
         get() = transportDraft.timeoutMs?.toString().orEmpty()
-        set(value) {
-            updateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
+        private set(value) {
+            mutateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
         }
 
     var modbusRtuDataBitsText: String
         get() = transportDraft.dataBits?.toString().orEmpty()
-        set(value) {
-            updateTransportDraft { copy(dataBits = value.toIntOrNull()) }
+        private set(value) {
+            mutateTransportDraft { copy(dataBits = value.toIntOrNull()) }
         }
 
     var modbusRtuStopBitsText: String
         get() = transportDraft.stopBits?.toString().orEmpty()
-        set(value) {
-            updateTransportDraft { copy(stopBits = value.toIntOrNull()) }
+        private set(value) {
+            mutateTransportDraft { copy(stopBits = value.toIntOrNull()) }
         }
 
     var modbusRtuParity: McuModbusSerialParity
         get() = transportDraft.parity ?: McuModbusSerialParity.NONE
-        set(value) {
-            updateTransportDraft { copy(parity = value) }
+        private set(value) {
+            mutateTransportDraft { copy(parity = value) }
         }
 
     var modbusFrameFormat: McuModbusFrameFormat
         get() = uiState.modbus.frameFormat
-        set(value) {
+        private set(value) {
             updateModbusState { copy(frameFormat = value) }
         }
 
     var modbusRtuRetriesText: String
         get() = transportDraft.retries?.toString().orEmpty()
-        set(value) {
-            updateTransportDraft { copy(retries = value.toIntOrNull()) }
+        private set(value) {
+            mutateTransportDraft { copy(retries = value.toIntOrNull()) }
         }
 
     var modbusGpioWritePinText: String
         get() = uiState.modbus.gpioWritePinText
-        set(value) {
+        private set(value) {
             updateModbusState { copy(gpioWritePinText = value) }
         }
 
     var modbusGpioWriteHigh: Boolean
         get() = uiState.modbus.gpioWriteHigh
-        set(value) {
+        private set(value) {
             updateModbusState { copy(gpioWriteHigh = value) }
         }
 
     var modbusGpioModePinText: String
         get() = uiState.modbus.gpioModePinText
-        set(value) {
+        private set(value) {
             updateModbusState { copy(gpioModePinText = value) }
         }
 
     var modbusGpioMode: McuModbusGpioMode
         get() = uiState.modbus.gpioMode
-        set(value) {
+        private set(value) {
             updateModbusState { copy(gpioMode = value) }
         }
 
     var modbusPwmPinText: String
         get() = uiState.modbus.pwmPinText
-        set(value) {
+        private set(value) {
             updateModbusState { copy(pwmPinText = value) }
         }
 
     var modbusPwmDutyText: String
         get() = uiState.modbus.pwmDutyText
-        set(value) {
+        private set(value) {
             updateModbusState { copy(pwmDutyText = value) }
         }
 
     var modbusServoPinText: String
         get() = uiState.modbus.servoPinText
-        set(value) {
+        private set(value) {
             updateModbusState { copy(servoPinText = value) }
         }
 
     var modbusServoAngleText: String
         get() = uiState.modbus.servoAngleText
-        set(value) {
+        private set(value) {
             updateModbusState { copy(servoAngleText = value) }
         }
 
     var scriptLanguage: String
         get() = uiState.scriptEditor.language
-        set(value) {
+        private set(value) {
             updateScriptEditor { copy(language = value) }
         }
 
@@ -307,49 +307,49 @@ class McuConsoleWorkbenchState(
 
     var scriptText: String
         get() = uiState.scriptEditor.scriptText
-        set(value) {
+        private set(value) {
             updateScriptEditor { copy(scriptText = value) }
         }
 
     var serialCommandText: String
         get() = uiState.serialConsole.commandText
-        set(value) {
+        private set(value) {
             updateSerialConsoleState { copy(commandText = value) }
         }
 
     var serialCommandAppendLineEnding: Boolean
         get() = uiState.serialConsole.appendLineEnding
-        set(value) {
+        private set(value) {
             updateSerialConsoleState { copy(appendLineEnding = value) }
         }
 
     var serialCommandLineEnding: McuSerialLineEnding
         get() = uiState.serialConsole.lineEnding
-        set(value) {
+        private set(value) {
             updateSerialConsoleState { copy(lineEnding = value) }
         }
 
     var panelControlModuleText: String
         get() = uiState.panelControl.moduleText
-        set(value) {
+        private set(value) {
             updatePanelControlState { copy(moduleText = value) }
         }
 
     var panelDisplayValueText: String
         get() = uiState.panelControl.displayValueText
-        set(value) {
+        private set(value) {
             updatePanelControlState { copy(displayValueText = value) }
         }
 
     var panelBeepTimesText: String
         get() = uiState.panelControl.beepTimesText
-        set(value) {
+        private set(value) {
             updatePanelControlState { copy(beepTimesText = value) }
         }
 
     var panelLedIndexText: String
         get() = uiState.panelControl.ledIndexText
-        set(value) {
+        private set(value) {
             updatePanelControlState { copy(ledIndexText = value) }
         }
 
@@ -361,37 +361,37 @@ class McuConsoleWorkbenchState(
 
     var probePinMapFilesText: String
         get() = uiState.probe.pinMapFilesText
-        set(value) {
+        private set(value) {
             updateProbeState { copy(pinMapFilesText = value) }
         }
 
     var probeGpioSnapshotPinsText: String
         get() = uiState.probe.gpioSnapshotPinsText
-        set(value) {
+        private set(value) {
             updateProbeState { copy(gpioSnapshotPinsText = value) }
         }
 
     var probeI2cSdaText: String
         get() = uiState.probe.i2cSdaText
-        set(value) {
+        private set(value) {
             updateProbeState { copy(i2cSdaText = value) }
         }
 
     var probeI2cSclText: String
         get() = uiState.probe.i2cSclText
-        set(value) {
+        private set(value) {
             updateProbeState { copy(i2cSclText = value) }
         }
 
     var firmwarePathText: String
         get() = uiState.flashEditor.firmwarePathText
-        set(value) {
+        private set(value) {
             updateFlashEditor { copy(firmwarePathText = value) }
         }
 
     var timeoutMsText: String
         get() = uiState.scriptEditor.timeoutMsText
-        set(value) {
+        private set(value) {
             updateScriptEditor { copy(timeoutMsText = value) }
         }
 
@@ -437,7 +437,7 @@ class McuConsoleWorkbenchState(
         }
     }
 
-    private inline fun updateTransportDraft(
+    private inline fun mutateTransportDraft(
         transform: McuTransportProfileIso.() -> McuTransportProfileIso,
     ) {
         updateUiState {
@@ -524,6 +524,60 @@ class McuConsoleWorkbenchState(
         updateUiState {
             copy(loading = loading.transform())
         }
+    }
+
+    fun updatePortQuery(
+        value: String,
+    ) {
+        portQuery = value
+    }
+
+    fun updateTransportDraft(
+        transform: McuTransportProfileIso.() -> McuTransportProfileIso,
+    ) {
+        transportDraft = transportDraft.transform()
+    }
+
+    fun updateSelectedPortRemark(
+        value: String,
+    ) {
+        selectedPortRemarkDraft = value
+    }
+
+    fun updateModbusDraft(
+        transform: McuConsoleModbusState.() -> McuConsoleModbusState,
+    ) {
+        updateModbusState(transform)
+    }
+
+    fun updateScriptEditorDraft(
+        transform: McuConsoleScriptEditorState.() -> McuConsoleScriptEditorState,
+    ) {
+        updateScriptEditor(transform)
+    }
+
+    fun updateSerialConsoleDraft(
+        transform: McuConsoleSerialConsoleState.() -> McuConsoleSerialConsoleState,
+    ) {
+        updateSerialConsoleState(transform)
+    }
+
+    fun updatePanelControlDraft(
+        transform: McuConsolePanelControlState.() -> McuConsolePanelControlState,
+    ) {
+        updatePanelControlState(transform)
+    }
+
+    fun updateProbeDraft(
+        transform: McuConsoleProbeState.() -> McuConsoleProbeState,
+    ) {
+        updateProbeState(transform)
+    }
+
+    fun updateFlashEditorDraft(
+        transform: McuConsoleFlashEditorState.() -> McuConsoleFlashEditorState,
+    ) {
+        updateFlashEditor(transform)
     }
 
     val filteredPorts: List<McuPortSummary>
@@ -642,7 +696,7 @@ class McuConsoleWorkbenchState(
         selectedPortDeviceKey = selected?.deviceKey?.takeIf { it.isNotBlank() }
         deviceDraft = selected.toDeviceDraft(deviceDraft)
         if (selected != null) {
-            updateTransportDraft {
+            mutateTransportDraft {
                 copy(
                     deviceKey = selected.deviceKey.ifBlank { null },
                     portPathHint = selected.portPath.ifBlank { null },
@@ -661,7 +715,7 @@ class McuConsoleWorkbenchState(
         kind: McuTransportKind,
     ) {
         selectedTransportKind = kind
-        updateTransportDraft {
+        mutateTransportDraft {
             copy(
                 transportKind = kind,
                 name = name.ifBlank { kind.defaultDraftName() },

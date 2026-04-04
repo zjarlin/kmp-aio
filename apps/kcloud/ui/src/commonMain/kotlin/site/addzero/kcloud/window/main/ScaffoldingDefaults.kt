@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import org.koin.compose.koinInject
 import site.addzero.component.chat.AddChatOverlay
 import site.addzero.component.chat.AddChatOverlayState
-import site.addzero.kcloud.plugins.system.aichat.screen.AiChatPanel
+import site.addzero.kcloud.plugins.system.aichat.workbench.AiChatWorkbenchPanel
 import site.addzero.kcloud.plugins.system.aichat.workbench.AiChatWorkbenchState
 
 @Composable
@@ -16,6 +16,6 @@ internal fun DefaultOverlay(
         visible = overlayState.visible,
         onDismiss = overlayState::hide,
     ) {
-        AiChatPanel(state = aiChatState)
+        AiChatWorkbenchPanel(state = aiChatState)
     }
 }

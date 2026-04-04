@@ -47,7 +47,12 @@ pluginManagement {
         .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
         .get()
     plugins {
+        id("site.addzero.kcp.all-object-jvm-static") version resolvedAddzeroLibJvmVersion
         id("site.addzero.kcp.i18n") version resolvedKcpI18nVersion
+        id("site.addzero.kcp.multireceiver") version resolvedAddzeroLibJvmVersion
+        id("site.addzero.kcp.reified") version resolvedAddzeroLibJvmVersion
+        id("site.addzero.kcp.spread-pack") version resolvedAddzeroLibJvmVersion
+        id("site.addzero.kcp.transform-overload") version resolvedAddzeroLibJvmVersion
         id("site.addzero.ksp.modbus-rtu") version resolvedAddzeroLibJvmVersion
         id("site.addzero.ksp.modbus-tcp") version resolvedAddzeroLibJvmVersion
     }
@@ -173,9 +178,18 @@ if (hasLocalAddzeroLibJvm) {
     remapExternalProject(":lib:kcp", "lib/kcp")
     remapExternalProject(":lib:kcp:kcp-i18n", "lib/kcp/kcp-i18n")
     remapExternalProject(":lib:kcp:kcp-i18n-runtime", "lib/kcp/kcp-i18n-runtime")
+    remapExternalProject(":lib:kcp:spread-pack:kcp-spread-pack-annotations", "lib/kcp/spread-pack/kcp-spread-pack-annotations")
+    remapExternalProject(":lib:kcp:spread-pack:kcp-spread-pack-plugin", "lib/kcp/spread-pack/kcp-spread-pack-plugin")
+    remapExternalProject(
+        ":lib:kcp:spread-pack:kcp-spread-pack-gradle-plugin",
+        "lib/kcp/spread-pack/kcp-spread-pack-gradle-plugin",
+    )
+    remapExternalProject(":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin", "lib/kcp/spread-pack/kcp-spread-pack-ide-plugin")
     remapExternalProject(":lib:compose", "lib/compose")
     remapExternalProject(":lib:compose:app-sidebar", "lib/compose/app-sidebar")
+    remapExternalProject(":lib:compose:app-sidebar-cupertino-adapter", "lib/compose/app-sidebar-cupertino-adapter")
     remapExternalProject(":lib:compose:compose-apple-corner", "lib/compose/compose-apple-corner")
+    remapExternalProject(":lib:compose:compose-cupertino-workbench", "lib/compose/compose-cupertino-workbench")
     remapExternalProject(":lib:compose:compose-crud-spi", "lib/compose/compose-crud-spi")
     remapExternalProject(":lib:compose:compose-eventbus", "lib/compose/compose-eventbus")
     remapExternalProject(":lib:compose:compose-icon-map", "lib/compose/compose-icon-map")
@@ -191,14 +205,20 @@ if (hasLocalAddzeroLibJvm) {
     remapExternalProject(":lib:compose:compose-native-component-form", "lib/compose/compose-native-component-form")
     remapExternalProject(":lib:compose:compose-native-component-glass", "lib/compose/compose-native-component-glass")
     remapExternalProject(":lib:compose:compose-native-component-hook", "lib/compose/compose-native-component-hook")
+    remapExternalProject(
+        ":lib:compose:compose-native-component-knowledgegraph",
+        "lib/compose/compose-native-component-knowledgegraph",
+    )
     remapExternalProject(":lib:compose:compose-native-component-searchbar", "lib/compose/compose-native-component-searchbar")
     remapExternalProject(":lib:compose:compose-native-component-select", "lib/compose/compose-native-component-select")
+    remapExternalProject(":lib:compose:compose-native-component-sheet", "lib/compose/compose-native-component-sheet")
     remapExternalProject(":lib:compose:compose-native-component-table", "lib/compose/compose-native-component-table")
     remapExternalProject(":lib:compose:compose-native-component-table-core", "lib/compose/compose-native-component-table-core")
     remapExternalProject(":lib:compose:compose-native-component-table-pro", "lib/compose/compose-native-component-table-pro")
     remapExternalProject(":lib:compose:compose-native-component-text", "lib/compose/compose-native-component-text")
     remapExternalProject(":lib:compose:compose-native-component-tree", "lib/compose/compose-native-component-tree")
     remapExternalProject(":lib:compose:compose-native-component-toast", "lib/compose/compose-native-component-toast")
+    remapExternalProject(":lib:compose:compose-sheet-spi", "lib/compose/compose-sheet-spi")
     remapExternalProject(":lib:compose:compose-workbench-design", "lib/compose/compose-workbench-design")
     remapExternalProject(":lib:compose:compose-workbench-shell", "lib/compose/compose-workbench-shell")
     remapExternalProject(":lib:compose:compose-zh-fonts", "lib/compose/compose-zh-fonts")
@@ -207,6 +227,12 @@ if (hasLocalAddzeroLibJvm) {
     remapExternalProject(":lib:compose:media-playlist-player", "lib/compose/media-playlist-player")
     remapExternalProject(":lib:compose:scaffold-spi", "lib/compose/scaffold-spi")
     remapExternalProject(":lib:compose:shadcn-compose-component", "lib/compose/shadcn-compose-component")
+    remapExternalProject(":lib:gradle-plugin", "lib/gradle-plugin")
+    remapExternalProject(":lib:gradle-plugin:project-plugin", "lib/gradle-plugin/project-plugin")
+    remapExternalProject(
+        ":lib:gradle-plugin:project-plugin:gradle-ksp-consumer-base",
+        "lib/gradle-plugin/project-plugin/gradle-ksp-consumer-base",
+    )
     remapExternalProject(":lib:tool-kmp", "lib/tool-kmp")
     remapExternalProject(":lib:tool-kmp:tool-array", "lib/tool-kmp/tool-array")
     remapExternalProject(":lib:tool-kmp:tool-boolean", "lib/tool-kmp/tool-boolean")
@@ -214,6 +240,8 @@ if (hasLocalAddzeroLibJvm) {
     remapExternalProject(":lib:tool-kmp:tool-enum", "lib/tool-kmp/tool-enum")
     remapExternalProject(":lib:tool-kmp:network-starter", "lib/tool-kmp/network-starter")
     remapExternalProject(":lib:tool-kmp:tool-model", "lib/tool-kmp/tool-model")
+    remapExternalProject(":lib:tool-kmp:tool-regex", "lib/tool-kmp/tool-regex")
+    remapExternalProject(":lib:tool-kmp:tool-str", "lib/tool-kmp/tool-str")
     remapExternalProject(":lib:tool-kmp:tool-tree", "lib/tool-kmp/tool-tree")
     remapExternalProject(":lib:tool-jvm", "lib/tool-jvm")
     remapExternalProject(":lib:tool-jvm:tool-serial", "lib/tool-jvm/tool-serial")
@@ -228,14 +256,29 @@ if (hasLocalAddzeroLibJvm) {
     remapExternalProject(":lib:ksp:metadata:ksp-dsl-builder:ksp-dsl-builder-core", "lib/ksp/metadata/ksp-dsl-builder/ksp-dsl-builder-core")
     remapExternalProject(":lib:lsi", "lib/lsi")
     remapExternalProject(":lib:lsi:lsi-core", "lib/lsi/lsi-core")
+    remapExternalProject(":lib:lsi:lsi-ksp", "lib/lsi/lsi-ksp")
+    remapExternalProject(":lib:kcp:multireceiver:kcp-multireceiver-annotations", "lib/kcp/multireceiver/kcp-multireceiver-annotations")
     remapExternalProject(":lib:ksp:route", "lib/ksp/route")
     remapExternalProject(":lib:ksp:route:route-core", "lib/ksp/route/route-core")
     remapExternalProject(":lib:ksp:route:route-processor", "lib/ksp/route/route-processor")
     remapExternalProject(":lib:ksp:metadata:jimmer-entity-spi", "lib/ksp/metadata/jimmer-entity-spi")
+    remapExternalProject(
+        ":lib:ksp:metadata:compose-props:compose-props-annotations",
+        "lib/ksp/metadata/compose-props/compose-props-annotations",
+    )
+    remapExternalProject(
+        ":lib:ksp:metadata:compose-props:compose-props-gradle-plugin",
+        "lib/ksp/metadata/compose-props/compose-props-gradle-plugin",
+    )
+    remapExternalProject(
+        ":lib:ksp:metadata:compose-props:compose-props-processor",
+        "lib/ksp/metadata/compose-props/compose-props-processor",
+    )
     remapExternalProject(":lib:ksp:metadata:entity2iso-processor", "lib/ksp/metadata/entity2iso-processor")
     remapExternalProject(":lib:ksp:metadata:entity2form:entity2form-processor", "lib/ksp/metadata/entity2form/entity2form-processor")
     remapExternalProject(":lib:ksp:metadata:entity2mcp-processor", "lib/ksp/metadata/entity2mcp-processor")
     remapExternalProject(":lib:ksp:metadata:jimmer-entity-external-processor", "lib/ksp/metadata/jimmer-entity-external-processor")
+    remapExternalProject(":lib:ksp:metadata:multireceiver-processor", "lib/ksp/metadata/multireceiver-processor")
     remapExternalProject(":lib:ksp:metadata:modbus:modbus-runtime", "lib/ksp/metadata/modbus/modbus-runtime")
     remapExternalProject(":lib:ksp:metadata:modbus:modbus-ksp-core", "lib/ksp/metadata/modbus/modbus-ksp-core")
     remapExternalProject(
@@ -264,6 +307,10 @@ if (hasLocalAddzeroLibJvm) {
                     .using(project(":lib:tool-kmp:network-starter"))
                 substitute(module("site.addzero:compose-icon-map"))
                     .using(project(":lib:compose:compose-icon-map"))
+                substitute(module("site.addzero:app-sidebar-cupertino-adapter"))
+                    .using(project(":lib:compose:app-sidebar-cupertino-adapter"))
+                substitute(module("site.addzero:compose-cupertino-workbench"))
+                    .using(project(":lib:compose:compose-cupertino-workbench"))
                 substitute(module("site.addzero:compose-native-component-high-level"))
                     .using(project(":lib:compose:compose-native-component-high-level"))
                 substitute(module("site.addzero:compose-native-component-button"))
@@ -316,6 +363,14 @@ if (hasLocalAddzeroLibJvm) {
                     .using(project(":lib:kcp:kcp-i18n"))
                 substitute(module("site.addzero:kcp-i18n-runtime"))
                     .using(project(":lib:kcp:kcp-i18n-runtime"))
+                substitute(module("site.addzero:kcp-spread-pack-annotations"))
+                    .using(project(":lib:kcp:spread-pack:kcp-spread-pack-annotations"))
+                substitute(module("site.addzero:kcp-spread-pack-plugin"))
+                    .using(project(":lib:kcp:spread-pack:kcp-spread-pack-plugin"))
+                substitute(module("site.addzero:kcp-spread-pack-gradle-plugin"))
+                    .using(project(":lib:kcp:spread-pack:kcp-spread-pack-gradle-plugin"))
+                substitute(module("site.addzero:kcp-spread-pack-ide-plugin"))
+                    .using(project(":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin"))
                 substitute(module("site.addzero:jimmer-entity-spi"))
                     .using(project(":lib:ksp:metadata:jimmer-entity-spi"))
                 substitute(module("site.addzero:entity2iso-processor"))

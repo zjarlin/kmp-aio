@@ -4,18 +4,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
-import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.suno.SunoTrack
+import site.addzero.kcloud.music.MusicHistoryService
 import site.addzero.kcloud.vibepocket.model.FavoriteItem
-import site.addzero.kcloud.vibepocket.model.FavoriteRequest
 import site.addzero.kcloud.vibepocket.model.MusicHistoryItem
-import site.addzero.kcloud.music.SunoWorkflowService
 
 enum class MusicHistoryTab(
     val title: String,
@@ -41,9 +36,9 @@ data class MusicHistoryScreenState(
 )
 
 @KoinViewModel
-class MusicHistoryViewModel : ViewModel() {
-    private val screenScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-
+class MusicHistoryViewModel(
+    private val musicHistoryService: MusicHistoryService,
+) : ViewModel() {
     var state by mutableStateOf(MusicHistoryScreenState())
         private set
 
@@ -74,23 +69,17 @@ class MusicHistoryViewModel : ViewModel() {
         taskId: String,
         newFavorite: Boolean,
     ) {
-        screenScope.launch {
+        viewModelScope.launch {
             runCatching {
                 if (newFavorite) {
-                    ServerApiClient.favoriteApi.addFavorite(
-                        FavoriteRequest(
-                            trackId = trackId,
-                            taskId = taskId,
-                            audioUrl = track.audioUrl,
-                            title = track.title,
-                            tags = track.tags,
-                            imageUrl = track.imageUrl,
-                            duration = track.duration,
-                        ),
+                    musicHistoryService.addFavorite(
+                        trackId = trackId,
+                        track = track,
+                        taskId = taskId,
                     )
                     state = state.copy(favoriteIds = state.favoriteIds + trackId)
                 } else {
-                    ServerApiClient.favoriteApi.removeFavorite(trackId)
+                    musicHistoryService.removeFavorite(trackId)
                     state = state.copy(
                         favoriteIds = state.favoriteIds - trackId,
                         favorites = state.favorites.copy(
@@ -103,9 +92,9 @@ class MusicHistoryViewModel : ViewModel() {
     }
 
     fun removeFavorite(trackId: String) {
-        screenScope.launch {
+        viewModelScope.launch {
             runCatching {
-                ServerApiClient.favoriteApi.removeFavorite(trackId)
+                musicHistoryService.removeFavorite(trackId)
                 state = state.copy(
                     favoriteIds = state.favoriteIds - trackId,
                     favorites = state.favorites.copy(
@@ -117,7 +106,7 @@ class MusicHistoryViewModel : ViewModel() {
     }
 
     private fun refreshHistory() {
-        screenScope.launch {
+        viewModelScope.launch {
             state = state.copy(
                 history = state.history.copy(
                     isLoading = true,
@@ -125,7 +114,7 @@ class MusicHistoryViewModel : ViewModel() {
                 ),
             )
             try {
-                val historyItems = ServerApiClient.historyApi.getHistory()
+                val historyItems = musicHistoryService.getHistory()
                 state = state.copy(
                     history = MusicHistoryLoadState(items = historyItems),
                 )
@@ -141,7 +130,7 @@ class MusicHistoryViewModel : ViewModel() {
     }
 
     private fun refreshFavorites() {
-        screenScope.launch {
+        viewModelScope.launch {
             state = state.copy(
                 favorites = state.favorites.copy(
                     isLoading = true,
@@ -149,7 +138,7 @@ class MusicHistoryViewModel : ViewModel() {
                 ),
             )
             try {
-                val favoriteItems = ServerApiClient.favoriteApi.getFavorites()
+                val favoriteItems = musicHistoryService.getFavorites()
                 state = state.copy(
                     favorites = MusicHistoryLoadState(items = favoriteItems),
                     favoriteIds = favoriteItems.mapTo(linkedSetOf()) { item -> item.trackId },
@@ -166,9 +155,9 @@ class MusicHistoryViewModel : ViewModel() {
     }
 
     private fun refreshFavoriteIds() {
-        screenScope.launch {
+        viewModelScope.launch {
             runCatching {
-                ServerApiClient.favoriteApi.getFavorites()
+                musicHistoryService.getFavorites()
             }.onSuccess { favoriteItems ->
                 state = state.copy(
                     favoriteIds = favoriteItems.mapTo(linkedSetOf()) { item -> item.trackId },
@@ -178,18 +167,13 @@ class MusicHistoryViewModel : ViewModel() {
     }
 
     private fun refreshCredits() {
-        screenScope.launch {
+        viewModelScope.launch {
             state = state.copy(isLoadingCredits = true)
             try {
-                state = state.copy(credits = SunoWorkflowService.getCreditsOrNull())
+                state = state.copy(credits = musicHistoryService.getCreditsOrNull())
             } finally {
                 state = state.copy(isLoadingCredits = false)
             }
         }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        screenScope.cancel()
     }
 }

@@ -1,5 +1,5 @@
 plugins {
-    id("site.addzero.buildlogic.kmp.cmp-lib")
+    id("site.addzero.buildlogic.kmp.cmp-lib-cupertino")
     id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
@@ -38,7 +38,7 @@ dependencies {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:compose:compose-workbench-design"))
+            implementation(project(":lib:compose:compose-cupertino-workbench"))
             api(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:ksp:route:route-core"))
         }

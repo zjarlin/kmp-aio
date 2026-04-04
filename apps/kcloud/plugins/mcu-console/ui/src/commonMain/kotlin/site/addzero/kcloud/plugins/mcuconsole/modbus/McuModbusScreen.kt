@@ -12,9 +12,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import site.addzero.cupertino.workbench.material3.MaterialTheme
+import site.addzero.cupertino.workbench.material3.Surface
+import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -188,7 +188,11 @@ private fun McuModbusConnectionEditor(
             ) {
                 McuCupertinoField(
                     value = state.modbusConnectionNameText,
-                    onValueChange = { state.modbusConnectionNameText = it },
+                    onValueChange = { value ->
+                        state.updateTransportDraft {
+                            copy(name = value.ifBlank { state.selectedTransportKind.defaultDraftName() })
+                        }
+                    },
                     label = "连接别名",
                     modifier = Modifier.weight(1f),
                 )
@@ -222,7 +226,9 @@ private fun McuModbusConnectionEditor(
                     )
                     McuCupertinoField(
                         value = state.baudRateText,
-                        onValueChange = { state.baudRateText = it },
+                        onValueChange = { value ->
+                            state.updateTransportDraft { copy(baudRate = value.toIntOrNull()) }
+                        },
                         label = "波特率",
                     )
                     Row(
@@ -231,13 +237,17 @@ private fun McuModbusConnectionEditor(
                     ) {
                         McuCupertinoField(
                             value = state.modbusRtuDataBitsText,
-                            onValueChange = { state.modbusRtuDataBitsText = it },
+                            onValueChange = { value ->
+                                state.updateTransportDraft { copy(dataBits = value.toIntOrNull()) }
+                            },
                             label = "数据位",
                             modifier = Modifier.weight(1f),
                         )
                         McuCupertinoField(
                             value = state.modbusRtuStopBitsText,
-                            onValueChange = { state.modbusRtuStopBitsText = it },
+                            onValueChange = { value ->
+                                state.updateTransportDraft { copy(stopBits = value.toIntOrNull()) }
+                            },
                             label = "停止位",
                             modifier = Modifier.weight(1f),
                         )
@@ -246,7 +256,9 @@ private fun McuModbusConnectionEditor(
                         items = McuModbusSerialParity.entries,
                         selectedItem = state.modbusRtuParity,
                         labelOf = { parity -> parity.displayName() },
-                        onSelect = { parity -> state.modbusRtuParity = parity },
+                        onSelect = { parity ->
+                            state.updateTransportDraft { copy(parity = parity) }
+                        },
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -254,21 +266,27 @@ private fun McuModbusConnectionEditor(
                     ) {
                         McuCupertinoField(
                             value = state.modbusRtuUnitIdText,
-                            onValueChange = { state.modbusRtuUnitIdText = it },
+                            onValueChange = { value ->
+                                state.updateTransportDraft { copy(unitId = value.toIntOrNull()) }
+                            },
                             label = "站号 UnitId",
                             modifier = Modifier.weight(1f),
                             supportingText = "1..247",
                         )
                         McuCupertinoField(
                             value = state.modbusRtuRetriesText,
-                            onValueChange = { state.modbusRtuRetriesText = it },
+                            onValueChange = { value ->
+                                state.updateTransportDraft { copy(retries = value.toIntOrNull()) }
+                            },
                             label = "重试次数",
                             modifier = Modifier.weight(1f),
                         )
                     }
                     McuCupertinoField(
                         value = state.modbusRtuTimeoutMsText,
-                        onValueChange = { state.modbusRtuTimeoutMsText = it },
+                        onValueChange = { value ->
+                            state.updateTransportDraft { copy(timeoutMs = value.toIntOrNull()) }
+                        },
                         label = "超时(ms)",
                     )
                 }
@@ -281,7 +299,9 @@ private fun McuModbusConnectionEditor(
                         items = McuModbusFrameFormat.entries,
                         selectedItem = state.modbusFrameFormat,
                         labelOf = { frameFormat -> frameFormat.displayName() },
-                        onSelect = { frameFormat -> state.modbusFrameFormat = frameFormat },
+                        onSelect = { frameFormat ->
+                            state.updateModbusDraft { copy(frameFormat = frameFormat) }
+                        },
                     )
                     McuInfoNotice(
                         if (state.modbusFrameFormat == McuModbusFrameFormat.RTU) {
@@ -344,7 +364,9 @@ private fun McuModbusActionPanel(
                     item {
                         McuCupertinoField(
                             value = state.modbusGpioWritePinText,
-                            onValueChange = { state.modbusGpioWritePinText = it },
+                            onValueChange = { value ->
+                                state.updateModbusDraft { copy(gpioWritePinText = value) }
+                            },
                             label = "GPIO 引脚",
                         )
                     }
@@ -353,7 +375,9 @@ private fun McuModbusActionPanel(
                             items = listOf(true, false),
                             selectedItem = state.modbusGpioWriteHigh,
                             labelOf = { high -> if (high) "HIGH" else "LOW" },
-                            onSelect = { high -> state.modbusGpioWriteHigh = high },
+                            onSelect = { high ->
+                                state.updateModbusDraft { copy(gpioWriteHigh = high) }
+                            },
                         )
                     }
                 }
@@ -362,7 +386,9 @@ private fun McuModbusActionPanel(
                     item {
                         McuCupertinoField(
                             value = state.modbusGpioModePinText,
-                            onValueChange = { state.modbusGpioModePinText = it },
+                            onValueChange = { value ->
+                                state.updateModbusDraft { copy(gpioModePinText = value) }
+                            },
                             label = "GPIO 引脚",
                         )
                     }
@@ -371,7 +397,9 @@ private fun McuModbusActionPanel(
                             items = McuModbusGpioMode.entries,
                             selectedItem = state.modbusGpioMode,
                             labelOf = { mode -> mode.displayName() },
-                            onSelect = { mode -> state.modbusGpioMode = mode },
+                            onSelect = { mode ->
+                                state.updateModbusDraft { copy(gpioMode = mode) }
+                            },
                         )
                     }
                 }
@@ -380,14 +408,18 @@ private fun McuModbusActionPanel(
                     item {
                         McuCupertinoField(
                             value = state.modbusPwmPinText,
-                            onValueChange = { state.modbusPwmPinText = it },
+                            onValueChange = { value ->
+                                state.updateModbusDraft { copy(pwmPinText = value) }
+                            },
                             label = "PWM 引脚",
                         )
                     }
                     item {
                         McuCupertinoField(
                             value = state.modbusPwmDutyText,
-                            onValueChange = { state.modbusPwmDutyText = it },
+                            onValueChange = { value ->
+                                state.updateModbusDraft { copy(pwmDutyText = value) }
+                            },
                             label = "dutyU16",
                             supportingText = "合法范围 0..65535",
                         )
@@ -398,14 +430,18 @@ private fun McuModbusActionPanel(
                     item {
                         McuCupertinoField(
                             value = state.modbusServoPinText,
-                            onValueChange = { state.modbusServoPinText = it },
+                            onValueChange = { value ->
+                                state.updateModbusDraft { copy(servoPinText = value) }
+                            },
                             label = "舵机引脚",
                         )
                     }
                     item {
                         McuCupertinoField(
                             value = state.modbusServoAngleText,
-                            onValueChange = { state.modbusServoAngleText = it },
+                            onValueChange = { value ->
+                                state.updateModbusDraft { copy(servoAngleText = value) }
+                            },
                             label = "目标角度",
                             supportingText = "合法范围 0..180",
                         )
