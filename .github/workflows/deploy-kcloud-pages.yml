@@ -41,6 +41,13 @@ jobs:
           path: addzero-lib-jvm
           fetch-depth: 1
 
+      - name: Checkout build-logic
+        uses: actions/checkout@v4
+        with:
+          repository: zjarlin/build-logic
+          path: addzero-lib-jvm/checkouts/build-logic
+          fetch-depth: 1
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
