@@ -16,6 +16,9 @@ plugins {
 val libs = versionCatalogs.named("libs")
 val addzeroLibJvmVersion: String by project
 val desktopMainClass = "site.addzero.kcloud.bootstrap.MainKt"
+val desktopDistributionName = providers.gradleProperty("desktopDistributionName")
+    .orElse("okmy-dics")
+    .get()
 val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(24))
 }
@@ -72,6 +75,9 @@ compose.desktop {
         buildTypes.release.proguard.isEnabled.set(false)
         mainClass = desktopMainClass
         javaHome = desktopRuntimeJavaLauncher.get().metadata.installationPath.asFile.absolutePath
+        nativeDistributions {
+            packageName = desktopDistributionName
+        }
     }
 }
 

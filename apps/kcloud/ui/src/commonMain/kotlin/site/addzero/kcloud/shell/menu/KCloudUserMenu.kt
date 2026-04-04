@@ -1,15 +1,10 @@
 package site.addzero.kcloud.shell.menu
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material.icons.filled.Work
-import androidx.compose.material.icons.rounded.DarkMode
-import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -20,9 +15,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import org.koin.compose.koinInject
-import site.addzero.component.chat.AddChatOverlayState
 import site.addzero.kcloud.design.button.KCloudButtonVariant
 import site.addzero.kcloud.design.button.KCloudIconButton
 import site.addzero.kcloud.shell.KCloudShellState
@@ -30,43 +22,9 @@ import site.addzero.kcloud.shell.navigation.KCloudRouteCatalog
 import site.addzero.kcloud.shell.navigation.firstLeafRoutePath
 
 @Composable
-fun RowScope.KCloudShellActions(
-    darkTheme: Boolean,
-    onThemeToggle: () -> Unit,
-    shellState: KCloudShellState = koinInject(),
-    aiOverlayState: AddChatOverlayState = koinInject(),
-) {
-    Row(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        KCloudShellIconButton(
-            tooltip = if (aiOverlayState.visible) "关闭 AI 助手" else "打开 AI 助手",
-            onClick = aiOverlayState::toggle,
-            variant = if (aiOverlayState.visible) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
-        ) {
-            Icon(
-                imageVector = Icons.Default.SmartToy,
-                contentDescription = null,
-            )
-        }
-        KCloudShellIconButton(
-            tooltip = if (darkTheme) "切换到浅色" else "切换到深色",
-            onClick = onThemeToggle,
-            variant = if (darkTheme) KCloudButtonVariant.Secondary else KCloudButtonVariant.Outline,
-        ) {
-            Icon(
-                imageVector = if (darkTheme) Icons.Rounded.LightMode else Icons.Rounded.DarkMode,
-                contentDescription = null,
-            )
-        }
-        KCloudUserMenu(shellState = shellState)
-    }
-}
-
-@Composable
 fun KCloudUserMenu(
-    shellState: KCloudShellState = koinInject(),
-    routeCatalog: KCloudRouteCatalog = koinInject(),
+    shellState: KCloudShellState,
+    routeCatalog: KCloudRouteCatalog,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val items = remember(routeCatalog) {
@@ -131,7 +89,7 @@ fun KCloudUserMenu(
 }
 
 @Composable
-private fun KCloudShellIconButton(
+internal fun KCloudShellIconButton(
     tooltip: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

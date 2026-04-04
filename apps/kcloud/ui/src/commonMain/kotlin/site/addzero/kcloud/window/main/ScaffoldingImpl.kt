@@ -10,7 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.shell.menu.KCloudShellActions
+import site.addzero.kcloud.shell.menu.KCloudShellUserActionsRenderer
 import site.addzero.workbenchshell.spi.scaffolding.ScaffoldingSpi
 
 @Single(
@@ -18,7 +18,9 @@ import site.addzero.workbenchshell.spi.scaffolding.ScaffoldingSpi
         ScaffoldingSpi::class,
     ],
 )
-class ScaffoldingImpl : ScaffoldingSpi {
+class ScaffoldingImpl(
+    private val userActionsRenderer: KCloudShellUserActionsRenderer,
+) : ScaffoldingSpi {
     override val pageTitle: String = "KCloud"
     override val brandLabel: String = "OKMY DICS"
 
@@ -38,14 +40,14 @@ class ScaffoldingImpl : ScaffoldingSpi {
     }
 
     @Composable
+    @Suppress("UNUSED_PARAMETER")
     override fun RowScope.RenderUserActions(
         darkTheme: Boolean,
         onThemeToggle: () -> Unit,
     ) {
-        KCloudShellActions(
-            darkTheme = darkTheme,
-            onThemeToggle = onThemeToggle,
-        )
+        with(userActionsRenderer) {
+            Render()
+        }
     }
 
     @Composable

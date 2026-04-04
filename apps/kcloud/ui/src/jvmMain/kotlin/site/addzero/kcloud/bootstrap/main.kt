@@ -49,7 +49,7 @@ fun main() {
         val windowState = rememberWindowState(
             width = desktopUiMetrics.defaultWindowWidth,
             height = desktopUiMetrics.defaultWindowHeight,
-            placement = WindowPlacement.Fullscreen,
+            placement = WindowPlacement.Maximized,
         )
 
         Window(
