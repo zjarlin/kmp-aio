@@ -10,6 +10,7 @@ on:
 env:
   JAVA_VERSION: '21'
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g"
+  ORG_GRADLE_PROJECT_useLocalAddzeroLibJvmPluginBuild: 'true'
 
 jobs:
   build-wasm:
