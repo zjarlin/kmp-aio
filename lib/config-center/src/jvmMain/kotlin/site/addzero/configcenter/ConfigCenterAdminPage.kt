@@ -70,6 +70,13 @@ fun Application.installConfigCenterAdmin(
                     ),
                 )
             }
+            get("/api/namespaces") {
+                call.respondJson(
+                    ConfigCenterNamespaceListResponse(
+                        items = adminService.listNamespaces(),
+                    ),
+                )
+            }
             get("/api/value") {
                 call.respondJson(
                     adminService.readEntry(
@@ -84,6 +91,11 @@ fun Application.installConfigCenterAdmin(
                     adminService.writeEntry(call.receiveJson()),
                 )
             }
+            put("/api/namespace") {
+                call.respondJson(
+                    adminService.writeNamespace(call.receiveJson()),
+                )
+            }
             delete("/api/value") {
                 call.respondJson(
                     ConfigCenterDeleteResponse(
@@ -91,6 +103,15 @@ fun Application.installConfigCenterAdmin(
                             namespace = call.parameters["namespace"].orEmpty(),
                             key = call.parameters["key"].orEmpty(),
                             active = call.parameters["active"] ?: DEFAULT_CONFIG_CENTER_ACTIVE,
+                        ),
+                    ),
+                )
+            }
+            delete("/api/namespace") {
+                call.respondJson(
+                    ConfigCenterDeleteResponse(
+                        deleted = adminService.deleteNamespace(
+                            namespace = call.parameters["namespace"].orEmpty(),
                         ),
                     ),
                 )
@@ -106,6 +127,29 @@ private fun ConfigCenterValueService.asAdminService(): ConfigCenterAdminService 
 private class LegacyConfigCenterAdminService(
     private val delegate: ConfigCenterValueService,
 ) : ConfigCenterAdminService {
+    override fun listNamespaces(): List<ConfigCenterNamespaceDto> {
+        return delegate.listValues(limit = 2_000)
+            .map(ConfigCenterValueDto::namespace)
+            .filter(String::isNotBlank)
+            .distinct()
+            .sorted()
+            .map { namespace ->
+                ConfigCenterNamespaceDto(namespace = namespace)
+            }
+    }
+
+    override fun writeNamespace(
+        request: ConfigCenterNamespaceWriteRequest,
+    ): ConfigCenterNamespaceDto {
+        throw UnsupportedOperationException("namespace management is not supported by this service")
+    }
+
+    override fun deleteNamespace(
+        namespace: String,
+    ): Boolean {
+        throw UnsupportedOperationException("namespace management is not supported by this service")
+    }
+
     override fun listValues(
         namespace: String?,
         active: String?,
@@ -251,20 +295,33 @@ private fun renderConfigCenterAdminPage(
         .shell {
           max-width: 1440px;
           margin: 0 auto;
-          padding: 28px 20px 56px;
+          padding: 20px 18px 36px;
+          min-height: 100vh;
         }
-        .hero {
+        .topbar {
           display: flex;
           justify-content: space-between;
-          gap: 20px;
+          gap: 16px;
           align-items: flex-start;
-          margin-bottom: 20px;
-          padding: 26px 28px;
-          background: linear-gradient(135deg, rgba(255,255,255,0.94), rgba(248,250,252,0.9));
-          border: 1px solid var(--border);
-          border-radius: 24px;
-          box-shadow: var(--shadow);
-          backdrop-filter: blur(18px);
+          margin-bottom: 16px;
+        }
+        .topbar-left {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .topbar-controls {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          align-items: center;
+          justify-content: flex-end;
+        }
+        .topbar-actions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          align-items: center;
         }
         h1 {
           margin: 0;
@@ -272,17 +329,11 @@ private fun renderConfigCenterAdminPage(
           line-height: 1.1;
           letter-spacing: -0.03em;
         }
-        .hero p {
-          margin: 12px 0 0;
-          color: var(--muted-foreground);
-          max-width: 820px;
-          line-height: 1.7;
-        }
         .pill {
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          padding: 7px 12px;
+          padding: 6px 10px;
           border-radius: 999px;
           background: #ffffff;
           color: var(--muted-foreground);
@@ -291,55 +342,42 @@ private fun renderConfigCenterAdminPage(
           font-weight: 600;
           box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04);
         }
-        .hero-side {
-          min-width: 240px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-        .hero-stat {
-          padding: 14px 16px;
-          border-radius: 16px;
-          background: rgba(255, 255, 255, 0.78);
-          border: 1px solid var(--border);
-        }
-        .hero-stat-label {
-          font-size: 12px;
-          color: var(--muted-foreground);
-        }
-        .hero-stat-value {
-          margin-top: 6px;
-          font-size: 24px;
-          font-weight: 700;
-          letter-spacing: -0.03em;
-        }
         .layout {
           display: grid;
           grid-template-columns: minmax(0, 1.55fr) minmax(360px, 0.95fr);
-          gap: 20px;
+          gap: 16px;
+          align-items: stretch;
+          min-height: calc(100vh - 140px);
         }
         .card {
           background: var(--card);
           border: 1px solid var(--border);
-          border-radius: 22px;
+          border-radius: 18px;
           box-shadow: var(--shadow);
           overflow: hidden;
           backdrop-filter: blur(16px);
+          display: flex;
+          flex-direction: column;
         }
         .section {
-          padding: 22px;
+          padding: 16px 18px;
+        }
+        .section.section-tree {
+          display: flex;
+          flex-direction: column;
+          flex: 1;
         }
         .section + .section {
           border-top: 1px solid var(--border);
         }
         .filters, .editor-grid {
           display: grid;
-          gap: 14px;
+          gap: 10px 12px;
           grid-template-columns: repeat(3, minmax(0, 1fr));
         }
         .filters.filters-advanced {
           grid-template-columns: repeat(4, minmax(0, 1fr));
-          margin-top: 14px;
+          margin-top: 10px;
         }
         .editor-grid {
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -347,21 +385,32 @@ private fun renderConfigCenterAdminPage(
         .field {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
+        }
+        .field.compact label {
+          font-size: 11px;
+        }
+        .field.compact input,
+        .field.compact select {
+          padding: 8px 10px;
+          border-radius: 10px;
+        }
+        .field.compact select {
+          min-width: 160px;
         }
         .field.wide {
           grid-column: 1 / -1;
         }
         label {
-          font-size: 13px;
+          font-size: 12px;
           color: var(--muted-foreground);
           font-weight: 600;
         }
         input, textarea, select {
           width: 100%;
           border: 1px solid var(--border);
-          border-radius: 14px;
-          padding: 12px 14px;
+          border-radius: 12px;
+          padding: 10px 12px;
           font: inherit;
           background: var(--input);
           color: var(--foreground);
@@ -374,14 +423,14 @@ private fun renderConfigCenterAdminPage(
           box-shadow: 0 0 0 4px var(--ring);
         }
         textarea {
-          min-height: 100px;
+          min-height: 90px;
           resize: vertical;
         }
         .checkbox {
           display: flex;
           align-items: center;
           gap: 10px;
-          min-height: 44px;
+          min-height: 40px;
         }
         .checkbox input {
           width: auto;
@@ -393,8 +442,8 @@ private fun renderConfigCenterAdminPage(
         }
         button {
           border: 1px solid transparent;
-          border-radius: 14px;
-          padding: 11px 16px;
+          border-radius: 12px;
+          padding: 9px 14px;
           font: inherit;
           font-weight: 600;
           cursor: pointer;
@@ -421,7 +470,7 @@ private fun renderConfigCenterAdminPage(
           flex-wrap: wrap;
           align-items: center;
           justify-content: space-between;
-          gap: 12px;
+          gap: 10px;
         }
         .toolbar-meta {
           display: flex;
@@ -434,7 +483,7 @@ private fun renderConfigCenterAdminPage(
           background: rgba(255, 255, 255, 0.84);
           color: var(--muted-foreground);
           border-radius: 999px;
-          padding: 8px 12px;
+          padding: 6px 10px;
           font-size: 12px;
           font-weight: 600;
         }
@@ -446,10 +495,16 @@ private fun renderConfigCenterAdminPage(
         .tree {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
+        }
+        .tree-scroll {
+          overflow: auto;
+          padding-right: 6px;
+          flex: 1;
+          min-height: 320px;
         }
         .tree-empty {
-          padding: 18px 16px;
+          padding: 14px 12px;
           border: 1px dashed var(--border);
           border-radius: 14px;
           color: var(--muted-foreground);
@@ -459,15 +514,15 @@ private fun renderConfigCenterAdminPage(
         .tree-children {
           display: flex;
           flex-direction: column;
-          gap: 8px;
-          margin-top: 8px;
-          margin-left: 18px;
-          padding-left: 14px;
+          gap: 6px;
+          margin-top: 6px;
+          margin-left: 14px;
+          padding-left: 10px;
           border-left: 1px dashed var(--border);
         }
         .tree-branch {
           border: 1px solid var(--border);
-          border-radius: 16px;
+          border-radius: 14px;
           background: rgba(252, 253, 255, 0.85);
           overflow: hidden;
         }
@@ -478,7 +533,7 @@ private fun renderConfigCenterAdminPage(
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          padding: 12px 14px;
+          padding: 10px 12px;
         }
         .tree-branch > summary::-webkit-details-marker {
           display: none;
@@ -513,9 +568,9 @@ private fun renderConfigCenterAdminPage(
         .tree-leaf {
           width: 100%;
           border: 1px solid var(--border);
-          border-radius: 16px;
+          border-radius: 14px;
           background: rgba(255,255,255,0.94);
-          padding: 14px;
+          padding: 10px 12px;
           text-align: left;
           cursor: pointer;
         }
@@ -535,18 +590,18 @@ private fun renderConfigCenterAdminPage(
           gap: 12px;
         }
         .tree-leaf-key {
-          margin-top: 6px;
+          margin-top: 4px;
           color: var(--muted-foreground);
           font-size: 12px;
         }
         .tree-leaf-comment {
-          margin-top: 8px;
+          margin-top: 6px;
           color: var(--card-foreground);
           font-size: 13px;
           line-height: 1.5;
         }
         .tree-leaf-value {
-          margin-top: 10px;
+          margin-top: 6px;
           display: flex;
           gap: 8px;
           align-items: start;
@@ -577,6 +632,10 @@ private fun renderConfigCenterAdminPage(
         .status.error {
           color: var(--danger);
         }
+        .status.compact {
+          min-height: 18px;
+          font-size: 12px;
+        }
         .meta {
           display: inline-flex;
           gap: 8px;
@@ -604,34 +663,59 @@ private fun renderConfigCenterAdminPage(
           font-size: 13px;
           line-height: 1.6;
         }
+        .pagination {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px 10px;
+          margin-top: 10px;
+        }
+        .pagination .page-info {
+          font-size: 12px;
+          color: var(--muted-foreground);
+        }
+        .pagination select {
+          width: auto;
+          min-width: 110px;
+        }
         @media (max-width: 940px) {
           .layout { grid-template-columns: 1fr; }
           .filters, .editor-grid { grid-template-columns: 1fr; }
           .filters.filters-advanced { grid-template-columns: 1fr; }
-          .hero { flex-direction: column; }
-          .hero-side { width: 100%; }
+          .topbar { flex-direction: column; }
+          .topbar-controls { width: 100%; justify-content: space-between; }
         }
       </style>
     </head>
     <body>
       <div class="shell">
-        <div class="hero">
-          <div>
+        <div class="topbar">
+          <div class="topbar-left">
             <div class="pill">配置中心管理台</div>
             <h1>${escapeHtml(title)}</h1>
-            <p>左侧按 key 前缀树形浏览配置项，支持搜索、前缀筛选和自动建议；右侧维护配置值、说明、默认值、值类型与必填标记，整体界面统一为中文。</p>
           </div>
-          <div class="hero-side">
-            <div class="hero-stat">
-              <div class="hero-stat-label">当前命名空间</div>
-              <div class="hero-stat-value" id="hero-namespace">kcloud</div>
+          <div class="topbar-controls">
+            <div class="field compact">
+              <label for="filter-namespace">命名空间</label>
+              <select id="filter-namespace"></select>
             </div>
-            <div class="hero-stat">
-              <div class="hero-stat-label">当前环境</div>
-              <div class="hero-stat-value" id="hero-active">dev</div>
+            <div class="field compact">
+              <label for="filter-active">环境</label>
+              <select id="filter-active">
+                <option value="">全部</option>
+                <option value="dev" selected>dev</option>
+                <option value="prod">prod</option>
+                <option value="test">test</option>
+              </select>
+            </div>
+            <div class="topbar-actions">
+              <button class="secondary" id="create-namespace-button" type="button">新建命名空间</button>
+              <button class="secondary" id="rename-namespace-button" type="button">重命名</button>
+              <button class="danger" id="delete-namespace-button" type="button">删除命名空间</button>
             </div>
           </div>
         </div>
+        <div class="status compact" id="namespace-status"></div>
 
         <div class="layout">
           <div class="card">
@@ -639,14 +723,6 @@ private fun renderConfigCenterAdminPage(
               <h2 class="section-title">配置筛选</h2>
               <p class="section-subtitle">支持中文关键词、key 分段前缀、值类型、必填状态和是否有说明的组合筛选。</p>
               <div class="filters">
-                <div class="field">
-                  <label for="filter-namespace">命名空间</label>
-                  <input id="filter-namespace" value="kcloud" />
-                </div>
-                <div class="field">
-                  <label for="filter-active">环境</label>
-                  <input id="filter-active" value="dev" />
-                </div>
                 <div class="field">
                   <label for="filter-keyword">关键词</label>
                   <input id="filter-keyword" list="filter-keyword-suggestions" placeholder="key / value / 注释" />
@@ -694,11 +770,25 @@ private fun renderConfigCenterAdminPage(
               <datalist id="filter-keyword-suggestions"></datalist>
               <datalist id="key-suggestions"></datalist>
               <datalist id="value-type-suggestions"></datalist>
+              <datalist id="namespace-suggestions"></datalist>
             </div>
-            <div class="section">
+            <div class="section section-tree">
               <h2 class="section-title">配置树</h2>
               <div class="status" id="table-status"></div>
-              <div class="tree" id="values-tree"></div>
+              <div class="pagination" id="tree-pagination">
+                <button class="secondary" id="page-prev" type="button">上一页</button>
+                <div class="page-info" id="page-info">第 1 / 1 页</div>
+                <button class="secondary" id="page-next" type="button">下一页</button>
+                <select id="page-size">
+                  <option value="20">20 条/页</option>
+                  <option value="40" selected>40 条/页</option>
+                  <option value="60">60 条/页</option>
+                  <option value="100">100 条/页</option>
+                </select>
+              </div>
+              <div class="tree-scroll">
+                <div class="tree" id="values-tree"></div>
+              </div>
             </div>
           </div>
 
@@ -709,7 +799,7 @@ private fun renderConfigCenterAdminPage(
               <div class="editor-grid">
                 <div class="field">
                   <label for="edit-namespace">命名空间</label>
-                  <input id="edit-namespace" />
+                  <input id="edit-namespace" list="namespace-suggestions" />
                 </div>
                 <div class="field">
                   <label for="edit-active">环境</label>
@@ -766,6 +856,10 @@ private fun renderConfigCenterAdminPage(
           filterRequired: document.getElementById("filter-required"),
           filterValueType: document.getElementById("filter-value-type"),
           filterCommentOnly: document.getElementById("filter-comment-only"),
+          createNamespaceButton: document.getElementById("create-namespace-button"),
+          renameNamespaceButton: document.getElementById("rename-namespace-button"),
+          deleteNamespaceButton: document.getElementById("delete-namespace-button"),
+          namespaceStatus: document.getElementById("namespace-status"),
           newButton: document.getElementById("new-button"),
           refreshButton: document.getElementById("refresh-button"),
           valuesTree: document.getElementById("values-tree"),
@@ -773,9 +867,8 @@ private fun renderConfigCenterAdminPage(
           filterKeywordSuggestions: document.getElementById("filter-keyword-suggestions"),
           keySuggestions: document.getElementById("key-suggestions"),
           valueTypeSuggestions: document.getElementById("value-type-suggestions"),
+          namespaceSuggestions: document.getElementById("namespace-suggestions"),
           quickFilters: document.getElementById("quick-filters"),
-          heroNamespace: document.getElementById("hero-namespace"),
-          heroActive: document.getElementById("hero-active"),
           editNamespace: document.getElementById("edit-namespace"),
           editActive: document.getElementById("edit-active"),
           editKey: document.getElementById("edit-key"),
@@ -787,12 +880,19 @@ private fun renderConfigCenterAdminPage(
           saveButton: document.getElementById("save-button"),
           deleteButton: document.getElementById("delete-button"),
           resetButton: document.getElementById("reset-button"),
-          editorStatus: document.getElementById("editor-status")
+          editorStatus: document.getElementById("editor-status"),
+          pagePrev: document.getElementById("page-prev"),
+          pageNext: document.getElementById("page-next"),
+          pageInfo: document.getElementById("page-info"),
+          pageSize: document.getElementById("page-size")
         };
 
         let selectedLeafElement = null;
+        let loadedNamespaces = [];
         let loadedItems = [];
         let currentVisibleItems = [];
+        let currentPage = 1;
+        let pageSize = Number(elements.pageSize.value) || 40;
         let searchDebounceTimer = null;
 
         function setStatus(target, message, isError = false) {
@@ -865,11 +965,6 @@ private fun renderConfigCenterAdminPage(
           setStatus(elements.editorStatus, "当前是新增模式。填写右侧表单后点击“保存”即可新增配置。");
         }
 
-        function updateHeroStats() {
-          elements.heroNamespace.textContent = elements.filterNamespace.value.trim() || "全部";
-          elements.heroActive.textContent = elements.filterActive.value.trim() || "全部";
-        }
-
         function startCreateValue() {
           resetEditor();
           elements.editKey.focus();
@@ -888,8 +983,11 @@ private fun renderConfigCenterAdminPage(
           const keywordSuggestions = new Set();
           const keySuggestions = new Set();
           const valueTypeSuggestions = new Set(commonValueTypes());
+          const namespaceSuggestions = new Set();
 
           items.forEach((item) => {
+            const namespace = (item.namespace || "").trim();
+            if (namespace) namespaceSuggestions.add(namespace);
             const key = (item.key || "").trim();
             if (key) {
               keywordSuggestions.add(key);
@@ -916,6 +1014,147 @@ private fun renderConfigCenterAdminPage(
             elements.valueTypeSuggestions,
             Array.from(valueTypeSuggestions).sort((left, right) => left.localeCompare(right, "zh-Hans-CN")),
           );
+          renderDatalist(
+            elements.namespaceSuggestions,
+            Array.from(namespaceSuggestions).sort((left, right) => left.localeCompare(right, "zh-Hans-CN")),
+          );
+        }
+
+        function renderNamespaceOptions(preferredNamespace = "") {
+          const currentValue = preferredNamespace || elements.filterNamespace.value.trim();
+          const nextValue = currentValue || loadedNamespaces[0]?.namespace || "";
+          elements.filterNamespace.innerHTML = "";
+          loadedNamespaces.forEach((item) => {
+            const option = document.createElement("option");
+            option.value = item.namespace;
+            option.textContent = `${'$'}{item.namespace} (${'$'}{item.entryCount})`;
+            if (item.namespace === nextValue) {
+              option.selected = true;
+            }
+            elements.filterNamespace.appendChild(option);
+          });
+          if (!elements.filterNamespace.value && loadedNamespaces.length === 0) {
+            const option = document.createElement("option");
+            option.value = "";
+            option.textContent = "暂无命名空间";
+            option.selected = true;
+            elements.filterNamespace.appendChild(option);
+          }
+          if (!elements.filterNamespace.value && loadedNamespaces.length > 0) {
+            elements.filterNamespace.value = loadedNamespaces[0].namespace;
+          }
+        }
+
+        async function refreshNamespaces(preferredNamespace = "") {
+          try {
+            const response = await fetch(`${'$'}{basePath}/api/namespaces`);
+            if (!response.ok) throw new Error(await response.text());
+            const payload = await response.json();
+            loadedNamespaces = payload.items || [];
+            renderNamespaceOptions(preferredNamespace);
+            renderDatalist(
+              elements.namespaceSuggestions,
+              loadedNamespaces.map((item) => item.namespace),
+            );
+            setStatus(elements.namespaceStatus, "");
+          } catch (error) {
+            loadedNamespaces = [];
+            renderNamespaceOptions(preferredNamespace);
+            setStatus(elements.namespaceStatus, error.message || String(error), true);
+          }
+        }
+
+        async function saveNamespace(request, successMessage) {
+          setStatus(elements.namespaceStatus, "命名空间处理中...");
+          try {
+            const response = await fetch(`${'$'}{basePath}/api/namespace`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(request)
+            });
+            if (!response.ok) throw new Error(await response.text());
+            const namespace = await response.json();
+            await refreshNamespaces(namespace.namespace);
+            setStatus(elements.namespaceStatus, successMessage || "命名空间已更新。");
+            return namespace;
+          } catch (error) {
+            setStatus(elements.namespaceStatus, error.message || String(error), true);
+            return null;
+          }
+        }
+
+        async function createNamespace() {
+          const rawNamespace = window.prompt("输入新的命名空间，例如 kcloud.ai", "");
+          if (rawNamespace == null) {
+            return;
+          }
+          const namespace = rawNamespace.trim();
+          if (!namespace) {
+            setStatus(elements.namespaceStatus, "命名空间不能为空。", true);
+            return;
+          }
+          const saved = await saveNamespace(
+            { namespace },
+            "命名空间已创建。",
+          );
+          if (saved) {
+            elements.editNamespace.value = saved.namespace;
+            await refreshValues();
+          }
+        }
+
+        async function renameNamespace() {
+          const currentNamespace = elements.filterNamespace.value.trim();
+          if (!currentNamespace) {
+            setStatus(elements.namespaceStatus, "当前没有可重命名的命名空间。", true);
+            return;
+          }
+          const rawNamespace = window.prompt("输入新的命名空间", currentNamespace);
+          if (rawNamespace == null) {
+            return;
+          }
+          const namespace = rawNamespace.trim();
+          if (!namespace) {
+            setStatus(elements.namespaceStatus, "命名空间不能为空。", true);
+            return;
+          }
+          const saved = await saveNamespace(
+            { namespace, renameFrom: currentNamespace },
+            "命名空间已重命名。",
+          );
+          if (saved) {
+            elements.editNamespace.value = saved.namespace;
+            await refreshValues();
+          }
+        }
+
+        async function deleteNamespace() {
+          const namespace = elements.filterNamespace.value.trim();
+          if (!namespace) {
+            setStatus(elements.namespaceStatus, "当前没有可删除的命名空间。", true);
+            return;
+          }
+          if (!window.confirm(`确认删除命名空间 ${'$'}{namespace} 吗？其下所有配置和值都会一起删除。`)) {
+            return;
+          }
+          setStatus(elements.namespaceStatus, "命名空间删除中...");
+          try {
+            const search = new URLSearchParams({ namespace });
+            const response = await fetch(`${'$'}{basePath}/api/namespace?${'$'}{search.toString()}`, {
+              method: "DELETE"
+            });
+            if (!response.ok) throw new Error(await response.text());
+            const payload = await response.json();
+            if (!payload.deleted) {
+              throw new Error("没有匹配到可删除的命名空间。");
+            }
+            await refreshNamespaces("");
+            resetEditor();
+            setStatus(elements.namespaceStatus, "命名空间已删除。");
+            await refreshValues();
+          } catch (error) {
+            setStatus(elements.namespaceStatus, error.message || String(error), true);
+          }
         }
 
         function commonValueTypes() {
@@ -993,7 +1232,10 @@ private fun renderConfigCenterAdminPage(
 
         function refreshVisibleItems() {
           currentVisibleItems = applyClientFilters(loadedItems);
-          renderTree(currentVisibleItems);
+          const totalPages = Math.max(1, Math.ceil(currentVisibleItems.length / pageSize));
+          if (currentPage > totalPages) currentPage = totalPages;
+          renderTree(getPagedItems());
+          updatePagination(totalPages);
           setStatus(elements.tableStatus, `共 ${'$'}{loadedItems.length} 项，筛选后 ${'$'}{currentVisibleItems.length} 项。`);
         }
 
@@ -1007,6 +1249,7 @@ private fun renderConfigCenterAdminPage(
           Array.from(elements.quickFilters.querySelectorAll(".quick-chip")).forEach((chip) => {
             chip.classList.toggle("active", chip.dataset.prefix === prefix);
           });
+          currentPage = 1;
           refreshVisibleItems();
         }
 
@@ -1115,17 +1358,31 @@ private fun renderConfigCenterAdminPage(
           if (elements.filterActive.value.trim()) search.set("active", elements.filterActive.value.trim());
 
           setStatus(elements.tableStatus, "加载中...");
-          updateHeroStats();
           try {
             const response = await fetch(`${'$'}{basePath}/api/values?${'$'}{search.toString()}`);
             if (!response.ok) throw new Error(await response.text());
             const payload = await response.json();
             loadedItems = payload.items || [];
+            currentPage = 1;
             updateSuggestions(loadedItems);
             refreshVisibleItems();
+            if (!elements.editNamespace.value.trim()) {
+              elements.editNamespace.value = elements.filterNamespace.value.trim();
+            }
           } catch (error) {
             setStatus(elements.tableStatus, error.message || String(error), true);
           }
+        }
+
+        function getPagedItems() {
+          const start = (currentPage - 1) * pageSize;
+          return currentVisibleItems.slice(start, start + pageSize);
+        }
+
+        function updatePagination(totalPages) {
+          elements.pageInfo.textContent = `第 ${'$'}{currentPage} / ${'$'}{totalPages} 页`;
+          elements.pagePrev.disabled = currentPage <= 1;
+          elements.pageNext.disabled = currentPage >= totalPages;
         }
 
         async function saveValue() {
@@ -1151,6 +1408,7 @@ private fun renderConfigCenterAdminPage(
             const item = await response.json();
             populateEditor(item);
             setStatus(elements.editorStatus, "已保存。");
+            await refreshNamespaces(item.namespace);
             await refreshValues();
           } catch (error) {
             setStatus(elements.editorStatus, error.message || String(error), true);
@@ -1186,6 +1444,9 @@ private fun renderConfigCenterAdminPage(
         }
 
         elements.newButton.addEventListener("click", startCreateValue);
+        elements.createNamespaceButton.addEventListener("click", createNamespace);
+        elements.renameNamespaceButton.addEventListener("click", renameNamespace);
+        elements.deleteNamespaceButton.addEventListener("click", deleteNamespace);
         elements.refreshButton.addEventListener("click", refreshValues);
         elements.saveButton.addEventListener("click", saveValue);
         elements.deleteButton.addEventListener("click", deleteValue);
@@ -1195,6 +1456,7 @@ private fun renderConfigCenterAdminPage(
           Array.from(elements.quickFilters.querySelectorAll(".quick-chip")).forEach((chip) => {
             chip.classList.toggle("active", chip.dataset.prefix === elements.filterPrefix.value.trim());
           });
+          currentPage = 1;
           queueFilterRefresh();
         });
         elements.filterRequired.addEventListener("change", refreshVisibleItems);
@@ -1205,10 +1467,32 @@ private fun renderConfigCenterAdminPage(
         Array.from(elements.quickFilters.querySelectorAll(".quick-chip")).forEach((chip) => {
           chip.addEventListener("click", () => setQuickFilter(chip.dataset.prefix || ""));
         });
+        elements.pagePrev.addEventListener("click", () => {
+          if (currentPage > 1) {
+            currentPage -= 1;
+            refreshVisibleItems();
+          }
+        });
+        elements.pageNext.addEventListener("click", () => {
+          const totalPages = Math.max(1, Math.ceil(currentVisibleItems.length / pageSize));
+          if (currentPage < totalPages) {
+            currentPage += 1;
+            refreshVisibleItems();
+          }
+        });
+        elements.pageSize.addEventListener("change", () => {
+          pageSize = Number(elements.pageSize.value) || 40;
+          currentPage = 1;
+          refreshVisibleItems();
+        });
 
-        updateHeroStats();
-        resetEditor();
-        refreshValues();
+        async function boot() {
+          await refreshNamespaces("kcloud");
+          resetEditor();
+          await refreshValues();
+        }
+
+        boot();
       </script>
     </body>
     </html>

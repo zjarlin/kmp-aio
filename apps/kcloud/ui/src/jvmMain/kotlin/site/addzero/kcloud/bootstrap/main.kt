@@ -5,7 +5,6 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.awt.ComposeWindow
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
@@ -17,16 +16,12 @@ import org.jetbrains.skiko.disableTitleBar
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
-import site.addzero.kcloud.plugins.mcuconsole.api.external.McuConsoleApiClient
+import site.addzero.kcloud.plugins.mcuconsole.api.external.configureMcuConsoleApis
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
-import site.addzero.cupertino.workbench.metrics.LocalWorkbenchMetrics
-import site.addzero.cupertino.workbench.metrics.WorkbenchPresets
+import site.addzero.workbench.shell.metrics.LocalWorkbenchMetrics
 import java.awt.Container
 import javax.swing.JComponent
 
-private val desktopUiMetrics = WorkbenchPresets.DesktopCompact
-private val macCaptionBarHeight = desktopUiMetrics.topBarHeight
-private val macCaptionBarLeadingInset = desktopUiMetrics.topBarLeadingInset
 
 fun main() {
     configureDesktopRuntime()
@@ -34,7 +29,7 @@ fun main() {
         val embeddedServer = remember {
             startEmbeddedDesktopServer(
                 configureKoin = {
-                    withConfiguration<UiKoinApplication>()
+                    withConfiguration<KoinApplication>()
                 },
             )
         }
@@ -74,7 +69,7 @@ private fun configureLocalApiClients(
     baseUrl: String,
 ) {
     configureApiClients(baseUrl)
-    McuConsoleApiClient.configureBaseUrl(baseUrl)
+    configureMcuConsoleApis(baseUrl)
 }
 
 @Composable

@@ -24,9 +24,6 @@ import java.net.ServerSocket
 import org.koin.core.KoinApplication as CoreKoinApplication
 import org.koin.core.module.Module as KoinModule
 
-private const val DEFAULT_EMBEDDED_ENV = "dev"
-private const val DEFAULT_EMBEDDED_DESKTOP_PORT = 18080
-private const val DESKTOP_APP_DIRECTORY_NAME = "KCloud"
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
 private const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
@@ -35,11 +32,15 @@ private var embeddedApplicationConfigOverride: ApplicationConfig? = null
 @Volatile
 private var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
 @Volatile
-private var embeddedDesktopBaseUrl: String = "http://localhost:$DEFAULT_EMBEDDED_DESKTOP_PORT/"
+private var embeddedDesktopBaseUrl: String = buildEmbeddedDesktopBaseUrl(
+    publicHost = defaultDesktopPublicHost(),
+    port = defaultDesktopPort(),
+)
 
 interface EmbeddedDesktopServerHandle : AutoCloseable {
     val baseUrl: String
 }
+
 
 /**
  * Server 入口。
@@ -93,6 +94,7 @@ fun serverApplication(
     embeddedDesktopKoinConfigurer = null
     System.clearProperty(CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY)
     val config = loadServerConfig(configPath)
+
     val effectiveConfig = config.withConfigCenterOverrides(
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
         active = resolveConfigCenterActive(config),
@@ -103,12 +105,12 @@ fun serverApplication(
     val finalHost = host
         ?: System.getenv("SERVER_HOST")
         ?: deploymentEnv.string("host", AppConfigKeys.serverHost.defaultValue)
-        ?: "0.0.0.0"
+        ?: defaultServerHost()
 
     val finalPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
         ?: deploymentEnv.int("port", AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
-        ?: 8080
+        ?: defaultServerPort()
 
     val environment = applicationEnvironment {
         this.config = effectiveConfig
@@ -152,14 +154,17 @@ fun ktorApplication(
     val requestedHost = host
         ?: System.getenv("SERVER_HOST")
         ?: deploymentEnv.string("host", AppConfigKeys.serverHost.defaultValue)
-        ?: "0.0.0.0"
+        ?: defaultServerHost()
 
     val requestedPort = port
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
         ?: deploymentEnv.int("port", AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
-        ?: DEFAULT_EMBEDDED_DESKTOP_PORT
+        ?: defaultDesktopPort()
     val finalPort = resolveEmbeddedDesktopPort(requestedPort)
-    embeddedDesktopBaseUrl = "http://localhost:$finalPort/"
+    embeddedDesktopBaseUrl = buildEmbeddedDesktopBaseUrl(
+        publicHost = defaultDesktopPublicHost(),
+        port = finalPort,
+    )
     System.setProperty(
         CONFIG_CENTER_ADMIN_BASE_URL_PROPERTY,
         embeddedDesktopBaseUrl.removeSuffix("/"),
@@ -247,7 +252,7 @@ private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
         val env = System.getenv("KTOR_ENV")
             ?.trim()
             ?.ifBlank { null }
-            ?: DEFAULT_EMBEDDED_ENV
+            ?: defaultKtorEnvironment()
         ConfigFactory
             .parseResources("application-$env.conf")
             .withFallback(embeddedDesktopDefaults())
@@ -278,11 +283,10 @@ private fun resolveConfigCenterActive(
     config: ApplicationConfig,
 ): String {
     val env = ConfigCenter.getEnv(config).path("ktor")
-    return normalizeConfigCenterActive(
-        env.string("environment", AppConfigKeys.ktorEnvironment.defaultValue)
-            ?: System.getenv("KTOR_ENV")
-            ?: DEFAULT_EMBEDDED_ENV,
-    )
+    val active = env.string("environment", AppConfigKeys.ktorEnvironment.defaultValue)
+        ?: System.getenv("KTOR_ENV")
+        ?: defaultKtorEnvironment()
+    return normalizeConfigCenterActive(active)
 }
 
 private data class ServerCliArgs(
@@ -341,37 +345,37 @@ private fun embeddedDesktopDefaults() = ConfigFactory.parseString(
     """
     ktor {
       deployment {
-        port = 8080
-        host = "127.0.0.1"
+        port = ${defaultDesktopPort()}
+        host = "${defaultServerHost()}"
       }
       application {
         modules = [site.addzero.kcloud.ApplicationKt.module]
       }
     }
     banner {
-      text = "KCLOUD [DESKTOP]"
-      subtitle = "Embedded Dev Server"
+      text = "${defaultDesktopBannerText()}"
+      subtitle = "${defaultDesktopBannerSubtitle()}"
     }
     openapi {
-      enabled = false
-      path = "/swagger"
-      spec = "openapi/documentation.yaml"
+      enabled = ${defaultDesktopOpenapiEnabled()}
+      path = "${defaultDesktopOpenapiPath()}"
+      spec = "${defaultDesktopOpenapiSpec()}"
     }
     flyway {
-      enabled = false
+      enabled = ${defaultDesktopFlywayEnabled()}
     }
     datasources {
       sqlite {
-        enabled = true
-        url = "jdbc:sqlite:kcloud-desktop.db"
-        driver = "org.sqlite.JDBC"
+        enabled = ${defaultSqliteEnabled()}
+        url = "jdbc:sqlite:${defaultDesktopSqliteFileName()}"
+        driver = "${defaultSqliteDriver()}"
       }
       postgres {
-        enabled = false
+        enabled = ${defaultPostgresEnabled()}
       }
     }
     s3 {
-      enabled = false
+      enabled = ${defaultDesktopS3Enabled()}
     }
     """.trimIndent()
 )
@@ -388,13 +392,13 @@ private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
 
 private fun embeddedDesktopRuntimeOverrides(paths: EmbeddedDesktopPaths) =
     ConfigFactory.empty()
-        .withValue(AppConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(true))
+        .withValue(AppConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(defaultSqliteEnabled()))
         .withValue(AppConfigKeys.SQLITE_URL, ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
         .withValue(
             AppConfigKeys.SQLITE_DRIVER,
-            ConfigValueFactory.fromAnyRef(AppConfigKeys.sqliteDriver.defaultValue ?: "org.sqlite.JDBC"),
+            ConfigValueFactory.fromAnyRef(defaultSqliteDriver()),
         )
-        .withValue(AppConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(false))
+        .withValue(AppConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(defaultPostgresEnabled()))
         .withValue("kcloud.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
         .withValue("kcloud.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))
         .withValue("kcloud.runtime.cacheDir", ConfigValueFactory.fromAnyRef(paths.cacheDir.absolutePath))
@@ -411,7 +415,7 @@ private data class EmbeddedDesktopPaths(
 private fun resolveEmbeddedDesktopPaths(): EmbeddedDesktopPaths {
     val dataDir = preferredDesktopDataDir().ensureDirectory()
     val cacheDir = preferredDesktopCacheDir().ensureDirectory()
-    val sqliteFile = File(dataDir, "kcloud.db").absoluteFile
+    val sqliteFile = File(dataDir, defaultDesktopSqliteFileName()).absoluteFile
     migrateLegacyDatabaseIfNeeded(sqliteFile)
     return EmbeddedDesktopPaths(
         dataDir = dataDir,
@@ -423,10 +427,11 @@ private fun resolveEmbeddedDesktopPaths(): EmbeddedDesktopPaths {
 private fun preferredDesktopDataDir(): File {
     val userHome = desktopUserHome()
     val osName = System.getProperty("os.name").orEmpty()
+    val appDirectoryName = defaultDesktopAppDirectoryName()
 
     return when {
         osName.contains("Mac", ignoreCase = true) -> {
-            File(userHome, "Library/Application Support/$DESKTOP_APP_DIRECTORY_NAME")
+            File(userHome, "Library/Application Support/$appDirectoryName")
         }
 
         osName.contains("Windows", ignoreCase = true) -> {
@@ -434,7 +439,7 @@ private fun preferredDesktopDataDir(): File {
                 System.getenv("LOCALAPPDATA")
                     ?: System.getenv("APPDATA")
                     ?: userHome,
-                DESKTOP_APP_DIRECTORY_NAME,
+                appDirectoryName,
             )
         }
 
@@ -442,7 +447,7 @@ private fun preferredDesktopDataDir(): File {
             val xdgDataHome = System.getenv("XDG_DATA_HOME")
                 ?.takeIf { it.isNotBlank() }
                 ?: File(userHome, ".local/share").absolutePath
-            File(xdgDataHome, DESKTOP_APP_DIRECTORY_NAME.lowercase())
+            File(xdgDataHome, appDirectoryName.lowercase())
         }
     }
 }
@@ -450,10 +455,11 @@ private fun preferredDesktopDataDir(): File {
 private fun preferredDesktopCacheDir(): File {
     val userHome = desktopUserHome()
     val osName = System.getProperty("os.name").orEmpty()
+    val appDirectoryName = defaultDesktopAppDirectoryName()
 
     return when {
         osName.contains("Mac", ignoreCase = true) -> {
-            File(userHome, "Library/Caches/$DESKTOP_APP_DIRECTORY_NAME")
+            File(userHome, "Library/Caches/$appDirectoryName")
         }
 
         osName.contains("Windows", ignoreCase = true) -> {
@@ -461,7 +467,7 @@ private fun preferredDesktopCacheDir(): File {
                 System.getenv("LOCALAPPDATA")
                     ?: System.getenv("APPDATA")
                     ?: userHome,
-                "$DESKTOP_APP_DIRECTORY_NAME/Cache",
+                "$appDirectoryName/Cache",
             )
         }
 
@@ -469,7 +475,7 @@ private fun preferredDesktopCacheDir(): File {
             val xdgCacheHome = System.getenv("XDG_CACHE_HOME")
                 ?.takeIf { it.isNotBlank() }
                 ?: File(userHome, ".cache").absolutePath
-            File(xdgCacheHome, DESKTOP_APP_DIRECTORY_NAME.lowercase())
+            File(xdgCacheHome, appDirectoryName.lowercase())
         }
     }
 }
@@ -516,10 +522,11 @@ private fun migrateLegacyDatabaseIfNeeded(targetFile: File) {
 private fun legacyDatabaseCandidates(): List<File> {
     val workingDir = File(System.getProperty("user.dir").orEmpty()).absoluteFile
     val parentDir = workingDir.parentFile
+    val desktopSqliteFileName = defaultDesktopSqliteFileName()
 
     return buildList {
         add(File(workingDir, "kcloud-dev.db"))
-        add(File(workingDir, "kcloud.db"))
+        add(File(workingDir, desktopSqliteFileName))
         add(File(workingDir, "kcloud-desktop.db"))
         add(File(workingDir, "server/kcloud.db"))
         add(File(workingDir, "vibepocket-dev.db"))
@@ -528,11 +535,86 @@ private fun legacyDatabaseCandidates(): List<File> {
         add(File(workingDir, "server/vibepocket.db"))
         if (parentDir != null) {
             add(File(parentDir, "kcloud-dev.db"))
-            add(File(parentDir, "kcloud.db"))
+            add(File(parentDir, desktopSqliteFileName))
             add(File(parentDir, "kcloud-desktop.db"))
             add(File(parentDir, "vibepocket-dev.db"))
             add(File(parentDir, "vibepocket.db"))
             add(File(parentDir, "vibepocket-desktop.db"))
         }
     }.distinctBy { it.absolutePath }
+}
+
+private fun buildEmbeddedDesktopBaseUrl(
+    publicHost: String,
+    port: Int,
+): String {
+    return "http://$publicHost:$port/"
+}
+
+private fun defaultServerHost(): String {
+    return requireNotNull(AppConfigKeys.serverHost.defaultValue)
+}
+
+private fun defaultServerPort(): Int {
+    return requireNotNull(AppConfigKeys.serverPort.defaultValue?.toIntOrNull())
+}
+
+private fun defaultKtorEnvironment(): String {
+    return requireNotNull(AppConfigKeys.ktorEnvironment.defaultValue)
+}
+
+private fun defaultDesktopPublicHost(): String {
+    return requireNotNull(AppConfigKeys.desktopServerPublicHost.defaultValue)
+}
+
+private fun defaultDesktopPort(): Int {
+    return AppConfigKeys.desktopServerPort.defaultValue?.toIntOrNull() ?: defaultServerPort()
+}
+
+private fun defaultDesktopAppDirectoryName(): String {
+    return requireNotNull(AppConfigKeys.desktopAppDirectoryName.defaultValue)
+}
+
+private fun defaultDesktopSqliteFileName(): String {
+    return requireNotNull(AppConfigKeys.desktopSqliteFileName.defaultValue)
+}
+
+private fun defaultDesktopBannerText(): String {
+    return requireNotNull(AppConfigKeys.desktopBannerText.defaultValue)
+}
+
+private fun defaultDesktopBannerSubtitle(): String {
+    return requireNotNull(AppConfigKeys.desktopBannerSubtitle.defaultValue)
+}
+
+private fun defaultDesktopOpenapiEnabled(): Boolean {
+    return AppConfigKeys.desktopOpenapiEnabled.defaultValue?.toBooleanStrictOrNull() ?: false
+}
+
+private fun defaultDesktopOpenapiPath(): String {
+    return requireNotNull(AppConfigKeys.desktopOpenapiPath.defaultValue)
+}
+
+private fun defaultDesktopOpenapiSpec(): String {
+    return requireNotNull(AppConfigKeys.desktopOpenapiSpec.defaultValue)
+}
+
+private fun defaultDesktopFlywayEnabled(): Boolean {
+    return AppConfigKeys.desktopFlywayEnabled.defaultValue?.toBooleanStrictOrNull() ?: false
+}
+
+private fun defaultDesktopS3Enabled(): Boolean {
+    return AppConfigKeys.desktopS3Enabled.defaultValue?.toBooleanStrictOrNull() ?: false
+}
+
+private fun defaultSqliteEnabled(): Boolean {
+    return AppConfigKeys.sqliteEnabled.defaultValue?.toBooleanStrictOrNull() ?: true
+}
+
+private fun defaultSqliteDriver(): String {
+    return requireNotNull(AppConfigKeys.sqliteDriver.defaultValue)
+}
+
+private fun defaultPostgresEnabled(): Boolean {
+    return AppConfigKeys.postgresEnabled.defaultValue?.toBooleanStrictOrNull() ?: false
 }

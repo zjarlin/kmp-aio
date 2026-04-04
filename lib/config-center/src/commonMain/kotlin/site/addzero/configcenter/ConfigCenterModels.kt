@@ -97,6 +97,27 @@ data class ConfigCenterDeleteResponse(
     val deleted: Boolean = false,
 )
 
+@Serializable
+data class ConfigCenterNamespaceDto(
+    val id: String = "",
+    val namespace: String,
+    val entryCount: Int = 0,
+    val definitionCount: Int = 0,
+    val createTimeMillis: Long? = null,
+    val updateTimeMillis: Long? = null,
+)
+
+@Serializable
+data class ConfigCenterNamespaceWriteRequest(
+    val namespace: String,
+    val renameFrom: String? = null,
+)
+
+@Serializable
+data class ConfigCenterNamespaceListResponse(
+    val items: List<ConfigCenterNamespaceDto> = emptyList(),
+)
+
 interface ConfigCenterValueService {
     fun listValues(
         namespace: String? = null,
@@ -123,6 +144,16 @@ interface ConfigCenterValueService {
 }
 
 interface ConfigCenterAdminService : ConfigCenterValueService {
+    fun listNamespaces(): List<ConfigCenterNamespaceDto>
+
+    fun writeNamespace(
+        request: ConfigCenterNamespaceWriteRequest,
+    ): ConfigCenterNamespaceDto
+
+    fun deleteNamespace(
+        namespace: String,
+    ): Boolean
+
     fun listEntries(
         namespace: String? = null,
         active: String? = null,

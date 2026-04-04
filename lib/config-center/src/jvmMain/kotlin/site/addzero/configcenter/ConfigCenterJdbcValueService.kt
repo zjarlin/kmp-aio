@@ -39,6 +39,89 @@ class JdbcConfigCenterValueService(
         }
     }
 
+    override fun listNamespaces(): List<ConfigCenterNamespaceDto> {
+        return withConnection { connection ->
+            val namespaceRows = listStoredNamespaces(connection)
+            val valueCounts = countNamespaces(connection, "config_center_value")
+            val definitionCounts = countNamespaces(connection, "config_center_definition")
+            val discoveredNamespaces = linkedSetOf<String>()
+            discoveredNamespaces += namespaceRows.map(ConfigCenterNamespaceRow::namespace)
+            discoveredNamespaces += valueCounts.keys
+            discoveredNamespaces += definitionCounts.keys
+            discoveredNamespaces
+                .sorted()
+                .map { namespace ->
+                    val stored = namespaceRows.firstOrNull { row -> row.namespace == namespace }
+                    ConfigCenterNamespaceDto(
+                        id = stored?.id.orEmpty(),
+                        namespace = namespace,
+                        entryCount = valueCounts[namespace] ?: 0,
+                        definitionCount = definitionCounts[namespace] ?: 0,
+                        createTimeMillis = stored?.createTimeMillis,
+                        updateTimeMillis = stored?.updateTimeMillis,
+                    )
+                }
+        }
+    }
+
+    override fun writeNamespace(
+        request: ConfigCenterNamespaceWriteRequest,
+    ): ConfigCenterNamespaceDto {
+        val normalizedNamespace = normalizeConfigCenterNamespace(request.namespace)
+        val normalizedRenameFrom = request.renameFrom
+            ?.trim()
+            ?.takeIf(String::isNotBlank)
+            ?.let(::normalizeConfigCenterNamespace)
+        require(normalizedNamespace.isNotBlank()) { "namespace cannot be blank" }
+
+        return withConnection { connection ->
+            withTransaction(connection) {
+                if (normalizedRenameFrom != null && normalizedRenameFrom != normalizedNamespace) {
+                    renameNamespace(
+                        connection = connection,
+                        sourceNamespace = normalizedRenameFrom,
+                        targetNamespace = normalizedNamespace,
+                    )
+                } else {
+                    ensureNamespaceRecord(
+                        connection = connection,
+                        namespace = normalizedNamespace,
+                    )
+                }
+            }
+            readNamespace(
+                connection = connection,
+                namespace = normalizedNamespace,
+            ) ?: error("namespace write succeeded but could not be reloaded: $normalizedNamespace")
+        }
+    }
+
+    override fun deleteNamespace(
+        namespace: String,
+    ): Boolean {
+        val normalizedNamespace = normalizeConfigCenterNamespace(namespace)
+        require(normalizedNamespace.isNotBlank()) { "namespace cannot be blank" }
+        return withConnection { connection ->
+            withTransaction(connection) {
+                val deletedValues = deleteNamespaceRows(
+                    connection = connection,
+                    tableName = "config_center_value",
+                    namespace = normalizedNamespace,
+                )
+                val deletedDefinitions = deleteNamespaceRows(
+                    connection = connection,
+                    tableName = "config_center_definition",
+                    namespace = normalizedNamespace,
+                )
+                val deletedNamespace = deleteNamespaceRecord(
+                    connection = connection,
+                    namespace = normalizedNamespace,
+                )
+                deletedValues > 0 || deletedDefinitions > 0 || deletedNamespace > 0
+            }
+        }
+    }
+
     override fun readValue(
         namespace: String,
         key: String,
@@ -90,6 +173,11 @@ class JdbcConfigCenterValueService(
 
         val now = System.currentTimeMillis()
         withConnection { connection ->
+            ensureNamespaceRecord(
+                connection = connection,
+                namespace = normalizedNamespace,
+                now = now,
+            )
             val createdAt = lookupExistingCreateTime(
                 connection = connection,
                 namespace = normalizedNamespace,
@@ -326,6 +414,11 @@ class JdbcConfigCenterValueService(
             }
             val now = System.currentTimeMillis()
             deduplicated.values.forEach { definition ->
+                ensureNamespaceRecord(
+                    connection = connection,
+                    namespace = definition.namespace,
+                    now = now,
+                )
                 val createdAt = lookupExistingCreateTime(
                     connection = connection,
                     namespace = definition.namespace,
@@ -595,6 +688,22 @@ class JdbcConfigCenterValueService(
             )
             statement.executeUpdate(
                 """
+                CREATE TABLE IF NOT EXISTS config_center_namespace (
+                    id TEXT PRIMARY KEY,
+                    namespace TEXT NOT NULL UNIQUE,
+                    create_time BIGINT NOT NULL,
+                    update_time BIGINT NOT NULL
+                )
+                """.trimIndent(),
+            )
+            statement.executeUpdate(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_config_center_namespace_lookup
+                    ON config_center_namespace(namespace)
+                """.trimIndent(),
+            )
+            statement.executeUpdate(
+                """
                 CREATE TABLE IF NOT EXISTS config_center_meta (
                     meta_key TEXT PRIMARY KEY,
                     meta_value TEXT NOT NULL
@@ -621,6 +730,11 @@ class JdbcConfigCenterValueService(
                 )
                 statement.executeUpdate(
                     """
+                    COMMENT ON TABLE config_center_namespace IS '${settings.tableNote.replace("'", "''")}'
+                    """.trimIndent(),
+                )
+                statement.executeUpdate(
+                    """
                     COMMENT ON TABLE config_center_meta IS '${settings.tableNote.replace("'", "''")}'
                     """.trimIndent(),
                 )
@@ -628,6 +742,7 @@ class JdbcConfigCenterValueService(
         }
         ensureCompatibleValueColumns(connection)
         ensureCompatibleDefinitionColumns(connection)
+        ensureCompatibleNamespaceColumns(connection)
     }
 
     private fun <T> withConnection(
@@ -699,6 +814,24 @@ class JdbcConfigCenterValueService(
         }
     }
 
+    private fun ensureCompatibleNamespaceColumns(
+        connection: Connection,
+    ) {
+        val columns = existingColumns(connection, "config_center_namespace")
+        connection.createStatement().use { statement ->
+            if ("create_time" !in columns) {
+                statement.executeUpdate(
+                    "ALTER TABLE config_center_namespace ADD COLUMN create_time BIGINT NOT NULL DEFAULT 0",
+                )
+            }
+            if ("update_time" !in columns) {
+                statement.executeUpdate(
+                    "ALTER TABLE config_center_namespace ADD COLUMN update_time BIGINT NOT NULL DEFAULT 0",
+                )
+            }
+        }
+    }
+
     private fun existingColumns(
         connection: Connection,
         tableName: String,
@@ -752,6 +885,227 @@ class JdbcConfigCenterValueService(
             createTimeColumn,
             updateTimeColumn,
         ).joinToString(", ")
+    }
+}
+
+private data class ConfigCenterNamespaceRow(
+    val id: String,
+    val namespace: String,
+    val createTimeMillis: Long?,
+    val updateTimeMillis: Long?,
+)
+
+private fun JdbcConfigCenterValueService.listStoredNamespaces(
+    connection: Connection,
+): List<ConfigCenterNamespaceRow> {
+    return connection.prepareStatement(
+        """
+        SELECT id, namespace, create_time, update_time
+        FROM config_center_namespace
+        ORDER BY namespace ASC
+        """.trimIndent(),
+    ).use { statement ->
+        statement.executeQuery().use { resultSet ->
+            val rows = mutableListOf<ConfigCenterNamespaceRow>()
+            while (resultSet.next()) {
+                rows += ConfigCenterNamespaceRow(
+                    id = resultSet.getString("id").orEmpty(),
+                    namespace = resultSet.getString("namespace").orEmpty(),
+                    createTimeMillis = resultSet.getLong("create_time").takeIf { !resultSet.wasNull() },
+                    updateTimeMillis = resultSet.getLong("update_time").takeIf { !resultSet.wasNull() },
+                )
+            }
+            rows
+        }
+    }
+}
+
+private fun JdbcConfigCenterValueService.readNamespace(
+    connection: Connection,
+    namespace: String,
+): ConfigCenterNamespaceDto? {
+    val stored = listStoredNamespaces(connection).firstOrNull { row -> row.namespace == namespace }
+    if (stored == null) {
+        val valueCount = countNamespaces(connection, "config_center_value")[namespace] ?: 0
+        val definitionCount = countNamespaces(connection, "config_center_definition")[namespace] ?: 0
+        if (valueCount == 0 && definitionCount == 0) {
+            return null
+        }
+        return ConfigCenterNamespaceDto(
+            namespace = namespace,
+            entryCount = valueCount,
+            definitionCount = definitionCount,
+        )
+    }
+    return ConfigCenterNamespaceDto(
+        id = stored.id,
+        namespace = stored.namespace,
+        entryCount = countNamespaces(connection, "config_center_value")[namespace] ?: 0,
+        definitionCount = countNamespaces(connection, "config_center_definition")[namespace] ?: 0,
+        createTimeMillis = stored.createTimeMillis,
+        updateTimeMillis = stored.updateTimeMillis,
+    )
+}
+
+private fun JdbcConfigCenterValueService.countNamespaces(
+    connection: Connection,
+    tableName: String,
+): Map<String, Int> {
+    return connection.prepareStatement(
+        """
+        SELECT namespace, COUNT(*) AS namespace_count
+        FROM $tableName
+        GROUP BY namespace
+        """.trimIndent(),
+    ).use { statement ->
+        statement.executeQuery().use { resultSet ->
+            buildMap {
+                while (resultSet.next()) {
+                    put(
+                        resultSet.getString("namespace").orEmpty(),
+                        resultSet.getInt("namespace_count"),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun JdbcConfigCenterValueService.ensureNamespaceRecord(
+    connection: Connection,
+    namespace: String,
+    now: Long = System.currentTimeMillis(),
+) {
+    val createdAt = lookupNamespaceCreateTime(
+        connection = connection,
+        namespace = namespace,
+    ) ?: now
+    connection.prepareStatement(
+        """
+        INSERT INTO config_center_namespace (
+            id, namespace, create_time, update_time
+        ) VALUES (?, ?, ?, ?)
+        ON CONFLICT(namespace) DO UPDATE SET
+            update_time = excluded.update_time
+        """.trimIndent(),
+    ).use { statement ->
+        statement.setString(1, UUID.randomUUID().toString())
+        statement.setString(2, namespace)
+        statement.setLong(3, createdAt)
+        statement.setLong(4, now)
+        statement.executeUpdate()
+    }
+}
+
+private fun JdbcConfigCenterValueService.lookupNamespaceCreateTime(
+    connection: Connection,
+    namespace: String,
+): Long? {
+    return connection.prepareStatement(
+        """
+        SELECT create_time
+        FROM config_center_namespace
+        WHERE namespace = ?
+        """.trimIndent(),
+    ).use { statement ->
+        statement.setString(1, namespace)
+        statement.executeQuery().use { resultSet ->
+            if (resultSet.next()) {
+                resultSet.getLong(1)
+            } else {
+                null
+            }
+        }
+    }
+}
+
+private fun JdbcConfigCenterValueService.renameNamespace(
+    connection: Connection,
+    sourceNamespace: String,
+    targetNamespace: String,
+) {
+    if (sourceNamespace == targetNamespace) {
+        ensureNamespaceRecord(connection, targetNamespace)
+        return
+    }
+    val existingNamespaces = linkedSetOf<String>()
+    existingNamespaces += listStoredNamespaces(connection).map(ConfigCenterNamespaceRow::namespace)
+    existingNamespaces += countNamespaces(connection, "config_center_value").keys
+    existingNamespaces += countNamespaces(connection, "config_center_definition").keys
+    require(sourceNamespace in existingNamespaces) { "namespace does not exist: $sourceNamespace" }
+    require(targetNamespace !in existingNamespaces) { "namespace already exists: $targetNamespace" }
+    connection.prepareStatement(
+        "UPDATE config_center_value SET namespace = ? WHERE namespace = ?",
+    ).use { statement ->
+        statement.setString(1, targetNamespace)
+        statement.setString(2, sourceNamespace)
+        statement.executeUpdate()
+    }
+    connection.prepareStatement(
+        "UPDATE config_center_definition SET namespace = ? WHERE namespace = ?",
+    ).use { statement ->
+        statement.setString(1, targetNamespace)
+        statement.setString(2, sourceNamespace)
+        statement.executeUpdate()
+    }
+    val now = System.currentTimeMillis()
+    val updatedNamespaceRows = connection.prepareStatement(
+        "UPDATE config_center_namespace SET namespace = ?, update_time = ? WHERE namespace = ?",
+    ).use { statement ->
+        statement.setString(1, targetNamespace)
+        statement.setLong(2, now)
+        statement.setString(3, sourceNamespace)
+        statement.executeUpdate()
+    }
+    if (updatedNamespaceRows == 0) {
+        ensureNamespaceRecord(
+            connection = connection,
+            namespace = targetNamespace,
+            now = now,
+        )
+    }
+}
+
+private fun JdbcConfigCenterValueService.deleteNamespaceRows(
+    connection: Connection,
+    tableName: String,
+    namespace: String,
+): Int {
+    return connection.prepareStatement(
+        "DELETE FROM $tableName WHERE namespace = ?",
+    ).use { statement ->
+        statement.setString(1, namespace)
+        statement.executeUpdate()
+    }
+}
+
+private fun JdbcConfigCenterValueService.deleteNamespaceRecord(
+    connection: Connection,
+    namespace: String,
+): Int {
+    return connection.prepareStatement(
+        "DELETE FROM config_center_namespace WHERE namespace = ?",
+    ).use { statement ->
+        statement.setString(1, namespace)
+        statement.executeUpdate()
+    }
+}
+
+private fun <T> withTransaction(
+    connection: Connection,
+    block: () -> T,
+): T {
+    val originalAutoCommit = connection.autoCommit
+    connection.autoCommit = false
+    return try {
+        val result = block()
+        connection.commit()
+        result
+    } catch (error: Throwable) {
+        connection.rollback()
+        throw error
+    } finally {
+        connection.autoCommit = originalAutoCommit
     }
 }
 

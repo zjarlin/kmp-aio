@@ -4,12 +4,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
+import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
+import site.addzero.cupertino.workbench.scaffolding.RenderCupertinoWorkbenchScaffolding
 import site.addzero.kcloud.shell.ShellState
 import site.addzero.kcloud.theme.Theme
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
-import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
-import site.addzero.cupertino.workbench.scaffolding.RenderCupertinoWorkbenchScaffolding
 
 @Composable
 fun RenderWorkbenchWindow(
