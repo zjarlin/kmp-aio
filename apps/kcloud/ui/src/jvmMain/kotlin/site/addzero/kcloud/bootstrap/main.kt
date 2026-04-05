@@ -16,11 +16,15 @@ import org.jetbrains.skiko.disableTitleBar
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
+import site.addzero.cupertino.workbench.metrics.LocalWorkbenchMetrics
+import site.addzero.cupertino.workbench.metrics.WorkbenchPresets
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
-import site.addzero.workbench.shell.metrics.LocalWorkbenchMetrics
 import java.awt.Container
 import javax.swing.JComponent
 
+private val desktopUiMetrics = WorkbenchPresets.DesktopCompact
+private val macCaptionBarHeight = desktopUiMetrics.topBarHeight
+private val macCaptionBarLeadingInset = desktopUiMetrics.topBarLeadingInset
 
 fun main() {
     configureDesktopRuntime()
@@ -32,7 +36,7 @@ fun main() {
                 },
             )
         }
-        configureKcloudApiBaseUrl(embeddedServer.baseUrl)
+        bootstrapKcloudFrontendRuntimeConfig(embeddedServer.frontendRuntimeConfig)
 
         DisposableEffect(embeddedServer) {
             onDispose {

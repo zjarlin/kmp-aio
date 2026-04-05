@@ -1,6 +1,6 @@
 package site.addzero.kbox.core
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.prettyJson
 import site.addzero.kbox.core.model.KboxDotfileStatus
 import site.addzero.kbox.core.service.KboxDotfileService
 import site.addzero.kbox.core.service.KboxPathService
@@ -25,11 +25,7 @@ class KboxDotfileServiceTest {
                 }
             }
             val service = KboxDotfileService(
-                json = Json {
-                    prettyPrint = true
-                    encodeDefaults = true
-                    ignoreUnknownKeys = true
-                },
+                json = prettyJson,
                 pathService = pathService,
             )
             val targetFile = File(tempHome, ".zshrc").apply {
@@ -59,11 +55,7 @@ class KboxDotfileServiceTest {
                 }
             }
             val service = KboxDotfileService(
-                json = Json {
-                    prettyPrint = true
-                    encodeDefaults = true
-                    ignoreUnknownKeys = true
-                },
+                json = prettyJson,
                 pathService = pathService,
             )
             val targetFile = File(tempHome, ".gitconfig").apply {

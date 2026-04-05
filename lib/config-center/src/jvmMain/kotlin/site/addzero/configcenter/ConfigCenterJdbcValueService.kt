@@ -1,20 +1,22 @@
 package site.addzero.configcenter
 
+import site.addzero.util.db.SqlExecutor
 import java.sql.Connection
-import java.sql.DriverManager
 import java.sql.ResultSet
-import java.util.Properties
 import java.util.UUID
 
 class JdbcConfigCenterValueService(
     private val settings: ConfigCenterJdbcSettings,
 ) : ConfigCenterAdminService {
     private val dialect = settings.detectDialect()
+    private val sqlExecutor = SqlExecutor(
+        url = settings.url,
+        username = settings.username.orEmpty(),
+        password = settings.password.orEmpty(),
+        driver = settings.driver,
+    )
 
     init {
-        settings.driver?.let { driver ->
-            Class.forName(driver)
-        }
         if (settings.autoDdl) {
             withConnection { connection ->
                 ensureSchema(connection)
@@ -806,17 +808,9 @@ class JdbcConfigCenterValueService(
     private fun <T> withConnection(
         block: (Connection) -> T,
     ): T {
-        return openConnection().use(block)
-    }
-
-    private fun openConnection(): Connection {
-        if (settings.username.isNullOrBlank() && settings.password.isNullOrBlank()) {
-            return DriverManager.getConnection(settings.url)
+        return sqlExecutor.withConnection { connection ->
+            block(connection)
         }
-        val properties = Properties()
-        settings.username?.let { properties["user"] = it }
-        settings.password?.let { properties["password"] = it }
-        return DriverManager.getConnection(settings.url, properties)
     }
 
     private fun ensureCompatibleValueColumns(

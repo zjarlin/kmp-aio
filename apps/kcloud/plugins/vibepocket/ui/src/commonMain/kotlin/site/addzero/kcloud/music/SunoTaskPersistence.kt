@@ -1,6 +1,6 @@
 package site.addzero.kcloud.music
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.omitNullJson
 import site.addzero.kcloud.api.ApiProvider
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoTrack
@@ -9,11 +9,7 @@ import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceResponse as ApiSuno
 import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceSaveRequest as ApiSunoTaskResourceSaveRequest
 import site.addzero.kcloud.vibepocket.routes.SunoTaskResourceTrackResponse as ApiSunoTaskResourceTrackResponse
 
-private val sunoTaskPersistenceJson = Json {
-    encodeDefaults = true
-    explicitNulls = false
-    ignoreUnknownKeys = true
-}
+private val sunoTaskPersistenceJson = omitNullJson
 
 internal data class RefreshedSunoTaskSnapshot(
     val detail: SunoTaskDetail,

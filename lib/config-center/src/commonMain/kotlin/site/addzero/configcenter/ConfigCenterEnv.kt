@@ -1,5 +1,19 @@
 package site.addzero.configcenter
 
+fun configCenterEnv(
+    stringReader: (String) -> String?,
+    listReader: (String) -> List<String>?,
+    mapReader: (String) -> Map<String, String>?,
+    keysReader: (String) -> Set<String>,
+): ConfigCenterEnv {
+    return ConfigCenterEnv(
+        stringReader = stringReader,
+        listReader = listReader,
+        mapReader = mapReader,
+        keysReader = keysReader,
+    )
+}
+
 class ConfigCenterEnv internal constructor(
     private val stringReader: (String) -> String?,
     private val listReader: (String) -> List<String>?,

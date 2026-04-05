@@ -12,11 +12,9 @@ import io.ktor.server.routing.route
 import io.ktor.server.routing.routing
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json
 
-private val configCenterJson = Json {
-    ignoreUnknownKeys = true
-}
+private val configCenterJson = json
 
 private val commonConfigValueTypes = listOf(
     "kotlin.String",

@@ -17,7 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.prettyJson
 import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SUNO_MODELS
@@ -29,12 +29,6 @@ import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
 import site.addzero.kcloud.ui.StudioTone
 import site.addzero.kcloud.ui.SunoTokenApplyHint
-
-private val uploadCoverPrettyJson = Json {
-    prettyPrint = true
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-}
 
 @Composable
 fun UploadCoverWorkbench(
@@ -506,7 +500,7 @@ fun UploadCoverWorkbench(
                                         vocalGender = selectedGender,
                                         personaId = selectedPersonaId,
                                     )
-                                    submittedJson = uploadCoverPrettyJson.encodeToString(request)
+                                    submittedJson = prettyJson.encodeToString(request)
                                     val detail = SunoWorkflowService.submitTask(
                                         actionLabel = "提交翻唱",
                                         submit = { client, callbackUrl ->

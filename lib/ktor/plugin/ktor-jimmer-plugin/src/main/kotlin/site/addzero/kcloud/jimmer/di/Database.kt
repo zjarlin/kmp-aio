@@ -1,15 +1,15 @@
 package site.addzero.kcloud.jimmer.di
 
-import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.runtime.ConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.ConfigCenter
+import site.addzero.configcenter.ConfigCenterEnv
 import site.addzero.kcloud.jimmer.interceptor.BaseEntityDraftInterceptor
 import site.addzero.kcloud.jimmer.spi.DatabaseDriverSpi
 import site.addzero.kcloud.jimmer.spi.DatasourceBootstrapContext
@@ -21,7 +21,6 @@ import javax.sql.DataSource
 private const val DEFAULT_EMBEDDED_SQLITE_URL = "jdbc:sqlite:jimmer-embedded.db"
 
 @Module
-@ComponentScan("site.addzero.kcloud.jimmer")
 class JimmerKoinModule {
     @Single
     fun provideDefaultDataSource(registry: DatasourceRegistry): DataSource {
@@ -73,12 +72,12 @@ private data class DatasourceRuntime(
 
 @Single(createdAtStart = true)
 class DatasourceRegistry(
-    private val config: ApplicationConfig,
+    private val env: ConfigCenterEnv,
     private val interceptor: BaseEntityDraftInterceptor,
     private val driverResolver: DatabaseDriverResolver,
     private val datasourceBootstrappers: List<JimmerDatasourceBootstrapSpi>,
 ) {
-    private val runtimesByName = buildRuntimeMap(config)
+    private val runtimesByName = buildRuntimeMap(env)
     private val defaultRuntime = runtimesByName.values.firstOrNull()
         ?: throw IllegalStateException(
             "No enabled datasource configured. Please configure at least one datasources.*.enabled=true entry.",
@@ -107,11 +106,11 @@ class DatasourceRegistry(
             )
     }
 
-    private fun buildRuntimeMap(config: ApplicationConfig): LinkedHashMap<String, DatasourceRuntime> {
-        val datasources = loadAllDatasources(config)
+    private fun buildRuntimeMap(env: ConfigCenterEnv): LinkedHashMap<String, DatasourceRuntime> {
+        val datasources = loadAllDatasources(env)
             .filter { it.enabled }
             .ifEmpty {
-                fallbackEmbeddedDesktopDatasource(config)?.let(::listOf) ?: emptyList()
+                fallbackEmbeddedDesktopDatasource(env)?.let(::listOf) ?: emptyList()
             }
 
         val runtimes = LinkedHashMap<String, DatasourceRuntime>()
@@ -134,7 +133,7 @@ class DatasourceRegistry(
     }
 }
 
-private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): DatasourceProperties? {
+private fun fallbackEmbeddedDesktopDatasource(env: ConfigCenterEnv): DatasourceProperties? {
     val isEmbeddedDesktop = System.getProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
         ?.toBooleanStrictOrNull()
         ?: false
@@ -142,7 +141,6 @@ private fun fallbackEmbeddedDesktopDatasource(config: ApplicationConfig): Dataso
         return null
     }
 
-    val env = ConfigCenter.getEnv(config)
     val sqliteConfig = env.path("datasources", "sqlite")
     val sqliteUrl = sqliteConfig.string("url")
         ?.takeIf { it.isNotBlank() }
@@ -180,9 +178,8 @@ class DataSourceManager(
     }
 }
 
-private fun loadAllDatasources(config: ApplicationConfig): List<DatasourceProperties> {
+private fun loadAllDatasources(env: ConfigCenterEnv): List<DatasourceProperties> {
     val datasources = mutableListOf<DatasourceProperties>()
-    val env = ConfigCenter.getEnv(config)
     val datasourceRoot = env.path("datasources")
     for (name in datasourceRoot.keys()) {
         val datasourceEnv = datasourceRoot.child(name)

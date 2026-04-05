@@ -2,11 +2,11 @@ package site.addzero.coding.playground
 
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.sqlite.SQLiteDataSource
+import site.addzero.core.network.json.prettyJson
 import site.addzero.coding.playground.server.config.PlaygroundJdbcTransactionContext
 import site.addzero.coding.playground.server.config.SqliteLocalDateTimeScalarProvider
 import site.addzero.coding.playground.server.config.initDatabase
@@ -305,10 +305,7 @@ private fun withWorkbenchState(block: (WorkbenchStateRuntime) -> Unit) {
     val renderSyncService = CodeRenderAndSyncServiceImpl(
         support = support,
         pathResolver = pathResolver,
-        json = Json {
-            ignoreUnknownKeys = true
-            prettyPrint = true
-        },
+        json = prettyJson,
     )
     val state = PlaygroundWorkbenchState(
         projectService = CodegenProjectServiceImpl(support, serviceSupport),

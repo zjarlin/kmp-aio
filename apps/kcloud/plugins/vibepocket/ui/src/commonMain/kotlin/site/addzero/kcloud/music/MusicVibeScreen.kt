@@ -14,8 +14,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import org.koin.compose.viewmodel.koinViewModel
+import site.addzero.core.network.json.prettyJson
 import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 import site.addzero.cupertino.workbench.button.WorkbenchFilledTonalButton as FilledTonalButton
 import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
@@ -29,12 +29,6 @@ import site.addzero.kcloud.ui.StudioSectionCard
 import site.addzero.kcloud.ui.StudioTone
 import site.addzero.kcloud.ui.SunoTokenApplyHint
 import site.addzero.liquidglass.LiquidGlassTabs
-
-private val prettyJson = Json {
-    prettyPrint = true
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-}
 
 @Composable
 fun MusicVibeScreen() {

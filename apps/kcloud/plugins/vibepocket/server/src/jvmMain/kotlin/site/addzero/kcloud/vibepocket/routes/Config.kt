@@ -1,6 +1,5 @@
 package site.addzero.kcloud.vibepocket.routes
 
-import io.ktor.server.config.ApplicationConfig
 import kotlinx.coroutines.runBlocking
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.mp.KoinPlatform
@@ -8,15 +7,22 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
-import site.addzero.configcenter.ConfigCenter
+import site.addzero.configcenter.ConfigCenterBeanFactory
+import site.addzero.configcenter.ConfigCenterEnv
 import site.addzero.configcenter.ConfigCenterKeyDefinition
-import site.addzero.kcloud.config.AppConfigKeys
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
+import site.addzero.kcloud.plugins.system.configcenter.spi.RuntimeConfigCenterActive
 import site.addzero.kcloud.vibepocket.dto.OkResponse
 import site.addzero.kcloud.vibepocket.config.VibepocketConfigKeys
 import site.addzero.kcloud.vibepocket.model.AppConfig
 
 private const val VIBEPOCKET_CONFIG_NAMESPACE = "vibepocket"
+private val legacyConfigAliases = mapOf(
+    VibepocketConfigKeys.SUNO_API_TOKEN to listOf("suno_api_token"),
+    VibepocketConfigKeys.SUNO_API_BASE_URL to listOf("suno_api_base_url"),
+    VibepocketConfigKeys.SUNO_CALLBACK_URL to listOf("suno_callback_url"),
+    VibepocketConfigKeys.SUNO_SETUP_COMPLETE to listOf("vibepocket_setup_complete"),
+)
 
 private fun KSqlClient.readLegacyConfig(key: String): String? {
     return createQuery(AppConfig::class) {
@@ -26,7 +32,7 @@ private fun KSqlClient.readLegacyConfig(key: String): String? {
 
 @GetMapping("/api/config/runtime")
 suspend fun getRuntimeInfo(): ConfigRuntimeInfo {
-    return runtimeConfig().toRuntimeInfo()
+    return runtimeInfoEnv().toRuntimeInfo()
 }
 
 @GetMapping("/api/config/{key}")
@@ -119,14 +125,13 @@ private suspend fun readConfigValue(
 private suspend fun readConfigValue(
     key: String,
 ): String? {
-    configCenterService().readValue(
-        namespace = VIBEPOCKET_CONFIG_NAMESPACE,
-        key = key,
-        active = currentRuntimeConfigCenterActive(),
-    ).value?.let { value ->
+    runtimeConfigEnv(VIBEPOCKET_CONFIG_NAMESPACE).string(key)?.let { value ->
         return value
     }
-    val legacyValue = legacySqlClient().readLegacyConfig(key) ?: return null
+    val legacyValue = legacyConfigAliases[key]
+        ?.firstNotNullOfOrNull(legacySqlClient()::readLegacyConfig)
+        ?: legacySqlClient().readLegacyConfig(key)
+        ?: return null
     configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
@@ -136,11 +141,14 @@ private suspend fun readConfigValue(
     return legacyValue
 }
 
-private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
-    val env = ConfigCenter.getEnv(this)
-    val sqliteEnv = env.path("datasources", "sqlite")
-    val postgresEnv = env.path("datasources", "postgres")
-    val kcloudEnv = env.path("kcloud")
+private fun runtimeInfoEnv(): ConfigCenterEnv {
+    return KoinPlatform.getKoin().get()
+}
+
+private fun ConfigCenterEnv.toRuntimeInfo(): ConfigRuntimeInfo {
+    val sqliteEnv = path("datasources", "sqlite")
+    val postgresEnv = path("datasources", "postgres")
+    val kcloudEnv = path("kcloud")
     val sqliteEnabled = sqliteEnv.boolean("enabled", false) == true
     val postgresEnabled = postgresEnv.boolean("enabled", false) == true
     val sqliteUrl = sqliteEnv.string("url")
@@ -157,11 +165,24 @@ private fun ApplicationConfig.toRuntimeInfo(): ConfigRuntimeInfo {
     )
 }
 
-private fun runtimeConfig(): ApplicationConfig {
-    return KoinPlatform.getKoin().get()
+private fun runtimeConfigEnv(
+    namespace: String,
+): ConfigCenterEnv {
+    return configCenterBeanFactory().env(
+        namespace = namespace,
+        active = runtimeConfigCenterActive().value,
+    )
 }
 
 private fun configCenterService(): ConfigValueServiceSpi {
+    return KoinPlatform.getKoin().get()
+}
+
+private fun configCenterBeanFactory(): ConfigCenterBeanFactory {
+    return KoinPlatform.getKoin().get()
+}
+
+private fun runtimeConfigCenterActive(): RuntimeConfigCenterActive {
     return KoinPlatform.getKoin().get()
 }
 

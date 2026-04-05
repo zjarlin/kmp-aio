@@ -2,7 +2,7 @@ package site.addzero.kcloud.model
 
 import kotlinx.datetime.Clock
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.prettyJson as sharedPrettyJson
 
 @Serializable
 data class ServerConfig(
@@ -212,8 +212,4 @@ fun generateId(): String {
     return "${Clock.System.now().toEpochMilliseconds()}_${(1000..9999).random()}"
 }
 
-val json = Json {
-    prettyPrint = true
-    ignoreUnknownKeys = true
-    encodeDefaults = true
-}
+val json = sharedPrettyJson

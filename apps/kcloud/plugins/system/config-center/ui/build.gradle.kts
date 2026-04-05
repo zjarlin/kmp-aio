@@ -39,6 +39,8 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":lib:compose:compose-cupertino-workbench"))
+            implementation(project(":lib:config-center"))
+            implementation(project(":apps:kcloud:plugins:system:ai-chat:shared"))
             api(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:ksp:route:route-core"))
         }

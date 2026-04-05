@@ -22,6 +22,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.plugins.system.aichat.config.AiChatConfigKeys
 import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 
 @Route(
@@ -70,45 +71,53 @@ fun ConfigCenterProjectsScreen() {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         FilterChip(
-                            selected = state.namespace == "kcloud.ai",
+                            selected = state.namespace == AiChatConfigKeys.NAMESPACE,
                             onClick = { state.useAiNamespace() },
-                            label = { Text("kcloud.ai") },
+                            label = { Text(AiChatConfigKeys.NAMESPACE) },
                         )
-                        FilterChip(
-                            selected = state.key == "provider" && state.value == "openai",
-                            onClick = { state.applyAiProviderPreset("openai") },
-                            label = { Text("OpenAI") },
-                        )
-                        FilterChip(
-                            selected = state.key == "provider" && state.value == "anthropic",
-                            onClick = { state.applyAiProviderPreset("anthropic") },
-                            label = { Text("Anthropic") },
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        FilterChip(
-                            selected = state.key == "apiUrl" && state.value == "https://api.openai.com",
-                            onClick = { state.applyAiUrlPreset("openai") },
-                            label = { Text("OpenAI URL") },
-                        )
-                        FilterChip(
-                            selected = state.key == "apiUrl" && state.value == "https://api.anthropic.com",
-                            onClick = { state.applyAiUrlPreset("anthropic") },
-                            label = { Text("Anthropic URL") },
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        listOf("apiKey", "apiUrl", "provider", "model", "systemPrompt", "transport").forEach { preset ->
+                        state.aiProviderPresets.forEach { preset ->
                             FilterChip(
-                                selected = state.key == preset,
-                                onClick = { state.applyAiKeyPreset(preset) },
-                                label = { Text(preset) },
+                                selected = state.key == AiChatConfigKeys.VENDOR && state.value == preset.vendor,
+                                onClick = { state.applyAiProviderPreset(preset) },
+                                label = { Text(preset.label) },
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        state.aiProviderPresets.forEach { preset ->
+                            FilterChip(
+                                selected = state.key == AiChatConfigKeys.API_URL &&
+                                    state.value == preset.apiUrlDefinition.defaultValue.orEmpty(),
+                                onClick = { state.applyAiUrlPreset(preset) },
+                                label = { Text("${preset.label} URL") },
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        state.aiProviderPresets.forEach { preset ->
+                            FilterChip(
+                                selected = state.key == AiChatConfigKeys.MODEL &&
+                                    state.value == preset.modelDefinition.defaultValue.orEmpty(),
+                                onClick = { state.applyAiModelPreset(preset) },
+                                label = { Text("${preset.label} Model") },
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        state.aiKeyPresets.forEach { definition ->
+                            FilterChip(
+                                selected = state.key == definition.key,
+                                onClick = { state.applyAiKeyPreset(definition) },
+                                label = { Text(definition.key) },
                             )
                         }
                     }

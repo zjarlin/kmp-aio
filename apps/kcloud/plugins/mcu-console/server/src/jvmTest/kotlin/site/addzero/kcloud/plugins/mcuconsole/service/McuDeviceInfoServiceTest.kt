@@ -1,7 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json as sharedJson
 import site.addzero.kcloud.plugins.mcuconsole.FakeSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoPollRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuSessionOpenRequest
@@ -15,10 +15,7 @@ import kotlin.test.assertTrue
  * 验证设备信息轮询服务的请求发送、回包等待与失败兜底行为。
  */
 class McuDeviceInfoServiceTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    private val json = sharedJson
     private val codec = McuVmProtocolCodec(json)
 
     /**

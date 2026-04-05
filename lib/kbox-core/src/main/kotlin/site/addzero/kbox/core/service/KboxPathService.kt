@@ -3,8 +3,8 @@ package site.addzero.kbox.core.service
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
+import site.addzero.core.network.json.prettyJson
 import site.addzero.kbox.core.KBOX_APP_NAME
 import site.addzero.kbox.core.model.KboxInstallerPlatform
 import site.addzero.kbox.core.model.KboxInstallerRule
@@ -16,12 +16,7 @@ import java.io.File
 
 @Single
 open class KboxPathService {
-    private val json = Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        coerceInputValues = true
-    }
+    private val json = prettyJson
 
     open fun defaultAppDataDir(): File {
         return PathUtil.appDataDir(

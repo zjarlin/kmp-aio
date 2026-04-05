@@ -3,8 +3,11 @@ package site.addzero.coding.playground.server.config
 import io.ktor.server.config.MapApplicationConfig
 import java.nio.file.Path
 import java.nio.file.Paths
-import site.addzero.starter.normalizeConfigCenterActive
-import site.addzero.starter.readConfigCenterValues
+import site.addzero.configcenter.ConfigCenterBeanFactory
+import site.addzero.configcenter.configCenterJdbcSettingsOrNull
+import site.addzero.configcenter.ConfigCenterEnv
+import site.addzero.configcenter.env
+import site.addzero.configcenter.normalizeConfigCenterActive
 import kotlin.io.path.createDirectories
 
 data class PlaygroundServerSettings(
@@ -39,26 +42,26 @@ private data class PlaygroundRuntimeSettings(
 )
 
 private fun loadPlaygroundRuntimeSettings(): PlaygroundRuntimeSettings {
-    val overrideValues = buildPlaygroundBootstrapConfig().readConfigCenterValues(
-        namespace = PLAYGROUND_CONFIG_NAMESPACE,
-        active = resolvePlaygroundConfigCenterActive(),
+    val active = resolvePlaygroundConfigCenterActive()
+    val env = buildPlaygroundBootstrapEnv(
+        active = active,
     )
     val dataDirectory = Paths.get(
-        overrideValues[PLAYGROUND_DATA_DIR_KEY]
+        env.string(PLAYGROUND_DATA_DIR_KEY)
             ?: System.getProperty(PLAYGROUND_DATA_DIR_KEY)
             ?: defaultPlaygroundDataDirectory().toString(),
     ).toAbsolutePath().normalize()
     dataDirectory.createDirectories()
-    val sqliteUrl = overrideValues[PLAYGROUND_DB_URL_KEY]
+    val sqliteUrl = env.string(PLAYGROUND_DB_URL_KEY)
         ?: System.getProperty(PLAYGROUND_DB_URL_KEY)
         ?: "jdbc:sqlite:${dataDirectory.resolve("coding-playground.db")}"
-    val serverHost = overrideValues[PLAYGROUND_SERVER_HOST_KEY]
+    val serverHost = env.string(PLAYGROUND_SERVER_HOST_KEY)
         ?: System.getProperty(PLAYGROUND_SERVER_HOST_KEY)
         ?: "127.0.0.1"
-    val serverPort = overrideValues[PLAYGROUND_SERVER_PORT_KEY]?.toIntOrNull()
+    val serverPort = env.string(PLAYGROUND_SERVER_PORT_KEY)?.toIntOrNull()
         ?: System.getProperty(PLAYGROUND_SERVER_PORT_KEY)?.toIntOrNull()
         ?: 18181
-    val httpServerEnabled = overrideValues[PLAYGROUND_HTTP_ENABLED_KEY]?.toBooleanStrictOrNull()
+    val httpServerEnabled = env.string(PLAYGROUND_HTTP_ENABLED_KEY)?.toBooleanStrictOrNull()
         ?: System.getProperty(PLAYGROUND_HTTP_ENABLED_KEY)?.toBooleanStrictOrNull()
         ?: false
     return PlaygroundRuntimeSettings(
@@ -67,6 +70,19 @@ private fun loadPlaygroundRuntimeSettings(): PlaygroundRuntimeSettings {
         serverHost = serverHost,
         serverPort = serverPort,
         httpServerEnabled = httpServerEnabled,
+    )
+}
+
+private fun buildPlaygroundBootstrapEnv(
+    active: String,
+): ConfigCenterEnv {
+    val bootstrapConfig = buildPlaygroundBootstrapConfig()
+    val jdbcSettings = bootstrapConfig.configCenterJdbcSettingsOrNull()
+        ?: error("缺少 coding-playground 配置中心 JDBC 启动参数。")
+    return ConfigCenterBeanFactory.env(
+        settings = jdbcSettings,
+        namespace = PLAYGROUND_CONFIG_NAMESPACE,
+        active = active,
     )
 }
 

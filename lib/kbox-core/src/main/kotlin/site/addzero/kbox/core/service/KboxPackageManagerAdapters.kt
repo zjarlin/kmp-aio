@@ -1,6 +1,6 @@
 package site.addzero.kbox.core.service
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
@@ -200,10 +200,6 @@ class HomebrewCaskPackageManagerAdapter(
 class WingetPackageManagerAdapter(
     private val runner: KboxCommandRunner,
 ) : AbstractPackageManagerAdapter(runner) {
-    private val json = Json {
-        ignoreUnknownKeys = true
-    }
-
     override val managerId = "winget"
     override val displayName = "Winget"
 

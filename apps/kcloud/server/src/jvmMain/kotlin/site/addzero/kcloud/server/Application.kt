@@ -4,20 +4,30 @@ import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
 import io.ktor.server.application.*
 import io.ktor.server.config.*
+import io.ktor.server.config.HoconApplicationConfig
+import io.ktor.server.config.withFallback
 import io.ktor.server.engine.*
+import io.ktor.server.engine.EngineConnectorBuilder
+import io.ktor.server.engine.applicationEnvironment
+import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.*
+import io.ktor.server.netty.Netty
 import io.ktor.server.routing.*
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.withConfiguration
+import site.addzero.configcenter.ConfigCenterBeanFactory
+import site.addzero.configcenter.ConfigCenterEnv
+import site.addzero.configcenter.configCenterJdbcSettingsOrNull
+import site.addzero.configcenter.env
 import site.addzero.kcloud.config.AppConfigKeys
+import site.addzero.kcloud.config.KcloudFrontendRuntimeConfig
 import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
+import site.addzero.configcenter.normalizeConfigCenterActive
+import site.addzero.configcenter.withConfigCenterOverrides
 import site.addzero.starter.installConfigCenterAdminIfEnabled
 import site.addzero.starter.installEffectiveConfig
-import site.addzero.starter.normalizeConfigCenterActive
-import site.addzero.starter.readConfigCenterValues
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
-import site.addzero.starter.withConfigCenterOverrides
 import java.io.File
 import java.net.ServerSocket
 import org.koin.core.KoinApplication as CoreKoinApplication
@@ -26,28 +36,55 @@ import org.koin.core.module.Module as KoinModule
 private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
 /**  */
 private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
-private const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
+internal const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
+
+interface EmbeddedDesktopServerHandle : AutoCloseable {
+    val frontendRuntimeConfig: KcloudFrontendRuntimeConfig
+}
+
 @Volatile
-private var embeddedApplicationConfigOverride: ApplicationConfig? = null
+internal var embeddedApplicationConfigOverride: ApplicationConfig? = null
 @Volatile
-private var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
+internal var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
 @Volatile
 private var embeddedDesktopBaseUrl: String? = null
 
-interface EmbeddedDesktopServerHandle : AutoCloseable {
-    val baseUrl: String
+private val config: HoconApplicationConfig by lazy {
+    loadServerConfig(configPath = null)
 }
+
 
 
 /**
  * Server 入口。
  */
 fun main(args: Array<String>) {
-    val cli = parseServerCliArgs(args)
-    serverApplication(
-        configPath = cli.configPath,
-        host = cli.host,
-        port = cli.port,
+    val active = resolveConfigCenterActive(config)
+    val runtimeSettings = resolveRuntimeSettings(
+        config = config,
+        active = active,
+    )
+    val effectiveConfig = HoconApplicationConfig(
+        serverRuntimeOverrides().resolve(),
+    ).withFallback(
+        config.withConfigCenterOverrides(
+            namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+            active = active,
+        ),
+    )
+    val environment = applicationEnvironment {
+        this.config = effectiveConfig
+    }
+    embeddedServer(
+        factory = Netty,
+        environment = environment,
+        configure = {
+            connectors += EngineConnectorBuilder().apply {
+                host = runtimeSettings.serverHost
+                port = runtimeSettings.serverPort
+            }
+        },
+        module = Application::module,
     ).start(wait = true)
 }
 
@@ -80,49 +117,6 @@ fun Application.module(
     routing {
         registerKCloudPluginRoutes()
     }
-}
-
-fun serverApplication(
-    configPath: String? = null,
-    host: String? = null,
-    port: Int? = null,
-): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
-    require(host == null && port == null) {
-        "host/port 覆盖已禁用，请改为从配置中心提供 ${AppConfigKeys.SERVER_HOST} 与 ${AppConfigKeys.SERVER_PORT}。"
-    }
-    embeddedApplicationConfigOverride = null
-    embeddedDesktopKoinConfigurer = null
-    val config = loadServerConfig(configPath)
-    val active = resolveConfigCenterActive(config)
-    val runtimeSettings = resolveRuntimeSettings(
-        config = config,
-        active = active,
-    )
-
-    val effectiveConfig = HoconApplicationConfig(
-        serverRuntimeOverrides().resolve(),
-    ).withFallback(
-        config.withConfigCenterOverrides(
-            namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
-            active = active,
-        ),
-    )
-
-    val environment = applicationEnvironment {
-        this.config = effectiveConfig
-    }
-
-    return embeddedServer(
-        factory = Netty,
-        environment = environment,
-        configure = {
-            connectors += EngineConnectorBuilder().apply {
-                this.host = runtimeSettings.serverHost
-                this.port = runtimeSettings.serverPort
-            }
-        },
-        module = Application::module,
-    )
 }
 
 /**
@@ -220,9 +214,12 @@ fun startEmbeddedDesktopServer(
     val baseUrl = requireNotNull(embeddedDesktopBaseUrl) {
         "embeddedDesktopBaseUrl 尚未初始化。"
     }
+    val frontendRuntimeConfig = KcloudFrontendRuntimeConfig(
+        apiBaseUrl = baseUrl,
+    )
 
     return object : EmbeddedDesktopServerHandle {
-        override val baseUrl = baseUrl
+        override val frontendRuntimeConfig = frontendRuntimeConfig
 
         override fun close() {
             server.stop(
@@ -237,31 +234,9 @@ fun startEmbeddedDesktopServer(
     }
 }
 
-private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
-    val resolvedConfig = configPath?.let { path ->
-        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
-    } ?: ConfigFactory.load()
 
-    return HoconApplicationConfig(
-        embeddedDesktopOverrides()
-            .withFallback(resolvedConfig)
-            .resolve()
-    )
-}
 
-private fun loadServerConfig(configPath: String?): HoconApplicationConfig {
-    val resolved = configPath?.let { path ->
-        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
-    } ?: ConfigFactory.load()
-
-    return HoconApplicationConfig(
-        serverRuntimeOverrides()
-            .withFallback(resolved)
-            .resolve()
-    )
-}
-
-private fun resolveConfigCenterActive(
+internal fun resolveConfigCenterActive(
     config: ApplicationConfig,
 ): String {
     val active = config.propertyOrNull(AppConfigKeys.KTOR_ENVIRONMENT)
@@ -278,25 +253,30 @@ private data class ServerCliArgs(
     val port: Int? = null,
 )
 
-private fun parseServerCliArgs(args: Array<String>): ServerCliArgs {
-    val normalizedArgs = args
-        .flatMap { raw -> raw.split(Regex("\\s+")).filter { it.isNotBlank() } }
+private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
+    val resolvedConfig = configPath?.let { path ->
+        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
+    } ?: ConfigFactory.load()
 
-    fun findValue(name: String): String? {
-        val prefixes = listOf("-$name=", "--$name=")
-        return normalizedArgs.firstNotNullOfOrNull { arg ->
-            prefixes.firstNotNullOfOrNull { prefix ->
-                arg.removePrefix(prefix).takeIf { arg.startsWith(prefix) }
-            }
-        }
-    }
-
-    return ServerCliArgs(
-        configPath = findValue("config"),
-        host = findValue("host"),
-        port = findValue("port")?.toIntOrNull(),
+    return HoconApplicationConfig(
+        embeddedDesktopOverrides()
+            .withFallback(resolvedConfig)
+            .resolve(),
     )
 }
+
+internal fun loadServerConfig(configPath: String?): HoconApplicationConfig {
+    val resolvedConfig = configPath?.let { path ->
+        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
+    } ?: ConfigFactory.load()
+
+    return HoconApplicationConfig(
+        serverRuntimeOverrides()
+            .withFallback(resolvedConfig)
+            .resolve(),
+    )
+}
+
 
 private fun resolveConfigFile(path: String): File {
     val direct = File(path)
@@ -314,7 +294,7 @@ private fun resolveConfigFile(path: String): File {
     return direct
 }
 
-private fun serverRuntimeOverrides() = ConfigFactory.parseString(
+internal fun serverRuntimeOverrides() = ConfigFactory.parseString(
     """
     ktor {
       application {
@@ -372,7 +352,7 @@ private data class EmbeddedDesktopPaths(
         get() = "jdbc:sqlite:${sqliteFile.absolutePath}"
 }
 
-private data class KCloudRuntimeSettings(
+internal data class KCloudRuntimeSettings(
     val serverHost: String,
     val serverPort: Int,
     val desktopServerPublicHost: String,
@@ -391,31 +371,36 @@ private data class KCloudRuntimeSettings(
     val postgresEnabled: Boolean,
 )
 
-private fun resolveRuntimeSettings(
+internal fun resolveRuntimeSettings(
     config: ApplicationConfig,
     active: String,
 ): KCloudRuntimeSettings {
-    val values = config.readConfigCenterValues(
+    val jdbcSettings = config.configCenterJdbcSettingsOrNull()
+        ?: error(
+            "缺少配置中心 JDBC，无法读取运行时配置。请提供 config-center.jdbc.* 或 datasources.sqlite/postgres.*。",
+        )
+    val env = ConfigCenterBeanFactory.env(
+        settings = jdbcSettings,
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
         active = active,
     )
     return KCloudRuntimeSettings(
-        serverHost = values.requireNonBlank(AppConfigKeys.SERVER_HOST, active),
-        serverPort = values.requireInt(AppConfigKeys.SERVER_PORT, active),
-        desktopServerPublicHost = values.requireNonBlank(AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST, active),
-        desktopServerPort = values.requireInt(AppConfigKeys.DESKTOP_SERVER_PORT, active),
-        desktopAppDirectoryName = values.requireNonBlank(AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME, active),
-        desktopSqliteFileName = values.requireNonBlank(AppConfigKeys.DESKTOP_SQLITE_FILE_NAME, active),
-        desktopBannerText = values.requireNonBlank(AppConfigKeys.DESKTOP_BANNER_TEXT, active),
-        desktopBannerSubtitle = values.requireNonBlank(AppConfigKeys.DESKTOP_BANNER_SUBTITLE, active),
-        desktopOpenapiEnabled = values.requireBoolean(AppConfigKeys.DESKTOP_OPENAPI_ENABLED, active),
-        desktopOpenapiPath = values.requireNonBlank(AppConfigKeys.DESKTOP_OPENAPI_PATH, active),
-        desktopOpenapiSpec = values.requireNonBlank(AppConfigKeys.DESKTOP_OPENAPI_SPEC, active),
-        desktopFlywayEnabled = values.requireBoolean(AppConfigKeys.DESKTOP_FLYWAY_ENABLED, active),
-        desktopS3Enabled = values.requireBoolean(AppConfigKeys.DESKTOP_S3_ENABLED, active),
-        sqliteEnabled = values.requireBoolean(AppConfigKeys.SQLITE_ENABLED, active),
-        sqliteDriver = values.requireNonBlank(AppConfigKeys.SQLITE_DRIVER, active),
-        postgresEnabled = values.requireBoolean(AppConfigKeys.POSTGRES_ENABLED, active),
+        serverHost = env.requireNonBlank(AppConfigKeys.SERVER_HOST, active),
+        serverPort = env.requireInt(AppConfigKeys.SERVER_PORT, active),
+        desktopServerPublicHost = env.requireNonBlank(AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST, active),
+        desktopServerPort = env.requireInt(AppConfigKeys.DESKTOP_SERVER_PORT, active),
+        desktopAppDirectoryName = env.requireNonBlank(AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME, active),
+        desktopSqliteFileName = env.requireNonBlank(AppConfigKeys.DESKTOP_SQLITE_FILE_NAME, active),
+        desktopBannerText = env.requireNonBlank(AppConfigKeys.DESKTOP_BANNER_TEXT, active),
+        desktopBannerSubtitle = env.requireNonBlank(AppConfigKeys.DESKTOP_BANNER_SUBTITLE, active),
+        desktopOpenapiEnabled = env.requireBoolean(AppConfigKeys.DESKTOP_OPENAPI_ENABLED, active),
+        desktopOpenapiPath = env.requireNonBlank(AppConfigKeys.DESKTOP_OPENAPI_PATH, active),
+        desktopOpenapiSpec = env.requireNonBlank(AppConfigKeys.DESKTOP_OPENAPI_SPEC, active),
+        desktopFlywayEnabled = env.requireBoolean(AppConfigKeys.DESKTOP_FLYWAY_ENABLED, active),
+        desktopS3Enabled = env.requireBoolean(AppConfigKeys.DESKTOP_S3_ENABLED, active),
+        sqliteEnabled = env.requireBoolean(AppConfigKeys.SQLITE_ENABLED, active),
+        sqliteDriver = env.requireNonBlank(AppConfigKeys.SQLITE_DRIVER, active),
+        postgresEnabled = env.requireBoolean(AppConfigKeys.POSTGRES_ENABLED, active),
     )
 }
 
@@ -569,17 +554,17 @@ private fun buildEmbeddedDesktopBaseUrl(
     return "http://$publicHost:$port/"
 }
 
-private fun Map<String, String>.requireNonBlank(
+private fun ConfigCenterEnv.requireNonBlank(
     key: String,
     active: String,
 ): String {
-    return this[key]
+    return string(key)
         ?.trim()
         ?.takeIf(String::isNotBlank)
         ?: error("配置中心缺少必填项 namespace=$KCLOUD_CONFIG_CENTER_NAMESPACE active=$active key=$key")
 }
 
-private fun Map<String, String>.requireInt(
+private fun ConfigCenterEnv.requireInt(
     key: String,
     active: String,
 ): Int {
@@ -587,7 +572,7 @@ private fun Map<String, String>.requireInt(
         ?: error("配置中心项格式错误 namespace=$KCLOUD_CONFIG_CENTER_NAMESPACE active=$active key=$key，期望 Int。")
 }
 
-private fun Map<String, String>.requireBoolean(
+private fun ConfigCenterEnv.requireBoolean(
     key: String,
     active: String,
 ): Boolean {

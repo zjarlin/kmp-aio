@@ -24,6 +24,7 @@ ksp {
 
 dependencies {
     implementation(project(":apps:coding-playground:shared"))
+    implementation(project(":lib:config-center"))
     implementation(project(":lib:ktor:starter:starter-spi"))
 
     implementation(libs.io.ktor.ktor.server.core)

@@ -1,22 +1,18 @@
 package site.addzero.kcloud.vibepocket.routes
 
 import kotlinx.serialization.builtins.ListSerializer
-import kotlinx.serialization.json.Json
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.mp.KoinPlatform
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
+import site.addzero.core.network.json.omitNullJson
 import site.addzero.kcloud.vibepocket.model.SunoTaskResource
 import site.addzero.kcloud.vibepocket.model.SunoTaskResourceDraft
 import java.time.LocalDateTime
 
-private val sunoTaskResourceJson = Json {
-    encodeDefaults = true
-    explicitNulls = false
-    ignoreUnknownKeys = true
-}
+private val sunoTaskResourceJson = omitNullJson
 
 @PostMapping("/api/suno/resources")
 suspend fun save(

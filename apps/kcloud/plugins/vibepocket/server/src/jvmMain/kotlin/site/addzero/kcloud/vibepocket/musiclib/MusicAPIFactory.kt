@@ -5,7 +5,6 @@ import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.http.ContentType
 import io.ktor.serialization.kotlinx.json.json
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -14,6 +13,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.koin.mp.KoinPlatform
+import site.addzero.core.network.json.json
 import site.addzero.kcloud.api.netease.MusicSearchClient
 import site.addzero.kcloud.api.netease.SearchType as NeteaseSearchType
 import site.addzero.kcloud.vibepocket.musiclib.model.Song
@@ -86,10 +86,7 @@ private object NeteaseMusicProvider : MusicProvider {
 }
 
 private object QQMusicProvider : MusicProvider {
-    private val qqJson = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-    }
+    private val qqJson = json
 
     private val httpClient = HttpClient {
         install(ContentNegotiation) {

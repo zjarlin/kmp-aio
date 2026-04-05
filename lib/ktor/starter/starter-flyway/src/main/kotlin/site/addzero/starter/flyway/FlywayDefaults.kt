@@ -2,6 +2,7 @@ package site.addzero.starter.flyway
 
 import io.ktor.server.config.ApplicationConfig
 import site.addzero.configcenter.ConfigCenter
+import site.addzero.configcenter.ConfigCenterEnv
 import site.addzero.configcenter.ConfigCenterScopedEnv
 
 data class FlywayDefaults(
@@ -60,11 +61,22 @@ data class FlywayDefaults(
             return fromEnv(ConfigCenter.getEnv(config).path("flyway"))
         }
 
+        fun fromGlobalEnv(env: ConfigCenterEnv): FlywayDefaults {
+            return fromEnv(env.path("flyway"))
+        }
+
         fun fromDatasourceConfig(
             config: ApplicationConfig,
             datasourceName: String,
         ): FlywayDefaults {
             return fromEnv(ConfigCenter.getEnv(config).path("datasources", datasourceName, "flyway"))
+        }
+
+        fun fromDatasourceEnv(
+            env: ConfigCenterEnv,
+            datasourceName: String,
+        ): FlywayDefaults {
+            return fromEnv(env.path("datasources", datasourceName, "flyway"))
         }
     }
 }

@@ -1,6 +1,6 @@
 package site.addzero.kbox.core
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.prettyJson
 import site.addzero.kbox.core.model.KboxCommandResult
 import site.addzero.kbox.core.model.KboxCommandSpec
 import site.addzero.kbox.core.model.KboxComposeProjectAvailability
@@ -36,11 +36,7 @@ class KboxComposeProjectServiceTest {
             }
         }
         val service = KboxComposeProjectService(
-            json = Json {
-                prettyPrint = true
-                encodeDefaults = true
-                ignoreUnknownKeys = true
-            },
+            json = prettyJson,
             pathService = pathService,
             commandRunner = commandRunner,
         )

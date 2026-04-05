@@ -1,6 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json
 import site.addzero.kcloud.plugins.mcuconsole.FakeSerialPortGateway
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptRunState
@@ -13,10 +13,7 @@ import kotlin.test.assertTrue
 class McuScriptServiceTest {
     private val gateway = FakeSerialPortGateway()
     private val codec = McuVmProtocolCodec(
-        Json {
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        },
+        json,
     )
 
     @Test

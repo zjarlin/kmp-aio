@@ -9,7 +9,9 @@ import site.addzero.kcloud.api.netease.NeteaseSearchSong
 import site.addzero.kcloud.api.netease.SearchType
 
 @Single
-class NeteaseDemoState {
+class NeteaseDemoState(
+    private val musicSearchClient: MusicSearchClient,
+) {
     var token by mutableStateOf("")
         private set
     var query by mutableStateOf("周杰伦")
@@ -49,7 +51,7 @@ class NeteaseDemoState {
         lyricPreview = "正在等待搜索结果…"
         runCatching {
             applyToken()
-            MusicSearchClient.musicApi.search(
+            musicSearchClient.musicApi.search(
                 s = keyword,
                 type = SearchType.SONG.value,
                 limit = 8,
@@ -84,7 +86,7 @@ class NeteaseDemoState {
         lyricPreview = "正在加载歌词…"
         runCatching {
             applyToken()
-            MusicSearchClient.musicApi.getLyric(songId)
+            musicSearchClient.musicApi.getLyric(songId)
         }.onSuccess { response ->
             lyricPreview = response.lrc?.lyric?.takeIf { it.isNotBlank() } ?: "该歌曲没有返回歌词。"
             statusMessage = "歌词已加载。"
@@ -96,6 +98,6 @@ class NeteaseDemoState {
     }
 
     private fun applyToken() {
-        MusicSearchClient.mytoken = token.trim().ifBlank { null }
+        musicSearchClient.mytoken = token.trim().ifBlank { null }
     }
 }

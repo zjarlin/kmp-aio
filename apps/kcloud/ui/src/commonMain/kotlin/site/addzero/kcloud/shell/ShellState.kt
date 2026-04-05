@@ -1,9 +1,10 @@
 package site.addzero.kcloud.shell
 
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.navigation3.runtime.NavBackStack
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 
@@ -14,12 +15,10 @@ class ShellState(
     private val startupRoutePath = routeCatalog.defaultRoutePath
         .ifBlank { routeCatalog.routeEntries.firstOrNull()?.routePath.orEmpty() }
 
-    val backStack = NavBackStack(
-        NavRoute(routePath = startupRoutePath),
-    )
+    val backStack: SnapshotStateList<String> = mutableStateListOf(startupRoutePath)
 
     val selectedRoutePath
-        get() = backStack.lastOrNull()?.routePath ?: startupRoutePath
+        get() = backStack.lastOrNull() ?: startupRoutePath
 
     val selectedSceneId
         get() = routeCatalog.sceneIdFor(selectedRoutePath)
@@ -102,16 +101,15 @@ class ShellState(
     private fun navigateToRoute(
         routePath: String,
     ) {
-        val route = NavRoute(routePath = routePath)
         if (backStack.isEmpty()) {
-            backStack += route
+            backStack += routePath
             return
         }
-        if (backStack.last() == route) {
+        if (backStack.last() == routePath) {
             return
         }
 
         // 工作台导航保持单选语义，切页时替换当前栈顶而不是无限累积历史。
-        backStack[backStack.lastIndex] = route
+        backStack[backStack.lastIndex] = routePath
     }
 }

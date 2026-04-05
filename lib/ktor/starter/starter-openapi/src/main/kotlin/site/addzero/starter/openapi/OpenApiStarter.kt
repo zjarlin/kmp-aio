@@ -14,7 +14,7 @@ import site.addzero.starter.effectiveConfig
 class OpenApiStarterKoinModule
 
 @Single
-class OpenApiStarter : AppStarter {
+class OpenApiStarter : AppStarter<Application> {
 
     override fun Application.enable(): Boolean {
         return ConfigCenter.getEnv(effectiveConfig())

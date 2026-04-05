@@ -42,7 +42,9 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":lib:compose:compose-cupertino-workbench"))
-            implementation(project(":apps:kcloud:plugins:vibepocket"))
+            implementation(project(":lib:config-center"))
+            implementation(project(":lib:tool-kmp:tool-expect"))
+            api(project(":apps:kcloud:plugins:vibepocket"))
             implementation(project(":lib:compose:media-playlist-player"))
             implementation(project(":lib:api:api-music-spi"))
             implementation(project(":lib:api:api-suno"))

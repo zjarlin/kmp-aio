@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
+import site.addzero.configcenter.ConfigCenterBeanFactory
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.kcloud.api.suno.SunoApiClient
 import site.addzero.kcloud.api.suno.SunoGenerateRequest
@@ -144,6 +145,10 @@ private fun configCenterService(): ConfigValueServiceSpi {
     return KoinPlatform.getKoin().get()
 }
 
+private fun configCenterBeanFactory(): ConfigCenterBeanFactory {
+    return KoinPlatform.getKoin().get()
+}
+
 private fun KSqlClient.readLegacyConfigValue(key: String): String? {
     return createQuery(site.addzero.kcloud.vibepocket.model.AppConfig::class) {
         select(table)
@@ -151,11 +156,10 @@ private fun KSqlClient.readLegacyConfigValue(key: String): String? {
 }
 
 private suspend fun KSqlClient.getConfig(key: String): String? {
-    configCenterService().readValue(
+    configCenterBeanFactory().env(
         namespace = "vibepocket",
-        key = key,
         active = currentRuntimeConfigCenterActive(),
-    ).value?.let { value ->
+    ).string(key)?.let { value ->
         return value
     }
     val legacyValue = readLegacyConfigValue(key) ?: return null

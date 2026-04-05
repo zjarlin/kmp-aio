@@ -7,9 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
+import site.addzero.util.DirectoryLauncher
 import site.addzero.kcloud.music.SettingsService
 import site.addzero.kcloud.music.SunoRuntimeConfig
-import site.addzero.kcloud.platform.DirectoryLauncher
 import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
 
 data class SettingsFeedbackState(

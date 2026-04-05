@@ -1,6 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.protocol.mcuvm
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json
 import site.addzero.kcloud.plugins.mcuconsole.McuScriptExecuteRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -9,10 +9,7 @@ import kotlin.test.assertTrue
 
 class McuVmProtocolCodecTest {
     private val codec = McuVmProtocolCodec(
-        Json {
-            ignoreUnknownKeys = true
-            coerceInputValues = true
-        },
+        json,
     )
 
     @Test

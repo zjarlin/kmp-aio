@@ -3,7 +3,7 @@ import site.addzero.ksp.modbusrtu.gradle.ModbusRtuExtension
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-core")
     id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
-    id("site.addzero.buildlogic.kmp.kmp-json")
+    id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-koin-core")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
     id("site.addzero.ksp.modbus-rtu")
@@ -99,6 +99,7 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
+            implementation(project(":lib:config-center"))
             implementation(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:tool-jvm:tool-stm32-bootloader"))
             implementation(project(":lib:tool-jvm:tool-serial"))

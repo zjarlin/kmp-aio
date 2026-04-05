@@ -1,6 +1,9 @@
 package site.addzero.kcloud.settings
 
 import kotlinx.serialization.Serializable
+import site.addzero.kcloud.vibepocket.config.VibepocketConfigKeys
+
+private val defaultSunoApiBaseUrl = VibepocketConfigKeys.sunoApiBaseUrl.defaultValue.orEmpty()
 
 /**
  * 单个 API 服务的连接配置信息。
@@ -30,7 +33,7 @@ data class ApiConfig(
 data class ModuleConfigs(
     val music: List<ApiConfig> = listOf(
         ApiConfig(label = "Suno API Token"),
-        ApiConfig(label = "Suno API Base URL", baseUrl = "https://api.sunoapi.org/api/v1"),
+        ApiConfig(label = "Suno API Base URL", baseUrl = defaultSunoApiBaseUrl),
     ),
     val image: List<ApiConfig> = emptyList(),
     val video: List<ApiConfig> = emptyList()

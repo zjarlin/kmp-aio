@@ -4,8 +4,71 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.configcenter.ConfigCenterKeyDefinition
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_ANTHROPIC
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_DEEPSEEK
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_GEMINI
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OLLAMA
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENAI
+import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENROUTER
+import site.addzero.kcloud.plugins.system.aichat.config.AiChatConfigKeys
 import site.addzero.kcloud.plugins.system.configcenter.api.Apis
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
+
+data class AiConfigProviderPreset(
+    val label: String,
+    val vendor: String,
+    val apiUrlDefinition: ConfigCenterKeyDefinition,
+    val modelDefinition: ConfigCenterKeyDefinition,
+)
+
+private val AI_PROVIDER_PRESETS = listOf(
+    AiConfigProviderPreset(
+        label = "OpenAI",
+        vendor = AI_CHAT_VENDOR_OPENAI,
+        apiUrlDefinition = AiChatConfigKeys.presetOpenaiApiUrl,
+        modelDefinition = AiChatConfigKeys.presetOpenaiModel,
+    ),
+    AiConfigProviderPreset(
+        label = "Anthropic",
+        vendor = AI_CHAT_VENDOR_ANTHROPIC,
+        apiUrlDefinition = AiChatConfigKeys.presetAnthropicApiUrl,
+        modelDefinition = AiChatConfigKeys.presetAnthropicModel,
+    ),
+    AiConfigProviderPreset(
+        label = "DeepSeek",
+        vendor = AI_CHAT_VENDOR_DEEPSEEK,
+        apiUrlDefinition = AiChatConfigKeys.presetDeepseekApiUrl,
+        modelDefinition = AiChatConfigKeys.presetDeepseekModel,
+    ),
+    AiConfigProviderPreset(
+        label = "OpenRouter",
+        vendor = AI_CHAT_VENDOR_OPENROUTER,
+        apiUrlDefinition = AiChatConfigKeys.presetOpenrouterApiUrl,
+        modelDefinition = AiChatConfigKeys.presetOpenrouterModel,
+    ),
+    AiConfigProviderPreset(
+        label = "Gemini",
+        vendor = AI_CHAT_VENDOR_GEMINI,
+        apiUrlDefinition = AiChatConfigKeys.presetGeminiApiUrl,
+        modelDefinition = AiChatConfigKeys.presetGeminiModel,
+    ),
+    AiConfigProviderPreset(
+        label = "Ollama",
+        vendor = AI_CHAT_VENDOR_OLLAMA,
+        apiUrlDefinition = AiChatConfigKeys.presetOllamaApiUrl,
+        modelDefinition = AiChatConfigKeys.presetOllamaModel,
+    ),
+)
+
+private val AI_EDITABLE_DEFINITIONS = listOf(
+    AiChatConfigKeys.transport,
+    AiChatConfigKeys.vendor,
+    AiChatConfigKeys.apiUrl,
+    AiChatConfigKeys.apiKey,
+    AiChatConfigKeys.model,
+    AiChatConfigKeys.systemPrompt,
+)
 
 @Single
 class ConfigCenterWorkbenchState {
@@ -21,47 +84,50 @@ class ConfigCenterWorkbenchState {
     var isBusy by mutableStateOf(false)
         private set
 
+    val aiProviderPresets: List<AiConfigProviderPreset>
+        get() = AI_PROVIDER_PRESETS
+
+    val aiKeyPresets: List<ConfigCenterKeyDefinition>
+        get() = AI_EDITABLE_DEFINITIONS
+
     fun useAiNamespace() {
-        namespace = "kcloud.ai"
+        namespace = AiChatConfigKeys.NAMESPACE
     }
 
     fun applyAiKeyPreset(
-        preset: String,
+        definition: ConfigCenterKeyDefinition,
     ) {
         useAiNamespace()
-        key = preset
-        if (preset == "transport" && value.isBlank()) {
-            value = "http"
+        key = definition.key
+        if (value.isBlank()) {
+            value = definition.defaultValue.orEmpty()
         }
     }
 
     fun applyAiProviderPreset(
-        provider: String,
+        preset: AiConfigProviderPreset,
     ) {
         useAiNamespace()
-        when (provider.lowercase()) {
-            "openai" -> {
-                key = "provider"
-                value = "openai"
-            }
-
-            "anthropic" -> {
-                key = "provider"
-                value = "anthropic"
-            }
-        }
+        key = AiChatConfigKeys.VENDOR
+        value = preset.vendor
     }
 
     fun applyAiUrlPreset(
-        provider: String,
+        preset: AiConfigProviderPreset,
     ) {
         useAiNamespace()
-        key = "apiUrl"
-        value = when (provider.lowercase()) {
-            "openai" -> "https://api.openai.com"
-            "anthropic" -> "https://api.anthropic.com"
-            else -> value
-        }
+        key = AiChatConfigKeys.API_URL
+        value = preset.apiUrlDefinition.defaultValue
+            ?: error("缺少 ${preset.apiUrlDefinition.key} 的默认值定义。")
+    }
+
+    fun applyAiModelPreset(
+        preset: AiConfigProviderPreset,
+    ) {
+        useAiNamespace()
+        key = AiChatConfigKeys.MODEL
+        value = preset.modelDefinition.defaultValue
+            ?: error("缺少 ${preset.modelDefinition.key} 的默认值定义。")
     }
 
     suspend fun readValue() {

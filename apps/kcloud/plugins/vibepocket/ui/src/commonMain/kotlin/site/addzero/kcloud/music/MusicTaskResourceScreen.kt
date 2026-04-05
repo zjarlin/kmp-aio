@@ -29,9 +29,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import org.koin.compose.viewmodel.koinViewModel
+import site.addzero.core.network.json.prettyJson
 import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
 import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
 import site.addzero.kcloud.api.suno.SunoTaskDetail
@@ -43,12 +43,6 @@ import site.addzero.kcloud.ui.StudioPill
 import site.addzero.kcloud.ui.StudioSectionCard
 import site.addzero.kcloud.ui.StudioTone
 import site.addzero.media.playlist.player.DefaultPlaylistPlayer
-
-private val taskResourcePrettyJson = Json {
-    prettyPrint = true
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-}
 
 @Composable
 fun MusicTaskResourceScreen() {
@@ -319,7 +313,7 @@ private fun TaskResourceDetail(
     val effectiveTrackCount = liveDetail?.response?.sunoData?.size ?: item.tracks.size
     val liveTracks = liveDetail?.response?.sunoData.orEmpty()
     val effectiveError = liveDetail?.errorMessage ?: liveDetail?.errorCode ?: item.errorMessage
-    val effectiveDetailJson = liveDetail?.let { taskResourcePrettyJson.encodeToString(it) } ?: item.detailJson
+    val effectiveDetailJson = liveDetail?.let { prettyJson.encodeToString(it) } ?: item.detailJson
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -663,8 +657,8 @@ private fun String.prettyJsonOrRaw(): String {
         return raw
     }
     return runCatching {
-        val element = taskResourcePrettyJson.parseToJsonElement(raw)
-        taskResourcePrettyJson.encodeToString(JsonElement.serializer(), element)
+        val element = prettyJson.parseToJsonElement(raw)
+        prettyJson.encodeToString(JsonElement.serializer(), element)
     }.getOrDefault(raw)
 }
 

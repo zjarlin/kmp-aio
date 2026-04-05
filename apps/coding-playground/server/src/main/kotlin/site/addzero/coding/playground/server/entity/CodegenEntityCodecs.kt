@@ -1,11 +1,9 @@
 package site.addzero.coding.playground.server.entity
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json
 import site.addzero.coding.playground.shared.dto.FunctionParameterDto
 
-private val codegenEntityJson = Json {
-    ignoreUnknownKeys = true
-}
+private val codegenEntityJson = json
 
 fun encodeStringList(value: List<String>): String? = value.takeIf { it.isNotEmpty() }?.let(codegenEntityJson::encodeToString)
 

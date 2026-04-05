@@ -4,50 +4,67 @@ import de.jensklingenberg.ktorfit.Ktorfit
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import site.addzero.core.network.HttpClientFactory
+import site.addzero.kcloud.config.KcloudFrontendRuntimeConfig
 
-private const val defaultBaseUrl = "http://localhost:18080/"
-private const val httpClientProfile = "kcloud-api"
+private const val KCLOUD_API_HTTP_CLIENT_PROFILE = "kcloud-api"
 
-private object KcloudApiRuntime {
-    @Volatile
-    private var baseUrl = defaultBaseUrl
+private object KcloudFrontendRuntimeBootstrap {
+    private var runtimeConfig: KcloudFrontendRuntimeConfig? = null
 
-    fun configureBaseUrl(
-        value: String,
+    fun install(
+        value: KcloudFrontendRuntimeConfig,
     ) {
-        baseUrl = normalizeBaseUrl(value)
+        val normalized = KcloudFrontendRuntimeConfig(
+            apiBaseUrl = value.normalizedApiBaseUrl(),
+        )
+        val installed = runtimeConfig
+        if (installed == null) {
+            runtimeConfig = normalized
+            return
+        }
+        check(installed == normalized) {
+            "KcloudFrontendRuntimeConfig 已初始化，不能在运行时切换。"
+        }
     }
 
-    fun createKtorfit(
-        httpClientFactory: HttpClientFactory,
-    ): Ktorfit {
-        return Ktorfit.Builder()
-            .baseUrl(baseUrl)
-            .httpClient(httpClientFactory.get(httpClientProfile))
-            .build()
-    }
-
-    private fun normalizeBaseUrl(
-        value: String,
-    ): String {
-        return value.trim()
-            .ifBlank { defaultBaseUrl }
-            .trimEnd('/') + "/"
+    fun requireRuntimeConfig(): KcloudFrontendRuntimeConfig {
+        return requireNotNull(runtimeConfig) {
+            "KcloudFrontendRuntimeConfig 尚未初始化。请在应用启动前完成前端 runtime config 装配。"
+        }
     }
 }
 
-fun configureKcloudApiBaseUrl(
-    baseUrl: String,
+data class KcloudApiHttpClientProfile(
+    val value: String = KCLOUD_API_HTTP_CLIENT_PROFILE,
+)
+
+fun bootstrapKcloudFrontendRuntimeConfig(
+    runtimeConfig: KcloudFrontendRuntimeConfig,
 ) {
-    KcloudApiRuntime.configureBaseUrl(baseUrl)
+    KcloudFrontendRuntimeBootstrap.install(runtimeConfig)
 }
 
 @Module
 class KcloudApiModule {
     @Single
+    fun provideFrontendRuntimeConfig(): KcloudFrontendRuntimeConfig {
+        return KcloudFrontendRuntimeBootstrap.requireRuntimeConfig()
+    }
+
+    @Single
+    fun provideApiHttpClientProfile(): KcloudApiHttpClientProfile {
+        return KcloudApiHttpClientProfile()
+    }
+
+    @Single
     fun provideKtorfit(
         httpClientFactory: HttpClientFactory,
+        runtimeConfig: KcloudFrontendRuntimeConfig,
+        httpClientProfile: KcloudApiHttpClientProfile,
     ): Ktorfit {
-        return KcloudApiRuntime.createKtorfit(httpClientFactory)
+        return Ktorfit.Builder()
+            .baseUrl(runtimeConfig.normalizedApiBaseUrl())
+            .httpClient(httpClientFactory.get(httpClientProfile.value))
+            .build()
     }
 }

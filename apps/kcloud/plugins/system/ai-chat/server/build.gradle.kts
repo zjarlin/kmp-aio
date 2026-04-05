@@ -30,6 +30,7 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:system:ai-chat:shared"))
+            implementation(project(":lib:config-center"))
             implementation(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("ai-koog-koog-agents").get())

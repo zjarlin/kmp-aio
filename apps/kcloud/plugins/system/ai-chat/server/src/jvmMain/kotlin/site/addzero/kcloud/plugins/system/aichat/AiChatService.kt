@@ -1,9 +1,10 @@
 package site.addzero.kcloud.plugins.system.aichat
 
-import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
-import org.koin.mp.KoinPlatform
+import site.addzero.configcenter.ConfigCenterBeanFactory
+import site.addzero.configcenter.ConfigCenterEnv
+import site.addzero.configcenter.ConfigCenterKeyDefinition
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatMessage
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatSession
 import site.addzero.kcloud.plugins.system.aichat.model.by
@@ -16,9 +17,7 @@ import site.addzero.kcloud.plugins.system.aichat.config.AiChatConfigKeys
 import site.addzero.kcloud.plugins.system.aichat.provider.AiChatCompletionGateway
 import site.addzero.kcloud.plugins.system.aichat.provider.AiChatCompletionRequest
 import site.addzero.kcloud.plugins.system.aichat.provider.AiChatTurn
-import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
-import site.addzero.kcloud.plugins.system.configcenter.spi.requireRuntimeConfigCenterActive
-import site.addzero.kcloud.plugins.system.configcenter.spi.RUNTIME_CONFIG_CENTER_ACTIVE_KEY
+import site.addzero.kcloud.plugins.system.configcenter.spi.RuntimeConfigCenterActive
 import java.util.*
 
 private const val DEFAULT_SESSION_TITLE = "新会话"
@@ -27,7 +26,8 @@ private const val DEFAULT_SESSION_TITLE = "新会话"
 class AiChatService(
     private val sqlClient: KSqlClient,
     private val completionGateway: AiChatCompletionGateway,
-    private val applicationConfig: ApplicationConfig,
+    private val configCenterBeanFactory: ConfigCenterBeanFactory,
+    private val runtimeConfigCenterActive: RuntimeConfigCenterActive,
 ) {
     fun listSessions(): List<AiChatSessionDto> {
         return allSessions()
@@ -179,56 +179,48 @@ class AiChatService(
     }
 
     private fun loadDefaultProviderConfig(): AiChatProviderConfigDto {
-        val active = currentRuntimeConfigCenterActive()
+        val env = runtimeEnv()
         return AiChatProviderConfigDto(
-            transport = requireConfigValue(active, AiChatConfigKeys.TRANSPORT, "apiTransport"),
-            vendor = requireConfigValue(active, AiChatConfigKeys.VENDOR, "provider", "apiVendor", "apiProvider"),
-            baseUrl = requireConfigValue(active, AiChatConfigKeys.API_URL, "baseUrl"),
-            apiKey = readFirstConfigValue(active, AiChatConfigKeys.API_KEY, "token"),
-            model = requireConfigValue(active, AiChatConfigKeys.MODEL),
-            systemPrompt = requireConfigValue(active, AiChatConfigKeys.SYSTEM_PROMPT),
+            transport = requireConfigValue(env, AiChatConfigKeys.transport, "apiTransport"),
+            vendor = requireConfigValue(env, AiChatConfigKeys.vendor, "provider", "apiVendor", "apiProvider"),
+            baseUrl = requireConfigValue(env, AiChatConfigKeys.apiUrl, "baseUrl"),
+            apiKey = readFirstConfigValue(env, AiChatConfigKeys.apiKey, "token"),
+            model = requireConfigValue(env, AiChatConfigKeys.model),
+            systemPrompt = requireConfigValue(env, AiChatConfigKeys.systemPrompt),
         )
     }
 
     private fun readFirstConfigValue(
-        active: String,
-        vararg keys: String,
+        env: ConfigCenterEnv,
+        definition: ConfigCenterKeyDefinition,
+        vararg aliases: String,
     ): String {
-        return keys.firstNotNullOfOrNull { key ->
-            readConfigValue(active, key).takeIf { it.isNotBlank() }
-        }.orEmpty()
+        return buildList {
+            add(definition.key)
+            addAll(aliases)
+        }.firstNotNullOfOrNull { key ->
+            env.string(key)?.trim()?.takeIf(String::isNotBlank)
+        } ?: definition.defaultValue.orEmpty()
     }
 
     private fun requireConfigValue(
-        active: String,
-        key: String,
+        env: ConfigCenterEnv,
+        definition: ConfigCenterKeyDefinition,
         vararg aliases: String,
     ): String {
-        return readFirstConfigValue(active, key, *aliases)
+        return readFirstConfigValue(env, definition, *aliases)
             .ifBlank {
-                error("配置中心缺少必填项 namespace=${AiChatConfigKeys.NAMESPACE} active=$active key=$key")
+                error(
+                    "配置中心缺少必填项 namespace=${AiChatConfigKeys.NAMESPACE} " +
+                        "active=${runtimeConfigCenterActive.value} key=${definition.key}",
+                )
             }
     }
 
-    private fun readConfigValue(
-        active: String,
-        key: String,
-    ): String {
-        val service = runCatching {
-            KoinPlatform.getKoin().get<ConfigValueServiceSpi>()
-        }.getOrNull() ?: return ""
-        return runCatching {
-            service.readValue(
-                namespace = AiChatConfigKeys.NAMESPACE,
-                key = key,
-                active = active,
-            ).value.orEmpty()
-        }.getOrDefault("")
-    }
-
-    private fun currentRuntimeConfigCenterActive(): String {
-        return requireRuntimeConfigCenterActive(
-            applicationConfig.propertyOrNull(RUNTIME_CONFIG_CENTER_ACTIVE_KEY)?.getString(),
+    private fun runtimeEnv(): ConfigCenterEnv {
+        return configCenterBeanFactory.env(
+            namespace = AiChatConfigKeys.NAMESPACE,
+            active = runtimeConfigCenterActive.value,
         )
     }
 }

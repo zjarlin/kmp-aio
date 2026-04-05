@@ -6,7 +6,7 @@ object ConfigCenter {
     fun getEnv(
         config: ApplicationConfig,
     ): ConfigCenterEnv {
-        return ConfigCenterEnv(
+        return configCenterEnv(
             stringReader = { key ->
                 config.propertyOrNull(key)?.getString()
             },

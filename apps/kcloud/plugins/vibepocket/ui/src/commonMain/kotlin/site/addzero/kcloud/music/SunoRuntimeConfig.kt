@@ -4,15 +4,14 @@ import site.addzero.kcloud.api.ApiProvider
 import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.api.suno.SunoApiClient
 import site.addzero.kcloud.vibepocket.model.ConfigEntry
+import site.addzero.kcloud.vibepocket.config.VibepocketConfigKeys
 
-private const val SUNO_SETUP_COMPLETE_KEY = "vibepocket_setup_complete"
-private const val SUNO_API_TOKEN_KEY = "suno_api_token"
-private const val SUNO_API_BASE_URL_KEY = "suno_api_base_url"
-private const val SUNO_CALLBACK_URL_KEY = "suno_callback_url"
+private val defaultSunoApiBaseUrl = VibepocketConfigKeys.sunoApiBaseUrl.defaultValue
+    ?: error("缺少 ${VibepocketConfigKeys.SUNO_API_BASE_URL} 的默认值定义。")
 
 data class SunoRuntimeConfig(
     val apiToken: String = "",
-    val baseUrl: String = SunoApiClient.DEFAULT_BASE_URL,
+    val baseUrl: String = defaultSunoApiBaseUrl,
     val callbackUrl: String = "",
 ) {
     val hasToken
@@ -40,14 +39,14 @@ data class SunoRuntimeConfig(
 }
 
 suspend fun loadSunoRuntimeConfig(): SunoRuntimeConfig {
-    val apiToken = getConfigValueOrNull(SUNO_API_TOKEN_KEY)
+    val apiToken = getConfigValueOrNull(VibepocketConfigKeys.SUNO_API_TOKEN)
         .orEmpty()
         .trim()
-    val baseUrl = getConfigValueOrNull(SUNO_API_BASE_URL_KEY)
+    val baseUrl = getConfigValueOrNull(VibepocketConfigKeys.SUNO_API_BASE_URL)
         ?.trim()
-        ?.ifBlank { SunoApiClient.DEFAULT_BASE_URL }
-        ?: SunoApiClient.DEFAULT_BASE_URL
-    val callbackUrl = getConfigValueOrNull(SUNO_CALLBACK_URL_KEY)
+        ?.ifBlank { defaultSunoApiBaseUrl }
+        ?: defaultSunoApiBaseUrl
+    val callbackUrl = getConfigValueOrNull(VibepocketConfigKeys.SUNO_CALLBACK_URL)
         .orEmpty()
         .trim()
     return SunoRuntimeConfig(
@@ -58,7 +57,7 @@ suspend fun loadSunoRuntimeConfig(): SunoRuntimeConfig {
 }
 
 suspend fun hasCompletedVibePocketSetup(): Boolean {
-    val storedValue = getConfigValueOrNull(SUNO_SETUP_COMPLETE_KEY)
+    val storedValue = getConfigValueOrNull(VibepocketConfigKeys.SUNO_SETUP_COMPLETE)
         ?.trim()
         ?.equals("true", ignoreCase = true)
     return storedValue == true
@@ -71,33 +70,33 @@ suspend fun persistSunoRuntimeConfig(
 ) {
     val normalizedToken = apiToken.trim()
     val normalizedBaseUrl = baseUrl.trim()
-        .ifBlank { SunoApiClient.DEFAULT_BASE_URL }
+        .ifBlank { defaultSunoApiBaseUrl }
     val normalizedCallbackUrl = callbackUrl.trim()
 
     ApiProvider.configApi.updateConfig(
         ConfigEntry(
-            key = SUNO_API_TOKEN_KEY,
+            key = VibepocketConfigKeys.SUNO_API_TOKEN,
             value = normalizedToken,
             description = "Suno API Token",
         )
     )
     ApiProvider.configApi.updateConfig(
         ConfigEntry(
-            key = SUNO_API_BASE_URL_KEY,
+            key = VibepocketConfigKeys.SUNO_API_BASE_URL,
             value = normalizedBaseUrl,
             description = "Suno API Base URL",
         )
     )
     ApiProvider.configApi.updateConfig(
         ConfigEntry(
-            key = SUNO_CALLBACK_URL_KEY,
+            key = VibepocketConfigKeys.SUNO_CALLBACK_URL,
             value = normalizedCallbackUrl,
             description = "Suno Callback URL",
         )
     )
     ApiProvider.configApi.updateConfig(
         ConfigEntry(
-            key = SUNO_SETUP_COMPLETE_KEY,
+            key = VibepocketConfigKeys.SUNO_SETUP_COMPLETE,
             value = "true",
             description = "Welcome setup completed",
         )

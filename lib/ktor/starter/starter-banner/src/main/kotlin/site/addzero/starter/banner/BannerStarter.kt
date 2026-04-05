@@ -10,6 +10,9 @@ import site.addzero.ktor.banner.Banner
 import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 
+@Module
+@ComponentScan("site.addzero.starter.banner")
+class BannerStarterKoinModule
 
 @Single
 class BannerStarter : AppStarter<Application> {

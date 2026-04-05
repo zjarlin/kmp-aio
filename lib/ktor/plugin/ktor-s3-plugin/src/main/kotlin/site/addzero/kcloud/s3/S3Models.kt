@@ -1,9 +1,13 @@
 package site.addzero.kcloud.s3
 
 data class S3Config(
-    val endpoint: String = "https://s3.cstcloud.cn",
-    val region: String = "us-east-1",
-    val bucket: String = "af466fd92b0146ccbfb40cf590c912a0",
-    val accessKey: String = "",
-    val secretKey: String = ""
+    val endpoint: String,
+    val region: String,
+    val bucket: String,
+    val accessKey: String,
+    val secretKey: String,
+)
+
+data class S3RuntimeToggle(
+    val enabled: Boolean,
 )

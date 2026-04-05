@@ -15,7 +15,7 @@ class SerializationStarterKoinModule
 
 @Named("serializationStarter")
 @Single
-class SerializationStarter : AppStarter {
+class SerializationStarter : AppStarter<Application> {
 
     override fun Application.onInstall() {
         install(ContentNegotiation) {

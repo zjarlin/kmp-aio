@@ -17,6 +17,7 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-openapi"))
             implementation(project(":lib:ktor:starter:starter-flyway"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(project(":lib:ktor:plugin:ktor-s3-plugin"))
         }
         jvmTest.dependencies {
             implementation(project(":apps:kcloud:plugins:mcu-console"))

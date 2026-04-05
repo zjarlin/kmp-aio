@@ -1,15 +1,12 @@
 package site.addzero.kcloud.s3
 
 import io.ktor.server.application.*
-import io.ktor.server.config.*
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import org.koin.ktor.ext.getKoin
-import site.addzero.configcenter.ConfigCenter
 import site.addzero.starter.AppStarter
-import site.addzero.starter.effectiveConfig
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
@@ -19,20 +16,6 @@ import java.net.URI
 @Module
 @ComponentScan("site.addzero.kcloud.s3")
 class S3KoinModule {
-    @Single
-    fun provideS3Config(
-        config: ApplicationConfig,
-    ): S3Config {
-        val env = ConfigCenter.getEnv(config).path("s3")
-        return S3Config(
-            endpoint = env.string("endpoint", "https://s3.cstcloud.cn") ?: "https://s3.cstcloud.cn",
-            region = env.string("region", "us-east-1") ?: "us-east-1",
-            bucket = env.string("bucket", "af466fd92b0146ccbfb40cf590c912a0") ?: "af466fd92b0146ccbfb40cf590c912a0",
-            accessKey = env.string("accessKey").orEmpty(),
-            secretKey = env.string("secretKey").orEmpty(),
-        )
-    }
-
     @Single
     fun provideS3Client(config: S3Config): S3Client {
         val credentials = AwsBasicCredentials.create(config.accessKey, config.secretKey)
@@ -50,13 +33,13 @@ class S3KoinModule {
  */
 @Named("s3Starter")
 @Single
-class S3Starter : AppStarter {
+class S3Starter : AppStarter<Application> {
     override val order get() = 60
 
     override fun Application.enable(): Boolean {
-        return ConfigCenter.getEnv(effectiveConfig())
-            .path("s3")
-            .boolean("enabled", true) != false
+        return runCatching {
+            getKoin().get<S3RuntimeToggle>().enabled
+        }.getOrDefault(false)
     }
 
     override fun Application.onInstall() {

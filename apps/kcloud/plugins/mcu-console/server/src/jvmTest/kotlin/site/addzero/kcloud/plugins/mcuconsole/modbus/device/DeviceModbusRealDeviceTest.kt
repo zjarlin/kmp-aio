@@ -1,7 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json as sharedJson
 import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigRegistry
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
 import site.addzero.esp32_host_computer.generated.modbus.rtu.DeviceApiGeneratedRtuConfigProvider
@@ -25,10 +25,7 @@ private const val REAL_TIMEOUT_MS = 2_000L
 private const val REAL_RETRIES = 1
 
 class DeviceModbusRealDeviceTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    private val json = sharedJson
 
     @Test
     fun `read device info from real modbus rtu device`() = runBlocking {

@@ -5,6 +5,7 @@ import kotlinx.serialization.json.Json
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import site.addzero.core.network.json.prettyJson
 import site.addzero.kbox.core.service.KboxPathService
 import site.addzero.kbox.plugin.api.KboxInstalledPluginState
 import kotlin.io.path.createTempDirectory
@@ -18,11 +19,7 @@ import kotlin.test.assertTrue
 import java.io.File
 
 class KboxRuntimePluginManagerTest {
-    private val json = Json {
-        prettyPrint = true
-        encodeDefaults = true
-        ignoreUnknownKeys = true
-    }
+    private val json = prettyJson
 
     @AfterTest
     fun tearDown() {

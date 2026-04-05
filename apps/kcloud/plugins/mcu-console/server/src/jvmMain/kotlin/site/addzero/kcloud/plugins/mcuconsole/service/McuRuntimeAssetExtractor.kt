@@ -1,18 +1,16 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
-import io.ktor.server.config.ApplicationConfig
 import org.koin.core.annotation.Single
+import site.addzero.configcenter.ConfigCenterBeanFactory
 import site.addzero.kcloud.plugins.mcuconsole.config.McuConsoleConfigKeys
-import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
-import site.addzero.kcloud.plugins.system.configcenter.spi.RUNTIME_CONFIG_CENTER_ACTIVE_KEY
-import site.addzero.kcloud.plugins.system.configcenter.spi.requireRuntimeConfigCenterActive
+import site.addzero.kcloud.plugins.system.configcenter.spi.RuntimeConfigCenterActive
 import java.io.File
 
 @Single
 class McuRuntimeAssetExtractor(
     private val bundleCatalog: McuRuntimeBundleCatalog,
-    private val applicationConfig: ApplicationConfig,
-    private val configValueService: ConfigValueServiceSpi,
+    private val configCenterBeanFactory: ConfigCenterBeanFactory,
+    private val runtimeConfigCenterActive: RuntimeConfigCenterActive,
 ) {
     private val classLoader = javaClass.classLoader
 
@@ -105,19 +103,15 @@ class McuRuntimeAssetExtractor(
     }
 
     private fun resolveRootDirectory(): File {
-        val active = requireRuntimeConfigCenterActive(
-            applicationConfig.propertyOrNull(RUNTIME_CONFIG_CENTER_ACTIVE_KEY)?.getString(),
-        )
-        val configured = configValueService.readValue(
+        val configured = configCenterBeanFactory.env(
             namespace = McuConsoleConfigKeys.NAMESPACE,
-            key = McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR,
-            active = active,
-        ).value
+            active = runtimeConfigCenterActive.value,
+        ).string(McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR)
             ?.trim()
             ?.takeIf(String::isNotBlank)
             ?: error(
                 "配置中心缺少必填项 namespace=${McuConsoleConfigKeys.NAMESPACE} " +
-                    "active=$active key=${McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR}",
+                    "active=${runtimeConfigCenterActive.value} key=${McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR}",
             )
         return File(configured).absoluteFile
     }

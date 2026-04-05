@@ -2,15 +2,15 @@ package site.addzero.kcloud.shell.content
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.ui.NavDisplay
 import site.addzero.cupertino.workbench.material3.MaterialTheme
 import site.addzero.cupertino.workbench.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.koin.core.annotation.Single
 import site.addzero.generated.RouteTable
-import site.addzero.kcloud.shell.NavRoute
 import site.addzero.kcloud.shell.ShellState
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 import site.addzero.kcloud.shell.navigation.RouteEntry
@@ -29,39 +29,28 @@ class ContentRenderer(
         WorkbenchContentSurface(
             modifier = modifier.fillMaxSize(),
         ) {
-            ScreenContentEntry(
-                routePath = NavRoute(shellState.selectedRoutePath),
-                routeCatalog = routeCatalog,
+            NavDisplay(
+                backStack = shellState.backStack,
                 modifier = Modifier.fillMaxSize(),
-            )
+            ) { routePath ->
+                when (RouteTable.allRoutes[routePath]) {
+                    null -> NavEntry(routePath) {
+                        EmptyShellContent(
+                            routeEntry = routeCatalog.findRoute(routePath),
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+
+                    else -> NavEntry(routePath) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            RouteTable.allRoutes.getValue(routePath).invoke()
+                        }
+                    }
+                }
+            }
         }
-    }
-}
-
-@Composable
-private fun ScreenContentEntry(
-    routePath: NavRoute,
-    routeCatalog: RouteCatalog,
-    modifier: Modifier = Modifier,
-) {
-    val routeEntry = remember(routeCatalog, routePath) {
-        routeCatalog.findRoute(routePath.routePath)
-    }
-    val content = routeEntry?.routePath?.let { path ->
-        RouteTable.allRoutes[path]
-    }
-    if (content == null) {
-        EmptyShellContent(
-            routeEntry = routeEntry,
-            modifier = modifier,
-        )
-        return
-    }
-
-    Box(
-        modifier = modifier.fillMaxSize(),
-    ) {
-        content()
     }
 }
 

@@ -15,6 +15,6 @@ object Apis {
     /**
      * ConfigCenterApi 服务实例
      */
-    val configCenterApi
+    val configCenterApi: ConfigCenterApi
         get() = ktorfit().createConfigCenterApi()
 }

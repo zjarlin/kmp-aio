@@ -36,7 +36,7 @@ fun Application.runStarters() {
         val app = this
         val koin = app.getKoin()
         val starters = koin
-            .getAll<AppStarter>()
+            .getAll<AppStarter<Application>>()
             .filter { starter -> with(starter) { app.enable() } }
             .sortedBy { it.order }
         attributes.put(startersExecutedKey, true)

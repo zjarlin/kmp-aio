@@ -1,7 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json as sharedJson
 import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigProvider
 import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigRegistry
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
@@ -21,10 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DeviceModbusServiceTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    private val json = sharedJson
 
     @Test
     fun `get24PowerLights uses active session port and decodes 24 coils`() = runBlocking {

@@ -458,9 +458,3 @@ CREATE TABLE IF NOT EXISTS knowledge_document (
 
 CREATE INDEX IF NOT EXISTS idx_knowledge_document_space_id
     ON knowledge_document(space_id);
-
--- 默认插入 Neon Postgres 数据源配置
-INSERT OR IGNORE INTO datasource_config (owner, name, db_type, url, enabled, description)
-VALUES ('system', 'neon-postgres', 'POSTGRES', 
-       'jdbc:postgresql://ep-blue-firefly-aisnog4x-pooler.c-4.us-east-1.aws.neon.tech/neondb?user=neondb_owner&password=npg_B1lfyWedh0PY&sslmode=require&channelBinding=require', 
-       1, 'Neon Cloud Postgres');

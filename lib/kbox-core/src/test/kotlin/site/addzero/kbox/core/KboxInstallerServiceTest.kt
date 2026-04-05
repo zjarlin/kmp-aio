@@ -1,6 +1,6 @@
 package site.addzero.kbox.core
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.prettyJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -27,10 +27,7 @@ class KboxInstallerServiceTest {
             }
         }
         val historyStore = KboxHistoryStore(
-            json = Json {
-                prettyPrint = true
-                encodeDefaults = true
-            },
+            json = prettyJson,
             pathService = pathService,
         )
         val service = KboxInstallerService(

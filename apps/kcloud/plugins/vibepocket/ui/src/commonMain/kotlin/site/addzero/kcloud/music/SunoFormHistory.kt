@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.ktor.util.date.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json
 import site.addzero.kcloud.api.ApiProvider
 import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.vibepocket.model.ConfigEntry
@@ -20,10 +20,7 @@ private const val MAX_FORM_HISTORY_SIZE = 6
 private const val VIBE_FORM_HISTORY_KEY = "music_vibe_form_history"
 private const val UPLOAD_COVER_FORM_HISTORY_KEY = "music_upload_cover_form_history"
 
-private val formHistoryJson = Json {
-    encodeDefaults = true
-    ignoreUnknownKeys = true
-}
+private val formHistoryJson = json
 
 @Serializable
 private data class VibeFormHistoryPayload(

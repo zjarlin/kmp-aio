@@ -84,7 +84,7 @@ class FlywayStarterKoinModule
 @Single
 class FlywayStarter(
     private val configProviders: List<FlywayConfigSpi>,
-) : AppStarter {
+) : AppStarter<Application> {
     override val order = 200
 
     override fun Application.enable(): Boolean {

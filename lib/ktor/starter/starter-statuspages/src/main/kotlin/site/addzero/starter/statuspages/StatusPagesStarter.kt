@@ -10,7 +10,7 @@ class StatusPagesStarterKoinModule
 
 @Named("statusPagesStarter")
 @Single
-class StatusPagesStarter : AppStarter {
+class StatusPagesStarter : AppStarter<Application> {
 
     override fun Application.onInstall() {
         installDefaultStatusPages()

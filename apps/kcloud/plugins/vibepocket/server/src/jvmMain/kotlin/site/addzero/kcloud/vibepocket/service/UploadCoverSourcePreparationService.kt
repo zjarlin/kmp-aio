@@ -5,7 +5,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
+import site.addzero.configcenter.ConfigCenterBeanFactory
+import site.addzero.configcenter.ConfigCenterEnv
+import site.addzero.configcenter.ConfigCenterKeyDefinition
 import site.addzero.kcloud.api.suno.SunoApiClient
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
+import site.addzero.kcloud.plugins.system.configcenter.spi.RuntimeConfigCenterActive
+import site.addzero.kcloud.vibepocket.config.VibepocketConfigKeys
 import site.addzero.kcloud.vibepocket.model.AppConfig
 import site.addzero.starter.statuspages.BadGatewayHttpException
 import site.addzero.vibepocket.api.music.MusicPlaybackRateUtil
@@ -21,12 +27,15 @@ interface UploadCoverSourcePreparationService {
 @Single
 class DefaultUploadCoverSourcePreparationService(
     private val sqlClient: KSqlClient,
+    private val configValueService: ConfigValueServiceSpi,
+    private val configCenterBeanFactory: ConfigCenterBeanFactory,
+    private val runtimeConfigCenterActive: RuntimeConfigCenterActive,
 ) : UploadCoverSourcePreparationService {
     companion object {
         private const val DEFAULT_PLAYBACK_RATE = 1.06
         private const val DEFAULT_OUTPUT_CONTENT_TYPE = "audio/wav"
-        private const val SUNO_API_TOKEN_KEY = "suno_api_token"
-        private const val SUNO_API_BASE_URL_KEY = "suno_api_base_url"
+        private const val LEGACY_SUNO_API_TOKEN_KEY = "suno_api_token"
+        private const val LEGACY_SUNO_API_BASE_URL_KEY = "suno_api_base_url"
     }
 
     override suspend fun prepare(
@@ -85,17 +94,18 @@ class DefaultUploadCoverSourcePreparationService(
     }
 
     private fun createSunoClient(): SunoApiClient {
-        val apiToken = readConfigValue(SUNO_API_TOKEN_KEY)
-            ?.trim()
-            .orEmpty()
+        val apiToken = readRuntimeConfigValue(
+            definition = VibepocketConfigKeys.sunoApiToken,
+            legacyKeys = arrayOf(LEGACY_SUNO_API_TOKEN_KEY),
+        ).trim()
         if (apiToken.isBlank()) {
             throw IllegalStateException(SunoApiClient.MISSING_API_TOKEN_MESSAGE)
         }
 
-        val baseUrl = readConfigValue(SUNO_API_BASE_URL_KEY)
-            ?.trim()
-            ?.ifBlank { SunoApiClient.DEFAULT_BASE_URL }
-            ?: SunoApiClient.DEFAULT_BASE_URL
+        val baseUrl = readRuntimeConfigValue(
+            definition = VibepocketConfigKeys.sunoApiBaseUrl,
+            legacyKeys = arrayOf(LEGACY_SUNO_API_BASE_URL_KEY),
+        ).trim()
 
         return SunoApiClient(
             apiToken = apiToken,
@@ -103,7 +113,47 @@ class DefaultUploadCoverSourcePreparationService(
         )
     }
 
-    private fun readConfigValue(key: String): String? {
+    private fun readRuntimeConfigValue(
+        definition: ConfigCenterKeyDefinition,
+        legacyKeys: Array<String> = emptyArray(),
+    ): String {
+        val active = runtimeConfigCenterActive.value
+        val configuredValue = runtimeEnv()
+            .string(definition.key)
+            ?.trim()
+            .orEmpty()
+        if (configuredValue.isNotBlank()) {
+            return configuredValue
+        }
+
+        val legacyValue = legacyKeys.firstNotNullOfOrNull { legacyKey ->
+            readLegacyConfigValue(legacyKey)
+                ?.trim()
+                ?.takeIf(String::isNotBlank)
+        }
+        if (legacyValue != null) {
+            configValueService.writeValue(
+                namespace = VibepocketConfigKeys.NAMESPACE,
+                key = definition.key,
+                value = legacyValue,
+                active = active,
+            )
+            return legacyValue
+        }
+
+        return definition.defaultValue.orEmpty()
+    }
+
+    private fun runtimeEnv(): ConfigCenterEnv {
+        return configCenterBeanFactory.env(
+            namespace = VibepocketConfigKeys.NAMESPACE,
+            active = runtimeConfigCenterActive.value,
+        )
+    }
+
+    private fun readLegacyConfigValue(
+        key: String,
+    ): String? {
         return sqlClient.createQuery(AppConfig::class) {
             select(table)
         }.execute().firstOrNull { it.key == key }?.value

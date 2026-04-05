@@ -1,6 +1,6 @@
 package site.addzero.kbox.core
 
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.prettyJson
 import site.addzero.kbox.core.model.KboxDetectedPackageManager
 import site.addzero.kbox.core.model.KboxPackageImportEntryResult
 import site.addzero.kbox.core.service.KboxPackageManagerAdapter
@@ -23,11 +23,7 @@ class KboxPackageProfileServiceTest {
             }
         }
         val service = KboxPackageProfileService(
-            json = Json {
-                prettyPrint = true
-                encodeDefaults = true
-                ignoreUnknownKeys = true
-            },
+            json = prettyJson,
             pathService = pathService,
             adapters = listOf(adapter),
         )

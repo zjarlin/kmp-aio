@@ -3,6 +3,8 @@ package site.addzero.kcloud.vibepocket.config
 import site.addzero.configcenter.ConfigCenterItem
 import site.addzero.configcenter.ConfigCenterNamespace
 
+private const val DEFAULT_SUNO_API_BASE_URL = "https://api.sunoapi.org/api/v1"
+
 @ConfigCenterNamespace(
     namespace = "vibepocket",
     objectName = "VibepocketConfigKeys",
@@ -56,4 +58,30 @@ interface VibepocketConfigCenterSpec {
         comment = "对象存储基础路径前缀。",
     )
     val storageBasePath: String
+
+    @ConfigCenterItem(
+        key = "suno.apiToken",
+        comment = "Suno API Token。",
+    )
+    val sunoApiToken: String
+
+    @ConfigCenterItem(
+        key = "suno.apiBaseUrl",
+        comment = "Suno API Base URL。",
+        defaultValue = DEFAULT_SUNO_API_BASE_URL,
+    )
+    val sunoApiBaseUrl: String
+
+    @ConfigCenterItem(
+        key = "suno.callbackUrl",
+        comment = "Suno 回调 URL。",
+    )
+    val sunoCallbackUrl: String
+
+    @ConfigCenterItem(
+        key = "suno.setupComplete",
+        comment = "VibePocket 欢迎引导是否已完成。",
+        defaultValue = "false",
+    )
+    val sunoSetupComplete: Boolean
 }

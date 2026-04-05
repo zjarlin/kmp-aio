@@ -1,7 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.modbus.atomic
 
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json as sharedJson
 import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigProvider
 import site.addzero.device.driver.modbus.rtu.ModbusRtuConfigRegistry
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
@@ -17,10 +17,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class AutomicModbusServiceTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        coerceInputValues = true
-    }
+    private val json = sharedJson
 
     @Test
     fun `gpio write uses active session port and register payload`() = runBlocking {

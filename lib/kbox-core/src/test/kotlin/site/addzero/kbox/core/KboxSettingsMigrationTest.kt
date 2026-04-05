@@ -1,7 +1,7 @@
 package site.addzero.kbox.core
 
 import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
+import site.addzero.core.network.json.json as sharedJson
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -9,11 +9,7 @@ import site.addzero.kbox.core.model.KboxSettings
 import site.addzero.kbox.core.support.KboxDefaults
 
 class KboxSettingsMigrationTest {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-        coerceInputValues = true
-    }
+    private val json = sharedJson
 
     @Test
     fun `old settings payload should receive sync defaults`() {

@@ -5,6 +5,7 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-app")
+    id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
     id("site.addzero.buildlogic.kmp.kmp-konfig")
 }
@@ -19,8 +20,9 @@ val desktopJavaLauncher = javaToolchains.launcherFor {
 kotlin {
     sourceSets {
         commonMain.dependencies {
+            implementation(project(":apps:coding-playground:annotations"))
             implementation(project(":apps:coding-playground:shared"))
-            implementation("site.addzero:api-netease:2026.02.17")
+            implementation(project(":lib:api:api-netease"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
         }

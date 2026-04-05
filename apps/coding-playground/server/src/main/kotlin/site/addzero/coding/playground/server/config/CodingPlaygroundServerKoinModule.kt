@@ -8,16 +8,14 @@ import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import org.sqlite.SQLiteDataSource
+import site.addzero.core.network.json.prettyJson
 import javax.sql.DataSource
 
 @Module
 class CodingPlaygroundServerKoinModule {
     @Single
     fun provideJson(): Json {
-        return Json {
-            ignoreUnknownKeys = true
-            prettyPrint = true
-        }
+        return prettyJson
     }
 
     @Single
