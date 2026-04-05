@@ -1,4 +1,4 @@
-package site.addzero.kcloud.server
+package site.addzero.kcloud.server.context
 
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single

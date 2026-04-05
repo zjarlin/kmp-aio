@@ -1,12 +1,13 @@
-package site.addzero.kcloud.jimmer.di
+package site.addzero.kcloud.jimmer.scalarprovider.sqllite
 
 import org.babyfish.jimmer.sql.runtime.AbstractScalarProvider
+import org.koin.core.annotation.Single
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
 
-object SqliteInstantScalarProvider :
-    AbstractScalarProvider<Instant, String>(Instant::class.java, String::class.java) {
+@Single
+class SqliteInstantScalarProvider : AbstractScalarProvider<Instant, String>(Instant::class.java, String::class.java) {
 
     override fun toScalar(sqlValue: String): Instant {
         val normalized = sqlValue.trim()

@@ -10,6 +10,7 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
 import org.gradle.api.tasks.bundling.Zip
+import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
@@ -38,11 +39,11 @@ kotlin {
         implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
         implementation("site.addzero:compose-icon-map:2026.10329.10127")
         implementation(project(":apps:kcloud:shared"))
-        implementation(project(":apps:kcloud:plugins:system:ai-chat:ui"))
-        implementation(project(":apps:kcloud:plugins:system:config-center:ui"))
-        implementation(project(":apps:kcloud:plugins:system:knowledge-base:ui"))
-        implementation(project(":apps:kcloud:plugins:system:rbac:ui"))
-        implementation(project(":apps:kcloud:plugins:vibepocket:ui"))
+//        implementation(project(":apps:kcloud:plugins:system:ai-chat:ui"))
+//        implementation(project(":apps:kcloud:plugins:system:config-center:ui"))
+//        implementation(project(":apps:kcloud:plugins:system:knowledge-base:ui"))
+//        implementation(project(":apps:kcloud:plugins:system:rbac:ui"))
+//        implementation(project(":apps:kcloud:plugins:vibepocket:ui"))
         implementation(project(":lib:tool-kmp:network-starter"))
         implementation(project(":lib:compose:compose-native-component-chat"))
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
@@ -58,7 +59,7 @@ kotlin {
         }
         jvmTest.dependencies {
             implementation(project(":apps:kcloud:server"))
-            implementation(project(":apps:kcloud:plugins:vibepocket:server"))
+//            implementation(project(":apps:kcloud:plugins:vibepocket:server"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
         }
     }

@@ -1,6 +1,7 @@
-package site.addzero.kcloud.jimmer.di
+package site.addzero.kcloud.jimmer.scalarprovider.sqllite
 
 import org.babyfish.jimmer.sql.runtime.AbstractScalarProvider
+import org.koin.core.annotation.Single
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -15,8 +16,8 @@ internal val SQLITE_LOCAL_DATE_TIME_FORMATTER: DateTimeFormatter = DateTimeForma
     .optionalEnd()
     .toFormatter()
 
-object SqliteLocalDateTimeScalarProvider :
-    AbstractScalarProvider<LocalDateTime, String>(LocalDateTime::class.java, String::class.java) {
+@Single
+class SqliteLocalDateTimeScalarProvider : AbstractScalarProvider<LocalDateTime, String>(LocalDateTime::class.java, String::class.java) {
 
     override fun toScalar(sqlValue: String): LocalDateTime {
         val normalized = sqlValue.trim()

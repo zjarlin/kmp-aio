@@ -4,6 +4,7 @@ import site.addzero.device.protocol.modbus.annotation.ModbusOperation
 import site.addzero.device.protocol.modbus.model.ModbusFunctionCode
 
 /**
+ * 心跳接口
  * 板卡链路探活的 Modbus RTU 契约。
  *
  * 这份契约的目的不是表达“串口已建立连接”。
