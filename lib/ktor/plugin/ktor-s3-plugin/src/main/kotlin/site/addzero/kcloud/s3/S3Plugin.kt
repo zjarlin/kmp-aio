@@ -1,12 +1,11 @@
 package site.addzero.kcloud.s3
 
 import io.ktor.server.application.*
-import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
-import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import org.koin.ktor.ext.getKoin
+import site.addzero.kcloud.s3.spi.S3ConfigSpi
 import site.addzero.starter.AppStarter
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
@@ -17,8 +16,9 @@ import java.net.URI
 @Module
 @Configuration
 class S3KoinModule {
+
     @Single
-    fun provideS3Client(config: S3Config): S3Client {
+    fun provideS3Client(config: S3ConfigSpi): S3Client {
         val credentials = AwsBasicCredentials.create(config.accessKey, config.secretKey)
         return S3Client.builder()
             .endpointOverride(URI.create(config.endpoint))
@@ -33,25 +33,20 @@ class S3KoinModule {
  * S3 自动引导实现类。符合 AppStarter 接口，通过 Koin 自动发现。
  */
 @Single
-class S3Starter : AppStarter<Application> {
+class S3Starter(val s3ConfigSpi: S3ConfigSpi) : AppStarter<Application> {
     override val order get() = 60
 
     override fun Application.enable(): Boolean {
-        return runCatching {
-            getKoin().get<S3RuntimeToggle>().enabled
-        }.getOrDefault(false)
+        return s3ConfigSpi.enabled
     }
 
     override fun Application.onInstall() {
-        val s3Config = getKoin().get<S3Config>()
-        if (s3Config.accessKey.isBlank() || s3Config.secretKey.isBlank()) {
+        if (s3ConfigSpi.accessKey.isBlank() || s3ConfigSpi.secretKey.isBlank()) {
             log.warn("Skipping S3 starter because accessKey/secretKey are blank")
             return
         }
-
         install(createApplicationPlugin(name = "S3AutoConfiguration") {
             val s3Client = application.getKoin().get<S3Client>()
-
             application.monitor.subscribe(ApplicationStopping) {
                 s3Client.close()
             }

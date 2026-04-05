@@ -1,42 +1,59 @@
 package site.addzero.kcloud.bootstrap
 
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.awt.ComposeWindow
-import androidx.compose.ui.window.FrameWindowScope
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import org.jetbrains.skiko.SkiaLayer
-import org.jetbrains.skiko.disableTitleBar
+import org.koin.core.KoinApplication
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.appsidebar.LocalWorkbenchWindowFrame
-import site.addzero.appsidebar.WorkbenchWindowFrame
 import site.addzero.cupertino.workbench.metrics.LocalWorkbenchMetrics
 import site.addzero.cupertino.workbench.metrics.WorkbenchPresets
-import site.addzero.kcloud.server.startEmbeddedDesktopServer
-import java.awt.Container
-import javax.swing.JComponent
+import site.addzero.kcloud.server.EmbeddedDesktopServerHandle
+import site.addzero.kcloud.server.embeddedApplicationConfigOverride
+import site.addzero.kcloud.server.embeddedDesktopBaseUrl
+import site.addzero.kcloud.server.embeddedDesktopKoinConfigurer
+import site.addzero.kcloud.server.ktorApplication
+import site.addzero.workbench.immersivedesktop.MacOsImmersiveDesktopWindowConfig
+import site.addzero.workbench.immersivedesktop.ProvideMacOsImmersiveDesktopWindowFrame
+import site.addzero.workbench.immersivedesktop.configureImmersiveDesktopRuntime
 
 private val desktopUiMetrics = WorkbenchPresets.DesktopCompact
-private val macCaptionBarHeight = desktopUiMetrics.topBarHeight
-private val macCaptionBarLeadingInset = desktopUiMetrics.topBarLeadingInset
+private val macOsImmersiveWindowConfig = MacOsImmersiveDesktopWindowConfig(
+    topBarHeight = desktopUiMetrics.topBarHeight,
+    leadingInset = desktopUiMetrics.topBarLeadingInset,
+    toggleSystemPropertyKey = "kcloud.window.macImmersive.enabled",
+)
 
 fun main() {
-    configureDesktopRuntime()
+    configureImmersiveDesktopRuntime()
     application {
         val embeddedServer = remember {
-            startEmbeddedDesktopServer(
-                configureKoin = {
-                    withConfiguration<KoinApplication>()
-                },
+            embeddedDesktopKoinConfigurer = { withConfiguration<KoinApplication>() }
+            val server = ktorApplication(
+            ).start(wait = false)
+            val baseUrl = requireNotNull(embeddedDesktopBaseUrl) {
+                "embeddedDesktopBaseUrl 尚未初始化。"
+            }
+            val frontendRuntimeConfig = KcloudFrontendRuntimeConfig(
+                apiBaseUrl = baseUrl,
             )
+            object : EmbeddedDesktopServerHandle {
+                override val frontendRuntimeConfig = frontendRuntimeConfig
+
+                override fun close() {
+                    server.stop(
+                        gracePeriodMillis = 1_000,
+                        timeoutMillis = 5_000,
+                    )
+                    embeddedDesktopKoinConfigurer = null
+                    embeddedApplicationConfigOverride = null
+                    embeddedDesktopBaseUrl = null
+                }
+            }
         }
-        bootstrapKcloudFrontendRuntimeConfig(embeddedServer.frontendRuntimeConfig)
 
         DisposableEffect(embeddedServer) {
             onDispose {
@@ -55,8 +72,9 @@ fun main() {
             title = "kcloud",
             state = windowState,
         ) {
-            ProvideWorkbenchWindowFrame(
+            ProvideMacOsImmersiveDesktopWindowFrame(
                 state = windowState,
+                config = macOsImmersiveWindowConfig,
             ) {
                 CompositionLocalProvider(
                     LocalWorkbenchMetrics provides desktopUiMetrics,
@@ -66,88 +84,4 @@ fun main() {
             }
         }
     }
-}
-
-@Composable
-private fun FrameWindowScope.ProvideWorkbenchWindowFrame(
-    state: WindowState,
-    content: @Composable () -> Unit,
-) {
-    val immersiveEnabled = shouldEnableImmersiveTopBar(state)
-
-    DisposableEffect(window, immersiveEnabled) {
-        if (immersiveEnabled) {
-            window.findSkiaLayer()?.disableTitleBar(macCaptionBarHeight.value)
-            window.rootPane.putClientProperty("apple.awt.fullWindowContent", true)
-            window.rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
-            window.rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
-        }
-        onDispose {}
-    }
-
-    if (!immersiveEnabled) {
-        content()
-        return
-    }
-
-    CompositionLocalProvider(
-        LocalWorkbenchWindowFrame provides WorkbenchWindowFrame(
-            immersiveTopBar = true,
-            topBarHeight = macCaptionBarHeight,
-            leadingInset = macCaptionBarLeadingInset,
-        ),
-    ) {
-        content()
-    }
-}
-
-private fun isMacOs(): Boolean {
-    return System.getProperty("os.name")
-        ?.contains("Mac", ignoreCase = true) == true
-}
-
-private fun configureDesktopRuntime() {
-    System.setProperty("sun.java2d.metal", System.getProperty("sun.java2d.metal") ?: "false")
-}
-
-private fun shouldEnableImmersiveTopBar(state: WindowState): Boolean {
-    if (!isMacOs() || state.placement == WindowPlacement.Fullscreen) {
-        return false
-    }
-    val explicitToggle = System.getProperty("kcloud.window.macImmersive.enabled")
-        ?.toBooleanStrictOrNull()
-    if (explicitToggle != null) {
-        return explicitToggle
-    }
-    return isMacImmersiveHostCompatible()
-}
-
-private fun isMacImmersiveHostCompatible(): Boolean {
-    val javaFeature = Runtime.version().feature()
-    val macMajorVersion = System.getProperty("os.version")
-        ?.substringBefore('.')
-        ?.toIntOrNull()
-    return javaFeature < 25 && (macMajorVersion == null || macMajorVersion < 26)
-}
-
-private fun <T : JComponent> findComponent(
-    container: Container,
-    klass: Class<T>,
-): T? {
-    val componentSequence = container.components.asSequence()
-    return componentSequence.filter { klass.isInstance(it) }
-        .ifEmpty {
-            componentSequence.filterIsInstance<Container>()
-                .mapNotNull { child -> findComponent(child, klass) }
-        }
-        .map { component -> klass.cast(component) }
-        .firstOrNull()
-}
-
-private inline fun <reified T : JComponent> Container.findComponent(): T? {
-    return findComponent(this, T::class.java)
-}
-
-private fun ComposeWindow.findSkiaLayer(): SkiaLayer? {
-    return findComponent()
 }

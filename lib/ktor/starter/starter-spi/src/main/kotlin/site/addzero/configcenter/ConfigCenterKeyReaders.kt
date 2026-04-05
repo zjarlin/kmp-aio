@@ -3,33 +3,35 @@ package site.addzero.configcenter
 import io.ktor.server.config.ApplicationConfig
 
 fun ApplicationConfig.stringOrNull(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
 ): String? {
-    return propertyOrNull(definition.key)?.getString()
+    return propertyOrNull(path)?.getString()
 }
 
 fun ApplicationConfig.string(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
+    defaultValue: String? = null,
 ): String? {
-    return stringOrNull(definition) ?: definition.defaultValue
+    return stringOrNull(path) ?: defaultValue
 }
 
 fun ApplicationConfig.intOrNull(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
 ): Int? {
-    return stringOrNull(definition)?.toIntOrNull()
+    return stringOrNull(path)?.toIntOrNull()
 }
 
 fun ApplicationConfig.int(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
+    defaultValue: Int? = null,
 ): Int? {
-    return intOrNull(definition) ?: definition.defaultValue?.toIntOrNull()
+    return intOrNull(path) ?: defaultValue
 }
 
 fun ApplicationConfig.booleanOrNull(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
 ): Boolean? {
-    return stringOrNull(definition)?.trim()?.lowercase()?.let { value ->
+    return stringOrNull(path)?.trim()?.lowercase()?.let { value ->
         when (value) {
             "true" -> true
             "false" -> false
@@ -39,19 +41,14 @@ fun ApplicationConfig.booleanOrNull(
 }
 
 fun ApplicationConfig.boolean(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
+    defaultValue: Boolean? = null,
 ): Boolean? {
-    return booleanOrNull(definition) ?: definition.defaultValue?.trim()?.lowercase()?.let { value ->
-        when (value) {
-            "true" -> true
-            "false" -> false
-            else -> null
-        }
-    }
+    return booleanOrNull(path) ?: defaultValue
 }
 
 fun ApplicationConfig.listOrNull(
-    definition: ConfigCenterKeyDefinition,
+    path: String,
 ): List<String>? {
-    return propertyOrNull(definition.key)?.getList()
+    return propertyOrNull(path)?.getList()
 }

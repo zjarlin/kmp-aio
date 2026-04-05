@@ -6,7 +6,7 @@ data class ConfigCenterJdbcSettings(
     val url: String,
     val username: String? = null,
     val password: String? = null,
-    val driver: String? = ConfigCenterJdbcSettings.inferDriver(url),
+    val driver: String? = inferDriver(url),
     val autoDdl: Boolean = true,
     val tableNote: String = CONFIG_CENTER_TABLE_NOTE,
 ) {

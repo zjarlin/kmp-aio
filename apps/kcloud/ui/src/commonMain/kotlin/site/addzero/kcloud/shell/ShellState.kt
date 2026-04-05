@@ -15,7 +15,7 @@ class ShellState(
     private val startupRoutePath = routeCatalog.defaultRoutePath
         .ifBlank { routeCatalog.routeEntries.firstOrNull()?.routePath.orEmpty() }
 
-    val backStack: SnapshotStateList<String> = mutableStateListOf(startupRoutePath)
+    val backStack = mutableStateListOf(startupRoutePath)
 
     val selectedRoutePath
         get() = backStack.lastOrNull() ?: startupRoutePath

@@ -27,15 +27,6 @@ private val commonConfigValueTypes = listOf(
     "kotlinx.serialization.json.JsonElement",
 )
 
-fun Application.installConfigCenterAdmin(
-    settings: ConfigCenterJdbcSettings,
-    adminSettings: ConfigCenterAdminSettings = ConfigCenterAdminSettings(),
-) {
-    installConfigCenterAdmin(
-        service = JdbcConfigCenterValueService(settings),
-        adminSettings = adminSettings,
-    )
-}
 
 fun Application.installConfigCenterAdmin(
     service: ConfigCenterValueService,

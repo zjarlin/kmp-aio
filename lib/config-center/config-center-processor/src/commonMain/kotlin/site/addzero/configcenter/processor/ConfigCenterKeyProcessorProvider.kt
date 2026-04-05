@@ -12,22 +12,15 @@ import com.google.devtools.ksp.symbol.KSAnnotation
 import com.google.devtools.ksp.symbol.KSClassDeclaration
 import com.google.devtools.ksp.symbol.KSFile
 import com.google.devtools.ksp.symbol.KSPropertyDeclaration
-import com.squareup.kotlinpoet.ClassName
-import com.squareup.kotlinpoet.CodeBlock
-import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
-import com.squareup.kotlinpoet.LIST
 import com.squareup.kotlinpoet.ParameterSpec
-import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
-import com.squareup.kotlinpoet.asTypeName
+import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.ksp.writeTo
-import site.addzero.configcenter.ConfigCenterDefinitionProvider
 import site.addzero.configcenter.ConfigCenterItem
-import site.addzero.configcenter.ConfigCenterKeyDefinition
 import site.addzero.configcenter.ConfigCenterNamespace
 
 class ConfigCenterKeyProcessorProvider : SymbolProcessorProvider {
@@ -45,14 +38,20 @@ private class ConfigCenterKeyProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
 ) : SymbolProcessor {
+    private val declarations = linkedSetOf<KSClassDeclaration>()
+
     override fun process(
         resolver: Resolver,
     ): List<KSAnnotated> {
         val annotationName = ConfigCenterNamespace::class.qualifiedName.orEmpty()
         resolver.getSymbolsWithAnnotation(annotationName)
             .filterIsInstance<KSClassDeclaration>()
-            .forEach(::generateSpec)
+            .forEach(declarations::add)
         return emptyList()
+    }
+
+    override fun finish() {
+        declarations.forEach(::generateSpec)
     }
 
     private fun generateSpec(
@@ -76,11 +75,6 @@ private class ConfigCenterKeyProcessor(
             ?.trim()
             ?.takeIf(String::isNotBlank)
             ?: "${simpleName}Keys"
-        val generatedProviderName = namespaceAnnotation.argumentValue("providerName")
-            ?.toString()
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?: "${generatedObjectName}Provider"
 
         val items = declaration.getAllProperties()
             .mapNotNull { property -> property.toModelOrNull(logger) }
@@ -95,124 +89,59 @@ private class ConfigCenterKeyProcessor(
                     .build(),
             )
 
-        val definitionClassName = ConfigCenterKeyDefinition::class.asTypeName()
-        val allDefinitionReferences = mutableListOf<CodeBlock>()
-        var hasTemplateItem = false
         items.forEach { item ->
-            objectBuilder.addProperty(
-                PropertySpec.builder(item.constantName, STRING)
-                    .addModifiers(KModifier.CONST)
-                    .initializer("%S", item.key)
-                    .build(),
-            )
-            if (item.templateParameters.isEmpty()) {
-                objectBuilder.addProperty(
-                    PropertySpec.builder(item.propertyName, definitionClassName)
-                        .initializer(item.definitionInitializerCode(item.constantName))
-                        .build(),
-                )
-                allDefinitionReferences += CodeBlock.of(item.propertyName)
-            } else {
-                hasTemplateItem = true
-                objectBuilder.addProperty(
-                    PropertySpec.builder(item.templatePropertyName, definitionClassName)
-                        .initializer(item.definitionInitializerCode(item.constantName))
-                        .build(),
-                )
-                objectBuilder.addFunction(
-                    FunSpec.builder(item.propertyName)
-                        .addParameters(
-                            item.templateParameters.map { parameterName ->
-                                ParameterSpec.builder(parameterName, STRING).build()
-                            },
-                        )
-                        .returns(STRING)
-                        .addStatement(
-                            "return materializeTemplate(%L, %L)",
-                            item.constantName,
-                            item.templateParameters.joinToString(", ") { parameterName ->
-                                "\"$parameterName\" to $parameterName"
-                            },
-                        )
-                        .build(),
-                )
-                objectBuilder.addFunction(
-                    FunSpec.builder(item.definitionFunctionName)
-                        .addParameters(
-                            item.templateParameters.map { parameterName ->
-                                ParameterSpec.builder(parameterName, STRING).build()
-                            },
-                        )
-                        .returns(definitionClassName)
-                        .addStatement(
-                            "return %L.copy(key = %L(%L))",
-                            item.templatePropertyName,
-                            item.propertyName,
-                            item.templateParameters.joinToString(", "),
-                        )
-                        .build(),
-                )
-                allDefinitionReferences += CodeBlock.of(item.templatePropertyName)
+            if (item.comment != null) {
+                objectBuilder.addKdoc("")
+            }
+            val constantBuilder = PropertySpec.builder(item.constantName, STRING)
+                .addModifiers(KModifier.CONST)
+                .initializer("%S", item.key)
+            item.comment?.let { comment ->
+                constantBuilder.addKdoc("%L\n", comment)
+            }
+            objectBuilder.addProperty(constantBuilder.build())
+
+            if (item.templateParameters.isNotEmpty()) {
+                val functionBuilder = FunSpec.builder(item.propertyName)
+                    .returns(STRING)
+                    .addParameters(
+                        item.templateParameters.map { parameterName ->
+                            ParameterSpec.builder(parameterName, STRING).build()
+                        },
+                    )
+                    .addStatement(
+                        "return materializeTemplate(%L, %L)",
+                        item.constantName,
+                        item.templateParameters.joinToString(", ") { parameterName ->
+                            "\"$parameterName\" to $parameterName"
+                        },
+                    )
+                item.comment?.let { comment ->
+                    functionBuilder.addKdoc("%L\n", comment)
+                }
+                objectBuilder.addFunction(functionBuilder.build())
             }
         }
 
-        if (hasTemplateItem) {
+        if (items.any { it.templateParameters.isNotEmpty() }) {
             objectBuilder.addFunction(
                 FunSpec.builder("materializeTemplate")
                     .addModifiers(KModifier.PRIVATE)
                     .addParameter("template", STRING)
-                    .addParameter(
-                        ParameterSpec.builder(
-                            "arguments",
-                            ClassName("kotlin", "Pair").parameterizedBy(STRING, STRING),
-                        ).addModifiers(KModifier.VARARG).build(),
-                    )
+                    .addParameter("arguments", STRING, KModifier.VARARG)
                     .returns(STRING)
                     .addStatement("var resolved = template")
-                    .beginControlFlow("arguments.forEach { (name, value) ->")
-                    .addStatement("resolved = resolved.replace(\"{\$name}\", value)")
+                    .beginControlFlow("arguments.forEach { argument ->")
+                    .addStatement("val parts = argument.split('=', limit = 2)")
+                    .addStatement("if (parts.size == 2) resolved = resolved.replace(\"{\${parts[0]}}\", parts[1])")
                     .endControlFlow()
                     .addStatement("return resolved")
                     .build(),
             )
         }
 
-        objectBuilder.addProperty(
-            PropertySpec.builder(
-                "all",
-                LIST.parameterizedBy(ConfigCenterKeyDefinition::class.asTypeName()),
-            ).initializer(
-                if (allDefinitionReferences.isEmpty()) {
-                    CodeBlock.of("emptyList()")
-                } else {
-                    CodeBlock.builder()
-                        .add("listOf(\n")
-                        .indent()
-                        .add(allDefinitionReferences.joinToString(",\n") { "%L" }, *allDefinitionReferences.toTypedArray())
-                        .add("\n")
-                        .unindent()
-                        .add(")")
-                        .build()
-                },
-            ).build(),
-        )
-
-        val providerBuilder = TypeSpec.classBuilder(generatedProviderName)
-            .addAnnotation(ClassName("org.koin.core.annotation", "Single"))
-            .addSuperinterface(ConfigCenterDefinitionProvider::class)
-            .addProperty(
-                PropertySpec.builder(
-                    "definitions",
-                    LIST.parameterizedBy(ConfigCenterKeyDefinition::class.asTypeName()),
-                )
-                    .addModifiers(KModifier.OVERRIDE)
-                    .initializer("%L.all", generatedObjectName)
-                    .build(),
-            )
-
         FileSpec.builder(packageName, generatedObjectName)
             .addType(objectBuilder.build())
-            .addType(providerBuilder.build())
             .build()
             .writeTo(
                 codeGenerator = codeGenerator,
@@ -229,38 +158,7 @@ private data class ConfigItemModel(
     val constantName: String,
     val key: String,
     val comment: String?,
-    val defaultValue: String?,
-    val required: Boolean,
-    val valueType: String,
-    val source: String,
-    val builtin: Boolean,
-    val editable: Boolean,
-    val deletable: Boolean,
 ) {
-    val templatePropertyName
-        get() = "${propertyName}Template"
-
-    val definitionFunctionName
-        get() = "${propertyName}Definition"
-
-    fun definitionInitializerCode(
-        keyReference: String,
-    ): CodeBlock {
-        return CodeBlock.of(
-            "%T(namespace = NAMESPACE, key = %L, valueType = %S, comment = %L, defaultValue = %L, required = %L, source = %S, builtin = %L, editable = %L, deletable = %L)",
-            ConfigCenterKeyDefinition::class,
-            keyReference,
-            valueType,
-            comment?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null"),
-            defaultValue?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null"),
-            required,
-            source,
-            builtin,
-            editable,
-            deletable,
-        )
-    }
-
     val templateParameters
         get() = key.findTemplateParameters()
 }
@@ -283,19 +181,7 @@ private fun KSPropertyDeclaration.toModelOrNull(
         ?.toString()
         ?.trim()
         ?.takeIf(String::isNotBlank)
-    val defaultValue = annotation.argumentValue("defaultValue")
-        ?.toString()
-        ?.trim()
-        ?.takeIf(String::isNotBlank)
-    val required = annotation.argumentValue("required") as? Boolean ?: false
-    val resolvedType = type.resolve()
-    val valueType = if (resolvedType.arguments.isEmpty()) {
-        resolvedType.declaration.qualifiedName?.asString() ?: resolvedType.toString()
-    } else {
-        resolvedType.toString()
-    }
     val templateParameters = key.findTemplateParameters()
-    val builtin = required
     return ConfigItemModel(
         propertyName = propertyName,
         constantName = if (templateParameters.isEmpty()) {
@@ -305,13 +191,6 @@ private fun KSPropertyDeclaration.toModelOrNull(
         },
         key = key,
         comment = comment,
-        defaultValue = defaultValue,
-        required = required,
-        valueType = valueType,
-        source = "ksp",
-        builtin = builtin,
-        editable = !builtin,
-        deletable = !builtin,
     )
 }
 

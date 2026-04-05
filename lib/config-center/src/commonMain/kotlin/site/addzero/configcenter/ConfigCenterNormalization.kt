@@ -28,3 +28,15 @@ fun normalizeConfigCenterActive(
         else -> normalizeConfigCenterNamespace(normalized).ifBlank { DEFAULT_CONFIG_CENTER_ACTIVE }
     }
 }
+
+fun normalizeConfigCenterPath(
+    rawValue: String,
+): String {
+    return rawValue
+        .trim()
+        .split('.')
+        .asSequence()
+        .map(String::trim)
+        .filter(String::isNotBlank)
+        .joinToString(".")
+}

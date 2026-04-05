@@ -18,22 +18,4 @@ class ConfigCenterRuntimeModule {
     ): ConfigCenterValueService {
         return jdbcConfigCenterValueService
     }
-
-    @Single(createdAtStart = true)
-    fun provideConfigCenterAdminService(
-        jdbcConfigCenterValueService: JdbcConfigCenterValueService,
-    ): ConfigCenterAdminService {
-        return jdbcConfigCenterValueService
-    }
-
-    @Single(createdAtStart = true)
-    fun provideConfigCenterMetadataBootstrap(
-        definitionProviders: List<ConfigCenterDefinitionProvider>,
-        jdbcConfigCenterValueService: JdbcConfigCenterValueService,
-    ): ConfigCenterMetadataBootstrap {
-        return ConfigCenterMetadataBootstrap(
-            definitionProviders = definitionProviders,
-            jdbcConfigCenterValueService = jdbcConfigCenterValueService,
-        )
-    }
 }

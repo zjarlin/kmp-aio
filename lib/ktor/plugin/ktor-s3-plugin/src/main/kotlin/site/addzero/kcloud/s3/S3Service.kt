@@ -1,6 +1,7 @@
 package site.addzero.kcloud.s3
 
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.s3.spi.S3ConfigSpi
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.*
@@ -9,7 +10,7 @@ import java.io.InputStream
 @Single
 class S3Service(
     private val s3Client: S3Client,
-    private val config: S3Config
+    private val config: S3ConfigSpi
 ) {
 
     /**

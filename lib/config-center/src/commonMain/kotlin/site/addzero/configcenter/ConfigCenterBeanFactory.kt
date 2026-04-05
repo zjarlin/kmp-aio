@@ -28,10 +28,10 @@ class ConfigCenterBeanFactory(
             active = scope.normalizedActive,
             limit = Int.MAX_VALUE,
         ).forEach { item ->
-            val key = item.key.trim()
-            val value = item.value?.trim()
-            if (key.isNotBlank() && value != null) {
-                values[key] = value
+            val normalizedPath = normalizeConfigCenterPath(item.path)
+            val value = item.value
+            if (normalizedPath.isNotBlank() && value != null) {
+                values[normalizedPath] = value
             }
         }
         return configCenterEnvOf(resolveConfigCenterSnapshot(values))
@@ -44,38 +44,36 @@ fun configCenterEnvOf(
     values: Map<String, String>,
 ): ConfigCenterEnv {
     val snapshot = LinkedHashMap<String, String>()
-    values.forEach { (key, value) ->
-        val normalizedKey = key.trim()
-        if (normalizedKey.isNotBlank()) {
-            snapshot[normalizedKey] = value
+    values.forEach { (path, value) ->
+        val normalizedPath = normalizeConfigCenterPath(path)
+        if (normalizedPath.isNotBlank()) {
+            snapshot[normalizedPath] = value
         }
     }
     return ConfigCenterEnv(
-        stringReader = { key ->
-            snapshot[key.trim()]
+        stringReader = { path ->
+            snapshot[normalizeConfigCenterPath(path)]
         },
-        listReader = { key ->
-            snapshot[key.trim()]?.toConfigCenterListOrNull()
+        listReader = { path ->
+            snapshot[normalizeConfigCenterPath(path)]?.toConfigCenterListOrNull()
         },
         mapReader = { path ->
-            val normalizedPath = path.trim().removeSuffix(".")
+            val normalizedPath = normalizeConfigCenterPath(path)
             val prefix = if (normalizedPath.isBlank()) {
                 ""
             } else {
                 "$normalizedPath."
             }
             val nested = snapshot.entries
-                .filter { (key, _) ->
-                    key.startsWith(prefix)
-                }
-                .associate { (key, value) ->
-                    key.removePrefix(prefix) to value
+                .filter { (candidatePath, _) -> candidatePath.startsWith(prefix) }
+                .associate { (candidatePath, value) ->
+                    candidatePath.removePrefix(prefix) to value
                 }
                 .filterKeys(String::isNotBlank)
             nested.takeIf(Map<String, String>::isNotEmpty)
         },
         keysReader = { path ->
-            val normalizedPath = path.trim().removeSuffix(".")
+            val normalizedPath = normalizeConfigCenterPath(path)
             val prefix = if (normalizedPath.isBlank()) {
                 ""
             } else {
@@ -83,9 +81,9 @@ fun configCenterEnvOf(
             }
             snapshot.keys
                 .asSequence()
-                .filter { key -> key.startsWith(prefix) }
-                .map { key ->
-                    key.removePrefix(prefix)
+                .filter { candidatePath -> candidatePath.startsWith(prefix) }
+                .map { candidatePath ->
+                    candidatePath.removePrefix(prefix)
                         .substringBefore('.')
                         .trim()
                 }
@@ -102,29 +100,32 @@ fun resolveConfigCenterSnapshot(
     val visiting = LinkedHashSet<String>()
 
     fun resolve(
-        key: String,
+        path: String,
     ): String {
-        resolved[key]?.let { value ->
+        resolved[path]?.let { value ->
             return value
         }
-        check(visiting.add(key)) {
-            "配置中心变量存在循环引用: ${visiting.joinToString(" -> ")} -> $key"
+        check(visiting.add(path)) {
+            "配置中心变量存在循环引用: ${visiting.joinToString(" -> ")} -> $path"
         }
-        val rawValue = values[key]
-            ?: error("配置中心变量引用缺少 key=$key")
+        val rawValue = values[path]
+            ?: error("配置中心变量引用缺少 path=$path")
         val resolvedValue = CONFIG_CENTER_PLACEHOLDER_REGEX.replace(rawValue) { match ->
-            val referencedKey = match.groupValues[1].trim()
-            require(referencedKey.isNotBlank()) {
+            val referencedPath = normalizeConfigCenterPath(match.groupValues[1])
+            require(referencedPath.isNotBlank()) {
                 "配置中心变量占位符不能为空: $rawValue"
             }
-            resolve(referencedKey)
+            resolve(referencedPath)
         }
-        visiting.remove(key)
-        resolved[key] = resolvedValue
+        visiting.remove(path)
+        resolved[path] = resolvedValue
         return resolvedValue
     }
 
-    values.keys.forEach(::resolve)
+    values.keys
+        .map(::normalizeConfigCenterPath)
+        .filter(String::isNotBlank)
+        .forEach(::resolve)
     return resolved
 }
 

@@ -11,7 +11,6 @@ interface BannerConfigCenterSpec {
     @ConfigCenterItem(
         key = "banner.text",
         comment = "启动 Banner 主标题。",
-        defaultValue = "APP",
     )
     val text: String
 

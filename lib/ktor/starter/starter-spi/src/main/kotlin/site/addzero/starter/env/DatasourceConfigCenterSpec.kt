@@ -11,7 +11,6 @@ interface DatasourceConfigCenterSpec {
     @ConfigCenterItem(
         key = "datasources.{name}.enabled",
         comment = "是否启用数据源 {name}。",
-        defaultValue = "false",
     )
     val enabled: Boolean
 

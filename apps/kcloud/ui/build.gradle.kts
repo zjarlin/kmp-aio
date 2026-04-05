@@ -55,6 +55,7 @@ kotlin {
             implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
             implementation(project(":lib:config-center"))
             implementation(project(":lib:ktor:starter:starter-spi"))
+            implementation("site.addzero:compose-workbench-immersive-desktop:$addzeroLibJvmVersion")
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
         }
         jvmTest.dependencies {

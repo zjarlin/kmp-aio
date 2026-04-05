@@ -5,8 +5,9 @@ package site.addzero.kcloud.jimmer.spi
  */
 interface DatasourcePropertiesSpi {
     val default get() = false
-    val name: String
     val url: String
+    get() = "jdbc:sqlite:./config-center.sqlite"
+
     val driverClassName: String
     val user: String
     val password: String

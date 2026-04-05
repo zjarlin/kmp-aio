@@ -30,81 +30,45 @@ class ConfigCenterEnv internal constructor(
     }
 
     fun string(
-        definition: ConfigCenterKeyDefinition,
-    ): String? {
-        return string(
-            key = definition.key,
-            defaultValue = definition.defaultValue,
-        )
-    }
-
-    fun string(
-        key: String,
+        path: String,
         defaultValue: String? = null,
     ): String? {
-        val normalizedKey = key.trim()
-        if (normalizedKey.isBlank()) {
+        val normalizedPath = normalizeConfigCenterPath(path)
+        if (normalizedPath.isBlank()) {
             return defaultValue
         }
-        return stringReader(normalizedKey) ?: defaultValue
+        return stringReader(normalizedPath) ?: defaultValue
     }
 
     fun int(
-        definition: ConfigCenterKeyDefinition,
-    ): Int? {
-        return int(
-            key = definition.key,
-            defaultValue = definition.defaultValue?.toIntOrNull(),
-        )
-    }
-
-    fun int(
-        key: String,
+        path: String,
         defaultValue: Int? = null,
     ): Int? {
-        return string(key)?.toIntOrNull() ?: defaultValue
+        return string(path)?.toIntOrNull() ?: defaultValue
     }
 
     fun boolean(
-        definition: ConfigCenterKeyDefinition,
-    ): Boolean? {
-        return boolean(
-            key = definition.key,
-            defaultValue = definition.defaultValue.toBooleanStrictOrNullSafe(),
-        )
-    }
-
-    fun boolean(
-        key: String,
+        path: String,
         defaultValue: Boolean? = null,
     ): Boolean? {
-        return string(key)?.toBooleanStrictOrNullSafe() ?: defaultValue
+        return string(path)?.toBooleanStrictOrNullSafe() ?: defaultValue
     }
 
     fun list(
-        definition: ConfigCenterKeyDefinition,
-    ): List<String>? {
-        return list(
-            key = definition.key,
-            defaultValue = definition.defaultValue.parseStringListOrNull(),
-        )
-    }
-
-    fun list(
-        key: String,
+        path: String,
         defaultValue: List<String>? = null,
     ): List<String>? {
-        val normalizedKey = key.trim()
-        if (normalizedKey.isBlank()) {
+        val normalizedPath = normalizeConfigCenterPath(path)
+        if (normalizedPath.isBlank()) {
             return defaultValue
         }
-        return listReader(normalizedKey) ?: defaultValue
+        return listReader(normalizedPath) ?: defaultValue
     }
 
     fun map(
         path: String,
     ): Map<String, String>? {
-        val normalizedPath = path.trim()
+        val normalizedPath = normalizeConfigCenterPath(path)
         if (normalizedPath.isBlank()) {
             return null
         }
@@ -114,7 +78,7 @@ class ConfigCenterEnv internal constructor(
     fun keys(
         path: String,
     ): Set<String> {
-        val normalizedPath = path.trim()
+        val normalizedPath = normalizeConfigCenterPath(path)
         if (normalizedPath.isBlank()) {
             return emptySet()
         }
@@ -137,61 +101,61 @@ class ConfigCenterScopedEnv internal constructor(
     }
 
     fun string(
-        key: String,
+        path: String,
         defaultValue: String? = null,
     ): String? {
         return env.string(
-            key = composeKey(key),
+            path = composePath(path),
             defaultValue = defaultValue,
         )
     }
 
     fun int(
-        key: String,
+        path: String,
         defaultValue: Int? = null,
     ): Int? {
         return env.int(
-            key = composeKey(key),
+            path = composePath(path),
             defaultValue = defaultValue,
         )
     }
 
     fun boolean(
-        key: String,
+        path: String,
         defaultValue: Boolean? = null,
     ): Boolean? {
         return env.boolean(
-            key = composeKey(key),
+            path = composePath(path),
             defaultValue = defaultValue,
         )
     }
 
     fun list(
-        key: String,
+        path: String,
         defaultValue: List<String>? = null,
     ): List<String>? {
         return env.list(
-            key = composeKey(key),
+            path = composePath(path),
             defaultValue = defaultValue,
         )
     }
 
     fun map(
-        key: String? = null,
+        path: String? = null,
     ): Map<String, String>? {
-        return env.map(composeKey(key))
+        return env.map(composePath(path))
     }
 
     fun keys(
-        key: String? = null,
+        path: String? = null,
     ): Set<String> {
-        return env.keys(composeKey(key))
+        return env.keys(composePath(path))
     }
 
-    private fun composeKey(
-        key: String?,
+    private fun composePath(
+        path: String?,
     ): String {
-        return listOf(prefix, key.orEmpty())
+        return listOf(prefix, path.orEmpty())
             .joinConfigPath()
     }
 }
@@ -209,26 +173,9 @@ private fun String?.toBooleanStrictOrNullSafe(): Boolean? {
         }
 }
 
-private fun String?.parseStringListOrNull(): List<String>? {
-    val normalized = this?.trim()?.takeIf(String::isNotBlank) ?: return null
-    if (normalized.startsWith("[") && normalized.endsWith("]")) {
-        return normalized
-            .removePrefix("[")
-            .removeSuffix("]")
-            .split(',')
-            .map { part -> part.trim().trim('"') }
-            .filter(String::isNotBlank)
-    }
-    return normalized
-        .split(',')
-        .map(String::trim)
-        .filter(String::isNotBlank)
-        .takeIf(List<String>::isNotEmpty)
-}
-
 private fun List<String>.joinConfigPath(): String {
     return asSequence()
-        .map(String::trim)
+        .map(::normalizeConfigCenterPath)
         .filter(String::isNotBlank)
         .joinToString(".")
 }

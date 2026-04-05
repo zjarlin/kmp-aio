@@ -6,6 +6,7 @@ import io.ktor.server.config.withFallback
 import io.ktor.server.engine.EngineConnectorBuilder
 import io.ktor.server.engine.applicationEnvironment
 import io.ktor.server.engine.embeddedServer
+import org.babyfish.jimmer.sql.kt.KSqlClient
 import io.ktor.server.netty.Netty
 import io.ktor.server.netty.NettyApplicationEngine
 import org.koin.core.context.GlobalContext
@@ -16,7 +17,6 @@ import site.addzero.configcenter.ConfigCenterValueWriteRequest
 import site.addzero.configcenter.JdbcConfigCenterValueService
 import site.addzero.configcenter.withConfigCenterOverrides
 import site.addzero.kcloud.config.AppConfigKeys
-import site.addzero.kcloud.jimmer.di.DatasourceRegistry
 import site.addzero.kcloud.plugins.system.configcenter.spi.RuntimeConfigCenterActive
 import site.addzero.starter.AppStarter
 import site.addzero.starter.banner.BannerStarter
@@ -25,6 +25,7 @@ import site.addzero.starter.openapi.OpenApiStarter
 import site.addzero.starter.serialization.SerializationStarter
 import site.addzero.starter.statuspages.StatusPagesStarter
 import java.nio.file.Files
+import javax.sql.DataSource
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -111,7 +112,8 @@ class ServerKoinApplicationTest {
             assertTrue(starters.any { starter -> starter is StatusPagesStarter })
             assertNotNull(koin.get<RuntimeConfigCenterActive>())
             assertNotNull(koin.get<ConfigCenterEnv>())
-            assertNotNull(koin.get<DatasourceRegistry>())
+            assertNotNull(koin.get<KSqlClient>())
+            assertNotNull(koin.get<DataSource>())
         } finally {
             server.stop(gracePeriodMillis = 0, timeoutMillis = 0)
             stopKoin()

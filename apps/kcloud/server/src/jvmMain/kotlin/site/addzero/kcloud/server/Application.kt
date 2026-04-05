@@ -14,14 +14,12 @@ import io.ktor.server.netty.*
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.*
 import org.koin.dsl.module
+import org.koin.mp.KoinPlatform
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.configcenter.ConfigCenterBeanFactory
 import site.addzero.configcenter.ConfigCenterEnv
-import site.addzero.configcenter.configCenterJdbcSettingsOrNull
+import site.addzero.configcenter.ConfigCenterJdbcSettings
 import site.addzero.configcenter.env
-import site.addzero.kcloud.config.AppConfigKeys
-import site.addzero.kcloud.config.KcloudFrontendRuntimeConfig
-import site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY
 import site.addzero.configcenter.normalizeConfigCenterActive
 import site.addzero.configcenter.withConfigCenterOverrides
 import site.addzero.starter.installConfigCenterAdminIfEnabled
@@ -30,72 +28,22 @@ import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
 import java.net.ServerSocket
-import org.koin.core.KoinApplication as CoreKoinApplication
 import org.koin.core.module.Module as KoinModule
-
-private const val EMBEDDED_DESKTOP_MODE_PROPERTY = "kcloud.embedded.desktop"
-/**  */
-private const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop"
-internal const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
-
-interface EmbeddedDesktopServerHandle : AutoCloseable {
-    val frontendRuntimeConfig: KcloudFrontendRuntimeConfig
-}
-
-@Volatile
-internal var embeddedApplicationConfigOverride: ApplicationConfig? = null
-@Volatile
-internal var embeddedDesktopKoinConfigurer: (CoreKoinApplication.() -> Unit)? = null
-@Volatile
-private var embeddedDesktopBaseUrl: String? = null
-
-private val config: HoconApplicationConfig by lazy {
-    loadServerConfig(configPath = null)
-}
-
-
 
 /**
  * Server 入口。
  */
 fun main(args: Array<String>) {
-    val active = resolveConfigCenterActive(config)
-    val runtimeSettings = resolveRuntimeSettings(
-        config = config,
-        active = active,
-    )
-    val effectiveConfig = HoconApplicationConfig(
-        serverRuntimeOverrides().resolve(),
-    ).withFallback(
-        config.withConfigCenterOverrides(
-            namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
-            active = active,
-        ),
-    )
-    val environment = applicationEnvironment {
-        this.config = effectiveConfig
-    }
-    embeddedServer(
-        factory = Netty,
-        environment = environment,
-        configure = {
-            connectors += EngineConnectorBuilder().apply {
-                host = runtimeSettings.serverHost
-                port = runtimeSettings.serverPort
-            }
-        },
-        module = Application::module,
-    ).start(wait = true)
+    val env = KoinPlatform.getKoin().get<ConfigCenterEnv>()
+    val active = env.int("server.port")?:throw IllegalArgumentException("server.port is required")
+    embeddedServer(Netty, port = active, module = Application::module).start(wait = true)
 }
 
 /**
  * 由 Ktor 启动配置指定调用。
  */
-fun Application.module(
-    overrideModules: List<KoinModule> = emptyList(),
-) {
-    val config = embeddedApplicationConfigOverride ?: environment.config
-    installEffectiveConfig(config)
+fun Application.module( ) {
+
     installConfigCenterAdminIfEnabled(config)
     val desktopKoinConfigurer = embeddedDesktopKoinConfigurer
     val runtimeModules = buildList {
@@ -128,9 +76,6 @@ fun ktorApplication(
     host: String? = null,
     port: Int? = null,
 ): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
-    require(host == null && port == null) {
-        "host/port 覆盖已禁用，请改为从配置中心提供 ${AppConfigKeys.SERVER_HOST} 与 ${AppConfigKeys.DESKTOP_SERVER_PORT}。"
-    }
     val config = loadEmbeddedConfig(configPath)
     val active = resolveConfigCenterActive(config)
     val runtimeSettings = resolveRuntimeSettings(
@@ -153,7 +98,6 @@ fun ktorApplication(
         ),
     )
     embeddedApplicationConfigOverride = effectiveConfig
-    System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     embeddedDesktopBaseUrl = buildEmbeddedDesktopBaseUrl(
         publicHost = runtimeSettings.desktopServerPublicHost,
@@ -196,45 +140,6 @@ private fun isPortAvailable(
     }.isSuccess
 }
 
-/**
- * 桌面端使用的内嵌 server 句柄，避免把 Ktor engine 类型暴露给 UI 模块。
- */
-fun startEmbeddedDesktopServer(
-    configPath: String? = null,
-    host: String? = null,
-    port: Int? = null,
-    configureKoin: (CoreKoinApplication.() -> Unit)? = null,
-): EmbeddedDesktopServerHandle {
-    embeddedDesktopKoinConfigurer = configureKoin
-    val server = ktorApplication(
-        configPath = configPath,
-        host = host,
-        port = port,
-    ).start(wait = false)
-    val baseUrl = requireNotNull(embeddedDesktopBaseUrl) {
-        "embeddedDesktopBaseUrl 尚未初始化。"
-    }
-    val frontendRuntimeConfig = KcloudFrontendRuntimeConfig(
-        apiBaseUrl = baseUrl,
-    )
-
-    return object : EmbeddedDesktopServerHandle {
-        override val frontendRuntimeConfig = frontendRuntimeConfig
-
-        override fun close() {
-            server.stop(
-                gracePeriodMillis = 1_000,
-                timeoutMillis = 5_000,
-            )
-            embeddedDesktopKoinConfigurer = null
-            embeddedApplicationConfigOverride = null
-            embeddedDesktopBaseUrl = null
-            System.clearProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY)
-        }
-    }
-}
-
-
 
 internal fun resolveConfigCenterActive(
     config: ApplicationConfig,
@@ -253,66 +158,6 @@ private data class ServerCliArgs(
     val port: Int? = null,
 )
 
-private fun loadEmbeddedConfig(configPath: String?): HoconApplicationConfig {
-    val resolvedConfig = configPath?.let { path ->
-        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
-    } ?: ConfigFactory.load()
-
-    return HoconApplicationConfig(
-        embeddedDesktopOverrides()
-            .withFallback(resolvedConfig)
-            .resolve(),
-    )
-}
-
-internal fun loadServerConfig(configPath: String?): HoconApplicationConfig {
-    val resolvedConfig = configPath?.let { path ->
-        ConfigFactory.parseFile(resolveConfigFile(path)).withFallback(ConfigFactory.load())
-    } ?: ConfigFactory.load()
-
-    return HoconApplicationConfig(
-        serverRuntimeOverrides()
-            .withFallback(resolvedConfig)
-            .resolve(),
-    )
-}
-
-
-private fun resolveConfigFile(path: String): File {
-    val direct = File(path)
-    if (direct.exists()) return direct
-
-    var current: File? = File(System.getProperty("user.dir")).absoluteFile
-    while (current != null) {
-        val candidate = File(current, path)
-        if (candidate.exists()) {
-            return candidate
-        }
-        current = current.parentFile
-    }
-
-    return direct
-}
-
-internal fun serverRuntimeOverrides() = ConfigFactory.parseString(
-    """
-    ktor {
-      application {
-        modules = []
-      }
-    }
-    """.trimIndent()
-)
-
-private fun embeddedDesktopOverrides() = ConfigFactory.parseString(
-    """
-    ktor {
-      application {
-        modules = []
-      }
-    }
-    """.trimIndent()
-)
 
 private fun embeddedDesktopRuntimeOverrides(
     paths: EmbeddedDesktopPaths,
@@ -321,10 +166,19 @@ private fun embeddedDesktopRuntimeOverrides(
     ConfigFactory.empty()
         .withValue(AppConfigKeys.SERVER_HOST, ConfigValueFactory.fromAnyRef(settings.serverHost))
         .withValue(AppConfigKeys.SERVER_PORT, ConfigValueFactory.fromAnyRef(settings.desktopServerPort))
-        .withValue(AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST, ConfigValueFactory.fromAnyRef(settings.desktopServerPublicHost))
+        .withValue(
+            AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST,
+            ConfigValueFactory.fromAnyRef(settings.desktopServerPublicHost)
+        )
         .withValue(AppConfigKeys.DESKTOP_SERVER_PORT, ConfigValueFactory.fromAnyRef(settings.desktopServerPort))
-        .withValue(AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME, ConfigValueFactory.fromAnyRef(settings.desktopAppDirectoryName))
-        .withValue(AppConfigKeys.DESKTOP_SQLITE_FILE_NAME, ConfigValueFactory.fromAnyRef(settings.desktopSqliteFileName))
+        .withValue(
+            AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME,
+            ConfigValueFactory.fromAnyRef(settings.desktopAppDirectoryName)
+        )
+        .withValue(
+            AppConfigKeys.DESKTOP_SQLITE_FILE_NAME,
+            ConfigValueFactory.fromAnyRef(settings.desktopSqliteFileName)
+        )
         .withValue("banner.text", ConfigValueFactory.fromAnyRef(settings.desktopBannerText))
         .withValue("banner.subtitle", ConfigValueFactory.fromAnyRef(settings.desktopBannerSubtitle))
         .withValue("openapi.enabled", ConfigValueFactory.fromAnyRef(settings.desktopOpenapiEnabled))
@@ -375,12 +229,8 @@ internal fun resolveRuntimeSettings(
     config: ApplicationConfig,
     active: String,
 ): KCloudRuntimeSettings {
-    val jdbcSettings = config.configCenterJdbcSettingsOrNull()
-        ?: error(
-            "缺少配置中心 JDBC，无法读取运行时配置。请提供 config-center.jdbc.* 或 datasources.sqlite/postgres.*。",
-        )
     val env = ConfigCenterBeanFactory.env(
-        settings = jdbcSettings,
+        settings = ConfigCenterJdbcSettings(),
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
         active = active,
     )
@@ -508,9 +358,9 @@ private fun migrateLegacyDatabaseIfNeeded(
     val legacySource = legacyDatabaseCandidates(sqliteFileName)
         .firstOrNull { candidate ->
             candidate.exists() &&
-                candidate.isFile &&
-                candidate.length() > 0L &&
-                candidate.absolutePath != targetFile.absolutePath
+                    candidate.isFile &&
+                    candidate.length() > 0L &&
+                    candidate.absolutePath != targetFile.absolutePath
         }
         ?: return
 

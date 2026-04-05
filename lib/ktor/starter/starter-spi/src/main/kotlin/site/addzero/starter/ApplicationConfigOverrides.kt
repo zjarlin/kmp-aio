@@ -7,11 +7,6 @@ import io.ktor.util.AttributeKey
 private val EffectiveApplicationConfigKey =
     AttributeKey<ApplicationConfig>("site.addzero.starter.effective-application-config")
 
-fun Application.installEffectiveConfig(
-    config: ApplicationConfig,
-) {
-    attributes.put(EffectiveApplicationConfigKey, config)
-}
 
 fun Application.effectiveConfig(): ApplicationConfig {
     return runCatching { attributes[EffectiveApplicationConfigKey] }.getOrNull()

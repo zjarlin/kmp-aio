@@ -29,7 +29,7 @@ internal fun buildConfigCenterAdminAnnouncement(
     val adminLink = applicationConfig.resolveConfigCenterAdminLink(adminSettings)
     return buildString {
         append("配置中心管理页已启用。")
-        append("可通过 H5 页面管理配置命名空间、环境、键值和说明等配置元数据。")
+        append("可通过 H5 页面管理 namespace、active、path、value。")
         append("访问入口：")
         append(adminLink)
     }
