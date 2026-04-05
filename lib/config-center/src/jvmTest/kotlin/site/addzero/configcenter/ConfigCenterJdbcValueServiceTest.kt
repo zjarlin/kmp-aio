@@ -35,7 +35,7 @@ class ConfigCenterJdbcValueServiceTest {
         assertNotNull(first.createTimeMillis)
         assertNotNull(first.updateTimeMillis)
         assertEquals(first.createTimeMillis, second.createTimeMillis)
-        assertTrue((second.updateTimeMillis ?: 0L) >= (first.updateTimeMillis ?: 0L))
+        assertTrue(second.updateTimeMillis >= first.updateTimeMillis)
     }
 
     @Test

@@ -29,7 +29,7 @@ class ConfigCenterAdminAnnouncementTest {
         assertContains(announcement.orEmpty(), "配置中心管理页已启用")
         assertContains(announcement.orEmpty(), "H5 页面")
         assertContains(announcement.orEmpty(), "http://0.0.0.0:19090/meta/config")
-        assertContains(announcement.orEmpty(), "配置元数据")
+        assertContains(announcement.orEmpty(), "namespace、active、path、value")
     }
 
     @Test
