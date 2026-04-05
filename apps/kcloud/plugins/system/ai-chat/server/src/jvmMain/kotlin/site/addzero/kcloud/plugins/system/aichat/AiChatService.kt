@@ -1,11 +1,9 @@
 package site.addzero.kcloud.plugins.system.aichat
 
+import io.ktor.server.config.ApplicationConfig
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
 import org.koin.mp.KoinPlatform
-import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_DEFAULT_SYSTEM_PROMPT
-import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_TRANSPORT_HTTP
-import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENAI
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatMessage
 import site.addzero.kcloud.plugins.system.aichat.model.AiChatSession
 import site.addzero.kcloud.plugins.system.aichat.model.by
@@ -14,10 +12,13 @@ import site.addzero.kcloud.plugins.system.aichat.api.AiChatDeleteResult
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatProviderConfigDto
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
+import site.addzero.kcloud.plugins.system.aichat.config.AiChatConfigKeys
 import site.addzero.kcloud.plugins.system.aichat.provider.AiChatCompletionGateway
 import site.addzero.kcloud.plugins.system.aichat.provider.AiChatCompletionRequest
 import site.addzero.kcloud.plugins.system.aichat.provider.AiChatTurn
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
+import site.addzero.kcloud.plugins.system.configcenter.spi.requireRuntimeConfigCenterActive
+import site.addzero.kcloud.plugins.system.configcenter.spi.RUNTIME_CONFIG_CENTER_ACTIVE_KEY
 import java.util.*
 
 private const val DEFAULT_SESSION_TITLE = "新会话"
@@ -26,6 +27,7 @@ private const val DEFAULT_SESSION_TITLE = "新会话"
 class AiChatService(
     private val sqlClient: KSqlClient,
     private val completionGateway: AiChatCompletionGateway,
+    private val applicationConfig: ApplicationConfig,
 ) {
     fun listSessions(): List<AiChatSessionDto> {
         return allSessions()
@@ -177,27 +179,39 @@ class AiChatService(
     }
 
     private fun loadDefaultProviderConfig(): AiChatProviderConfigDto {
+        val active = currentRuntimeConfigCenterActive()
         return AiChatProviderConfigDto(
-            transport = readFirstConfigValue("transport", "apiTransport").ifBlank { AI_CHAT_TRANSPORT_HTTP },
-            vendor = readFirstConfigValue("vendor", "provider", "apiVendor", "apiProvider").ifBlank {
-                AI_CHAT_VENDOR_OPENAI
-            },
-            baseUrl = readFirstConfigValue("apiUrl", "baseUrl"),
-            apiKey = readFirstConfigValue("apiKey", "token"),
-            model = readConfigValue("model"),
-            systemPrompt = readConfigValue("systemPrompt").ifBlank { AI_CHAT_DEFAULT_SYSTEM_PROMPT },
+            transport = requireConfigValue(active, AiChatConfigKeys.TRANSPORT, "apiTransport"),
+            vendor = requireConfigValue(active, AiChatConfigKeys.VENDOR, "provider", "apiVendor", "apiProvider"),
+            baseUrl = requireConfigValue(active, AiChatConfigKeys.API_URL, "baseUrl"),
+            apiKey = readFirstConfigValue(active, AiChatConfigKeys.API_KEY, "token"),
+            model = requireConfigValue(active, AiChatConfigKeys.MODEL),
+            systemPrompt = requireConfigValue(active, AiChatConfigKeys.SYSTEM_PROMPT),
         )
     }
 
     private fun readFirstConfigValue(
+        active: String,
         vararg keys: String,
     ): String {
         return keys.firstNotNullOfOrNull { key ->
-            readConfigValue(key).takeIf { it.isNotBlank() }
+            readConfigValue(active, key).takeIf { it.isNotBlank() }
         }.orEmpty()
     }
 
+    private fun requireConfigValue(
+        active: String,
+        key: String,
+        vararg aliases: String,
+    ): String {
+        return readFirstConfigValue(active, key, *aliases)
+            .ifBlank {
+                error("配置中心缺少必填项 namespace=${AiChatConfigKeys.NAMESPACE} active=$active key=$key")
+            }
+    }
+
     private fun readConfigValue(
+        active: String,
         key: String,
     ): String {
         val service = runCatching {
@@ -205,11 +219,17 @@ class AiChatService(
         }.getOrNull() ?: return ""
         return runCatching {
             service.readValue(
-                namespace = "kcloud.ai",
+                namespace = AiChatConfigKeys.NAMESPACE,
                 key = key,
-                active = "dev",
+                active = active,
             ).value.orEmpty()
         }.getOrDefault("")
+    }
+
+    private fun currentRuntimeConfigCenterActive(): String {
+        return requireRuntimeConfigCenterActive(
+            applicationConfig.propertyOrNull(RUNTIME_CONFIG_CENTER_ACTIVE_KEY)?.getString(),
+        )
     }
 }
 

@@ -57,7 +57,7 @@ class KoogAiChatCompletionGateway : AiChatCompletionGateway {
         val client = createClient(request)
         val executor = SingleLLMPromptExecutor(client)
         val prompt = prompt(id = "ai-chat-${request.vendor}-${request.model.ifBlank { "default" }}") {
-            system(request.systemPrompt.ifBlank { "你是一个可靠、直接、简洁的中文助手。" })
+            system(request.systemPrompt.requireNonBlank("systemPrompt"))
             request.messages.forEach { turn ->
                 when (turn.role.normalizeRole()) {
                     "system" -> system(turn.content)
@@ -87,7 +87,7 @@ class KoogAiChatCompletionGateway : AiChatCompletionGateway {
         request: AiChatCompletionRequest,
     ): LLMClient {
         val vendor = request.vendor.normalizeVendor()
-        val baseUrl = request.baseUrl.normalizeBaseUrl(defaultBaseUrl(vendor))
+        val baseUrl = request.baseUrl.requireNonBlank("baseUrl").trimEnd('/')
         return when (vendor) {
             AI_CHAT_VENDOR_OPENAI,
             AI_CHAT_VENDOR_OPENAI_COMPATIBLE,
@@ -138,7 +138,7 @@ class KoogAiChatCompletionGateway : AiChatCompletionGateway {
         val vendor = request.vendor.normalizeVendor()
         return LLModel(
             provider = vendor.toProvider(),
-            id = request.model.ifBlank { defaultModel(vendor) },
+            id = request.model.requireNonBlank("model"),
             capabilities = DEFAULT_CAPABILITIES,
             contextLength = 128_000,
             maxOutputTokens = 8_192,
@@ -157,61 +157,15 @@ private val DEFAULT_CAPABILITIES = listOf(
 )
 
 private fun String.normalizeTransport(): String {
-    return trim().lowercase().ifBlank { AI_CHAT_TRANSPORT_HTTP }
+    return trim().lowercase().ifBlank { error("AiChatCompletionRequest.transport 不能为空。") }
 }
 
 private fun String.normalizeVendor(): String {
-    return trim().lowercase().ifBlank { AI_CHAT_VENDOR_OPENAI }
+    return trim().lowercase().ifBlank { error("AiChatCompletionRequest.vendor 不能为空。") }
 }
 
 private fun String.normalizeRole(): String {
     return trim().lowercase().ifBlank { "user" }
-}
-
-private fun String.normalizeBaseUrl(
-    fallback: String,
-): String {
-    return trim().ifBlank { fallback }.trimEnd('/')
-}
-
-private fun defaultBaseUrl(
-    vendor: String,
-): String {
-    return when (vendor) {
-        AI_CHAT_VENDOR_OPENAI,
-        AI_CHAT_VENDOR_OPENAI_COMPATIBLE,
-        -> "https://api.openai.com"
-
-        AI_CHAT_VENDOR_OPENROUTER -> "https://openrouter.ai"
-        AI_CHAT_VENDOR_DEEPSEEK -> "https://api.deepseek.com"
-        AI_CHAT_VENDOR_ANTHROPIC -> "https://api.anthropic.com"
-        AI_CHAT_VENDOR_GOOGLE,
-        AI_CHAT_VENDOR_GEMINI,
-        -> "https://generativelanguage.googleapis.com"
-
-        AI_CHAT_VENDOR_OLLAMA -> "http://localhost:11434"
-        else -> error("不支持的模型厂商: $vendor")
-    }
-}
-
-private fun defaultModel(
-    vendor: String,
-): String {
-    return when (vendor) {
-        AI_CHAT_VENDOR_OPENAI,
-        AI_CHAT_VENDOR_OPENAI_COMPATIBLE,
-        -> "gpt-5-mini"
-
-        AI_CHAT_VENDOR_OPENROUTER -> "openai/gpt-5-mini"
-        AI_CHAT_VENDOR_DEEPSEEK -> "deepseek-chat"
-        AI_CHAT_VENDOR_ANTHROPIC -> "claude-3-7-sonnet-latest"
-        AI_CHAT_VENDOR_GOOGLE,
-        AI_CHAT_VENDOR_GEMINI,
-        -> "gemini-2.5-flash"
-
-        AI_CHAT_VENDOR_OLLAMA -> "qwen3:latest"
-        else -> error("不支持的模型厂商: $vendor")
-    }
 }
 
 private fun String.toProvider(): LLMProvider {
@@ -240,5 +194,13 @@ private fun AiChatCompletionRequest.requiredApiKey(
     }
     return apiKey.trim().ifBlank {
         error("厂商 $vendor 缺少 API Key")
+    }
+}
+
+private fun String.requireNonBlank(
+    fieldName: String,
+): String {
+    return trim().ifBlank {
+        error("AiChatCompletionRequest.$fieldName 不能为空。")
     }
 }

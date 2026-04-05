@@ -4,7 +4,6 @@ import org.babyfish.jimmer.sql.dialect.Dialect
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.koin.core.annotation.Single
 import org.sqlite.SQLiteDataSource
-import site.addzero.kcloud.jimmer.di.DatasourceProperties
 import javax.sql.DataSource
 
 @Single

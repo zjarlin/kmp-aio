@@ -17,7 +17,7 @@ data class ConfigResponse(
 
 @Serializable
 data class StorageConfig(
-    val type: String = "LOCAL",
+    val type: String,
     val endpoint: String? = null,
     val accessKey: String? = null,
     val secretKey: String? = null,

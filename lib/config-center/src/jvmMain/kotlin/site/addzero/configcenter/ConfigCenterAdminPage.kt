@@ -930,6 +930,16 @@ private fun renderConfigCenterAdminPage(
           return normalized;
         }
 
+        function applyEditorProtection(item) {
+          const editable = item ? item.editable !== false : true;
+          const deletable = item ? item.deletable !== false : true;
+          elements.editComment.disabled = !editable;
+          elements.editDefaultValue.disabled = !editable;
+          elements.editValueType.disabled = !editable;
+          elements.editRequired.disabled = !editable;
+          elements.deleteButton.disabled = !deletable;
+        }
+
         function populateEditor(item) {
           elements.editNamespace.value = item.namespace || "";
           elements.editActive.value = item.active || "dev";
@@ -939,6 +949,7 @@ private fun renderConfigCenterAdminPage(
           elements.editDefaultValue.value = item.defaultValue || "";
           elements.editValueType.value = ensureValueTypeOption(item.valueType);
           elements.editRequired.checked = Boolean(item.required);
+          applyEditorProtection(item);
           setStatus(elements.editorStatus, "已加载选中的配置项。");
         }
 
@@ -961,6 +972,7 @@ private fun renderConfigCenterAdminPage(
           elements.editDefaultValue.value = "";
           elements.editValueType.value = ensureValueTypeOption("kotlin.String");
           elements.editRequired.checked = false;
+          applyEditorProtection(null);
           selectLeaf(null);
           setStatus(elements.editorStatus, "当前是新增模式。填写右侧表单后点击“保存”即可新增配置。");
         }
@@ -1289,7 +1301,10 @@ private fun renderConfigCenterAdminPage(
               </div>
               <div class="meta">
                 <span class="tag">${'$'}{escapeHtml(item.active || "dev")}</span>
+                ${'$'}{item.builtin ? '<span class="tag">内置</span>' : '<span class="tag">外置</span>'}
                 ${'$'}{item.required ? '<span class="tag">必填</span>' : ""}
+                ${'$'}{item.editable === false ? '<span class="tag">只读</span>' : ""}
+                ${'$'}{item.deletable === false ? '<span class="tag">保护</span>' : ""}
               </div>
             </div>
             <div class="tree-leaf-comment">${'$'}{highlightText(item.comment || "未填写说明", highlightTokens)}</div>

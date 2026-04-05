@@ -16,7 +16,6 @@ import org.jetbrains.skiko.disableTitleBar
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.appsidebar.LocalWorkbenchWindowFrame
 import site.addzero.appsidebar.WorkbenchWindowFrame
-import site.addzero.kcloud.plugins.mcuconsole.api.external.configureMcuConsoleApis
 import site.addzero.kcloud.server.startEmbeddedDesktopServer
 import site.addzero.workbench.shell.metrics.LocalWorkbenchMetrics
 import java.awt.Container
@@ -33,7 +32,7 @@ fun main() {
                 },
             )
         }
-        configureLocalApiClients(embeddedServer.baseUrl)
+        configureKcloudApiBaseUrl(embeddedServer.baseUrl)
 
         DisposableEffect(embeddedServer) {
             onDispose {
@@ -63,13 +62,6 @@ fun main() {
             }
         }
     }
-}
-
-private fun configureLocalApiClients(
-    baseUrl: String,
-) {
-    configureApiClients(baseUrl)
-    configureMcuConsoleApis(baseUrl)
 }
 
 @Composable

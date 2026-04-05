@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.cupertino.workbench.button.WorkbenchButton as Button
-import site.addzero.kcloud.api.ServerApiClient
+import site.addzero.kcloud.api.ApiProvider
 import site.addzero.kcloud.api.suno.SunoGeneratePersonaRequest
 import site.addzero.kcloud.vibepocket.model.PersonaItem
 import site.addzero.kcloud.vibepocket.model.PersonaSaveRequest
@@ -88,7 +88,7 @@ fun PersonaFormDialog(
                                 ?: throw IllegalStateException("Persona 创建成功但未返回 personaId")
 
                             statusText = "正在保存 Persona 记录..."
-                            val savedPersona = ServerApiClient.personaApi.savePersona(
+                            val savedPersona = ApiProvider.personaApi.savePersona(
                                 PersonaSaveRequest(
                                     personaId = personaId,
                                     name = name.trim(),

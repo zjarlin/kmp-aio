@@ -6,8 +6,8 @@ import kotlinx.browser.window
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
+    configureKcloudApiBaseUrl(window.location.origin)
     ComposeViewport {
         App()
     }
 }
-

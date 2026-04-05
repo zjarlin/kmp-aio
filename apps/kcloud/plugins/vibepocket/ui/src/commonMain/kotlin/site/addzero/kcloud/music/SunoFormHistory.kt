@@ -12,7 +12,8 @@ import androidx.compose.ui.unit.dp
 import io.ktor.util.date.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import site.addzero.kcloud.api.ServerApiClient
+import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.vibepocket.model.ConfigEntry
 
 private const val MAX_FORM_HISTORY_SIZE = 6
@@ -118,7 +119,7 @@ internal data class SavedUploadCoverFormDraft(
 }
 
 internal suspend fun loadVibeFormHistory(): List<SavedVibeFormDraft> {
-    val rawValue = ServerApiClient.getConfig(VIBE_FORM_HISTORY_KEY)
+    val rawValue = getConfigValueOrNull(VIBE_FORM_HISTORY_KEY)
         ?.trim()
         .orEmpty()
     if (rawValue.isBlank()) {
@@ -149,7 +150,7 @@ internal suspend fun saveVibeFormDraft(draft: SavedVibeFormDraft) {
 }
 
 internal suspend fun loadUploadCoverFormHistory(): List<SavedUploadCoverFormDraft> {
-    val rawValue = ServerApiClient.getConfig(UPLOAD_COVER_FORM_HISTORY_KEY)
+    val rawValue = getConfigValueOrNull(UPLOAD_COVER_FORM_HISTORY_KEY)
         ?.trim()
         .orEmpty()
     if (rawValue.isBlank()) {
@@ -204,7 +205,7 @@ private suspend fun persistFormHistory(
     description: String,
     value: String,
 ) {
-    ServerApiClient.configApi.updateConfig(
+    ApiProvider.configApi.updateConfig(
         ConfigEntry(
             key = key,
             value = value,

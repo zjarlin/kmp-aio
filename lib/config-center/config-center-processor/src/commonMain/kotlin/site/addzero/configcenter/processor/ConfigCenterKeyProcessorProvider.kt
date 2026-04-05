@@ -232,6 +232,10 @@ private data class ConfigItemModel(
     val defaultValue: String?,
     val required: Boolean,
     val valueType: String,
+    val source: String,
+    val builtin: Boolean,
+    val editable: Boolean,
+    val deletable: Boolean,
 ) {
     val templatePropertyName
         get() = "${propertyName}Template"
@@ -243,13 +247,17 @@ private data class ConfigItemModel(
         keyReference: String,
     ): CodeBlock {
         return CodeBlock.of(
-            "%T(namespace = NAMESPACE, key = %L, valueType = %S, comment = %L, defaultValue = %L, required = %L)",
+            "%T(namespace = NAMESPACE, key = %L, valueType = %S, comment = %L, defaultValue = %L, required = %L, source = %S, builtin = %L, editable = %L, deletable = %L)",
             ConfigCenterKeyDefinition::class,
             keyReference,
             valueType,
             comment?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null"),
             defaultValue?.let { CodeBlock.of("%S", it) } ?: CodeBlock.of("null"),
             required,
+            source,
+            builtin,
+            editable,
+            deletable,
         )
     }
 
@@ -287,6 +295,7 @@ private fun KSPropertyDeclaration.toModelOrNull(
         resolvedType.toString()
     }
     val templateParameters = key.findTemplateParameters()
+    val builtin = required
     return ConfigItemModel(
         propertyName = propertyName,
         constantName = if (templateParameters.isEmpty()) {
@@ -299,6 +308,10 @@ private fun KSPropertyDeclaration.toModelOrNull(
         defaultValue = defaultValue,
         required = required,
         valueType = valueType,
+        source = "ksp",
+        builtin = builtin,
+        editable = !builtin,
+        deletable = !builtin,
     )
 }
 

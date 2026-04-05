@@ -1,12 +1,8 @@
 package site.addzero.kcloud.plugins.mcuconsole.workbench
 
-import de.jensklingenberg.ktorfit.Ktorfit
-import org.koin.mp.KoinPlatform
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.*
 import site.addzero.kcloud.plugins.mcuconsole.api.external.Apis
-import site.addzero.kcloud.plugins.mcuconsole.api.external.McuModbusApi
-import site.addzero.kcloud.plugins.mcuconsole.api.external.createMcuModbusApi
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusCommandResponse
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioModeRequest
 import site.addzero.kcloud.plugins.mcuconsole.modbus.atomic.McuModbusGpioWriteRequest
@@ -18,7 +14,7 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.device.McuModbusPowerLights
 @Single
 class McuConsoleRemoteService {
     private val modbusApi
-        get() = KoinPlatform.getKoin().get<Ktorfit>().createMcuModbusApi()
+        get() = Apis.mcuModbusAtomicRoutesApi
 
     suspend fun listPorts() = Apis.mcuSessionApi.listMcuPorts().items
 
@@ -163,24 +159,24 @@ class McuConsoleRemoteService {
     suspend fun gpioWrite(
         request: McuModbusGpioWriteRequest,
     ): McuModbusCommandResponse {
-        return modbusApi.gpioWrite(request)
+        return modbusApi.writeMcuModbusGpio(request)
     }
 
     suspend fun gpioMode(
         request: McuModbusGpioModeRequest,
     ): McuModbusCommandResponse {
-        return modbusApi.gpioMode(request)
+        return modbusApi.writeMcuModbusGpioMode(request)
     }
 
     suspend fun pwmDuty(
         request: McuModbusPwmDutyRequest,
     ): McuModbusCommandResponse {
-        return modbusApi.pwmDuty(request)
+        return modbusApi.writeMcuModbusPwmDuty(request)
     }
 
     suspend fun servoAngle(
         request: McuModbusServoAngleRequest,
     ): McuModbusCommandResponse {
-        return modbusApi.servoAngle(request)
+        return modbusApi.writeMcuModbusServoAngle(request)
     }
 }

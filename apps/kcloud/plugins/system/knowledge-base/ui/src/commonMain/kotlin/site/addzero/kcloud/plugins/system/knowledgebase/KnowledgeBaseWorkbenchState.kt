@@ -5,13 +5,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.system.knowledgebase.api.ApiProvider
 import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentDto
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeDocumentMutationRequest
 import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceDto
+import site.addzero.kcloud.plugins.system.knowledgebase.api.KnowledgeSpaceMutationRequest
 
 @Single
-class KnowledgeBaseWorkbenchState(
-    private val remoteService: KnowledgeBaseRemoteService,
-) {
+class KnowledgeBaseWorkbenchState {
     val spaces = mutableStateListOf<KnowledgeSpaceDto>()
     val documents = mutableStateListOf<KnowledgeDocumentDto>()
 
@@ -41,7 +42,7 @@ class KnowledgeBaseWorkbenchState(
 
     suspend fun refreshSpaces() {
         runBusy("已刷新知识空间") {
-            val loadedSpaces = remoteService.listSpaces()
+            val loadedSpaces = ApiProvider.knowledgeBaseApi.listKnowledgeSpaces()
             spaces.replaceAll(loadedSpaces)
             val nextSpaceId = selectedSpaceId?.takeIf { currentId ->
                 loadedSpaces.any { space -> space.id == currentId }
@@ -59,7 +60,12 @@ class KnowledgeBaseWorkbenchState(
             "空间名称不能为空"
         }
         runBusy("已创建知识空间") {
-            val created = remoteService.createSpace(spaceName.trim(), spaceDescription)
+            val created = ApiProvider.knowledgeBaseApi.createKnowledgeSpace(
+                KnowledgeSpaceMutationRequest(
+                    name = spaceName.trim(),
+                    description = spaceDescription.ifBlank { null },
+                ),
+            )
             spaces.add(0, created)
             selectSpace(created.id)
         }
@@ -71,7 +77,13 @@ class KnowledgeBaseWorkbenchState(
             "空间名称不能为空"
         }
         runBusy("已保存知识空间") {
-            val updated = remoteService.updateSpace(spaceId, spaceName.trim(), spaceDescription)
+            val updated = ApiProvider.knowledgeBaseApi.updateKnowledgeSpace(
+                spaceId = spaceId,
+                request = KnowledgeSpaceMutationRequest(
+                    name = spaceName.trim(),
+                    description = spaceDescription.ifBlank { null },
+                ),
+            )
             upsertSpace(updated)
         }
     }
@@ -79,7 +91,7 @@ class KnowledgeBaseWorkbenchState(
     suspend fun deleteSelectedSpace() {
         val spaceId = selectedSpaceId ?: return
         runBusy("已删除知识空间") {
-            remoteService.deleteSpace(spaceId)
+            ApiProvider.knowledgeBaseApi.deleteKnowledgeSpace(spaceId)
             selectedSpaceId = null
             refreshSpaces()
         }
@@ -94,7 +106,7 @@ class KnowledgeBaseWorkbenchState(
             spaceName = space.name
             spaceDescription = space.description.orEmpty()
         }
-        val loadedDocuments = remoteService.listDocuments(spaceId)
+        val loadedDocuments = ApiProvider.knowledgeBaseApi.listKnowledgeDocuments(spaceId)
         documents.replaceAll(loadedDocuments)
         val nextDocument = loadedDocuments.firstOrNull()
         if (nextDocument == null) {
@@ -125,7 +137,13 @@ class KnowledgeBaseWorkbenchState(
             "文档标题不能为空"
         }
         runBusy("已创建文档") {
-            val created = remoteService.createDocument(spaceId, documentTitle.trim(), documentContent)
+            val created = ApiProvider.knowledgeBaseApi.createKnowledgeDocument(
+                spaceId = spaceId,
+                request = KnowledgeDocumentMutationRequest(
+                    title = documentTitle.trim(),
+                    content = documentContent,
+                ),
+            )
             documents.add(0, created)
             selectDocument(created.id)
         }
@@ -137,7 +155,13 @@ class KnowledgeBaseWorkbenchState(
             "文档标题不能为空"
         }
         runBusy("已保存文档") {
-            val updated = remoteService.updateDocument(documentId, documentTitle.trim(), documentContent)
+            val updated = ApiProvider.knowledgeBaseApi.updateKnowledgeDocument(
+                documentId = documentId,
+                request = KnowledgeDocumentMutationRequest(
+                    title = documentTitle.trim(),
+                    content = documentContent,
+                ),
+            )
             upsertDocument(updated)
             selectDocument(updated.id)
         }
@@ -146,7 +170,7 @@ class KnowledgeBaseWorkbenchState(
     suspend fun deleteSelectedDocument() {
         val documentId = selectedDocumentId ?: return
         runBusy("已删除文档") {
-            remoteService.deleteDocument(documentId)
+            ApiProvider.knowledgeBaseApi.deleteKnowledgeDocument(documentId)
             val currentSpaceId = selectedSpaceId
             if (currentSpaceId != null) {
                 selectSpace(currentSpaceId)

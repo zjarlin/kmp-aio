@@ -15,48 +15,54 @@ object Apis {
     /**
      * McuDeviceInfoApi 服务实例
      */
-    val mcuDeviceInfoApi
+    val mcuDeviceInfoApi: McuDeviceInfoApi
         get() = ktorfit().createMcuDeviceInfoApi()
 
     /**
      * McuFlashApi 服务实例
      */
-    val mcuFlashApi
+    val mcuFlashApi: McuFlashApi
         get() = ktorfit().createMcuFlashApi()
+
+    /**
+     * McuModbusAtomicRoutesApi 服务实例
+     */
+    val mcuModbusAtomicRoutesApi: McuModbusAtomicRoutesApi
+        get() = ktorfit().createMcuModbusAtomicRoutesApi()
 
     /**
      * McuModbusDeviceRoutesApi 服务实例
      */
-    val mcuModbusDeviceRoutesApi
+    val mcuModbusDeviceRoutesApi: McuModbusDeviceRoutesApi
         get() = ktorfit().createMcuModbusDeviceRoutesApi()
 
     /**
      * McuModbusDeviceWriteApi 服务实例
      */
-    val mcuModbusDeviceWriteApi
+    val mcuModbusDeviceWriteApi: McuModbusDeviceWriteApi
         get() = ktorfit().createMcuModbusDeviceWriteApi()
 
     /**
      * McuRuntimeApi 服务实例
      */
-    val mcuRuntimeApi
+    val mcuRuntimeApi: McuRuntimeApi
         get() = ktorfit().createMcuRuntimeApi()
 
     /**
      * McuScriptApi 服务实例
      */
-    val mcuScriptApi
+    val mcuScriptApi: McuScriptApi
         get() = ktorfit().createMcuScriptApi()
 
     /**
      * McuSessionApi 服务实例
      */
-    val mcuSessionApi
+    val mcuSessionApi: McuSessionApi
         get() = ktorfit().createMcuSessionApi()
 
     /**
      * McuSettingsApi 服务实例
      */
-    val mcuSettingsApi
+    val mcuSettingsApi: McuSettingsApi
         get() = ktorfit().createMcuSettingsApi()
 }

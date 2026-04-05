@@ -28,10 +28,8 @@ data class DatasourceProperties(
  * 新增数据库类型只需新增实现类并标注 @Single，无需修改现有代码。
  */
 interface DatabaseDriverSpi {
-    val databaseProperties: DatasourceProperties
-
     /** 判断此驱动是否能处理给定的 driver 字符串 */
-    fun supports(): Boolean
+    fun supports(driver: String): Boolean
 
     /** 创建 DataSource */
     fun createDataSource(props: DatasourceProperties): DataSource

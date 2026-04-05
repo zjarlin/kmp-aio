@@ -36,12 +36,12 @@ data class AiChatMessageCreateRequest(
 
 @Serializable
 data class AiChatProviderConfigDto(
-    val transport: String = AI_CHAT_TRANSPORT_HTTP,
-    val vendor: String = AI_CHAT_VENDOR_OPENAI,
+    val transport: String = "",
+    val vendor: String = "",
     val baseUrl: String = "",
     val apiKey: String = "",
     val model: String = "",
-    val systemPrompt: String = AI_CHAT_DEFAULT_SYSTEM_PROMPT,
+    val systemPrompt: String = "",
 )
 
 @Serializable
@@ -66,5 +66,3 @@ const val AI_CHAT_VENDOR_ANTHROPIC = "anthropic"
 const val AI_CHAT_VENDOR_GOOGLE = "google"
 const val AI_CHAT_VENDOR_GEMINI = "gemini"
 const val AI_CHAT_VENDOR_OLLAMA = "ollama"
-
-const val AI_CHAT_DEFAULT_SYSTEM_PROMPT = "你是一个可靠、直接、简洁的中文助手。"

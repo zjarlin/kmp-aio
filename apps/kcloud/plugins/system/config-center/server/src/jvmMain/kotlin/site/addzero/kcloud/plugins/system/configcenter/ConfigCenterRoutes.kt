@@ -6,6 +6,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.put
 import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
+import site.addzero.kcloud.plugins.system.configcenter.currentRuntimeConfigCenterActive
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 import site.addzero.springktor.runtime.optionalRequestParam
 import site.addzero.springktor.runtime.requireRequestBody
@@ -17,7 +18,10 @@ fun Route.configCenterRoutes() {
             configCenterService().readValue(
                 namespace = call.requireRequestParam("namespace"),
                 key = call.requireRequestParam("key"),
-                active = call.optionalRequestParam<String>("active") ?: "dev",
+                active = call.optionalRequestParam<String>("active")
+                    ?.trim()
+                    ?.takeIf(String::isNotBlank)
+                    ?: currentRuntimeConfigCenterActive(),
             ),
         )
     }

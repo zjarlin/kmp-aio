@@ -52,6 +52,8 @@ import site.addzero.kcloud.plugins.mcuconsole.workbench.*
 import site.addzero.cupertino.workbench.button.WorkbenchButton as ShadcnButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonSize as ShadcnButtonSize
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant as ShadcnButtonVariant
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 private enum class McuControlTab(
     val id: String,
@@ -2200,8 +2202,8 @@ private fun handleTerminalKeyEvent(
 private fun formatBytes(bytes: Int?): String {
     val value = bytes ?: return "-"
     return when {
-        value >= 1024 * 1024 -> String.format("%.1f MB", value / 1024f / 1024f)
-        value >= 1024 -> String.format("%.1f KB", value / 1024f)
+        value >= 1024 * 1024 -> "${formatDecimal(value / 1024f / 1024f, 1)} MB"
+        value >= 1024 -> "${formatDecimal(value / 1024f, 1)} KB"
         else -> "$value B"
     }
 }
@@ -2211,5 +2213,35 @@ private fun formatChipId(chipId: Int?): String {
 }
 
 private fun formatVoltage(millivolts: Int?): String {
-    return millivolts?.let { String.format("%.2f V", it / 1000f) } ?: "-"
+    return millivolts?.let { "${formatDecimal(it / 1000f, 2)} V" } ?: "-"
+}
+
+/**
+ * 兼容 commonMain 的定点格式化，避免依赖 JVM 专属的 String.format。
+ */
+private fun formatDecimal(value: Float, digits: Int): String {
+    if (digits <= 0) {
+        return value.roundToInt().toString()
+    }
+
+    val factor = when (digits) {
+        1 -> 10
+        2 -> 100
+        3 -> 1_000
+        else -> {
+            var computedFactor = 1
+            repeat(digits) {
+                computedFactor *= 10
+            }
+            computedFactor
+        }
+    }
+    val rounded = (value * factor).roundToInt()
+    val integerPart = rounded / factor
+    val fractionPart = abs(rounded % factor)
+    return buildString {
+        append(integerPart)
+        append('.')
+        append(fractionPart.toString().padStart(digits, '0'))
+    }
 }

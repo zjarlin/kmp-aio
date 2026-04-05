@@ -18,7 +18,7 @@ class AiChatPanelPresenter(
     val panelState: AddChatPanelState
         get() = AddChatPanelState(
             title = "AI 助手",
-            subtitle = "支持配置后台 URL、API Key、厂商与模型参数",
+            subtitle = "支持配置 API Key、厂商与模型参数",
             sessions = state.sessions.map { session ->
                 AddChatSessionItem(
                     id = session.id.toString(),
@@ -38,13 +38,13 @@ class AiChatPanelPresenter(
             quickPrompts = defaultQuickPrompts(),
             input = state.draftMessage,
             connection = AddChatConnectionConfig(
-                backendUrl = state.serverBaseUrl,
-                transport = state.connectionConfig().transport.toChatTransport(),
-                vendor = state.connectionConfig().vendor.toChatVendor(),
-                providerBaseUrl = state.connectionConfig().baseUrl,
-                apiKey = state.connectionConfig().apiKey,
-                model = state.connectionConfig().model,
-                systemPrompt = state.connectionConfig().systemPrompt,
+                backendUrl = state.connection.backendUrl,
+                transport = state.connection.transport.toChatTransport(),
+                vendor = state.connection.vendor.toChatVendor(),
+                providerBaseUrl = state.connection.providerBaseUrl,
+                apiKey = state.connection.apiKey,
+                model = state.connection.model,
+                systemPrompt = state.connection.systemPrompt,
             ),
             showConnectionEditor = true,
             isSending = state.isBusy,

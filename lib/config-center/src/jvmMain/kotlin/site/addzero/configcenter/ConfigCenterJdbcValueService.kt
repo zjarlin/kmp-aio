@@ -77,6 +77,9 @@ class JdbcConfigCenterValueService(
         return withConnection { connection ->
             withTransaction(connection) {
                 if (normalizedRenameFrom != null && normalizedRenameFrom != normalizedNamespace) {
+                    check(!namespaceContainsReadOnlyDefinitions(connection, normalizedRenameFrom)) {
+                        "namespace contains system built-in configs and cannot be renamed: $normalizedRenameFrom"
+                    }
                     renameNamespace(
                         connection = connection,
                         sourceNamespace = normalizedRenameFrom,
@@ -102,6 +105,9 @@ class JdbcConfigCenterValueService(
         val normalizedNamespace = normalizeConfigCenterNamespace(namespace)
         require(normalizedNamespace.isNotBlank()) { "namespace cannot be blank" }
         return withConnection { connection ->
+            if (namespaceContainsUndeletableDefinitions(connection, normalizedNamespace)) {
+                return@withConnection false
+            }
             withTransaction(connection) {
                 val deletedValues = deleteNamespaceRows(
                     connection = connection,
@@ -227,6 +233,14 @@ class JdbcConfigCenterValueService(
         require(normalizedKey.isNotBlank()) { "key cannot be blank" }
 
         return withConnection { connection ->
+            val definition = findDefinition(
+                connection = connection,
+                namespace = normalizedNamespace,
+                key = normalizedKey,
+            )
+            if (definition != null && !definition.deletable) {
+                return@withConnection false
+            }
             connection.prepareStatement(
                 """
                 DELETE FROM config_center_value
@@ -316,23 +330,33 @@ class JdbcConfigCenterValueService(
         require(normalizedNamespace.isNotBlank()) { "namespace cannot be blank" }
         require(normalizedKey.isNotBlank()) { "key cannot be blank" }
 
-        val valueType = request.valueType
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?: "kotlin.String"
+        val existingDefinition = withConnection { connection ->
+            findDefinition(
+                connection = connection,
+                namespace = normalizedNamespace,
+                key = normalizedKey,
+            )
+        }
 
-        upsertDefinitions(
-            listOf(
-                ConfigCenterKeyDefinition(
-                    namespace = normalizedNamespace,
-                    key = normalizedKey,
-                    valueType = valueType,
-                    comment = request.comment,
-                    defaultValue = request.defaultValue,
-                    required = request.required ?: false,
-                ),
-            ),
-        )
+        if (existingDefinition == null || existingDefinition.editable) {
+            val definition = ConfigCenterKeyDefinition(
+                namespace = normalizedNamespace,
+                key = normalizedKey,
+                valueType = request.valueType
+                    ?.trim()
+                    ?.takeIf(String::isNotBlank)
+                    ?: existingDefinition?.valueType
+                    ?: "kotlin.String",
+                comment = request.comment ?: existingDefinition?.comment,
+                defaultValue = request.defaultValue ?: existingDefinition?.defaultValue,
+                required = request.required ?: existingDefinition?.required ?: false,
+                source = existingDefinition?.source ?: "manual",
+                builtin = existingDefinition?.builtin ?: false,
+                editable = existingDefinition?.editable ?: true,
+                deletable = existingDefinition?.deletable ?: true,
+            )
+            upsertDefinitions(listOf(definition))
+        }
 
         request.value?.let { rawValue ->
             writeValue(
@@ -341,7 +365,11 @@ class JdbcConfigCenterValueService(
                     active = normalizedActive,
                     key = normalizedKey,
                     value = rawValue,
-                    comment = request.comment,
+                    comment = if (existingDefinition?.editable == false) {
+                        existingDefinition.comment
+                    } else {
+                        request.comment
+                    },
                 ),
             )
         }
@@ -365,6 +393,14 @@ class JdbcConfigCenterValueService(
         require(normalizedKey.isNotBlank()) { "key cannot be blank" }
 
         return withConnection { connection ->
+            val definition = findDefinition(
+                connection = connection,
+                namespace = normalizedNamespace,
+                key = normalizedKey,
+            )
+            if (definition != null && !definition.deletable) {
+                return@withConnection false
+            }
             val deletedValue = connection.prepareStatement(
                 """
                 DELETE FROM config_center_value
@@ -400,60 +436,79 @@ class JdbcConfigCenterValueService(
             return 0
         }
         return withConnection { connection ->
-            val deduplicated = LinkedHashMap<String, ConfigCenterKeyDefinition>()
-            definitions.forEach { definition ->
-                val normalizedNamespace = normalizeConfigCenterNamespace(definition.namespace)
-                val normalizedKey = definition.key.trim()
-                if (normalizedNamespace.isBlank() || normalizedKey.isBlank()) {
-                    return@forEach
-                }
-                deduplicated["$normalizedNamespace::$normalizedKey"] = definition.copy(
-                    namespace = normalizedNamespace,
-                    key = normalizedKey,
-                )
-            }
-            val now = System.currentTimeMillis()
-            deduplicated.values.forEach { definition ->
-                ensureNamespaceRecord(
-                    connection = connection,
-                    namespace = definition.namespace,
-                    now = now,
-                )
-                val createdAt = lookupExistingCreateTime(
-                    connection = connection,
-                    namespace = definition.namespace,
-                    key = definition.key,
-                    tableName = "config_center_definition",
-                ) ?: now
-                connection.prepareStatement(
-                    """
-                    INSERT INTO config_center_definition (
-                        id, namespace, config_key, value_type, comment, default_value, required, source, create_time, update_time
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(namespace, config_key) DO UPDATE SET
-                        value_type = excluded.value_type,
-                        comment = excluded.comment,
-                        default_value = excluded.default_value,
-                        required = excluded.required,
-                        source = excluded.source,
-                        update_time = excluded.update_time
-                    """.trimIndent(),
-                ).use { statement ->
-                    statement.setString(1, UUID.randomUUID().toString())
-                    statement.setString(2, definition.namespace)
-                    statement.setString(3, definition.key)
-                    statement.setString(4, definition.valueType.ifBlank { "kotlin.String" })
-                    statement.setString(5, definition.comment)
-                    statement.setString(6, definition.defaultValue)
-                    statement.setBoolean(7, definition.required)
-                    statement.setString(8, "ksp")
-                    statement.setLong(9, createdAt)
-                    statement.setLong(10, now)
-                    statement.executeUpdate()
-                }
-            }
-            deduplicated.size
+            upsertDefinitions(
+                connection = connection,
+                definitions = definitions,
+            )
         }
+    }
+
+    private fun upsertDefinitions(
+        connection: Connection,
+        definitions: List<ConfigCenterKeyDefinition>,
+    ): Int {
+        if (definitions.isEmpty()) {
+            return 0
+        }
+        val deduplicated = LinkedHashMap<String, ConfigCenterKeyDefinition>()
+        definitions.forEach { definition ->
+            val normalizedNamespace = normalizeConfigCenterNamespace(definition.namespace)
+            val normalizedKey = definition.key.trim()
+            if (normalizedNamespace.isBlank() || normalizedKey.isBlank()) {
+                return@forEach
+            }
+            deduplicated["$normalizedNamespace::$normalizedKey"] = definition.copy(
+                namespace = normalizedNamespace,
+                key = normalizedKey,
+            )
+        }
+        val now = System.currentTimeMillis()
+        deduplicated.values.forEach { definition ->
+            ensureNamespaceRecord(
+                connection = connection,
+                namespace = definition.namespace,
+                now = now,
+            )
+            val createdAt = lookupExistingCreateTime(
+                connection = connection,
+                namespace = definition.namespace,
+                key = definition.key,
+                tableName = "config_center_definition",
+            ) ?: now
+            connection.prepareStatement(
+                """
+                INSERT INTO config_center_definition (
+                    id, namespace, config_key, value_type, comment, default_value, required, source, builtin, editable, deletable, create_time, update_time
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(namespace, config_key) DO UPDATE SET
+                    value_type = excluded.value_type,
+                    comment = excluded.comment,
+                    default_value = excluded.default_value,
+                    required = excluded.required,
+                    source = excluded.source,
+                    builtin = excluded.builtin,
+                    editable = excluded.editable,
+                    deletable = excluded.deletable,
+                    update_time = excluded.update_time
+                """.trimIndent(),
+            ).use { statement ->
+                statement.setString(1, UUID.randomUUID().toString())
+                statement.setString(2, definition.namespace)
+                statement.setString(3, definition.key)
+                statement.setString(4, definition.valueType.ifBlank { "kotlin.String" })
+                statement.setString(5, definition.comment)
+                statement.setString(6, definition.defaultValue)
+                statement.setBoolean(7, definition.required)
+                statement.setString(8, definition.source)
+                statement.setBoolean(9, definition.builtin)
+                statement.setBoolean(10, definition.editable)
+                statement.setBoolean(11, definition.deletable)
+                statement.setLong(12, createdAt)
+                statement.setLong(13, now)
+                statement.executeUpdate()
+            }
+        }
+        return deduplicated.size
     }
 
     private fun listValues(
@@ -535,7 +590,7 @@ class JdbcConfigCenterValueService(
         )
         return connection.prepareStatement(
             """
-            SELECT id, namespace, config_key, value_type, comment, default_value, required, source, create_time, update_time
+            SELECT id, namespace, config_key, value_type, comment, default_value, required, source, builtin, editable, deletable, create_time, update_time
             FROM config_center_definition
             $whereClause
             ORDER BY namespace ASC, config_key ASC
@@ -564,7 +619,7 @@ class JdbcConfigCenterValueService(
     ): StoredDefinition? {
         connection.prepareStatement(
             """
-            SELECT id, namespace, config_key, value_type, comment, default_value, required, source, create_time, update_time
+            SELECT id, namespace, config_key, value_type, comment, default_value, required, source, builtin, editable, deletable, create_time, update_time
             FROM config_center_definition
             WHERE namespace = ?
               AND config_key = ?
@@ -592,7 +647,7 @@ class JdbcConfigCenterValueService(
     ): StoredDefinition? {
         return connection.prepareStatement(
             """
-            SELECT id, namespace, config_key, value_type, comment, default_value, required, source, create_time, update_time
+            SELECT id, namespace, config_key, value_type, comment, default_value, required, source, builtin, editable, deletable, create_time, update_time
             FROM config_center_definition
             WHERE namespace = ?
             """.trimIndent(),
@@ -675,6 +730,9 @@ class JdbcConfigCenterValueService(
                     default_value TEXT,
                     required BOOLEAN NOT NULL DEFAULT FALSE,
                     source TEXT,
+                    builtin BOOLEAN NOT NULL DEFAULT FALSE,
+                    editable BOOLEAN NOT NULL DEFAULT TRUE,
+                    deletable BOOLEAN NOT NULL DEFAULT TRUE,
                     create_time BIGINT NOT NULL,
                     update_time BIGINT NOT NULL
                 )
@@ -801,6 +859,21 @@ class JdbcConfigCenterValueService(
             if ("source" !in columns) {
                 statement.executeUpdate("ALTER TABLE config_center_definition ADD COLUMN source TEXT")
             }
+            if ("builtin" !in columns) {
+                statement.executeUpdate(
+                    "ALTER TABLE config_center_definition ADD COLUMN builtin BOOLEAN NOT NULL DEFAULT FALSE",
+                )
+            }
+            if ("editable" !in columns) {
+                statement.executeUpdate(
+                    "ALTER TABLE config_center_definition ADD COLUMN editable BOOLEAN NOT NULL DEFAULT TRUE",
+                )
+            }
+            if ("deletable" !in columns) {
+                statement.executeUpdate(
+                    "ALTER TABLE config_center_definition ADD COLUMN deletable BOOLEAN NOT NULL DEFAULT TRUE",
+                )
+            }
             if ("create_time" !in columns) {
                 statement.executeUpdate(
                     "ALTER TABLE config_center_definition ADD COLUMN create_time BIGINT NOT NULL DEFAULT 0",
@@ -811,6 +884,24 @@ class JdbcConfigCenterValueService(
                     "ALTER TABLE config_center_definition ADD COLUMN update_time BIGINT NOT NULL DEFAULT 0",
                 )
             }
+            statement.executeUpdate(
+                """
+                UPDATE config_center_definition
+                SET
+                    builtin = CASE
+                        WHEN COALESCE(source, '') = 'ksp' AND required = TRUE THEN TRUE
+                        ELSE builtin
+                    END,
+                    editable = CASE
+                        WHEN COALESCE(source, '') = 'ksp' AND required = TRUE THEN FALSE
+                        ELSE editable
+                    END,
+                    deletable = CASE
+                        WHEN COALESCE(source, '') = 'ksp' AND required = TRUE THEN FALSE
+                        ELSE deletable
+                    END
+                """.trimIndent(),
+            )
         }
     }
 
@@ -1091,6 +1182,46 @@ private fun JdbcConfigCenterValueService.deleteNamespaceRecord(
     }
 }
 
+private fun JdbcConfigCenterValueService.namespaceContainsReadOnlyDefinitions(
+    connection: Connection,
+    namespace: String,
+): Boolean {
+    return connection.prepareStatement(
+        """
+        SELECT 1
+        FROM config_center_definition
+        WHERE namespace = ?
+          AND editable = FALSE
+        LIMIT 1
+        """.trimIndent(),
+    ).use { statement ->
+        statement.setString(1, namespace)
+        statement.executeQuery().use { resultSet ->
+            resultSet.next()
+        }
+    }
+}
+
+private fun JdbcConfigCenterValueService.namespaceContainsUndeletableDefinitions(
+    connection: Connection,
+    namespace: String,
+): Boolean {
+    return connection.prepareStatement(
+        """
+        SELECT 1
+        FROM config_center_definition
+        WHERE namespace = ?
+          AND deletable = FALSE
+        LIMIT 1
+        """.trimIndent(),
+    ).use { statement ->
+        statement.setString(1, namespace)
+        statement.executeQuery().use { resultSet ->
+            resultSet.next()
+        }
+    }
+}
+
 private fun <T> withTransaction(
     connection: Connection,
     block: () -> T,
@@ -1116,6 +1247,10 @@ private data class StoredDefinition(
     val comment: String?,
     val defaultValue: String?,
     val required: Boolean,
+    val source: String?,
+    val builtin: Boolean,
+    val editable: Boolean,
+    val deletable: Boolean,
     val createTimeMillis: Long?,
     val updateTimeMillis: Long?,
 ) {
@@ -1136,6 +1271,10 @@ private data class StoredDefinition(
             defaultValue = defaultValue,
             valueType = valueType,
             required = required,
+            source = source,
+            builtin = builtin,
+            editable = editable,
+            deletable = deletable,
             createTimeMillis = value?.createTimeMillis ?: createTimeMillis,
             updateTimeMillis = value?.updateTimeMillis ?: updateTimeMillis,
         )
@@ -1220,6 +1359,10 @@ private fun ResultSet.toDefinition(): StoredDefinition {
         comment = getString("comment"),
         defaultValue = getString("default_value"),
         required = getBoolean("required").takeIf { !wasNull() } ?: false,
+        source = getString("source"),
+        builtin = getBoolean("builtin").takeIf { !wasNull() } ?: false,
+        editable = getBoolean("editable").takeIf { !wasNull() } ?: true,
+        deletable = getBoolean("deletable").takeIf { !wasNull() } ?: true,
         createTimeMillis = getLong("create_time").takeIf { !wasNull() },
         updateTimeMillis = getLong("update_time").takeIf { !wasNull() },
     )

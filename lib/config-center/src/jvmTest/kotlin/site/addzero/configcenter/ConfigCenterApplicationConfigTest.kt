@@ -61,6 +61,19 @@ class ConfigCenterApplicationConfigTest {
                     assertTrue(resultSet.next())
                     assertEquals(1, resultSet.getInt(1))
                 }
+                statement.executeQuery(
+                    """
+                    PRAGMA table_info(config_center_definition)
+                    """.trimIndent(),
+                ).use { resultSet ->
+                    val columns = linkedSetOf<String>()
+                    while (resultSet.next()) {
+                        columns += resultSet.getString("name").orEmpty()
+                    }
+                    assertTrue("builtin" in columns)
+                    assertTrue("editable" in columns)
+                    assertTrue("deletable" in columns)
+                }
             }
         }
     }

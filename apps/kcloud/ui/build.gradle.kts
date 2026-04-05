@@ -40,7 +40,6 @@ kotlin {
         implementation(project(":apps:kcloud:plugins:system:ai-chat:ui"))
         implementation(project(":apps:kcloud:plugins:system:config-center:ui"))
         implementation(project(":apps:kcloud:plugins:system:knowledge-base:ui"))
-        implementation(project(":apps:kcloud:plugins:system:plugin-market:ui"))
         implementation(project(":apps:kcloud:plugins:system:rbac:ui"))
         implementation(project(":apps:kcloud:plugins:vibepocket:ui"))
         implementation(project(":lib:tool-kmp:network-starter"))

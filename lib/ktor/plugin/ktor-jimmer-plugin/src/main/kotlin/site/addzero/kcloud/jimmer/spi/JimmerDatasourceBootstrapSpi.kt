@@ -1,6 +1,4 @@
 package site.addzero.kcloud.jimmer.spi
-
-import site.addzero.kcloud.jimmer.di.DatasourceProperties
 import javax.sql.DataSource
 
 data class DatasourceBootstrapContext(

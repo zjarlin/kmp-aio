@@ -1,11 +1,18 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
+import io.ktor.server.config.ApplicationConfig
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.mcuconsole.config.McuConsoleConfigKeys
+import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
+import site.addzero.kcloud.plugins.system.configcenter.spi.RUNTIME_CONFIG_CENTER_ACTIVE_KEY
+import site.addzero.kcloud.plugins.system.configcenter.spi.requireRuntimeConfigCenterActive
 import java.io.File
 
 @Single
 class McuRuntimeAssetExtractor(
     private val bundleCatalog: McuRuntimeBundleCatalog,
+    private val applicationConfig: ApplicationConfig,
+    private val configValueService: ConfigValueServiceSpi,
 ) {
     private val classLoader = javaClass.classLoader
 
@@ -93,15 +100,26 @@ class McuRuntimeAssetExtractor(
         artifactFile: File,
     ): String {
         return "运行时包 $bundleId 仍是仓库占位固件，不能直接刷写。请先把真实板卡固件放到 ${artifactFile.absolutePath}，" +
-            "或通过 -Dkcloud.mcu.runtime.dir 指向你准备好的 runtime bundle 目录。"
+            "或在配置中心 namespace=${McuConsoleConfigKeys.NAMESPACE} " +
+            "key=${McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR} 配置真实运行时目录。"
     }
 
     private fun resolveRootDirectory(): File {
-        val configured = System.getProperty("kcloud.mcu.runtime.dir")
-            ?.takeIf { it.isNotBlank() }
-        return File(
-            configured ?: "${System.getProperty("user.home")}/.kcloud/mcu-runtime-bundles",
+        val active = requireRuntimeConfigCenterActive(
+            applicationConfig.propertyOrNull(RUNTIME_CONFIG_CENTER_ACTIVE_KEY)?.getString(),
         )
+        val configured = configValueService.readValue(
+            namespace = McuConsoleConfigKeys.NAMESPACE,
+            key = McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR,
+            active = active,
+        ).value
+            ?.trim()
+            ?.takeIf(String::isNotBlank)
+            ?: error(
+                "配置中心缺少必填项 namespace=${McuConsoleConfigKeys.NAMESPACE} " +
+                    "active=$active key=${McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR}",
+            )
+        return File(configured).absoluteFile
     }
 
     companion object {

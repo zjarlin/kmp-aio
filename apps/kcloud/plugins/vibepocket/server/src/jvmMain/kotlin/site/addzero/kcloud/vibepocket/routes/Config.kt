@@ -45,6 +45,7 @@ suspend fun updateConfig(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = entry.key,
         value = entry.value,
+        active = currentRuntimeConfigCenterActive(),
     )
     return OkResponse()
 }
@@ -56,9 +57,7 @@ suspend fun getStorageConfig(): StorageConfig {
     }
 
     return StorageConfig(
-        type = readValue(VibepocketConfigKeys.storageType)
-            ?: VibepocketConfigKeys.storageType.defaultValue
-            ?: "LOCAL",
+        type = requireConfigValue(VibepocketConfigKeys.storageType),
         endpoint = readValue(VibepocketConfigKeys.storageEndpoint),
         accessKey = readValue(VibepocketConfigKeys.storageAccessKey),
         secretKey = readValue(VibepocketConfigKeys.storageSecretKey),
@@ -76,7 +75,10 @@ suspend fun saveStorageConfig(
     configCenterService().writeValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = VibepocketConfigKeys.STORAGE_TYPE,
-        value = config.type,
+        value = config.type.trim().ifBlank {
+            error("配置中心缺少必填项 namespace=$VIBEPOCKET_CONFIG_NAMESPACE active=${currentRuntimeConfigCenterActive()} key=${VibepocketConfigKeys.STORAGE_TYPE}")
+        },
+        active = currentRuntimeConfigCenterActive(),
     )
     config.endpoint?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_ENDPOINT, it) }
     config.accessKey?.let { saveStorageValue(VibepocketConfigKeys.STORAGE_ACCESS_KEY, it) }
@@ -93,7 +95,19 @@ private suspend fun saveStorageValue(key: String, value: String) {
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
         value = value,
+        active = currentRuntimeConfigCenterActive(),
     )
+}
+
+private suspend fun requireConfigValue(
+    definition: ConfigCenterKeyDefinition,
+): String {
+    return readConfigValue(definition)
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: error(
+            "配置中心缺少必填项 namespace=$VIBEPOCKET_CONFIG_NAMESPACE active=${currentRuntimeConfigCenterActive()} key=${definition.key}",
+        )
 }
 
 private suspend fun readConfigValue(
@@ -108,6 +122,7 @@ private suspend fun readConfigValue(
     configCenterService().readValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
+        active = currentRuntimeConfigCenterActive(),
     ).value?.let { value ->
         return value
     }
@@ -116,6 +131,7 @@ private suspend fun readConfigValue(
         namespace = VIBEPOCKET_CONFIG_NAMESPACE,
         key = key,
         value = legacyValue,
+        active = currentRuntimeConfigCenterActive(),
     )
     return legacyValue
 }

@@ -4,12 +4,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.system.configcenter.api.Apis
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
 
 @Single
-class ConfigCenterWorkbenchState(
-    private val remoteService: ConfigCenterRemoteService,
-) {
+class ConfigCenterWorkbenchState {
     var namespace by mutableStateOf("kcloud")
     var active by mutableStateOf("dev")
     var key by mutableStateOf("")
@@ -71,7 +70,7 @@ class ConfigCenterWorkbenchState(
         runBusy(
             successMessage = "已读取配置",
         ) {
-            val loaded = remoteService.readValue(
+            val loaded = Apis.configCenterApi.getConfigCenterValue(
                 namespace = namespace,
                 key = key,
                 active = active,
@@ -90,7 +89,7 @@ class ConfigCenterWorkbenchState(
         runBusy(
             successMessage = "已写入配置",
         ) {
-            val saved = remoteService.writeValue(
+            val saved = Apis.configCenterApi.putConfigCenterValue(
                 ConfigCenterValueWriteRequest(
                     namespace = namespace,
                     active = active,

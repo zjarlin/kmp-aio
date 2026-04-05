@@ -11,13 +11,46 @@ interface ConfigValueServiceSpi {
     fun readValue(
         namespace: String,
         key: String,
-        active: String = "dev",
+        active: String,
     ): ConfigCenterValueDto
 
     fun writeValue(
         namespace: String,
         key: String,
         value: String,
-        active: String = "dev",
+        active: String,
     ): ConfigCenterValueDto
+}
+
+const val RUNTIME_CONFIG_CENTER_ACTIVE_KEY = "ktor.environment"
+
+fun requireRuntimeConfigCenterActive(
+    rawValue: String?,
+): String {
+    val normalized = rawValue
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: error("缺少启动配置 $RUNTIME_CONFIG_CENTER_ACTIVE_KEY，无法确定配置中心 active。")
+
+    return when (normalized.lowercase()) {
+        "default",
+        "dev",
+        "development",
+        -> "dev"
+
+        "prod",
+        "prd",
+        "production",
+        -> "prod"
+
+        else -> {
+            normalized
+                .lowercase()
+                .replace(Regex("[^a-z0-9]+"), "-")
+                .trim('-')
+                .ifBlank {
+                    error("启动配置 $RUNTIME_CONFIG_CENTER_ACTIVE_KEY=$normalized 无法归一化为有效 active。")
+                }
+        }
+    }
 }

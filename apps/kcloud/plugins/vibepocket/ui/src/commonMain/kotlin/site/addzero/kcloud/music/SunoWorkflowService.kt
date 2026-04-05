@@ -3,7 +3,7 @@ package site.addzero.kcloud.music
 import io.ktor.http.*
 import io.ktor.util.date.*
 import kotlinx.coroutines.delay
-import site.addzero.kcloud.api.ServerApiClient
+import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.api.suno.*
 import kotlin.random.Random
 
@@ -253,7 +253,7 @@ object SunoWorkflowService {
 
         val recoveryDeadline = getTimeMillis() + maxWaitMs
         while (getTimeMillis() < recoveryDeadline) {
-            val recoveredTaskId = ServerApiClient.getConfig(callbackReservation.taskIdConfigKey)
+            val recoveredTaskId = getConfigValueOrNull(callbackReservation.taskIdConfigKey)
                 ?.trim()
                 .orEmpty()
             if (recoveredTaskId.isNotBlank()) {

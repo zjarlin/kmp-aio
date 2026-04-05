@@ -3,8 +3,8 @@ package site.addzero.kcloud.music
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import site.addzero.kcloud.api.ApiProvider
 import site.addzero.kcloud.api.MusicSearchApi
-import site.addzero.kcloud.api.ServerApiClient
 import site.addzero.kcloud.api.music.MusicLyric
 import site.addzero.kcloud.api.music.MusicResolvedAsset
 import site.addzero.kcloud.api.music.MusicTrack
@@ -12,7 +12,7 @@ import site.addzero.kcloud.api.music.MusicTrack
 object MusicSearchService {
     private val supportedProviders = listOf("netease", "qq")
     private val resolvedAssetCache = linkedMapOf<String, MusicResolvedAsset>()
-    internal var api: MusicSearchApi = ServerApiClient.musicApi
+    internal var api: MusicSearchApi = ApiProvider.musicSearchApi
 
     suspend fun search(keyword: String): List<MusicTrack> {
         val normalizedKeyword = keyword.trim()
@@ -67,7 +67,7 @@ object MusicSearchService {
     fun playbackId(track: MusicTrack): String = "music:${normalizeProvider(track.platform)}:${track.id}"
 
     internal fun resetForTests() {
-        api = ServerApiClient.musicApi
+        api = ApiProvider.musicSearchApi
         resolvedAssetCache.clear()
     }
 

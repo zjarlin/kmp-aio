@@ -166,7 +166,7 @@ interface AppConfigSpec {
     @ConfigCenterItem(
         key = "datasources.postgres.driver",
         comment = "PostgreSQL 数据源的 JDBC 驱动类名。",
-        defaultValue = "org.postgresql.Driver",
+        required = true,
     )
     val postgresDriver: String
 }

@@ -11,7 +11,7 @@ interface VibepocketConfigCenterSpec {
     @ConfigCenterItem(
         key = "storage.type",
         comment = "VibePocket 当前存储类型，例如 LOCAL、S3。",
-        defaultValue = "LOCAL",
+        required = true,
     )
     val storageType: String
 

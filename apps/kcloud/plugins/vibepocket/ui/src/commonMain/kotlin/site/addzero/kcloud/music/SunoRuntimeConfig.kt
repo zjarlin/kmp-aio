@@ -1,6 +1,7 @@
 package site.addzero.kcloud.music
 
-import site.addzero.kcloud.api.ServerApiClient
+import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.api.suno.SunoApiClient
 import site.addzero.kcloud.vibepocket.model.ConfigEntry
 
@@ -39,14 +40,14 @@ data class SunoRuntimeConfig(
 }
 
 suspend fun loadSunoRuntimeConfig(): SunoRuntimeConfig {
-    val apiToken = ServerApiClient.getConfig(SUNO_API_TOKEN_KEY)
+    val apiToken = getConfigValueOrNull(SUNO_API_TOKEN_KEY)
         .orEmpty()
         .trim()
-    val baseUrl = ServerApiClient.getConfig(SUNO_API_BASE_URL_KEY)
+    val baseUrl = getConfigValueOrNull(SUNO_API_BASE_URL_KEY)
         ?.trim()
         ?.ifBlank { SunoApiClient.DEFAULT_BASE_URL }
         ?: SunoApiClient.DEFAULT_BASE_URL
-    val callbackUrl = ServerApiClient.getConfig(SUNO_CALLBACK_URL_KEY)
+    val callbackUrl = getConfigValueOrNull(SUNO_CALLBACK_URL_KEY)
         .orEmpty()
         .trim()
     return SunoRuntimeConfig(
@@ -57,7 +58,7 @@ suspend fun loadSunoRuntimeConfig(): SunoRuntimeConfig {
 }
 
 suspend fun hasCompletedVibePocketSetup(): Boolean {
-    val storedValue = ServerApiClient.getConfig(SUNO_SETUP_COMPLETE_KEY)
+    val storedValue = getConfigValueOrNull(SUNO_SETUP_COMPLETE_KEY)
         ?.trim()
         ?.equals("true", ignoreCase = true)
     return storedValue == true
@@ -73,28 +74,28 @@ suspend fun persistSunoRuntimeConfig(
         .ifBlank { SunoApiClient.DEFAULT_BASE_URL }
     val normalizedCallbackUrl = callbackUrl.trim()
 
-    ServerApiClient.configApi.updateConfig(
+    ApiProvider.configApi.updateConfig(
         ConfigEntry(
             key = SUNO_API_TOKEN_KEY,
             value = normalizedToken,
             description = "Suno API Token",
         )
     )
-    ServerApiClient.configApi.updateConfig(
+    ApiProvider.configApi.updateConfig(
         ConfigEntry(
             key = SUNO_API_BASE_URL_KEY,
             value = normalizedBaseUrl,
             description = "Suno API Base URL",
         )
     )
-    ServerApiClient.configApi.updateConfig(
+    ApiProvider.configApi.updateConfig(
         ConfigEntry(
             key = SUNO_CALLBACK_URL_KEY,
             value = normalizedCallbackUrl,
             description = "Suno Callback URL",
         )
     )
-    ServerApiClient.configApi.updateConfig(
+    ApiProvider.configApi.updateConfig(
         ConfigEntry(
             key = SUNO_SETUP_COMPLETE_KEY,
             value = "true",

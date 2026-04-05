@@ -8,27 +8,23 @@ import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_DEFAULT_SYSTEM_PROMPT
 import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_TRANSPORT_HTTP
 import site.addzero.kcloud.plugins.system.aichat.api.AI_CHAT_VENDOR_OPENAI
+import site.addzero.kcloud.plugins.system.aichat.api.Apis
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatMessageCreateRequest
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatProviderConfigDto
+import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionCreateRequest
 import site.addzero.kcloud.plugins.system.aichat.api.AiChatSessionDto
 
 @Single
-class AiChatWorkbenchState(
-    private val remoteService: AiChatRemoteService,
-) {
+class AiChatWorkbenchState {
     val sessions = mutableStateListOf<AiChatSessionDto>()
     val messages = mutableStateListOf<AiChatMessageDto>()
 
     var selectedSessionId by mutableStateOf<Long?>(null)
         private set
 
-    var serverBaseUrl by mutableStateOf("")
-    var providerTransport by mutableStateOf(AI_CHAT_TRANSPORT_HTTP)
-    var providerVendor by mutableStateOf(AI_CHAT_VENDOR_OPENAI)
-    var providerBaseUrl by mutableStateOf("")
-    var providerApiKey by mutableStateOf("")
-    var providerModel by mutableStateOf("")
-    var providerSystemPrompt by mutableStateOf(AI_CHAT_DEFAULT_SYSTEM_PROMPT)
+    var connection by mutableStateOf(AiChatConnectionState())
+        private set
 
     var draftMessage by mutableStateOf("")
     var statusMessage by mutableStateOf("")
@@ -48,7 +44,7 @@ class AiChatWorkbenchState(
 
     suspend fun refreshSessions() {
         runBusy("已刷新会话") {
-            val loadedSessions = remoteService.listSessions(serverBaseUrl = serverBaseUrl)
+            val loadedSessions = Apis.aiChatApi.listAiChatSessions()
             sessions.replaceAll(loadedSessions)
             syncSelectedSession(loadedSessions)
         }
@@ -56,9 +52,8 @@ class AiChatWorkbenchState(
 
     suspend fun createSession() {
         runBusy("已创建新会话") {
-            val created = remoteService.createSession(
-                title = "新会话",
-                serverBaseUrl = serverBaseUrl,
+            val created = Apis.aiChatApi.createAiChatSession(
+                AiChatSessionCreateRequest(title = "新会话"),
             )
             sessions.add(0, created)
             selectSession(created.id)
@@ -68,10 +63,7 @@ class AiChatWorkbenchState(
     suspend fun deleteSelectedSession() {
         val sessionId = selectedSessionId ?: return
         runBusy("已删除会话") {
-            remoteService.deleteSession(
-                sessionId = sessionId,
-                serverBaseUrl = serverBaseUrl,
-            )
+            Apis.aiChatApi.deleteAiChatSession(sessionId)
             selectedSessionId = null
             refreshSessions()
         }
@@ -82,10 +74,7 @@ class AiChatWorkbenchState(
     ) {
         selectedSessionId = sessionId
         messages.replaceAll(
-            remoteService.listMessages(
-                sessionId = sessionId,
-                serverBaseUrl = serverBaseUrl,
-            )
+            Apis.aiChatApi.listAiChatMessages(sessionId)
         )
     }
 
@@ -96,18 +85,18 @@ class AiChatWorkbenchState(
             return
         }
         runBusy("消息已写入会话") {
-            val sessionId = selectedSessionId ?: remoteService.createSession(
-                title = "新会话",
-                serverBaseUrl = serverBaseUrl,
+            val sessionId = selectedSessionId ?: Apis.aiChatApi.createAiChatSession(
+                AiChatSessionCreateRequest(title = "新会话"),
             ).also { created ->
                 sessions.add(0, created)
                 selectedSessionId = created.id
             }.id
-            val conversation = remoteService.sendMessage(
+            val conversation = Apis.aiChatApi.sendAiChatMessage(
                 sessionId = sessionId,
-                content = content,
-                serverBaseUrl = serverBaseUrl,
-                provider = currentProviderConfig(),
+                request = AiChatMessageCreateRequest(
+                    content = content,
+                    provider = currentProviderConfig(),
+                ),
             )
             upsertSession(conversation.session)
             messages.replaceAll(conversation.messages)
@@ -137,28 +126,26 @@ class AiChatWorkbenchState(
         model: String,
         systemPrompt: String,
     ) {
-        serverBaseUrl = backendUrl
-        providerTransport = transport
-        providerVendor = vendor
-        this.providerBaseUrl = providerBaseUrl
-        providerApiKey = apiKey
-        providerModel = model
-        providerSystemPrompt = systemPrompt
+        connection = connection.copy(
+            backendUrl = backendUrl,
+            transport = transport,
+            vendor = vendor,
+            providerBaseUrl = providerBaseUrl,
+            apiKey = apiKey,
+            model = model,
+            systemPrompt = systemPrompt,
+        )
+        if (backendUrl.isNotBlank()) {
+            statusMessage = "AI 助手已统一复用全局 KCloud 后端，独立 backendUrl 配置不再单独建连。"
+        }
     }
 
     fun connectionConfig(): AiChatProviderConfigDto {
-        return currentProviderConfig()
+        return connection.toProviderConfig()
     }
 
     private fun currentProviderConfig(): AiChatProviderConfigDto {
-        return AiChatProviderConfigDto(
-            transport = providerTransport,
-            vendor = providerVendor,
-            baseUrl = providerBaseUrl,
-            apiKey = providerApiKey,
-            model = providerModel,
-            systemPrompt = providerSystemPrompt,
-        )
+        return connection.toProviderConfig()
     }
 
     private fun upsertSession(
@@ -200,6 +187,27 @@ class AiChatWorkbenchState(
         }
         isBusy = false
     }
+}
+
+data class AiChatConnectionState(
+    val backendUrl: String = "",
+    val transport: String = AI_CHAT_TRANSPORT_HTTP,
+    val vendor: String = AI_CHAT_VENDOR_OPENAI,
+    val providerBaseUrl: String = "",
+    val apiKey: String = "",
+    val model: String = "",
+    val systemPrompt: String = AI_CHAT_DEFAULT_SYSTEM_PROMPT,
+)
+
+private fun AiChatConnectionState.toProviderConfig(): AiChatProviderConfigDto {
+    return AiChatProviderConfigDto(
+        transport = transport,
+        vendor = vendor,
+        baseUrl = providerBaseUrl,
+        apiKey = apiKey,
+        model = model,
+        systemPrompt = systemPrompt,
+    )
 }
 
 private fun <T> MutableList<T>.replaceAll(

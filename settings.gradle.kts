@@ -170,6 +170,13 @@ if (hasLocalAddzeroLibJvm) {
         project(projectPath).projectDir = resolvedLocalAddzeroLibJvmDir.resolve(relativeDir)
     }
 
+    fun remapExternalProjectIfExists(projectPath: String, relativeDir: String) {
+        val projectDir = resolvedLocalAddzeroLibJvmDir.resolve(relativeDir)
+        if (projectDir.isDirectory) {
+            remapExternalProject(projectPath, relativeDir)
+        }
+    }
+
     remapExternalProject(":lib:api", "lib/api")
     remapExternalProject(":lib:api:api-music-spi", "lib/api/api-music-spi")
     remapExternalProject(":lib:api:api-netease", "lib/api/api-netease")
@@ -184,7 +191,10 @@ if (hasLocalAddzeroLibJvm) {
         ":lib:kcp:spread-pack:kcp-spread-pack-gradle-plugin",
         "lib/kcp/spread-pack/kcp-spread-pack-gradle-plugin",
     )
-    remapExternalProject(":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin", "lib/kcp/spread-pack/kcp-spread-pack-ide-plugin")
+    remapExternalProjectIfExists(
+        ":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin",
+        "lib/kcp/spread-pack/kcp-spread-pack-ide-plugin",
+    )
     remapExternalProject(":lib:compose", "lib/compose")
     remapExternalProject(":lib:compose:app-sidebar", "lib/compose/app-sidebar")
     remapExternalProject(":lib:compose:app-sidebar-cupertino-adapter", "lib/compose/app-sidebar-cupertino-adapter")
@@ -369,8 +379,10 @@ if (hasLocalAddzeroLibJvm) {
                     .using(project(":lib:kcp:spread-pack:kcp-spread-pack-plugin"))
                 substitute(module("site.addzero:kcp-spread-pack-gradle-plugin"))
                     .using(project(":lib:kcp:spread-pack:kcp-spread-pack-gradle-plugin"))
-                substitute(module("site.addzero:kcp-spread-pack-ide-plugin"))
-                    .using(project(":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin"))
+                if (findProject(":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin") != null) {
+                    substitute(module("site.addzero:kcp-spread-pack-ide-plugin"))
+                        .using(project(":lib:kcp:spread-pack:kcp-spread-pack-ide-plugin"))
+                }
                 substitute(module("site.addzero:jimmer-entity-spi"))
                     .using(project(":lib:ksp:metadata:jimmer-entity-spi"))
                 substitute(module("site.addzero:entity2iso-processor"))

@@ -154,6 +154,7 @@ private suspend fun KSqlClient.getConfig(key: String): String? {
     configCenterService().readValue(
         namespace = "vibepocket",
         key = key,
+        active = currentRuntimeConfigCenterActive(),
     ).value?.let { value ->
         return value
     }
@@ -162,6 +163,7 @@ private suspend fun KSqlClient.getConfig(key: String): String? {
         namespace = "vibepocket",
         key = key,
         value = legacyValue,
+        active = currentRuntimeConfigCenterActive(),
     )
     return legacyValue
 }
@@ -175,6 +177,7 @@ private suspend fun KSqlClient.setConfig(
         namespace = "vibepocket",
         key = key,
         value = value,
+        active = currentRuntimeConfigCenterActive(),
     )
 }
 

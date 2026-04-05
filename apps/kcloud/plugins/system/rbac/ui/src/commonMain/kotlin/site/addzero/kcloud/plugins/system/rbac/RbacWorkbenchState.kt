@@ -5,13 +5,12 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.system.rbac.api.ApiProvider
 import site.addzero.kcloud.plugins.system.rbac.api.RbacRoleDto
 import site.addzero.kcloud.plugins.system.rbac.api.RbacRoleMutationRequest
 
 @Single
-class RbacWorkbenchState(
-    private val remoteService: RbacRemoteService,
-) {
+class RbacWorkbenchState {
     val roles = mutableStateListOf<RbacRoleDto>()
 
     var selectedRoleId by mutableStateOf<Long?>(null)
@@ -70,14 +69,14 @@ class RbacWorkbenchState(
         val currentRoleId = selectedRoleId
         if (currentRoleId == null) {
             runBusy("已创建角色") {
-                val created = remoteService.createRole(currentRequest())
+                val created = ApiProvider.rbacApi.createRbacRole(currentRequest())
                 upsertRole(created)
                 selectRole(created.id)
             }
             return
         }
         runBusy("已保存角色") {
-            val updated = remoteService.updateRole(currentRoleId, currentRequest())
+            val updated = ApiProvider.rbacApi.updateRbacRole(currentRoleId, currentRequest())
             upsertRole(updated)
             selectRole(updated.id)
         }
@@ -86,7 +85,7 @@ class RbacWorkbenchState(
     suspend fun deleteSelectedRole() {
         val role = selectedRole ?: return
         runBusy("已删除角色") {
-            remoteService.deleteRole(role.id)
+            ApiProvider.rbacApi.deleteRbacRole(role.id)
             loadRoles(preferredRoleId = null)
         }
     }
@@ -94,7 +93,7 @@ class RbacWorkbenchState(
     private suspend fun loadRoles(
         preferredRoleId: Long?,
     ) {
-        val loadedRoles = remoteService.listRoles()
+        val loadedRoles = ApiProvider.rbacApi.listRbacRoles()
         roles.replaceAll(loadedRoles)
         val nextRoleId = preferredRoleId?.takeIf { currentRoleId ->
             loadedRoles.any { role -> role.id == currentRoleId }

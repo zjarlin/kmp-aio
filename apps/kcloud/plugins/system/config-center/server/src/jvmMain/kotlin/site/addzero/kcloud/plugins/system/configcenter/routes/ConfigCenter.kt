@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueDto
 import site.addzero.kcloud.plugins.system.configcenter.api.ConfigCenterValueWriteRequest
+import site.addzero.kcloud.plugins.system.configcenter.currentRuntimeConfigCenterActive
 import site.addzero.kcloud.plugins.system.configcenter.spi.ConfigValueServiceSpi
 
 @GetMapping("/api/system/config-center/value")
@@ -18,7 +19,7 @@ fun getConfigCenterValue(
     return service().readValue(
         namespace = namespace,
         key = key,
-        active = active ?: "dev",
+        active = active?.trim()?.takeIf(String::isNotBlank) ?: currentRuntimeConfigCenterActive(),
     )
 }
 

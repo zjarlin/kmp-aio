@@ -4,13 +4,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.plugins.system.rbac.api.ApiProvider
 import site.addzero.kcloud.plugins.system.rbac.api.UserProfileDto
 import site.addzero.kcloud.plugins.system.rbac.api.UserProfileUpdateRequest
 
 @Single
-class UserCenterWorkbenchState(
-    private val remoteService: UserCenterRemoteService,
-) {
+class UserCenterWorkbenchState {
     var isBusy by mutableStateOf(false)
         private set
 
@@ -38,7 +37,7 @@ class UserCenterWorkbenchState(
 
     suspend fun refresh() {
         runBusy(successMessage = "已刷新用户资料") {
-            applyProfile(remoteService.readCurrentProfile())
+            applyProfile(ApiProvider.userCenterApi.getCurrentUserProfile())
         }
     }
 
@@ -47,7 +46,7 @@ class UserCenterWorkbenchState(
             "显示名称不能为空"
         }
         runBusy(successMessage = "已保存用户资料") {
-            val saved = remoteService.saveCurrentProfile(
+            val saved = ApiProvider.userCenterApi.saveCurrentUserProfile(
                 UserProfileUpdateRequest(
                     displayName = displayName.trim(),
                     email = email.trim().ifBlank { null },
