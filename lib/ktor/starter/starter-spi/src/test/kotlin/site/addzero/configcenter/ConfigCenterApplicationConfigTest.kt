@@ -10,7 +10,7 @@ import kotlin.test.assertTrue
 
 class ConfigCenterApplicationConfigTest {
     @Test
-    fun `read values auto creates schema and exposes overrides`() {
+    fun `read values auto creates new schema and exposes overrides`() {
         val root = Files.createTempDirectory("config-center-config-test")
         val dbPath = root.resolve("config-center.sqlite")
         val dbUrl = "jdbc:sqlite:${dbPath.toAbsolutePath()}"
@@ -32,7 +32,7 @@ class ConfigCenterApplicationConfigTest {
             ConfigCenterValueWriteRequest(
                 namespace = "demo-app",
                 active = "dev",
-                key = "demo.message",
+                path = "demo.message",
                 value = "hello-config-center",
             ),
         )
@@ -55,24 +55,11 @@ class ConfigCenterApplicationConfigTest {
                 statement.executeQuery(
                     """
                     SELECT COUNT(*) FROM sqlite_master
-                    WHERE type = 'table' AND name = 'config_center_value'
+                    WHERE type = 'table' AND name = 'config_center_record'
                     """.trimIndent(),
                 ).use { resultSet ->
                     assertTrue(resultSet.next())
                     assertEquals(1, resultSet.getInt(1))
-                }
-                statement.executeQuery(
-                    """
-                    PRAGMA table_info(config_center_definition)
-                    """.trimIndent(),
-                ).use { resultSet ->
-                    val columns = linkedSetOf<String>()
-                    while (resultSet.next()) {
-                        columns += resultSet.getString("name").orEmpty()
-                    }
-                    assertTrue("builtin" in columns)
-                    assertTrue("editable" in columns)
-                    assertTrue("deletable" in columns)
                 }
             }
         }

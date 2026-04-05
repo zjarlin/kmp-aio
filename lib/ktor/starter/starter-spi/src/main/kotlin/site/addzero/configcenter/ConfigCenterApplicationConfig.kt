@@ -56,30 +56,20 @@ class ConfigCenterBootstrapRepository(
         val delegate = service ?: return emptyMap()
         val normalizedNamespace = normalizeConfigCenterNamespace(namespace)
         val normalizedActive = normalizeConfigCenterActive(active)
-        val snapshot = delegate.listValues(
-            namespace = normalizedNamespace,
-            active = normalizedActive,
-            limit = Int.MAX_VALUE,
-        ).associateNotNull { item ->
-            val normalizedPath = normalizeConfigCenterPath(item.path)
-            if (normalizedPath.isBlank()) {
-                null
-            } else {
-                normalizedPath to (item.value ?: "")
+        val snapshot = buildMap {
+            delegate.listValues(
+                namespace = normalizedNamespace,
+                active = normalizedActive,
+                limit = Int.MAX_VALUE,
+            ).forEach { item ->
+                val normalizedPath = normalizeConfigCenterPath(item.path)
+                if (normalizedPath.isNotBlank()) {
+                    put(normalizedPath, item.value ?: "")
+                }
             }
         }
         return resolveConfigCenterSnapshot(snapshot)
     }
-}
-
-private fun <K, V> Iterable<Pair<K, V>?>.associateNotNull(): Map<K, V> {
-    val values = LinkedHashMap<K, V>()
-    for (entry in this) {
-        if (entry != null) {
-            values[entry.first] = entry.second
-        }
-    }
-    return values
 }
 
 private fun buildConfigCenterOverrideConfig(

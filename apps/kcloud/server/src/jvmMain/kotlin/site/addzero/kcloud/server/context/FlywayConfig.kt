@@ -8,7 +8,7 @@ import site.addzero.starter.flyway.FlywayDatasourcePlan
 import site.addzero.starter.flyway.FlywayDefaults
 
 @Single
-class ServerFlywayConfigProvider(
+class FlywayConfig(
     private val env: ConfigCenterEnv,
 ) : FlywayConfigSpi {
     override val order = 0

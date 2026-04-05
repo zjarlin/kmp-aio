@@ -1,14 +1,11 @@
 package site.addzero.configcenter
 
-private const val CONFIG_CENTER_TABLE_NOTE = "来自config-center中间件请勿删除!"
-
 data class ConfigCenterJdbcSettings(
     val url: String,
     val username: String? = null,
     val password: String? = null,
     val driver: String? = inferDriver(url),
     val autoDdl: Boolean = true,
-    val tableNote: String = CONFIG_CENTER_TABLE_NOTE,
 ) {
     companion object {
         fun inferDriver(

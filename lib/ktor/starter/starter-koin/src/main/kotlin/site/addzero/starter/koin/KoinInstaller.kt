@@ -9,7 +9,6 @@ import org.koin.ktor.plugin.KoinApplicationStarted
 import org.koin.logger.slf4jLogger
 import site.addzero.starter.AppStarter
 
-private val startersExecutedKey = AttributeKey<Boolean>("site.addzero.starter.koin.startersExecuted")
 
 /**
  * Koin 初始化入口。
@@ -31,25 +30,17 @@ fun Application.installKoin(configure: KoinApplication.() -> Unit = {}) {
  * 过滤条件后依次执行 onInstall()。
  */
 fun Application.runStarters() {
-    fun execute(stage: String) {
-        if (attributes.getOrNull(startersExecutedKey) == true) return
+    fun execute() {
         val app = this
         val koin = app.getKoin()
         val starters = koin
             .getAll<AppStarter<Application>>()
             .filter { starter -> with(starter) { app.enable() } }
             .sortedBy { it.order }
-        attributes.put(startersExecutedKey, true)
-        log.info("Resolved ${starters.size} AppStarter(s) at stage=$stage")
         for (starter in starters) {
             log.info("Installing starter: ${starter::class.simpleName} (order=${starter.order})")
             with(starter) { app.onInstall() }
         }
     }
-    execute(stage = "after-koin-install")
-    if (attributes.getOrNull(startersExecutedKey) != true) {
-        monitor.subscribe(KoinApplicationStarted) {
-            execute(stage = "koin-started")
-        }
-    }
+    execute()
 }

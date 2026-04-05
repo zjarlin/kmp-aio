@@ -1,11 +1,12 @@
+package site.addzero.kcloud.server.context
+
 import site.addzero.configcenter.ConfigCenterEnv
 import site.addzero.configcenter.ConfigCenterBeanFactory
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.env
 
 @Module
-class ConfigCenterModule {
+class CenterConfig {
     @Single(createdAtStart = true)
     fun env(
     ): ConfigCenterEnv {

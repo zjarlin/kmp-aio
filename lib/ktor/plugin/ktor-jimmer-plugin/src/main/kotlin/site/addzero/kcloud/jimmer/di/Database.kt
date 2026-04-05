@@ -18,35 +18,31 @@ import org.koin.core.annotation.Single
 import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteInstantScalarProvider
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteLocalDateTimeScalarProvider
+import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.DatasourcePropertiesSpi
 import java.sql.DriverManager
 import javax.sql.DataSource
 
-// 假设你的 DatasourcePropertiesSpi 数据类定义（如果未定义需补充）
-internal fun DatasourcePropertiesSpi.toDatasource(): DataSource {
-    // 1. 校验核心参数
+internal fun DatasourceProperties.toDatasource(): DataSource {
     require(url.isNotBlank()) { "数据库URL不能为空" }
 
-    // 2. 解析URL并适配不同数据库类型
     val jdbcUrl = url.trim()
     return when {
-        // PostgreSQL 处理
         isPg(jdbcUrl) -> {
             createHikariDataSource(
                 jdbcUrl = jdbcUrl,
                 username = user,
                 password = password,
-                driverClassName = driverClassName ?: "org.postgresql.Driver"
+                driverClassName = driverClassName.ifBlank { "org.postgresql.Driver" }
             )
         }
-        // MySQL 处理（兼容 mariadb）
+
         isMysq(jdbcUrl) -> {
             createHikariDataSource(
                 jdbcUrl = jdbcUrl,
                 username = user,
                 password = password,
-                driverClassName = driverClassName ?: "com.mysql.cj.jdbc.Driver",
-                // MySQL 特有配置
+                driverClassName = driverClassName.ifBlank { "com.mysql.cj.jdbc.Driver" },
                 extraProperties = mapOf(
                     "useUnicode" to "true",
                     "characterEncoding" to "UTF-8",
@@ -56,9 +52,12 @@ internal fun DatasourcePropertiesSpi.toDatasource(): DataSource {
                 )
             )
         }
-        // SQLite 处理（无需用户名密码）
+
         isSqlLite(jdbcUrl) -> {
-            createSqliteDataSource(jdbcUrl, driverClassName ?: "org.sqlite.JDBC")
+            createSqliteDataSource(
+                jdbcUrl = jdbcUrl,
+                driverClassName = driverClassName.ifBlank { "org.sqlite.JDBC" },
+            )
         }
 
         else -> throw IllegalArgumentException("不支持的数据库类型，URL: $jdbcUrl")
@@ -85,7 +84,6 @@ internal fun isPg(jdbcUrl: String): Boolean {
 }
 
 /**
- * 创建 HikariCP 连接池（适配 PG/MySQL）
  */
 internal fun createHikariDataSource(
     jdbcUrl: String,
@@ -100,13 +98,11 @@ internal fun createHikariDataSource(
         this.password = password
         this.driverClassName = driverClassName
 
-        // 基础连接池配置（可根据需求调整）
         maximumPoolSize = 10
         minimumIdle = 2
-        idleTimeout = 300000 // 5分钟
-        connectionTimeout = 30000 // 30秒
+        idleTimeout = 300000
+        connectionTimeout = 30000
         poolName = "db-pool-${jdbcUrl.substringAfterLast(":").substringBefore("/")}"
-        // 附加属性
         extraProperties.forEach { (key, value) ->
             addDataSourceProperty(key, value)
         }
@@ -115,13 +111,10 @@ internal fun createHikariDataSource(
 }
 
 /**
- * 创建 SQLite 数据源（SQLite 无需连接池，直接返回基础 DataSource）
  */
 internal fun createSqliteDataSource(jdbcUrl: String, driverClassName: String): DataSource {
-    // 加载驱动
     Class.forName(driverClassName)
 
-    // SQLite 简单 DataSource 实现（也可使用 HikariCP，此处简化）
     return object : DataSource {
         override fun getConnection() = DriverManager.getConnection(jdbcUrl)
         override fun getConnection(username: String?, password: String?) = getConnection()
@@ -144,20 +137,16 @@ internal fun createSqliteDataSource(jdbcUrl: String, driverClassName: String): D
 @Single
 class DataSourceManager(
     private val interceptors: List<DraftInterceptor<*, *>>,
-    private val datasourcePropertiesSpis: List<DatasourcePropertiesSpi>,
+    private val datasourcePropertiesSpi: DatasourcePropertiesSpi,
     private val scalarProviders: List<AbstractScalarProvider<*, *>>
 ) {
-
-
-    fun DatasourcePropertiesSpi.toKsqlClient(): KSqlClient {
+    fun DatasourceProperties.toKsqlClient(): KSqlClient {
         val url = this.url
         val guessDialect = guessDialect(url)
         val toDatasource = this.toDatasource()
         val newKSqlClient = newKSqlClient {
             setDialect(guessDialect)
-            //设置拦截器
             interceptors.forEach { addDraftInterceptor(it) }
-            //转换器
             scalarProviders.forEach { addScalarProvider(it) }
             setDatabaseNamingStrategy(LOWER_CASE)
 
@@ -185,14 +174,24 @@ class DataSourceManager(
 
     }
 
-    private fun defaultDatasourcePropertiesSpi(): DatasourcePropertiesSpi =
-        datasourcePropertiesSpis.filter { it.default }.firstOrNull()
+    private fun defaultDatasourcePropertiesSpi(): DatasourceProperties {
+        val configured = datasourceProperties()
+        return configured.firstOrNull { it.default }
+            ?: configured.firstOrNull()
             ?: throw IllegalArgumentException("No enabled datasource found, check your DatasourcePropertiesSpi")
+    }
 
     @Single
     fun sqlClients(): List<KSqlClient> {
-        val map = datasourcePropertiesSpis.filterNot { it.default }.map { it.toKsqlClient() }
-        return map
+        return datasourceProperties()
+            .filterNot { it.default }
+            .map { it.toKsqlClient() }
+    }
+
+    private fun datasourceProperties(): List<DatasourceProperties> {
+        return datasourcePropertiesSpi.datasources()
+            .filter { datasource ->
+                datasource.enabled && datasource.url.isNotBlank()
+            }
     }
 }
-

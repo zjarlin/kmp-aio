@@ -2,6 +2,8 @@ package site.addzero.configcenter
 
 import app.cash.sqldelight.driver.jdbc.asJdbcDriver
 import site.addzero.configcenter.db.ConfigCenterDatabase
+import site.addzero.configcenter.db.Config_center_record
+import site.addzero.configcenter.db.ListNamespaces
 import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.DriverManager
@@ -125,12 +127,9 @@ class JdbcConfigCenterValueService(
     }
 
     fun listNamespaces(): List<ConfigCenterNamespaceDto> {
-        return queries.listNamespaces().executeAsList().map { row ->
-            ConfigCenterNamespaceDto(
-                namespace = row.namespace,
-                entryCount = row.entry_count.toInt(),
-            )
-        }
+        return queries.listNamespaces()
+            .executeAsList()
+            .map(ListNamespaces::toDto)
     }
 
     fun deleteNamespace(
@@ -236,29 +235,7 @@ class JdbcConfigCenterValueService(
         return lookup(tableName).ifEmpty { lookup(tableName.uppercase()) }
     }
 
-    private fun ConfigCenterDatabase.ListScopeValues.toDto(): ConfigCenterValueDto {
-        return ConfigCenterValueDto(
-            namespace = namespace,
-            active = active_env,
-            path = config_path,
-            value = config_value,
-            createTimeMillis = create_time,
-            updateTimeMillis = update_time,
-        )
-    }
-
-    private fun ConfigCenterDatabase.ListValues.toDto(): ConfigCenterValueDto {
-        return ConfigCenterValueDto(
-            namespace = namespace,
-            active = active_env,
-            path = config_path,
-            value = config_value,
-            createTimeMillis = create_time,
-            updateTimeMillis = update_time,
-        )
-    }
-
-    private fun ConfigCenterDatabase.ReadValue.toDto(): ConfigCenterValueDto {
+    private fun Config_center_record.toDto(): ConfigCenterValueDto {
         return ConfigCenterValueDto(
             namespace = namespace,
             active = active_env,
@@ -270,11 +247,20 @@ class JdbcConfigCenterValueService(
     }
 }
 
+private fun ListNamespaces.toDto(): ConfigCenterNamespaceDto {
+    return ConfigCenterNamespaceDto(
+        namespace = namespace,
+        entryCount = entry_count.toInt(),
+    )
+}
+
 private class ConfigCenterJdbcDataSource(
     private val settings: ConfigCenterJdbcSettings,
 ) : DataSource {
     init {
-        settings.driver?.takeIf(String::isNotBlank)?.let(Class::forName)
+        settings.driver?.takeIf(String::isNotBlank)?.let { driverName ->
+            Class.forName(driverName)
+        }
     }
 
     override fun getConnection(): Connection {
@@ -312,7 +298,7 @@ private class ConfigCenterJdbcDataSource(
         return Logger.getLogger("site.addzero.configcenter")
     }
 
-    override fun <T : Any?> unwrap(
+    override fun <T : Any> unwrap(
         iface: Class<T>?,
     ): T {
         throw UnsupportedOperationException("unwrap is not supported")

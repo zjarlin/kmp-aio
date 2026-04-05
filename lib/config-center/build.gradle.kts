@@ -9,6 +9,11 @@ val libs = versionCatalogs.named("libs")
 
 kotlin {
     sourceSets {
+        commonMain {
+            kotlin.srcDir(
+                layout.buildDirectory.dir("generated/sqldelight/code/ConfigCenterDatabase/commonMain"),
+            )
+        }
     }
 }
 

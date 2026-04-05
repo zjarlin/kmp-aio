@@ -44,16 +44,6 @@ fun main(args: Array<String>) {
  */
 fun Application.module( ) {
 
-    installConfigCenterAdminIfEnabled(config)
-    val desktopKoinConfigurer = embeddedDesktopKoinConfigurer
-    val runtimeModules = buildList {
-        add(
-            module {
-                single<ApplicationConfig> { config }
-            },
-        )
-        addAll(overrideModules)
-    }
     installKoin {
         withConfiguration<KCloudServerStarterKoinApplication>()
         desktopKoinConfigurer?.invoke(this)

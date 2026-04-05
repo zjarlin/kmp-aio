@@ -3,8 +3,8 @@ CREATE TABLE config_center_record (
     active_env TEXT NOT NULL,
     config_path TEXT NOT NULL,
     config_value TEXT NOT NULL,
-    create_time BIGINT NOT NULL,
-    update_time BIGINT NOT NULL,
+    create_time INTEGER NOT NULL,
+    update_time INTEGER NOT NULL,
     PRIMARY KEY (namespace, active_env, config_path)
 );
 

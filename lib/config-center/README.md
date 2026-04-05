@@ -3,7 +3,7 @@
 轻量级嵌入式配置中心。现在这套的定位已经比较明确了:
 
 - `site.addzero:config-center`
-  只负责通用契约、`ConfigCenterModule`、JDBC 存储、Koin 运行时装配。
+  只负责通用契约、`CenterConfig`、JDBC 存储、Koin 运行时装配。
 - `lib/ktor/starter/starter-spi`
   负责 Ktor 启动期配置覆盖、管理页、启动公告等 Ktor 适配。
 
@@ -24,7 +24,7 @@
 
 `config-center` 核心模块提供:
 
-- `ConfigCenterModule`
+- `CenterConfig`
 - `ConfigCenterBeanFactory`
 - `ConfigCenterValueService` / `ConfigCenterAdminService`
 - `JdbcConfigCenterValueService`
@@ -42,23 +42,23 @@
 
 推荐模式就是:
 
-- 宿主直接提供一个自己应用的 `ConfigCenterModule` bean
-- 其他地方直接注入 `ConfigCenterModule`
+- 宿主直接提供一个自己应用的 `CenterConfig` bean
+- 其他地方直接注入 `CenterConfig`
 - 如果它是应用根配置，建议 `createdAtStart = true`，让依赖配置的 bean 不会先于它初始化
 
 示例:
 
 ```kotlin
-import site.addzero.configcenter.ConfigCenterModule
+import site.addzero.configcenter.CenterConfig
 import site.addzero.configcenter.ConfigCenterBeanFactory
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 
 @Module
-class ConfigCenterModule {
+class CenterConfig {
     @Single(createdAtStart = true)
     fun provideRuntimeEnv(
-    ): ConfigCenterModule {
+    ): CenterConfig {
         return ConfigCenterBeanFactory.env(
             url = "jdbc:sqlite:./config-center.sqlite",
             namespace = "kcloud",
@@ -72,13 +72,13 @@ class ConfigCenterModule {
 
 ```kotlin
 import site.addzero.configcenter.ConfigCenterBeanFactory
-import site.addzero.configcenter.ConfigCenterModule
+import site.addzero.configcenter.CenterConfig
 import site.addzero.configcenter.ConfigCenterJdbcSettings
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 
 @Module
-class ConfigCenterModule {
+class CenterConfig {
     @Single(createdAtStart = true)
     fun provideJdbcSettings(): ConfigCenterJdbcSettings {
         return ConfigCenterJdbcSettings(
@@ -89,7 +89,7 @@ class ConfigCenterModule {
     @Single(createdAtStart = true)
     fun provideRuntimeEnv(
         jdbcSettings: ConfigCenterJdbcSettings,
-    ): ConfigCenterModule {
+    ): CenterConfig {
         return ConfigCenterBeanFactory.env(
             settings = jdbcSettings,
             namespace = "kcloud",
@@ -103,7 +103,7 @@ class ConfigCenterModule {
 
 ```kotlin
 class DemoSettings(
-    private val env: ConfigCenterModule,
+    private val env: CenterConfig,
 ) {
     val serverHost: String =
         requireNotNull(env.string("server.host")) {
@@ -183,7 +183,7 @@ server.base-url = http://${server.host}:${server.port}
 - 出现循环引用，会直接报错
 - `active` 不是 KSP 期裁剪，运行时按你传入的 `namespace + active` 读取并过滤
 
-虽然 `ConfigCenterModule` 提供了 `boolean`、`list`、`map` 这类读取辅助，但这只是消费侧解析能力，不代表存储层存在独立类型系统。
+虽然 `CenterConfig` 提供了 `boolean`、`list`、`map` 这类读取辅助，但这只是消费侧解析能力，不代表存储层存在独立类型系统。
 
 ## Ktor 现在怎么接
 
@@ -288,7 +288,7 @@ config-center {
 
 - `site.addzero.configcenter.ConfigCenterJdbcSettings`
 - `site.addzero.configcenter.ConfigCenterBeanFactory`
-- `site.addzero.configcenter.ConfigCenterModule`
+- `site.addzero.configcenter.CenterConfig`
 - `site.addzero.configcenter.JdbcConfigCenterValueService`
 - `site.addzero.configcenter.withConfigCenterOverrides`
 - `site.addzero.starter.installConfigCenterAdminIfEnabled`

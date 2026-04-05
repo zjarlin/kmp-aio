@@ -11,16 +11,17 @@ import site.addzero.starter.AppStarter
 import site.addzero.starter.effectiveConfig
 
 @Single
-class BannerStarter : AppStarter<Application> {
+class BannerStarter(val config: BannerConfigSpi) : AppStarter<Application> {
     override val order get() = 30
 
+    override val enable: Boolean
+        get() = config.enable
+
+
     override fun Application.onInstall() {
-        val env = ConfigCenter.getEnv(effectiveConfig()).path("banner")
-        val bannerText = env.string("text", "APP") ?: "APP"
-        val subtitle = env.string("subtitle").orEmpty()
         install(Banner) {
-            this.text = bannerText
-            this.subtitle = subtitle
+            this.text = config.bannerText
+            this.subtitle = config.bannerSubtitle
         }
     }
 }

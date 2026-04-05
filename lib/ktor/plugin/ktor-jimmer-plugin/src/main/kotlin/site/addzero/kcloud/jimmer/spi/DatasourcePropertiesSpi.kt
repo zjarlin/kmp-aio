@@ -1,14 +1,19 @@
 package site.addzero.kcloud.jimmer.spi
 
+data class DatasourceProperties(
+    val name: String,
+    val enabled: Boolean = true,
+    val default: Boolean = false,
+    val url: String,
+    val driverClassName: String
+    val user: String = "",
+    val password: String = "",
+)
+
 /**
- * 数据源属性（从配置中心覆盖后的 datasources.xxx 读取）
+ * 数据源属性 SPI。
+ * app 侧只实现这一份 SPI，插件内部自己处理默认源与扩展源。
  */
 interface DatasourcePropertiesSpi {
-    val default get() = false
-    val url: String
-    get() = "jdbc:sqlite:./config-center.sqlite"
-
-    val driverClassName: String
-    val user: String
-    val password: String
+    fun datasources(): List<DatasourceProperties>
 }

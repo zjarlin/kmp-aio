@@ -15,10 +15,12 @@ import com.google.devtools.ksp.symbol.KSPropertyDeclaration
 import com.squareup.kotlinpoet.FunSpec
 import com.squareup.kotlinpoet.KModifier
 import com.squareup.kotlinpoet.ParameterSpec
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 import com.squareup.kotlinpoet.PropertySpec
 import com.squareup.kotlinpoet.STRING
 import com.squareup.kotlinpoet.TypeSpec
 import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.asClassName
 import com.squareup.kotlinpoet.ksp.writeTo
 import site.addzero.configcenter.ConfigCenterItem
 import site.addzero.configcenter.ConfigCenterNamespace
@@ -90,9 +92,6 @@ private class ConfigCenterKeyProcessor(
             )
 
         items.forEach { item ->
-            if (item.comment != null) {
-                objectBuilder.addKdoc("")
-            }
             val constantBuilder = PropertySpec.builder(item.constantName, STRING)
                 .addModifiers(KModifier.CONST)
                 .initializer("%S", item.key)
@@ -128,12 +127,15 @@ private class ConfigCenterKeyProcessor(
                 FunSpec.builder("materializeTemplate")
                     .addModifiers(KModifier.PRIVATE)
                     .addParameter("template", STRING)
-                    .addParameter("arguments", STRING, KModifier.VARARG)
+                    .addParameter(
+                        "arguments",
+                        Pair::class.asClassName().parameterizedBy(STRING, STRING),
+                        KModifier.VARARG,
+                    )
                     .returns(STRING)
                     .addStatement("var resolved = template")
-                    .beginControlFlow("arguments.forEach { argument ->")
-                    .addStatement("val parts = argument.split('=', limit = 2)")
-                    .addStatement("if (parts.size == 2) resolved = resolved.replace(\"{\${parts[0]}}\", parts[1])")
+                    .beginControlFlow("arguments.forEach { (name, value) ->")
+                    .addStatement("resolved = resolved.replace(\"{\$name}\", value)")
                     .endControlFlow()
                     .addStatement("return resolved")
                     .build(),
