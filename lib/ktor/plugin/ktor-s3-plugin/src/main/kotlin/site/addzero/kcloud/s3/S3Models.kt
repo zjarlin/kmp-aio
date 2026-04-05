@@ -8,6 +8,10 @@ data class S3Config(
     val secretKey: String,
 )
 
+interface S3ConfigSpi{
+
+}
+
 data class S3RuntimeToggle(
     val enabled: Boolean,
 )

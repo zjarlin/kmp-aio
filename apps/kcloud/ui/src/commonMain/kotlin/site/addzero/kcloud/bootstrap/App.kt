@@ -10,9 +10,6 @@ import site.addzero.workbenchshell.spi.scaffolding.ScaffoldingSpi
 @Composable
 fun App() {
     val scaffolding = koinInject<ScaffoldingSpi>() as ScaffoldingImpl
-    remember {
-        configureGeneratedApiProviders()
-    }
     RenderWorkbenchWindow(
         scaffolding = scaffolding,
     )

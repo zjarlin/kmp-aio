@@ -2,6 +2,7 @@ package site.addzero.kcloud.s3
 
 import io.ktor.server.application.*
 import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
@@ -14,7 +15,7 @@ import software.amazon.awssdk.services.s3.S3Client
 import java.net.URI
 
 @Module
-@ComponentScan("site.addzero.kcloud.s3")
+@Configuration
 class S3KoinModule {
     @Single
     fun provideS3Client(config: S3Config): S3Client {
@@ -31,7 +32,6 @@ class S3KoinModule {
 /**
  * S3 自动引导实现类。符合 AppStarter 接口，通过 Koin 自动发现。
  */
-@Named("s3Starter")
 @Single
 class S3Starter : AppStarter<Application> {
     override val order get() = 60

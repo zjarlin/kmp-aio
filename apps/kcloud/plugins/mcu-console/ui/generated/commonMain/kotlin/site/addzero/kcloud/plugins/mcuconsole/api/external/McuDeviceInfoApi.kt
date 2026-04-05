@@ -17,7 +17,7 @@ interface McuDeviceInfoApi {
  * 返回类型: site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
  */
     @GET("/api/mcu/device-info")
-    suspend fun getMcuDeviceInfo(): site.addzero.kcloud.plugins.mcuconsole.McuDeviceInfoResponse
+    suspend fun getMcuDeviceInfo(): McuDeviceInfoResponse
 
 /**
  * pollMcuDeviceInfo
