@@ -1,7 +1,7 @@
 package site.addzero.kcloud.music
 
 import site.addzero.core.network.json.omitNullJson
-import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.Apis
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoTrack
 import site.addzero.kcloud.vibepocket.model.*
@@ -23,7 +23,7 @@ internal suspend fun saveSunoTaskArchive(
     requestJson: String?,
     detail: SunoTaskDetail?,
 ): SunoTaskResourceItem {
-    return ApiProvider.sunoTaskResourceApi.save(
+    return Apis.sunoTaskResourceApi.save(
         buildSunoTaskResourceSaveRequest(
             taskId = taskId,
             fallbackType = fallbackType,
@@ -36,7 +36,7 @@ internal suspend fun saveSunoTaskArchive(
 internal suspend fun persistSunoHistoryIfSuccess(detail: SunoTaskDetail?) {
     val request = detail?.toHistorySaveRequest() ?: return
     runCatching {
-        ApiProvider.historyApi.saveHistory(request)
+        Apis.historyApi.saveHistory(request)
     }
 }
 

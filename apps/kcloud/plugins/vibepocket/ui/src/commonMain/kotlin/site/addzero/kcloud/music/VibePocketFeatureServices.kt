@@ -1,7 +1,7 @@
 package site.addzero.kcloud.music
 
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.Apis
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.api.suno.SunoTrack
 import site.addzero.kcloud.vibepocket.model.ConfigRuntimeInfo
@@ -39,7 +39,7 @@ class DefaultCreativeAssetsService : CreativeAssetsService {
     override suspend fun loadTaskResources(
         onPartialRefresh: (List<SunoTaskResourceItem>) -> Unit,
     ): List<SunoTaskResourceItem> {
-        val loaded = ApiProvider.sunoTaskResourceApi.list()
+        val loaded = Apis.sunoTaskResourceApi.list()
             .map { response -> response.toTaskResourceItem() }
         val runtimeConfig = SunoWorkflowService.loadConfig()
         return if (runtimeConfig.hasToken) {
@@ -96,11 +96,11 @@ interface MusicHistoryService {
 )
 class DefaultMusicHistoryService : MusicHistoryService {
     override suspend fun getHistory(): List<MusicHistoryItem> {
-        return ApiProvider.historyApi.getHistory()
+        return Apis.historyApi.getHistory()
     }
 
     override suspend fun getFavorites(): List<FavoriteItem> {
-        return ApiProvider.favoriteApi.getFavorites()
+        return Apis.favoriteApi.getFavorites()
     }
 
     override suspend fun addFavorite(
@@ -108,7 +108,7 @@ class DefaultMusicHistoryService : MusicHistoryService {
         track: SunoTrack,
         taskId: String,
     ) {
-        ApiProvider.favoriteApi.addFavorite(
+        Apis.favoriteApi.addFavorite(
             FavoriteRequest(
                 trackId = trackId,
                 taskId = taskId,
@@ -124,7 +124,7 @@ class DefaultMusicHistoryService : MusicHistoryService {
     override suspend fun removeFavorite(
         trackId: String,
     ) {
-        ApiProvider.favoriteApi.removeFavorite(trackId)
+        Apis.favoriteApi.removeFavorite(trackId)
     }
 
     override suspend fun getCreditsOrNull(): Int? {
@@ -188,7 +188,7 @@ class DefaultSettingsService : SettingsService {
     }
 
     override suspend fun getRuntimeInfo(): ConfigRuntimeInfo? {
-        return runCatching { ApiProvider.configApi.getRuntimeInfo() }.getOrNull()
+        return runCatching { Apis.configApi.getRuntimeInfo() }.getOrNull()
     }
 }
 

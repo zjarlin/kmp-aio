@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import io.ktor.util.date.*
 import kotlinx.serialization.Serializable
 import site.addzero.core.network.json.json
-import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.Apis
 import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.vibepocket.model.ConfigEntry
 
@@ -202,7 +202,7 @@ private suspend fun persistFormHistory(
     description: String,
     value: String,
 ) {
-    ApiProvider.configApi.updateConfig(
+    Apis.configApi.updateConfig(
         ConfigEntry(
             key = key,
             value = value,

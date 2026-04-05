@@ -4,6 +4,6 @@ internal suspend fun getConfigValueOrNull(
     key: String,
 ): String? {
     return runCatching {
-        ApiProvider.configApi.getConfig(key).value
+        Apis.configApi.getConfig(key).value
     }.getOrNull()
 }

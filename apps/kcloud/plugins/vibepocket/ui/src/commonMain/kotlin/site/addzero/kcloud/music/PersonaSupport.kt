@@ -13,11 +13,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import site.addzero.cupertino.workbench.button.WorkbenchTextButton as TextButton
-import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.Apis
 import site.addzero.kcloud.vibepocket.model.PersonaItem
 
 internal suspend fun loadSavedPersonas(): List<PersonaItem> {
-    return ApiProvider.personaApi.getPersonas()
+    return Apis.personaApi.getPersonas()
         .distinctBy { it.personaId }
         .sortedByDescending { it.createdAt.orEmpty() }
 }

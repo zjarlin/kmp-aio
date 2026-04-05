@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import site.addzero.cupertino.workbench.button.WorkbenchIconButton as IconButton
 import site.addzero.cupertino.workbench.button.WorkbenchOutlinedButton as OutlinedButton
-import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.Apis
 import site.addzero.kcloud.api.suno.SunoTaskDetail
 import site.addzero.kcloud.vibepocket.model.FavoriteRequest
 import site.addzero.kcloud.vibepocket.model.PersonaItem
@@ -64,7 +64,7 @@ fun TaskProgressPanel(
     val tracks = effectiveTaskDetail?.response?.sunoData ?: emptyList()
 
     LaunchedEffect(Unit) {
-        val favorites = ApiProvider.favoriteApi.getFavorites()
+        val favorites = Apis.favoriteApi.getFavorites()
         favorites.forEach { favorite ->
             favoriteSet[favorite.trackId] = true
         }
@@ -259,10 +259,10 @@ fun TaskProgressPanel(
                                     scope.launch {
                                         try {
                                             if (isFavorite) {
-                                                ApiProvider.favoriteApi.removeFavorite(trackId)
+                                                Apis.favoriteApi.removeFavorite(trackId)
                                                 favoriteSet.remove(trackId)
                                             } else {
-                                                ApiProvider.favoriteApi.addFavorite(
+                                                Apis.favoriteApi.addFavorite(
                                                     FavoriteRequest(
                                                         trackId = trackId,
                                                         taskId = effectiveTaskId ?: "",

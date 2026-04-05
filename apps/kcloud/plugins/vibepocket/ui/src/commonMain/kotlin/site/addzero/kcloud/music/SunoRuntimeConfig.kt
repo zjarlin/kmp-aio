@@ -1,6 +1,6 @@
 package site.addzero.kcloud.music
 
-import site.addzero.kcloud.api.ApiProvider
+import site.addzero.kcloud.api.Apis
 import site.addzero.kcloud.api.getConfigValueOrNull
 import site.addzero.kcloud.api.suno.SunoApiClient
 import site.addzero.kcloud.vibepocket.model.ConfigEntry
@@ -73,28 +73,28 @@ suspend fun persistSunoRuntimeConfig(
         .ifBlank { defaultSunoApiBaseUrl }
     val normalizedCallbackUrl = callbackUrl.trim()
 
-    ApiProvider.configApi.updateConfig(
+    Apis.configApi.updateConfig(
         ConfigEntry(
             key = VibepocketConfigKeys.SUNO_API_TOKEN,
             value = normalizedToken,
             description = "Suno API Token",
         )
     )
-    ApiProvider.configApi.updateConfig(
+    Apis.configApi.updateConfig(
         ConfigEntry(
             key = VibepocketConfigKeys.SUNO_API_BASE_URL,
             value = normalizedBaseUrl,
             description = "Suno API Base URL",
         )
     )
-    ApiProvider.configApi.updateConfig(
+    Apis.configApi.updateConfig(
         ConfigEntry(
             key = VibepocketConfigKeys.SUNO_CALLBACK_URL,
             value = normalizedCallbackUrl,
             description = "Suno Callback URL",
         )
     )
-    ApiProvider.configApi.updateConfig(
+    Apis.configApi.updateConfig(
         ConfigEntry(
             key = VibepocketConfigKeys.SUNO_SETUP_COMPLETE,
             value = "true",
