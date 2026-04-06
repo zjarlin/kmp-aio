@@ -6,7 +6,7 @@ plugins {
 val libs = versionCatalogs.named("libs")
 
 dependencies {
-    implementation("com.zaxxer:HikariCP:5.1.0")
+    implementation(libs.findLibrary("hikaricp").get())
     implementation(project(":lib:ktor:starter:starter-spi"))
 //    implementation(libs.findLibrary("io-ktor-ktor-server-core").get())
 //    implementation(libs.findLibrary("io-insert-koin-koin-ktor").get())

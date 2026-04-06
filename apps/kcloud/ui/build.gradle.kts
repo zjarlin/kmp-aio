@@ -34,7 +34,7 @@ kotlin {
 
         implementation("site.addzero:compose-cupertino-workbench:$addzeroLibJvmVersion")
         implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
-        implementation("site.addzero:compose-icon-map:2026.10329.10127")
+        implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
         implementation(project(":apps:kcloud:shared"))
         implementation(libs.findLibrary("site-addzero-network-starter").get())
         implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")

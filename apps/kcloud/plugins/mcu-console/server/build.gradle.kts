@@ -79,7 +79,7 @@ kotlin {
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:tool-stm32-bootloader:$addzeroLibJvmVersion")
-            implementation("site.addzero:tool-serial:2026.04.04")
+            implementation(libs.findLibrary("tool-serial").get())
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())

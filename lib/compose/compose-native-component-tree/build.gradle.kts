@@ -2,15 +2,16 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
 }
+val libs = versionCatalogs.named("libs")
 
 kotlin {
     sourceSets {
         commonMain {
             dependencies {
                 implementation(project(":lib:compose:compose-apple-corner"))
-                implementation("site.addzero:compose-native-component-button:2025.09.30")
-                implementation("site.addzero:compose-native-component-searchbar:2025.09.30")
-                implementation("site.addzero:tool-tree:2026.10330.12238")
+                implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+                implementation(libs.findLibrary("tool-tree").get())
             }
         }
     }

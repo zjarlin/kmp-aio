@@ -7,7 +7,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
 //            implementation("site.addzero:tool:2025.10.07")
-            implementation("site.addzero:compose-model-component:2025.09.30")
+            implementation(libs.findLibrary("site-addzero-compose-model-component").get())
 //            implementation("com.seanproctor:data-table-material3:0.11.4")
 //           implementation("io.github.aleksandar-stefanovic:composematerialdatatable:1.2.1")
             implementation(libs.findLibrary("io-github-vinceglb-filekit-compose").get())

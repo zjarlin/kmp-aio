@@ -1,11 +1,12 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
 }
+val libs = versionCatalogs.named("libs")
 
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation("site.addzero:shadcn-compose-component:2025.09.30")
+            implementation(libs.findLibrary("shadcn-compose-component").get())
         }
     }
 }
