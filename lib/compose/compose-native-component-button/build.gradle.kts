@@ -6,7 +6,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":lib:compose:compose-native-component-high-level"))
+                implementation("site.addzero:compose-native-component-high-level:2025.09.30")
             }
         }
     }

@@ -13,11 +13,11 @@ plugins {
 kotlin {
   sourceSets {
     commonMain.dependencies {
-      implementation(project(":lib:compose:compose-native-component-card"))
-//            implementation(project(":lib:compose:compose-native-component"))
-//            implementation(project(":lib:tool-kmp:tool-json"))
+      implementation("site.addzero:compose-native-component-card:2025.09.30")
+//            implementation("site.addzero:compose-native-component:2025.09.30")
+//            implementation("site.addzero:tool-json:2026.02.04")
       implementation("site.addzero:compose-props-annotations:2025.09.30")
-      api(project(":lib:compose:compose-native-component-table-core"))
+      api("site.addzero:compose-native-component-table-core:2025.09.30")
     }
     jvmTest.dependencies {
       implementation(compose.desktop.currentOs)

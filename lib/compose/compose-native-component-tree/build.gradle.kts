@@ -8,9 +8,9 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(project(":lib:compose:compose-apple-corner"))
-                implementation(project(":lib:compose:compose-native-component-button"))
-                implementation(project(":lib:compose:compose-native-component-searchbar"))
-                implementation(project(":lib:tool-kmp:tool-tree"))
+                implementation("site.addzero:compose-native-component-button:2025.09.30")
+                implementation("site.addzero:compose-native-component-searchbar:2025.09.30")
+                implementation("site.addzero:tool-tree:2026.10330.12238")
             }
         }
     }

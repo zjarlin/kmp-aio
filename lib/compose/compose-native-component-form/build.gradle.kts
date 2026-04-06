@@ -11,12 +11,12 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":lib:kcp:spread-pack:kcp-spread-pack-annotations"))
-                implementation(project(":lib:tool-kmp:tool-enum"))
+                implementation("site.addzero:kcp-spread-pack-annotations:2026.04.04")
+                implementation("site.addzero:tool-enum:2026.02.06")
                 implementation(project(":lib:tool-kmp:tool-regex"))
-                implementation(project(":lib:tool-kmp:tool-str"))
-                implementation(project(":lib:compose:compose-native-component-button"))
-                implementation(project(":lib:compose:compose-native-component-tree"))
+                implementation("site.addzero:tool-str:2026.02.28")
+                implementation("site.addzero:compose-native-component-button:2025.09.30")
+                implementation("site.addzero:compose-native-component-tree:2025.09.30")
             }
         }
     }

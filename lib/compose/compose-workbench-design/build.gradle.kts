@@ -5,7 +5,7 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:compose:shadcn-compose-component"))
+            implementation("site.addzero:shadcn-compose-component:2025.09.30")
         }
     }
 }

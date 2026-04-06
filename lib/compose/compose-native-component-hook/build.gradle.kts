@@ -7,7 +7,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(project(":lib:compose:compose-native-component-autocomplet"))
-            implementation(project(":lib:compose:compose-native-component-select"))
+            implementation("site.addzero:compose-native-component-select:2025.09.30")
         }
     }
 }

@@ -6,7 +6,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             api(project(":lib:compose:app-sidebar"))
-            api(project(":lib:compose:shadcn-compose-component"))
+            api("site.addzero:shadcn-compose-component:2025.09.30")
         }
     }
 }

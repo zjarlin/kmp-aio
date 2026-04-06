@@ -10,7 +10,7 @@ apply(plugin = "site.addzero.kcp.spread-pack")
 kotlin {
     sourceSets {
         commonMain.dependencies {
-            implementation(project(":lib:kcp:spread-pack:kcp-spread-pack-annotations"))
+            implementation("site.addzero:kcp-spread-pack-annotations:2026.04.04")
             implementation(project(":lib:compose:compose-native-component-autocomplet"))
         }
     }

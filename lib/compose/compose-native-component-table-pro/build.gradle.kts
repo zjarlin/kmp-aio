@@ -12,20 +12,20 @@ plugins {
 kotlin {
     sourceSets {
         commonMain.dependencies {
-//            implementation(project(":lib:tool-kmp:tool-json"))
+//            implementation("site.addzero:tool-json:2026.02.04")
             implementation("site.addzero:compose-props-annotations:2025.09.30")
 //            implementation(projects.lib.compose.addzerosearch)
             api(project(":lib:compose:compose-crud-spi"))
-            api(project(":lib:compose:compose-native-component-table"))
-            implementation(project(":lib:compose:compose-native-component-button"))
-            implementation(project(":lib:compose:compose-native-component-searchbar"))
-            implementation(project(":lib:compose:compose-native-component-assist"))
-            implementation(project(":lib:compose:compose-native-component-select"))
-            implementation(project(":lib:compose:compose-native-component-high-level"))
-            implementation(project(":lib:compose:compose-native-component-form"))
-            implementation(project(":lib:compose:compose-native-component-tree"))
-            implementation(project(":lib:compose:compose-native-component-card"))
-//            implementation(project(":lib:tool-kmp:tool-str"))
+            api("site.addzero:compose-native-component-table:2025.09.30")
+            implementation("site.addzero:compose-native-component-button:2025.09.30")
+            implementation("site.addzero:compose-native-component-searchbar:2025.09.30")
+            implementation("site.addzero:compose-native-component-assist:2025.09.30")
+            implementation("site.addzero:compose-native-component-select:2025.09.30")
+            implementation("site.addzero:compose-native-component-high-level:2025.09.30")
+            implementation("site.addzero:compose-native-component-form:2025.09.30")
+            implementation("site.addzero:compose-native-component-tree:2025.09.30")
+            implementation("site.addzero:compose-native-component-card:2025.09.30")
+//            implementation("site.addzero:tool-str:2026.02.28")
 //            implementation(projects.lib.toolKmp.tool)
         }
     }

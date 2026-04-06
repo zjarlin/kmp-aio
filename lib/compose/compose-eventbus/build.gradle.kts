@@ -6,8 +6,8 @@ kotlin {
   sourceSets {
     commonMain.dependencies {
       implementation(project(":lib:compose:compose-native-component-toast"))
-      implementation(project(":lib:tool-kmp:network-starter"))
-      implementation(project(":lib:tool-kmp:tool-koin"))
+      implementation("site.addzero:network-starter:2026.10330.12238")
+      implementation("site.addzero:tool-koin:2025.12.30")
     }
   }
 }

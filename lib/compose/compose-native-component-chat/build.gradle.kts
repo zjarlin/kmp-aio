@@ -6,7 +6,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation(project(":lib:compose:compose-native-component-button"))
+                implementation("site.addzero:compose-native-component-button:2025.09.30")
                 implementation(project(":lib:compose:compose-native-component-text"))
             }
         }
