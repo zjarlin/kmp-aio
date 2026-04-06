@@ -35,6 +35,8 @@ val desktopRuntimeJavaLauncher = javaToolchains.launcherFor {
 
 kotlin {
     dependencies {
+        implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
+
         implementation(project(":lib:compose:compose-cupertino-workbench"))
         implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
         implementation("site.addzero:compose-icon-map:2026.10329.10127")
