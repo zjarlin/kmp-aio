@@ -15,7 +15,9 @@ kotlin {
         commonMain {
             kotlin.srcDir(generatedApiSourceDir)
             dependencies {
-                api(libs.findLibrary("modbus-runtime").get())
+                implementation(libs.findLibrary("modbus-runtime").get())
+//                implementation(libs.findLibrary("modbus-runtime").get())
+//                implementation(libs.findLibrary("modbus-runtime").get())
             }
         }
     }
