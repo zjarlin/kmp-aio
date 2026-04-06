@@ -40,7 +40,7 @@ private class ConfigCenterKeyProcessor(
     private val codeGenerator: CodeGenerator,
     private val logger: KSPLogger,
 ) : SymbolProcessor {
-    private val declarations = linkedSetOf<KSClassDeclaration>()
+    private val generatedDeclarations = linkedSetOf<String>()
 
     override fun process(
         resolver: Resolver,
@@ -48,12 +48,14 @@ private class ConfigCenterKeyProcessor(
         val annotationName = ConfigCenterNamespace::class.qualifiedName.orEmpty()
         resolver.getSymbolsWithAnnotation(annotationName)
             .filterIsInstance<KSClassDeclaration>()
-            .forEach(declarations::add)
+            .forEach { declaration ->
+                val qualifiedName = declaration.qualifiedName?.asString()
+                    ?: declaration.simpleName.asString()
+                if (generatedDeclarations.add(qualifiedName)) {
+                    generateSpec(declaration)
+                }
+            }
         return emptyList()
-    }
-
-    override fun finish() {
-        declarations.forEach(::generateSpec)
     }
 
     private fun generateSpec(

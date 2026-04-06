@@ -44,6 +44,6 @@ class ScaffoldingImpl(
 
     @Composable
     override fun RenderOverlay() {
-        DefaultOverlay()
+        Text("Overlay")
     }
 }

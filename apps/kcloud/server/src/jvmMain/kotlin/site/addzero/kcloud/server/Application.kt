@@ -153,8 +153,9 @@ internal fun loadServerConfig(
             )
         }
     }
-    return HoconApplicationConfig(serverRuntimeOverrides().resolve())
-        .withFallback(baseConfig)
+    return baseConfig.withFallback(
+        HoconApplicationConfig(serverRuntimeOverrides().resolve()),
+    )
 }
 
 private fun loadEmbeddedConfig(

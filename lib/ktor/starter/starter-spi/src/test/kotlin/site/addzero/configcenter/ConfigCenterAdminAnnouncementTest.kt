@@ -50,6 +50,26 @@ class ConfigCenterAdminAnnouncementTest {
     }
 
     @Test
+    fun `build announcement falls back to normalized path when deployment host port missing`() {
+        val applicationConfig = HoconApplicationConfig(
+            ConfigFactory.parseString(
+                """
+                config-center.enabled = true
+                config-center.jdbc.url = "jdbc:sqlite:./config-center.sqlite"
+                config-center.admin.enabled = true
+                config-center.admin.path = "/meta/config"
+                """.trimIndent(),
+            ),
+        )
+
+        val announcement = buildConfigCenterAdminAnnouncement(applicationConfig)
+
+        assertContains(announcement.orEmpty(), "配置中心管理页已启用")
+        assertContains(announcement.orEmpty(), "访问路径：/meta/config")
+        assertContains(announcement.orEmpty(), "未生成绝对访问地址")
+    }
+
+    @Test
     fun `resolve admin link uses configured host and port only`() {
         val applicationConfig = HoconApplicationConfig(
             ConfigFactory.parseString(

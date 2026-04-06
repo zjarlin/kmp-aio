@@ -83,13 +83,9 @@ class ServerKoinApplicationTest {
             config = config,
             active = active,
         )
-        val effectiveConfig = HoconApplicationConfig(
-            serverRuntimeOverrides().resolve(),
-        ).withFallback(
-            config.withConfigCenterOverrides(
-                namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
-                active = active,
-            ),
+        val effectiveConfig = config.withConfigCenterOverrides(
+            namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+            active = active,
         )
         val environment = applicationEnvironment {
             this.config = effectiveConfig

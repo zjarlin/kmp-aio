@@ -13,7 +13,7 @@ import site.addzero.kcloud.server.resolveConfigCenterActive
 import site.addzero.kcloud.server.resolveConfigCenterJdbcSettings
 
 @Module
-class CenterConfig {
+class ConfigCenterModule {
     @Single(createdAtStart = true)
     fun configCenterJdbcSettings(
         config: ApplicationConfig,

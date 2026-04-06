@@ -25,6 +25,10 @@ class FlywayStarter(
             log.warn("No FlywayConfigSpi registered, skipping Flyway starter")
             return
         }
+        if (!configPlan.enabled) {
+            log.info("Flyway starter disabled by config")
+            return
+        }
         val datasources = resolveDatasources(configPlan)
             .filter { it.enabled }
             .filter { it.flywayEnabled }
