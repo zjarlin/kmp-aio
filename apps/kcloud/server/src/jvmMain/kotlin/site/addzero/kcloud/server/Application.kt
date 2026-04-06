@@ -24,9 +24,6 @@ fun main(args: Array<String>) {
  */
 fun Application.module() {
     initKoin()
-//    installKoin {
-//        withConfiguration<KCloudServerStarterKoinApplication>()
-//    }
     runStarters()
     routing {
 //        registerKCloudPluginRoutes()
