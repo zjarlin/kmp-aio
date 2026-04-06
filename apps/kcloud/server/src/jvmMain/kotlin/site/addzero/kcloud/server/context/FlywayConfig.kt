@@ -2,6 +2,7 @@ package site.addzero.kcloud.server.context
 
 import org.koin.core.annotation.Single
 import site.addzero.configcenter.ConfigCenterEnv
+import site.addzero.configcenter.ConfigCenterScopedEnv
 import site.addzero.starter.flyway.FlywayConfigPlan
 import site.addzero.starter.flyway.FlywayConfigSpi
 import site.addzero.starter.flyway.FlywayDatasourcePlan
@@ -25,13 +26,40 @@ class FlywayConfig(
                 password = datasourceEnv.string("password").orEmpty(),
                 driver = datasourceEnv.string("driver").orEmpty(),
                 flywayEnabled = datasourceEnv.child("flyway").boolean("enabled", true) != false,
-                defaults = FlywayDefaults.fromDatasourceEnv(env, name),
+                defaults = datasourceEnv.child("flyway").toFlywayDefaults(),
             )
         }
         return FlywayConfigPlan(
             enabled = env.path("flyway").boolean("enabled", true) != false,
-            defaults = FlywayDefaults.fromGlobalEnv(env),
+            defaults = env.path("flyway").toFlywayDefaults(),
             datasources = datasources,
         )
     }
+}
+
+private fun ConfigCenterScopedEnv.toFlywayDefaults(): FlywayDefaults {
+    return FlywayDefaults(
+        locations = list("locations"),
+        baselineOnMigrate = boolean("baseline-on-migrate", false),
+        baselineVersion = string("baseline-version", "0"),
+        cleanDisabled = boolean("clean-disabled", true),
+        connectRetries = int("connect-retries", 0),
+        group = boolean("group", false),
+        installedBy = string("installed-by"),
+        mixed = boolean("mixed", false),
+        outOfOrder = boolean("out-of-order", false),
+        placeholderReplacement = boolean("placeholder-replacement", true),
+        placeholderPrefix = string("placeholder-prefix", "\${"),
+        placeholderSuffix = string("placeholder-suffix", "}"),
+        placeholders = child("placeholders").map(),
+        schemas = list("schemas"),
+        skipDefaultCallbacks = boolean("skip-default-callbacks", false),
+        skipDefaultResolvers = boolean("skip-default-resolvers", false),
+        sqlMigrationPrefix = string("sql-migration-prefix", "V"),
+        sqlMigrationSeparator = string("sql-migration-separator", "__"),
+        sqlMigrationSuffixes = list("sql-migration-suffixes"),
+        table = string("table", "flyway_schema_history"),
+        target = string("target", "latest"),
+        validateOnMigrate = boolean("validate-on-migrate", true),
+    )
 }

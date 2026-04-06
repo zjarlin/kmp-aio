@@ -3,10 +3,7 @@ package site.addzero.kcloud.plugins.mcuconsole.modbus.device
 import site.addzero.device.protocol.modbus.annotation.ModbusField
 import site.addzero.device.protocol.modbus.model.ModbusCodec
 
-/**
- * 24 路电源灯状态快照。
- */
-data class Device24PowerLights(
+data class Device24PowerLightsRegisters(
     @ModbusField(codec = ModbusCodec.BOOL_COIL, registerOffset = 0)
     val light1: Boolean,
     @ModbusField(codec = ModbusCodec.BOOL_COIL, registerOffset = 1)
@@ -56,32 +53,32 @@ data class Device24PowerLights(
     @ModbusField(codec = ModbusCodec.BOOL_COIL, registerOffset = 23)
     val light24: Boolean,
 ) {
-    fun asList(): List<Boolean> {
-        return listOf(
-            light1,
-            light2,
-            light3,
-            light4,
-            light5,
-            light6,
-            light7,
-            light8,
-            light9,
-            light10,
-            light11,
-            light12,
-            light13,
-            light14,
-            light15,
-            light16,
-            light17,
-            light18,
-            light19,
-            light20,
-            light21,
-            light22,
-            light23,
-            light24,
+    fun toApiModel(): Device24PowerLights {
+        return Device24PowerLights(
+            light1 = light1,
+            light2 = light2,
+            light3 = light3,
+            light4 = light4,
+            light5 = light5,
+            light6 = light6,
+            light7 = light7,
+            light8 = light8,
+            light9 = light9,
+            light10 = light10,
+            light11 = light11,
+            light12 = light12,
+            light13 = light13,
+            light14 = light14,
+            light15 = light15,
+            light16 = light16,
+            light17 = light17,
+            light18 = light18,
+            light19 = light19,
+            light20 = light20,
+            light21 = light21,
+            light22 = light22,
+            light23 = light23,
+            light24 = light24,
         )
     }
 }

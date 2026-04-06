@@ -1,16 +1,13 @@
 package site.addzero.kcloud.plugins.mcuconsole.service
 
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.ConfigCenterBeanFactory
-import site.addzero.kcloud.plugins.mcuconsole.config.McuConsoleConfigKeys
-import site.addzero.kcloud.plugins.system.configcenter.spi.RuntimeConfigCenterActive
+import site.addzero.kcloud.plugins.mcuconsole.spi.McuRuntimeBundleRootDirectorySpi
 import java.io.File
 
 @Single
 class McuRuntimeAssetExtractor(
     private val bundleCatalog: McuRuntimeBundleCatalog,
-    private val configCenterBeanFactory: ConfigCenterBeanFactory,
-    private val runtimeConfigCenterActive: RuntimeConfigCenterActive,
+    private val runtimeBundleRootDirectorySpi: McuRuntimeBundleRootDirectorySpi,
 ) {
     private val classLoader = javaClass.classLoader
 
@@ -98,22 +95,11 @@ class McuRuntimeAssetExtractor(
         artifactFile: File,
     ): String {
         return "运行时包 $bundleId 仍是仓库占位固件，不能直接刷写。请先把真实板卡固件放到 ${artifactFile.absolutePath}，" +
-            "或在配置中心 namespace=${McuConsoleConfigKeys.NAMESPACE} " +
-            "key=${McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR} 配置真实运行时目录。"
+            "或把 ${McuRuntimeBundleRootDirectorySpi::class.simpleName} 指向真实运行时目录。"
     }
 
     private fun resolveRootDirectory(): File {
-        val configured = configCenterBeanFactory.env(
-            namespace = McuConsoleConfigKeys.NAMESPACE,
-            active = runtimeConfigCenterActive.value,
-        ).string(McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR)
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?: error(
-                "配置中心缺少必填项 namespace=${McuConsoleConfigKeys.NAMESPACE} " +
-                    "active=${runtimeConfigCenterActive.value} key=${McuConsoleConfigKeys.RUNTIME_BUNDLE_ROOT_DIR}",
-            )
-        return File(configured).absoluteFile
+        return File(runtimeBundleRootDirectorySpi.rootDirectoryPath).absoluteFile
     }
 
     companion object {

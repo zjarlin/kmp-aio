@@ -99,7 +99,6 @@ kotlin {
         }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation(project(":lib:config-center"))
 //            implementation(project(":apps:kcloud:plugins:system:config-center"))
             implementation(project(":lib:tool-jvm:tool-stm32-bootloader"))
             implementation(project(":lib:tool-jvm:tool-serial"))

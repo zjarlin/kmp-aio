@@ -1,5 +1,4 @@
 plugins {
-    id("site.addzero.buildlogic.jvm.jvm-config-center")
     id("site.addzero.buildlogic.jvm.kotlin-convention")
     id("site.addzero.buildlogic.jvm.jimmer")
     id("site.addzero.buildlogic.jvm.jvm-koin")

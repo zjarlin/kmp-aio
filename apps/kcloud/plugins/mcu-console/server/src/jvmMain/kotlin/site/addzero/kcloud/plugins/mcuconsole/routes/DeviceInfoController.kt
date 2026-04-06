@@ -13,21 +13,15 @@ import site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfo
 @RestController
 @RequestMapping("/device")
 class DeviceInfoController(
-    private val deviceApi: DeviceApi
-){
+    private val deviceApi: DeviceApi,
+) {
     @GetMapping("/getDeviceInfo")
     suspend fun getDeviceInfo(): DeviceRuntimeInfo {
-        val deviceInfo = deviceApi.getDeviceInfo()
-        return deviceInfo
+        return deviceApi.getDeviceInfo().toApiModel()
     }
 
     @GetMapping("/get24PowerLights")
     suspend fun get24PowerLights(): Device24PowerLights {
-        val get24PowerLights = deviceApi.get24PowerLights()
-        return  get24PowerLights
-
+        return deviceApi.get24PowerLights().toApiModel()
     }
-
-
 }
-

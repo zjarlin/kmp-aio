@@ -1,6 +1,6 @@
 plugins {
-    id("site.addzero.buildlogic.jvm.jvm-config-center")
     id("site.addzero.buildlogic.jvm.kotlin-convention")
+    id("site.addzero.buildlogic.jvm.jvm-koin")
 }
 val libs = versionCatalogs.named("libs")
 
@@ -17,6 +17,7 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
+    implementation(project(":lib:config-center"))
     implementation(libs.findLibrary("io-ktor-ktor-server-core").get())
     implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-serialization-json").get())
     implementation(libs.findLibrary("site-addzero-tool-json").get())

@@ -22,7 +22,7 @@ interface DeviceApi {
         address = 0,
         functionCode = ModbusFunctionCode.READ_COILS,
     )
-    suspend fun get24PowerLights(): Device24PowerLights
+    suspend fun get24PowerLights(): Device24PowerLightsRegisters
 
     /**
      * 前端按钮: Modbus 页“读取设备信息”。
@@ -32,5 +32,5 @@ interface DeviceApi {
         address = 100,
         functionCode = ModbusFunctionCode.READ_INPUT_REGISTERS,
     )
-    suspend fun getDeviceInfo(): DeviceRuntimeInfo
+    suspend fun getDeviceInfo(): DeviceRuntimeInfoRegisters
 }
