@@ -5,6 +5,7 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-datetime")
 }
+val libs = versionCatalogs.named("libs")
 
 val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
 val addzeroLibJvmVersion: String by project
@@ -14,7 +15,7 @@ kotlin {
         commonMain {
             kotlin.srcDir(generatedApiSourceDir)
             dependencies {
-                api("site.addzero:modbus-runtime:$addzeroLibJvmVersion")
+                api(libs.findLibrary("modbus-runtime").get())
             }
         }
     }
