@@ -1,8 +1,7 @@
-package site.addzero.kcloud.shell
+package site.addzero.kcloud.shell.spi_impl.sys_stats
 
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single

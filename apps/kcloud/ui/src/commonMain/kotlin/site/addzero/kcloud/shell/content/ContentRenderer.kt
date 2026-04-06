@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.koin.core.annotation.Single
 import site.addzero.generated.RouteTable
-import site.addzero.kcloud.shell.ShellState
+import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 import site.addzero.kcloud.shell.navigation.RouteEntry
 import site.addzero.cupertino.workbench.content.WorkbenchContentSurface

@@ -6,8 +6,9 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
 import site.addzero.cupertino.workbench.scaffolding.RenderCupertinoWorkbenchScaffolding
-import site.addzero.kcloud.shell.ShellState
-import site.addzero.kcloud.theme.Theme
+import site.addzero.cupertino.workbench.theme.CupertinoWorkbenchTheme
+import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
+import site.addzero.kcloud.shell.spi_impl.ScaffoldingImpl
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
 
@@ -24,17 +25,18 @@ fun RenderWorkbenchWindow(
     val uiMetrics = currentWorkbenchMetrics()
     val sidebarVisible = shellState.sidebarVisible
 
-    Theme(
+    CupertinoWorkbenchTheme(
         darkTheme = darkTheme,
-    ) {
-        RenderCupertinoWorkbenchScaffolding(
-            scaffolding = scaffolding,
-            sidebarVisible = sidebarVisible,
-            onSidebarToggle = shellState::toggleSidebar,
-            defaultSidebarRatio = uiMetrics.sidebarRatio,
-            minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
-            maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
-        )
-        scaffolding.RenderOverlay()
-    }
+        content = {
+            RenderCupertinoWorkbenchScaffolding(
+                scaffolding = scaffolding,
+                sidebarVisible = sidebarVisible,
+                onSidebarToggle = shellState::toggleSidebar,
+                defaultSidebarRatio = uiMetrics.sidebarRatio,
+                minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
+                maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
+            )
+            scaffolding.RenderOverlay()
+        },
+    )
 }

@@ -5,7 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.shell.ShellState
+import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 import site.addzero.kcloud.shell.navigation.SidebarNode
 import site.addzero.kcloud.shell.navigation.firstLeafRoutePath

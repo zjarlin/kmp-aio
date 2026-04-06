@@ -2,7 +2,7 @@ package site.addzero.kcloud.shell.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import site.addzero.kcloud.shell.ShellState
+import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
 
 @Composable
 internal fun rememberSelectedRoute(

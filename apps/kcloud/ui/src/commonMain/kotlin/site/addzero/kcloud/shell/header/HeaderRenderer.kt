@@ -3,7 +3,7 @@ package site.addzero.kcloud.shell.header
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.shell.ShellState
+import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 import site.addzero.cupertino.workbench.header.WorkbenchSceneTabs
 import site.addzero.workbenchshell.spi.header.HeaderRender
