@@ -15,8 +15,8 @@ import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
-    id("site.addzero.buildlogic.kmp.cmp-app-cupertino")
-    id("site.addzero.buildlogic.kmp.cmp-wasm")
+    id("site.addzero.buildlogic.kmp.cmp-app")
+//    id("site.addzero.buildlogic.kmp.cmp-wasm")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
@@ -25,43 +25,32 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val addzeroLibJvmVersion: String by project
 val desktopMainClass = "site.addzero.kcloud.bootstrap.MainKt"
 
 kotlin {
     dependencies {
         implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
-
-        implementation("site.addzero:compose-cupertino-workbench:$addzeroLibJvmVersion")
-        implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
-        implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
+        implementation("site.addzero:compose-cupertino-workbench:2026.04.06")
+        implementation("site.addzero:scaffold-spi:2026.04.06")
         implementation(project(":apps:kcloud:shared"))
+        implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
         implementation(libs.findLibrary("site-addzero-network-starter").get())
-        implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+//        implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")
     }
     sourceSets {
         jvmMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
-            implementation(project(":lib:ktor:starter:starter-spi"))
-            implementation("site.addzero:compose-workbench-immersive-desktop:$addzeroLibJvmVersion")
 
-            //后端
             implementation(project(":apps:kcloud:server"))
-            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
-        }
-        jvmTest.dependencies {
-            implementation(project(":apps:kcloud:server"))
-//            implementation(project(":apps:kcloud:plugins:vibepocket:server"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
         }
     }
 }
+//kotlin.jvm().mainRun {
+//    mainClass.set(desktopMainClass)
+//}
 
-kotlin.jvm().mainRun {
-    mainClass.set(desktopMainClass)
-}
 compose.desktop {
     application {
         mainClass = desktopMainClass
