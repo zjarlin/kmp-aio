@@ -1,32 +1,22 @@
 package site.addzero.kcloud.server.context
 
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.ConfigCenterEnv
-import site.addzero.kcloud.s3.S3ConfigKeys
 import site.addzero.kcloud.s3.spi.S3ConfigSpi
 
 @Single
 class S3Config(
-    private val env: ConfigCenterEnv,
+    private val config: ServerContextConfig,
 ) : S3ConfigSpi {
     override val enabled: Boolean
-        get() = env.boolean(S3ConfigKeys.ENABLED, false) == true
+        get() = config.s3.enabled
     override val endpoint: String
-        get() = requiredValue(S3ConfigKeys.ENDPOINT)
+        get() = config.s3.endpoint
     override val region: String
-        get() = requiredValue(S3ConfigKeys.REGION)
+        get() = config.s3.region
     override val bucket: String
-        get() = requiredValue(S3ConfigKeys.BUCKET)
+        get() = config.s3.bucket
     override val accessKey: String
-        get() = env.string(S3ConfigKeys.ACCESS_KEY).orEmpty()
+        get() = config.s3.accessKey
     override val secretKey: String
-        get() = env.string(S3ConfigKeys.SECRET_KEY).orEmpty()
-
-    private fun requiredValue(path: String): String {
-        return env.string(path)
-            ?.trim()
-            ?.takeIf(String::isNotBlank)
-            ?: error("缺少配置 $path")
-    }
+        get() = config.s3.secretKey
 }
-

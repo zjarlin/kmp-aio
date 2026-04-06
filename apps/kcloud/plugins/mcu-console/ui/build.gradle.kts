@@ -45,12 +45,12 @@ kotlin {
             kotlin.srcDir(generatedApiSourceDir)
         }
         commonMain.dependencies {
-            implementation(project(":lib:compose:compose-cupertino-workbench"))
+            implementation(libs.compose.cupertino.workbench)
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
-            implementation(project(":lib:ksp:route:route-core"))
+            implementation(libs.findLibrary("site-addzero-route-core").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
-            implementation(project(":lib:compose:compose-native-component-text"))
+            implementation("site.addzero:compose-native-component-text:$addzeroLibJvmVersion")
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         }
     }

@@ -1,7 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
-    id("site.addzero.buildlogic.kmp.kmp-config-center")
-    id("site.addzero.buildlogic.kmp.cmp-kcloud-aio")
+//    id("site.addzero.buildlogic.kmp.cmp-kcloud-aio")
 }
 
 kotlin {
@@ -9,7 +8,6 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:shared"))
 //            implementation(project(":apps:kcloud:plugins:system:ai-chat:server"))
-            implementation(project(":lib:config-center"))
             implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-koin"))
             implementation(project(":lib:ktor:starter:starter-serialization"))
@@ -20,17 +18,9 @@ kotlin {
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":lib:ktor:plugin:ktor-s3-plugin"))
         }
-        jvmTest.dependencies {
-            implementation(project(":apps:kcloud:plugins:mcu-console"))
-        }
+//        jvmTest.dependencies {
+//            implementation(project(":apps:kcloud:plugins:mcu-console"))
+//        }
     }
 }
-val serverMainClass = "site.addzero.kcloud.server.ApplicationKt"
 
-kotlin.jvm().mainRun {
-    mainClass.set(serverMainClass)
-}
-
-tasks.named<JavaExec>("runJvm") {
-    mainClass.set(serverMainClass)
-}

@@ -7,13 +7,14 @@ plugins {
 }
 
 val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
+val addzeroLibJvmVersion: String by project
 
 kotlin {
     sourceSets {
         commonMain {
             kotlin.srcDir(generatedApiSourceDir)
             dependencies {
-                api(project(":lib:ksp:metadata:modbus:modbus-runtime"))
+                api("site.addzero:modbus-runtime:$addzeroLibJvmVersion")
             }
         }
     }

@@ -1,31 +1,12 @@
 import site.addzero.ksp.modbusrtu.gradle.ModbusRtuExtension
 
 plugins {
-    id("site.addzero.buildlogic.kmp.kmp-core")
-    id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
-    id("site.addzero.buildlogic.kmp.kmp-json-withtool")
-    id("site.addzero.buildlogic.kmp.kmp-koin-core")
-    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
+    id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
+    //rtu ksp生成
     id("site.addzero.ksp.modbus-rtu")
 }
 
 val libs = versionCatalogs.named("libs")
-val localAddzeroLibJvmDir = listOf(
-    rootDir.resolve("../addzero-lib-jvm"),
-    rootDir.resolve("addzero-lib-jvm"),
-).firstOrNull { candidateDir -> candidateDir.resolve("settings.gradle.kts").isFile }
-val localAddzeroLibJvmVersion = localAddzeroLibJvmDir
-    ?.resolve("gradle.properties")
-    ?.takeIf { file -> file.isFile }
-    ?.readLines()
-    ?.firstOrNull { line -> line.startsWith("version=") }
-    ?.substringAfter("=")
-    ?.trim()
-    ?.takeIf(String::isNotBlank)
-val addzeroLibJvmVersion = providers.gradleProperty("addzeroLibJvmVersion")
-    .orElse(localAddzeroLibJvmVersion ?: "2026.04.04")
-    .get()
-val hasLocalAddzeroLibJvm = localAddzeroLibJvmDir != null
 val localJimmerExternalProcessorPom = file(
     System.getProperty("user.home") +
         "/.m2/repository/site/addzero/jimmer-entity-external-processor/$addzeroLibJvmVersion/" +
@@ -48,13 +29,11 @@ val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui")
     .projectDir
     .resolve("src/commonMain/kotlin")
     .absolutePath
-val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jvmMain/kotlin")
+//val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jvmMain/kotlin")
 
 dependencies {
     add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
-    if (hasLocalAddzeroLibJvm) {
-        add("kspJvm", project(":lib:ksp:metadata:jimmer-entity-external-processor"))
-    } else if (localJimmerExternalProcessorPom.isFile) {
+    if (hasLocalAddzeroLibJvm || localJimmerExternalProcessorPom.isFile) {
         add("kspJvm", "site.addzero:jimmer-entity-external-processor:$addzeroLibJvmVersion")
     }
     add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
@@ -94,14 +73,13 @@ configure<ModbusRtuExtension> {
 
 kotlin {
     sourceSets {
-        jvmMain {
-            kotlin.srcDir(generatedJvmRouteSourceDir)
-        }
+//        jvmMain {
+//            kotlin.srcDir(generatedJvmRouteSourceDir)
+//        }
         jvmMain.dependencies {
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
-//            implementation(project(":apps:kcloud:plugins:system:config-center"))
-            implementation(project(":lib:tool-jvm:tool-stm32-bootloader"))
-            implementation(project(":lib:tool-jvm:tool-serial"))
+            implementation("site.addzero:tool-stm32-bootloader:$addzeroLibJvmVersion")
+            implementation("site.addzero:tool-serial:2026.04.04")
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
             implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
@@ -112,8 +90,8 @@ kotlin {
     }
 }
 
-tasks.register("generateRouteApis") {
-    group = "code generation"
-    description = "Generate Ktorfit APIs from Spring-style route sources."
-    dependsOn("kspKotlinJvm")
-}
+//tasks.register("generateRouteApis") {
+//    group = "code generation"
+//    description = "Generate Ktorfit APIs from Spring-style route sources."
+//    dependsOn("kspKotlinJvm")
+//}
