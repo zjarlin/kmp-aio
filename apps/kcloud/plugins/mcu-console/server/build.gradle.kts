@@ -65,7 +65,7 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation("site.addzero:tool-stm32-bootloader:2026.04.06")
+            implementation(libs.findLibrary("tool-stm32-bootloader").get())
             implementation(libs.findLibrary("tool-serial").get())
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())

@@ -30,8 +30,8 @@ val desktopMainClass = "site.addzero.kcloud.bootstrap.MainKt"
 kotlin {
     dependencies {
         implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
-        implementation("site.addzero:compose-cupertino-workbench:2026.04.06")
-        implementation("site.addzero:scaffold-spi:2026.04.06")
+        implementation(libs.findLibrary("compose-cupertino-workbench").get())
+        implementation(libs.findLibrary("scaffold-spi").get())
         implementation(project(":apps:kcloud:shared"))
         implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
         implementation(libs.findLibrary("site-addzero-network-starter").get())

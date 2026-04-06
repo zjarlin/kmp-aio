@@ -32,10 +32,10 @@ kotlin {
     dependencies {
         implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
         implementation(libs.findLibrary("compose-cupertino-workbench").get())
-        implementation("site.addzero:scaffold-spi:2026.04.06")
+        implementation(libs.findLibrary("scaffold-spi").get())
         implementation(libs.findLibrary("site-addzero-route-core").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
-        implementation("site.addzero:compose-native-component-text:2026.04.06")
+        implementation(libs.findLibrary("compose-native-component-text").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
 
     }
