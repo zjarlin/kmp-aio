@@ -1,20 +1,20 @@
 package site.addzero.kcloud.server
 
+import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.ConfigValueFactory
-import io.ktor.server.application.*
-import io.ktor.server.config.*
+import io.ktor.server.application.Application
+import io.ktor.server.config.ApplicationConfig
 import io.ktor.server.config.HoconApplicationConfig
 import io.ktor.server.config.withFallback
-import io.ktor.server.engine.*
 import io.ktor.server.engine.EngineConnectorBuilder
 import io.ktor.server.engine.applicationEnvironment
 import io.ktor.server.engine.embeddedServer
-import io.ktor.server.netty.*
 import io.ktor.server.netty.Netty
-import io.ktor.server.routing.*
+import io.ktor.server.netty.NettyApplicationEngine
+import io.ktor.server.routing.routing
+import org.koin.core.KoinApplication
 import org.koin.dsl.module
-import org.koin.mp.KoinPlatform
 import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.configcenter.ConfigCenterBeanFactory
 import site.addzero.configcenter.ConfigCenterEnv
@@ -22,62 +22,87 @@ import site.addzero.configcenter.ConfigCenterJdbcSettings
 import site.addzero.configcenter.env
 import site.addzero.configcenter.normalizeConfigCenterActive
 import site.addzero.configcenter.withConfigCenterOverrides
+import site.addzero.kcloud.config.AppConfigKeys
+import site.addzero.starter.effectiveConfig
 import site.addzero.starter.installConfigCenterAdminIfEnabled
-import site.addzero.starter.installEffectiveConfig
 import site.addzero.starter.koin.installKoin
 import site.addzero.starter.koin.runStarters
 import java.io.File
 import java.net.ServerSocket
-import org.koin.core.module.Module as KoinModule
 
-/**
- * Server 入口。
- */
-fun main(args: Array<String>) {
-    val env = KoinPlatform.getKoin().get<ConfigCenterEnv>()
-    val active = env.int("server.port")?:throw IllegalArgumentException("server.port is required")
-    embeddedServer(Netty, port = active, module = Application::module).start(wait = true)
+const val KCLOUD_CONFIG_CENTER_NAMESPACE = "kcloud"
+const val VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY = "vibepocket.embedded.desktop.mode"
+
+private const val DEFAULT_CONFIG_CENTER_JDBC_URL = "jdbc:sqlite:./config-center.sqlite"
+
+var embeddedApplicationConfigOverride: ApplicationConfig? = null
+var embeddedDesktopBaseUrl: String? = null
+var embeddedDesktopKoinConfigurer: (KoinApplication.() -> Unit)? = null
+
+fun main(
+    args: Array<String>,
+) {
+    val cliArgs = parseServerCliArgs(args)
+    val config = loadServerConfig(cliArgs.configPath)
+    val active = resolveConfigCenterActive(config)
+    val runtimeSettings = resolveRuntimeSettings(config, active)
+    val effectiveConfig = config.withConfigCenterOverrides(
+        namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
+        active = active,
+    )
+    val serverHost = cliArgs.host ?: runtimeSettings.serverHost
+    val serverPort = cliArgs.port ?: runtimeSettings.serverPort
+    embeddedServer(
+        factory = Netty,
+        environment = applicationEnvironment {
+            this.config = effectiveConfig
+        },
+        configure = {
+            connectors += EngineConnectorBuilder().apply {
+                host = serverHost
+                port = serverPort
+            }
+        },
+        module = Application::module,
+    ).start(wait = true)
 }
 
-/**
- * 由 Ktor 启动配置指定调用。
- */
-fun Application.module( ) {
-
+fun Application.module() {
     installKoin {
         withConfiguration<KCloudServerStarterKoinApplication>()
-        desktopKoinConfigurer?.invoke(this)
-        if (runtimeModules.isNotEmpty()) {
-            modules(runtimeModules)
-        }
+        modules(
+            module {
+                single<ApplicationConfig> { effectiveConfig() }
+            },
+        )
+        embeddedDesktopKoinConfigurer?.invoke(this)
     }
+    installConfigCenterAdminIfEnabled(effectiveConfig())
     runStarters()
     routing {
         registerKCloudPluginRoutes()
     }
 }
 
-/**
- * 桌面端内嵌启动入口（非阻塞），返回 server 实例。
- * 从配置中心读取桌面端内嵌启动参数。
- */
 fun ktorApplication(
     configPath: String? = null,
     host: String? = null,
     port: Int? = null,
-): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+): io.ktor.server.engine.EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val config = loadEmbeddedConfig(configPath)
     val active = resolveConfigCenterActive(config)
-    val runtimeSettings = resolveRuntimeSettings(
-        config = config,
-        active = active,
-    )
-    ensurePortAvailable(runtimeSettings.desktopServerPort)
+    val runtimeSettings = resolveRuntimeSettings(config, active)
+    val desktopServerHost = host ?: runtimeSettings.serverHost
+    val desktopServerPort = port ?: runtimeSettings.desktopServerPort
+    ensurePortAvailable(desktopServerPort)
+
     val desktopPaths = resolveEmbeddedDesktopPaths(runtimeSettings)
     val effectiveConfig = HoconApplicationConfig(
         embeddedDesktopRuntimeOverrides(
             paths = desktopPaths,
             settings = runtimeSettings,
+            serverHost = desktopServerHost,
+            serverPort = desktopServerPort,
         ).withFallback(
             embeddedDesktopOverrides(),
         ).resolve(),
@@ -87,29 +112,67 @@ fun ktorApplication(
             active = active,
         ),
     )
+
     embeddedApplicationConfigOverride = effectiveConfig
-    System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
     embeddedDesktopBaseUrl = buildEmbeddedDesktopBaseUrl(
         publicHost = runtimeSettings.desktopServerPublicHost,
-        port = runtimeSettings.desktopServerPort,
+        port = desktopServerPort,
     )
+    System.setProperty(VIBEPOCKET_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
 
-    val environment = applicationEnvironment {
-        this.config = effectiveConfig
-    }
-
-    val embeddedServer = embeddedServer(
+    return embeddedServer(
         factory = Netty,
-        environment = environment,
+        environment = applicationEnvironment {
+            this.config = effectiveConfig
+        },
         configure = {
             connectors += EngineConnectorBuilder().apply {
-                this.host = runtimeSettings.serverHost
-                this.port = runtimeSettings.desktopServerPort
+                this.host = desktopServerHost
+                this.port = desktopServerPort
             }
         },
         module = Application::module,
     )
-    return embeddedServer
+}
+
+internal fun loadServerConfig(
+    configPath: String? = null,
+): ApplicationConfig {
+    embeddedApplicationConfigOverride?.let { override ->
+        return override
+    }
+    val baseConfig = when {
+        configPath.isNullOrBlank() -> HoconApplicationConfig(ConfigFactory.load())
+        else -> {
+            val file = File(configPath).absoluteFile
+            check(file.isFile) { "找不到 server 配置文件: ${file.absolutePath}" }
+            HoconApplicationConfig(
+                ConfigFactory.parseFile(file)
+                    .withFallback(ConfigFactory.load())
+                    .resolve(),
+            )
+        }
+    }
+    return HoconApplicationConfig(serverRuntimeOverrides().resolve())
+        .withFallback(baseConfig)
+}
+
+private fun loadEmbeddedConfig(
+    configPath: String? = null,
+): ApplicationConfig {
+    return loadServerConfig(configPath)
+}
+
+internal fun serverRuntimeOverrides(): Config {
+    return ConfigFactory.empty()
+        .withValue("config-center.enabled", ConfigValueFactory.fromAnyRef(true))
+        .withValue("config-center.jdbc.url", ConfigValueFactory.fromAnyRef(DEFAULT_CONFIG_CENTER_JDBC_URL))
+        .withValue("config-center.jdbc.auto-ddl", ConfigValueFactory.fromAnyRef(true))
+        .withValue("config-center.admin.enabled", ConfigValueFactory.fromAnyRef(true))
+}
+
+private fun embeddedDesktopOverrides(): Config {
+    return serverRuntimeOverrides()
 }
 
 private fun ensurePortAvailable(
@@ -130,7 +193,6 @@ private fun isPortAvailable(
     }.isSuccess
 }
 
-
 internal fun resolveConfigCenterActive(
     config: ApplicationConfig,
 ): String {
@@ -142,32 +204,84 @@ internal fun resolveConfigCenterActive(
     return normalizeConfigCenterActive(active)
 }
 
+internal fun resolveConfigCenterJdbcSettings(
+    config: ApplicationConfig,
+): ConfigCenterJdbcSettings {
+    val url = config.propertyOrNull("config-center.jdbc.url")
+        ?.getString()
+        ?.trim()
+        ?.takeIf(String::isNotBlank)
+        ?: DEFAULT_CONFIG_CENTER_JDBC_URL
+    return ConfigCenterJdbcSettings(
+        url = url,
+        username = config.propertyOrNull("config-center.jdbc.username")?.getString()
+            ?: config.propertyOrNull("config-center.jdbc.user")?.getString(),
+        password = config.propertyOrNull("config-center.jdbc.password")?.getString(),
+        driver = config.propertyOrNull("config-center.jdbc.driver")?.getString()
+            ?: ConfigCenterJdbcSettings.inferDriver(url),
+        autoDdl = config.propertyOrNull("config-center.jdbc.auto-ddl")
+            ?.getString()
+            ?.trim()
+            ?.lowercase()
+            ?.let { value ->
+                when (value) {
+                    "true" -> true
+                    "false" -> false
+                    else -> null
+                }
+            }
+            ?: true,
+    )
+}
+
 private data class ServerCliArgs(
     val configPath: String? = null,
     val host: String? = null,
     val port: Int? = null,
 )
 
+private fun parseServerCliArgs(
+    args: Array<String>,
+): ServerCliArgs {
+    fun readValue(vararg names: String): String? {
+        return names.asSequence()
+            .mapNotNull { name ->
+                args.firstOrNull { arg -> arg.startsWith("$name=") }
+                    ?.substringAfter('=')
+                    ?.trim()
+                    ?.takeIf(String::isNotBlank)
+            }
+            .firstOrNull()
+    }
+
+    return ServerCliArgs(
+        configPath = readValue("--config", "-config"),
+        host = readValue("--host", "-host"),
+        port = readValue("--port", "-port")?.toIntOrNull(),
+    )
+}
 
 private fun embeddedDesktopRuntimeOverrides(
     paths: EmbeddedDesktopPaths,
     settings: KCloudRuntimeSettings,
-) =
+    serverHost: String,
+    serverPort: Int,
+): Config =
     ConfigFactory.empty()
-        .withValue(AppConfigKeys.SERVER_HOST, ConfigValueFactory.fromAnyRef(settings.serverHost))
-        .withValue(AppConfigKeys.SERVER_PORT, ConfigValueFactory.fromAnyRef(settings.desktopServerPort))
+        .withValue(AppConfigKeys.SERVER_HOST, ConfigValueFactory.fromAnyRef(serverHost))
+        .withValue(AppConfigKeys.SERVER_PORT, ConfigValueFactory.fromAnyRef(serverPort))
         .withValue(
             AppConfigKeys.DESKTOP_SERVER_PUBLIC_HOST,
-            ConfigValueFactory.fromAnyRef(settings.desktopServerPublicHost)
+            ConfigValueFactory.fromAnyRef(settings.desktopServerPublicHost),
         )
-        .withValue(AppConfigKeys.DESKTOP_SERVER_PORT, ConfigValueFactory.fromAnyRef(settings.desktopServerPort))
+        .withValue(AppConfigKeys.DESKTOP_SERVER_PORT, ConfigValueFactory.fromAnyRef(serverPort))
         .withValue(
             AppConfigKeys.DESKTOP_APP_DIRECTORY_NAME,
-            ConfigValueFactory.fromAnyRef(settings.desktopAppDirectoryName)
+            ConfigValueFactory.fromAnyRef(settings.desktopAppDirectoryName),
         )
         .withValue(
             AppConfigKeys.DESKTOP_SQLITE_FILE_NAME,
-            ConfigValueFactory.fromAnyRef(settings.desktopSqliteFileName)
+            ConfigValueFactory.fromAnyRef(settings.desktopSqliteFileName),
         )
         .withValue("banner.text", ConfigValueFactory.fromAnyRef(settings.desktopBannerText))
         .withValue("banner.subtitle", ConfigValueFactory.fromAnyRef(settings.desktopBannerSubtitle))
@@ -175,14 +289,11 @@ private fun embeddedDesktopRuntimeOverrides(
         .withValue("openapi.path", ConfigValueFactory.fromAnyRef(settings.desktopOpenapiPath))
         .withValue("openapi.spec", ConfigValueFactory.fromAnyRef(settings.desktopOpenapiSpec))
         .withValue("flyway.enabled", ConfigValueFactory.fromAnyRef(settings.desktopFlywayEnabled))
+        .withValue("s3.enabled", ConfigValueFactory.fromAnyRef(settings.desktopS3Enabled))
         .withValue(AppConfigKeys.SQLITE_ENABLED, ConfigValueFactory.fromAnyRef(settings.sqliteEnabled))
         .withValue(AppConfigKeys.SQLITE_URL, ConfigValueFactory.fromAnyRef(paths.sqliteJdbcUrl))
-        .withValue(
-            AppConfigKeys.SQLITE_DRIVER,
-            ConfigValueFactory.fromAnyRef(settings.sqliteDriver),
-        )
+        .withValue(AppConfigKeys.SQLITE_DRIVER, ConfigValueFactory.fromAnyRef(settings.sqliteDriver))
         .withValue(AppConfigKeys.POSTGRES_ENABLED, ConfigValueFactory.fromAnyRef(settings.postgresEnabled))
-        .withValue("s3.enabled", ConfigValueFactory.fromAnyRef(settings.desktopS3Enabled))
         .withValue("kcloud.runtime.sqlitePath", ConfigValueFactory.fromAnyRef(paths.sqliteFile.absolutePath))
         .withValue("kcloud.runtime.dataDir", ConfigValueFactory.fromAnyRef(paths.dataDir.absolutePath))
         .withValue("kcloud.runtime.cacheDir", ConfigValueFactory.fromAnyRef(paths.cacheDir.absolutePath))
@@ -220,7 +331,7 @@ internal fun resolveRuntimeSettings(
     active: String,
 ): KCloudRuntimeSettings {
     val env = ConfigCenterBeanFactory.env(
-        settings = ConfigCenterJdbcSettings(),
+        settings = resolveConfigCenterJdbcSettings(config),
         namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
         active = active,
     )
@@ -348,9 +459,9 @@ private fun migrateLegacyDatabaseIfNeeded(
     val legacySource = legacyDatabaseCandidates(sqliteFileName)
         .firstOrNull { candidate ->
             candidate.exists() &&
-                    candidate.isFile &&
-                    candidate.length() > 0L &&
-                    candidate.absolutePath != targetFile.absolutePath
+                candidate.isFile &&
+                candidate.length() > 0L &&
+                candidate.absolutePath != targetFile.absolutePath
         }
         ?: return
 
@@ -384,7 +495,7 @@ private fun legacyDatabaseCandidates(
             add(File(parentDir, "vibepocket.db"))
             add(File(parentDir, "vibepocket-desktop.db"))
         }
-    }.distinctBy { it.absolutePath }
+    }.distinctBy(File::getAbsolutePath)
 }
 
 private fun buildEmbeddedDesktopBaseUrl(

@@ -42,6 +42,12 @@ class ServerKoinApplicationTest {
             ktor {
               environment = "test"
             }
+            config-center {
+              jdbc {
+                url = "jdbc:sqlite:${dbFile.toAbsolutePath()}"
+                auto-ddl = true
+              }
+            }
             banner {
               text = "KCLOUD [TEST]"
               subtitle = "Koin Smoke"
@@ -159,7 +165,7 @@ private fun seedRuntimeConfigCenterValues(
             ConfigCenterValueWriteRequest(
                 namespace = KCLOUD_CONFIG_CENTER_NAMESPACE,
                 active = "test",
-                key = key,
+                path = key,
                 value = value,
             ),
         )

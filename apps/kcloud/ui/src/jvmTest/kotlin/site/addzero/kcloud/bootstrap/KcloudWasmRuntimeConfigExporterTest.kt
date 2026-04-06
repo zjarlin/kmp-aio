@@ -22,7 +22,7 @@ class KcloudWasmRuntimeConfigExporterTest {
             ConfigCenterValueWriteRequest(
                 namespace = "kcloud",
                 active = "dev",
-                key = "frontend.api.baseUrl",
+                path = "frontend.api.baseUrl",
                 value = "https://pages.example.com/api",
             ),
         )

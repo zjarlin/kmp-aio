@@ -3,12 +3,13 @@ package site.addzero.starter.banner
 import io.ktor.server.application.*
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
-import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
-import site.addzero.configcenter.ConfigCenter
 import site.addzero.ktor.banner.Banner
 import site.addzero.starter.AppStarter
-import site.addzero.starter.effectiveConfig
+
+@Module
+@ComponentScan("site.addzero.starter.banner")
+class BannerStarterKoinModule
 
 @Single
 class BannerStarter(val config: BannerConfigSpi) : AppStarter<Application> {

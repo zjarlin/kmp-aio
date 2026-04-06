@@ -1,5 +1,6 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
+    id("site.addzero.buildlogic.kmp.kmp-config-center")
     id("site.addzero.buildlogic.kmp.cmp-kcloud-aio")
 }
 
@@ -24,7 +25,7 @@ kotlin {
         }
     }
 }
-val serverMainClass = "site.addzero.kcloud.ApplicationKt"
+val serverMainClass = "site.addzero.kcloud.server.ApplicationKt"
 
 kotlin.jvm().mainRun {
     mainClass.set(serverMainClass)

@@ -1,6 +1,7 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib-cupertino")
     id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
+    id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-koin")
@@ -49,8 +50,8 @@ kotlin {
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation(project(":lib:ksp:route:route-core"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
+            implementation(project(":lib:compose:compose-native-component-text"))
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
-            implementation(project(":lib:tool-kmp:network-starter"))
         }
     }
 }

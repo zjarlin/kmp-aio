@@ -7,21 +7,60 @@ import org.babyfish.jimmer.sql.dialect.DefaultDialect
 import org.babyfish.jimmer.sql.dialect.Dialect
 import org.babyfish.jimmer.sql.dialect.MySqlDialect
 import org.babyfish.jimmer.sql.dialect.PostgresDialect
+import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
-import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.runtime.AbstractScalarProvider
 import org.babyfish.jimmer.sql.runtime.ConnectionManager.simpleConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
+import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteInstantScalarProvider
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteLocalDateTimeScalarProvider
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.DatasourcePropertiesSpi
 import java.sql.DriverManager
 import javax.sql.DataSource
+
+@Module
+@ComponentScan("site.addzero.kcloud.jimmer")
+class JimmerKoinModule {
+    @Single
+    fun dataSource(
+        datasourcePropertiesSpi: DatasourcePropertiesSpi,
+    ): DataSource {
+        return defaultDatasourceProperties(datasourcePropertiesSpi).toDatasource()
+    }
+
+    @Single
+    fun sqlClient(
+        datasourcePropertiesSpi: DatasourcePropertiesSpi,
+        interceptors: List<DraftInterceptor<*, *>>,
+        scalarProviders: List<AbstractScalarProvider<*, *>>,
+    ): KSqlClient {
+        return defaultDatasourceProperties(datasourcePropertiesSpi).toKsqlClient(
+            interceptors = interceptors,
+            scalarProviders = scalarProviders,
+        )
+    }
+
+    @Single
+    fun sqlClients(
+        datasourcePropertiesSpi: DatasourcePropertiesSpi,
+        interceptors: List<DraftInterceptor<*, *>>,
+        scalarProviders: List<AbstractScalarProvider<*, *>>,
+    ): List<KSqlClient> {
+        return enabledDatasourceProperties(datasourcePropertiesSpi)
+            .filterNot(DatasourceProperties::default)
+            .map { datasource ->
+                datasource.toKsqlClient(
+                    interceptors = interceptors,
+                    scalarProviders = scalarProviders,
+                )
+            }
+    }
+}
 
 internal fun DatasourceProperties.toDatasource(): DataSource {
     require(url.isNotBlank()) { "数据库URL不能为空" }
@@ -134,64 +173,42 @@ internal fun createSqliteDataSource(jdbcUrl: String, driverClassName: String): D
 /**
  * 动态数据源管理器（运行时按 dbType + url 创建临时连接，同样走 SPI）
  */
-@Single
-class DataSourceManager(
-    private val interceptors: List<DraftInterceptor<*, *>>,
-    private val datasourcePropertiesSpi: DatasourcePropertiesSpi,
-    private val scalarProviders: List<AbstractScalarProvider<*, *>>
-) {
-    fun DatasourceProperties.toKsqlClient(): KSqlClient {
-        val url = this.url
-        val guessDialect = guessDialect(url)
-        val toDatasource = this.toDatasource()
-        val newKSqlClient = newKSqlClient {
-            setDialect(guessDialect)
-            interceptors.forEach { addDraftInterceptor(it) }
-            scalarProviders.forEach { addScalarProvider(it) }
-            setDatabaseNamingStrategy(LOWER_CASE)
-
-            if (guessDialect is SQLiteDialect) {
-                addScalarProvider(KoinPlatform.getKoin().get<SqliteInstantScalarProvider>())
-                addScalarProvider(KoinPlatform.getKoin().get<SqliteLocalDateTimeScalarProvider>())
-            }
-            setConnectionManager(simpleConnectionManager(toDatasource))
+private fun DatasourceProperties.toKsqlClient(
+    interceptors: List<DraftInterceptor<*, *>>,
+    scalarProviders: List<AbstractScalarProvider<*, *>>,
+): KSqlClient {
+    val jdbcUrl = url.trim()
+    val dialect = guessDialect(jdbcUrl)
+    val dataSource = toDatasource()
+    val activeScalarProviders = when (dialect) {
+        is SQLiteDialect -> scalarProviders
+        else -> scalarProviders.filterNot { provider ->
+            provider is SqliteInstantScalarProvider || provider is SqliteLocalDateTimeScalarProvider
         }
-        return newKSqlClient
-
     }
-
-    @Single
-    fun dataSource(sqlclient: KSqlClient): DataSource {
-        val toDatasource = defaultDatasourcePropertiesSpi().toDatasource()
-        return toDatasource
+    return newKSqlClient {
+        setDialect(dialect)
+        interceptors.forEach(::addDraftInterceptor)
+        activeScalarProviders.forEach(::addScalarProvider)
+        setDatabaseNamingStrategy(LOWER_CASE)
+        setConnectionManager(simpleConnectionManager(dataSource))
     }
+}
 
+private fun defaultDatasourceProperties(
+    datasourcePropertiesSpi: DatasourcePropertiesSpi,
+): DatasourceProperties {
+    val configured = enabledDatasourceProperties(datasourcePropertiesSpi)
+    return configured.firstOrNull(DatasourceProperties::default)
+        ?: configured.firstOrNull()
+        ?: error("No enabled datasource found, check your DatasourcePropertiesSpi")
+}
 
-    @Single
-    fun sqlClient(): KSqlClient {
-        val toKsqlClient = defaultDatasourcePropertiesSpi().toKsqlClient()
-        return toKsqlClient
-
-    }
-
-    private fun defaultDatasourcePropertiesSpi(): DatasourceProperties {
-        val configured = datasourceProperties()
-        return configured.firstOrNull { it.default }
-            ?: configured.firstOrNull()
-            ?: throw IllegalArgumentException("No enabled datasource found, check your DatasourcePropertiesSpi")
-    }
-
-    @Single
-    fun sqlClients(): List<KSqlClient> {
-        return datasourceProperties()
-            .filterNot { it.default }
-            .map { it.toKsqlClient() }
-    }
-
-    private fun datasourceProperties(): List<DatasourceProperties> {
-        return datasourcePropertiesSpi.datasources()
-            .filter { datasource ->
-                datasource.enabled && datasource.url.isNotBlank()
-            }
-    }
+private fun enabledDatasourceProperties(
+    datasourcePropertiesSpi: DatasourcePropertiesSpi,
+): List<DatasourceProperties> {
+    return datasourcePropertiesSpi.datasources()
+        .filter { datasource ->
+            datasource.enabled && datasource.url.isNotBlank()
+        }
 }
