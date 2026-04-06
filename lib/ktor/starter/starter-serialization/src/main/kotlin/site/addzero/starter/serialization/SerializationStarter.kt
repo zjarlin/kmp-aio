@@ -9,13 +9,15 @@ import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
 import site.addzero.starter.AppStarter
 
-@Module
-@ComponentScan("site.addzero.starter.serialization")
-class SerializationStarterKoinModule
+//@Module
+//@ComponentScan("site.addzero.starter.serialization")
+//class SerializationStarterKoinModule
 
-@Named("serializationStarter")
+//@Named("serializationStarter")
 @Single
 class SerializationStarter : AppStarter<Application> {
+    override val enable: Boolean
+        get() = true
 
     override fun Application.onInstall() {
         install(ContentNegotiation) {

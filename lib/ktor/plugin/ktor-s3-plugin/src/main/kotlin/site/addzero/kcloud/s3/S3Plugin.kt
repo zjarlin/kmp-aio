@@ -35,10 +35,8 @@ class S3KoinModule {
 @Single
 class S3Starter(val s3ConfigSpi: S3ConfigSpi) : AppStarter<Application> {
     override val order get() = 60
-
-    override fun Application.enable(): Boolean {
-        return s3ConfigSpi.enabled
-    }
+    override val enable: Boolean
+        get() = s3ConfigSpi.enabled
 
     override fun Application.onInstall() {
         if (s3ConfigSpi.accessKey.isBlank() || s3ConfigSpi.secretKey.isBlank()) {

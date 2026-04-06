@@ -17,10 +17,8 @@ class FlywayStarter(
     private val configProviders: List<FlywayConfigSpi>,
 ) : AppStarter<Application> {
     override val order = 200
-
-    override fun Application.enable(): Boolean {
-        return resolvePlan()?.enabled ?: false
-    }
+    override val enable: Boolean
+        get() = configProviders.isNotEmpty()
 
     override fun Application.onInstall() {
         val configPlan = resolvePlan() ?: run {

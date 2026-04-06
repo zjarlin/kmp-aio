@@ -9,10 +9,8 @@ import site.addzero.starter.openapi.spi.OpenApiSpi
 
 @Single
 class OpenApiStarter(val spi: OpenApiSpi) : AppStarter<Application> {
-
-    override fun Application.enable(): Boolean {
-        return spi.enabled
-    }
+    override val enable: Boolean
+        get() = spi.enabled
 
     override fun Application.onInstall() {
         routing {

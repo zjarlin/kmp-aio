@@ -11,6 +11,8 @@ class StatusPagesStarterKoinModule
 @Named("statusPagesStarter")
 @Single
 class StatusPagesStarter : AppStarter<Application> {
+    override val enable: Boolean
+        get() = true
 
     override fun Application.onInstall() {
         installDefaultStatusPages()

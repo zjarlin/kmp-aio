@@ -35,7 +35,7 @@ fun Application.runStarters() {
         val koin = app.getKoin()
         val starters = koin
             .getAll<AppStarter<Application>>()
-            .filter { starter -> with(starter) { app.enable() } }
+            .filter { starter -> starter.enable }
             .sortedBy { it.order }
         for (starter in starters) {
             log.info("Installing starter: ${starter::class.simpleName} (order=${starter.order})")

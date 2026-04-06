@@ -5,7 +5,7 @@ data class DatasourceProperties(
     val enabled: Boolean = true,
     val default: Boolean = false,
     val url: String,
-    val driverClassName: String
+    val driverClassName: String,
     val user: String = "",
     val password: String = "",
 )
