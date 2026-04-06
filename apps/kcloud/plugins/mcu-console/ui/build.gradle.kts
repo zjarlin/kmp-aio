@@ -1,10 +1,11 @@
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib-cupertino")
-    id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
+    // id("site.addzero.buildlogic.ksp.ksp-jvm-cache-preparation")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-koin")
+    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
 
 val libs = versionCatalogs.named("libs")

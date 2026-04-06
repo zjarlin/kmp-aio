@@ -3,41 +3,30 @@ import site.addzero.ksp.modbusrtu.gradle.ModbusRtuExtension
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
     //rtu ksp生成
-    id("site.addzero.ksp.modbus-rtu")
+    id("site.addzero.ksp.modbus-rtu") version "+"
 }
 
 val libs = versionCatalogs.named("libs")
-val localJimmerExternalProcessorPom = file(
-    System.getProperty("user.home") +
-        "/.m2/repository/site/addzero/jimmer-entity-external-processor/$addzeroLibJvmVersion/" +
-        "jimmer-entity-external-processor-$addzeroLibJvmVersion.pom",
-)
-val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:ui")
-    .projectDir
-    .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external")
-    .absolutePath
+
+/** Api生成目录 */
+val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:ui") .projectDir .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external") .absolutePath
+
+/** 同构体生成目录 */
 val generatedIsoPackage = "site.addzero.kcloud.plugins.mcuconsole"
-val generatedIsoOutputDir = project(":apps:kcloud:plugins:mcu-console:shared")
-    .projectDir
-    .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole")
-    .absolutePath
-val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared")
-    .projectDir
-    .resolve("src/commonMain/kotlin")
-    .absolutePath
-val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui")
-    .projectDir
-    .resolve("src/commonMain/kotlin")
-    .absolutePath
+
+/** 同构体生成包 */
+val generatedIsoOutputDir = project(":apps:kcloud:plugins:mcu-console:shared") .projectDir .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole") .absolutePath
+
+/** 共享目录 */
+val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared") .projectDir .resolve("src/commonMain/kotlin") .absolutePath
+/** 共享前端目录 */
+val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui") .projectDir .resolve("src/commonMain/kotlin") .absolutePath
 //val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jvmMain/kotlin")
 
+/** 当前server源码目录 */
+val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
+
 dependencies {
-    add("kspJvm", libs.findLibrary("org-babyfish-jimmer-jimmer-ksp").get())
-    if (hasLocalAddzeroLibJvm || localJimmerExternalProcessorPom.isFile) {
-        add("kspJvm", "site.addzero:jimmer-entity-external-processor:$addzeroLibJvmVersion")
-    }
-    add("kspJvm", libs.findLibrary("spring2ktor-server-processor").get())
-    add("kspJvm", libs.findLibrary("site-addzero-controller2api-processor").get())
 }
 
 ksp {
@@ -45,7 +34,8 @@ ksp {
     arg("apiClientOutputDir", generatedApiOutputDir)
     arg("sharedSourceDir", sharedSourceDir)
     arg("sharedComposeSourceDir", sharedComposeSourceDir)
-    arg("backendServerSourceDir", projectDir.resolve("src/jvmMain/kotlin").absolutePath)
+    arg("backendServerSourceDir", backendServerSourceDir)
+
     arg("isomorphicPkg", generatedIsoPackage)
     arg("isomorphicGenDir", generatedIsoOutputDir)
     arg("isomorphicPackageName", generatedIsoPackage)
@@ -73,25 +63,12 @@ configure<ModbusRtuExtension> {
 
 kotlin {
     sourceSets {
-//        jvmMain {
-//            kotlin.srcDir(generatedJvmRouteSourceDir)
-//        }
         jvmMain.dependencies {
-            api(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation("site.addzero:tool-stm32-bootloader:$addzeroLibJvmVersion")
+            implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
+            implementation("site.addzero:tool-stm32-bootloader:2026.04.06")
             implementation(libs.findLibrary("tool-serial").get())
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
-            implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
-            implementation(libs.findLibrary("org-babyfish-jimmer-jimmer-sql-kotlin").get())
             implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
-            implementation(libs.findLibrary("spring2ktor-server-core").get())
-            compileOnly(libs.findLibrary("org-springframework-spring-web").get())
         }
     }
 }
-
-//tasks.register("generateRouteApis") {
-//    group = "code generation"
-//    description = "Generate Ktorfit APIs from Spring-style route sources."
-//    dependsOn("kspKotlinJvm")
-//}
