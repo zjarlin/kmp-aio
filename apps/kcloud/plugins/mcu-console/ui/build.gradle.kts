@@ -45,7 +45,7 @@ kotlin {
             kotlin.srcDir(generatedApiSourceDir)
         }
         commonMain.dependencies {
-            implementation(libs.compose.cupertino.workbench)
+            implementation(libs.findLibrary("compose-cupertino-workbench").get())
             api(project(":apps:kcloud:plugins:mcu-console:shared"))
             implementation("site.addzero:scaffold-spi:$addzeroLibJvmVersion")
             implementation(libs.findLibrary("site-addzero-route-core").get())

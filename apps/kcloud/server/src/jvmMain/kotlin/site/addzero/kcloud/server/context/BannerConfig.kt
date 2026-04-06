@@ -4,15 +4,13 @@ import org.koin.core.annotation.Single
 import site.addzero.starter.banner.BannerConfigSpi
 
 @Single
-class BannerConfig(
-    private val config: ServerContextConfig,
-) : BannerConfigSpi {
+class BannerConfig : BannerConfigSpi {
     override val enable: Boolean
-        get() = config.banner.enabled
+        get() = true
 
     override val bannerText: String
-        get() = config.banner.text
+        get() = "KCLOUD"
 
     override val bannerSubtitle: String
-        get() = config.banner.subtitle
+        get() = "Workbench"
 }

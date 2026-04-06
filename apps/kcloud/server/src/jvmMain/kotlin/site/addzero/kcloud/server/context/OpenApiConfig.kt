@@ -4,15 +4,13 @@ import org.koin.core.annotation.Single
 import site.addzero.starter.openapi.spi.OpenApiSpi
 
 @Single
-class OpenApiConfig(
-    private val config: ServerContextConfig,
-) : OpenApiSpi {
+class OpenApiConfig : OpenApiSpi {
     override val enabled: Boolean
-        get() = config.openApi.enabled
+        get() = false
 
     override val openapiPath: String
-        get() = config.openApi.path
+        get() = "/openapi"
 
     override val openapiSpec: String
-        get() = config.openApi.spec
+        get() = "openapi/documentation.yaml"
 }

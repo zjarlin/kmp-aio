@@ -5,20 +5,27 @@ import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.DatasourcePropertiesSpi
 
 @Single
-class JimmerConfig(
-    private val config: ServerContextConfig,
-) : DatasourcePropertiesSpi {
+class JimmerConfig : DatasourcePropertiesSpi {
     override fun datasources(): List<DatasourceProperties> {
-        return config.datasources.map { datasource ->
+        return listOf(
             DatasourceProperties(
-                name = datasource.name,
-                enabled = datasource.enabled,
-                default = datasource.default,
-                url = datasource.url,
-                driverClassName = datasource.driverClassName,
-                user = datasource.user,
-                password = datasource.password,
-            )
-        }
+                name = "sqlite",
+                enabled = true,
+                default = true,
+                url = serverSqliteJdbcUrl(),
+                driverClassName = "org.sqlite.JDBC",
+                user = "",
+                password = "",
+            ),
+            DatasourceProperties(
+                name = "postgres",
+                enabled = false,
+                default = false,
+                url = "",
+                driverClassName = "org.postgresql.Driver",
+                user = "",
+                password = "",
+            ),
+        )
     }
 }

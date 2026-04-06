@@ -4,19 +4,17 @@ import org.koin.core.annotation.Single
 import site.addzero.kcloud.s3.spi.S3ConfigSpi
 
 @Single
-class S3Config(
-    private val config: ServerContextConfig,
-) : S3ConfigSpi {
+class S3Config : S3ConfigSpi {
     override val enabled: Boolean
-        get() = config.s3.enabled
+        get() = false
     override val endpoint: String
-        get() = config.s3.endpoint
+        get() = "http://127.0.0.1:9000"
     override val region: String
-        get() = config.s3.region
+        get() = "us-east-1"
     override val bucket: String
-        get() = config.s3.bucket
+        get() = "kcloud"
     override val accessKey: String
-        get() = config.s3.accessKey
+        get() = ""
     override val secretKey: String
-        get() = config.s3.secretKey
+        get() = ""
 }

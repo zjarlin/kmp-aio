@@ -17,7 +17,6 @@ tasks.withType<Test>().configureEach {
 }
 
 dependencies {
-    implementation(project(":lib:config-center"))
     implementation(libs.findLibrary("io-ktor-ktor-server-core").get())
     implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-serialization-json").get())
     implementation(libs.findLibrary("site-addzero-tool-json").get())

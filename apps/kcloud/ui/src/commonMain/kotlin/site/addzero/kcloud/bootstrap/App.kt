@@ -12,12 +12,6 @@ import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.window.main.RenderWorkbenchWindow
 import site.addzero.kcloud.window.main.ScaffoldingImpl
 import site.addzero.workbenchshell.spi.scaffolding.ScaffoldingSpi
-@ComponentScan("site.addzero")
-@Module
-class KoinAio
-
-@org.koin.core.annotation.KoinApplication
-class KoinAioApp
 
 @Composable
 fun App() {
@@ -28,12 +22,5 @@ fun App() {
         scaffolding = scaffolding,
     )
 }
-fun initKoin() {
-    val orNull = KoinPlatformTools.defaultContext().getOrNull()
-    if (orNull == null) {
-        startKoin {
-            withConfiguration<KoinAioApp>()
-        }
-    }
-}
+
 
