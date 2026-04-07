@@ -1,12 +1,12 @@
-pluginManagement {
-    repositories {
-        mavenLocal()
-        google()
-        mavenCentral()
-        gradlePluginPortal()
-    }
-    includeBuild("checkouts/build-logic")
-}
+//pluginManagement {
+//    repositories {
+//        mavenLocal()
+//        google()
+//        mavenCentral()
+//        gradlePluginPortal()
+//    }
+//    includeBuild("checkouts/build-logic")
+//}
 
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
