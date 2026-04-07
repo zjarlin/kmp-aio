@@ -14,16 +14,16 @@ import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
 import site.addzero.kcloud.plugins.hostconfig.routes.common.BusinessValidationException
 import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectModbusServerConfigRequest
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectModbusServerConfigResponse
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectMqttConfigRequest
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectMqttConfigResponse
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectUploadOperationResponse
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectUploadRemoteAction
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectUploadRemoteActionRequest
-import site.addzero.kcloud.plugins.hostconfig.routes.config.ProjectUploadRequest
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
