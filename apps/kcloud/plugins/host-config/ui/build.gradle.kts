@@ -35,10 +35,7 @@ val routeOwnerModuleDir =
         .first()
         .absolutePath
 
-//val generateHostConfigUiApis =
-//    project(":apps:kcloud:plugins:host-config:server")
-//        .tasks
-//        .named("kspKotlinJvm")
+val generateHostConfigUiApisTaskPath = ":apps:kcloud:plugins:host-config:server:kspKotlinJvm"
 
 ksp {
     arg("sharedSourceDir", sharedSourceDir)
@@ -64,12 +61,12 @@ kotlin {
     }
 }
 
-//tasks.matching { task ->
-//    task.name in setOf(
-//        "kspCommonMainKotlinMetadata",
-//        "compileCommonMainKotlinMetadata",
-//        "compileKotlinJvm",
-//    )
-//}.configureEach {
-//    dependsOn(generateHostConfigUiApis)
-//}
+tasks.matching { task ->
+    task.name in setOf(
+        "kspCommonMainKotlinMetadata",
+        "compileCommonMainKotlinMetadata",
+        "compileKotlinJvm",
+    )
+}.configureEach {
+    dependsOn(generateHostConfigUiApisTaskPath)
+}

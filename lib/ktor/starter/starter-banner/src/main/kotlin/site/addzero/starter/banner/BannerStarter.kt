@@ -35,11 +35,3 @@ class BannerStarter(val config: BannerConfigSpi) : AppStarter {
     }
 }
 
-@Single
-class BannerStarterTest(val config: BannerConfigSpi) : AppStarterTest {
-    override fun onstart() {
-        println(config)
-    }
-
-
-}

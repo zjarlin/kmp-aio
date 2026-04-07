@@ -56,10 +56,6 @@ fun Application.module() {
 fun Application.runStarters() {
     val app = this
     val koin = KoinPlatform.getKoin()
-    val starterTests = koin.getAll<AppStarterTest>()
-    starterTests.forEach { starter ->
-        log.info("Loaded starter test: ${starter::class.simpleName}")
-    }
     val starters = koin.getAll<AppStarter>()
         .filter { starter -> starter.enable }
         .sortedBy { it.order }

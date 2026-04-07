@@ -30,6 +30,25 @@ val sharedComposeSourceDir =
 /** 当前 server 源码目录。 */
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
 
+val generatedApiFiles =
+    listOf(
+        "CloudAccessApi.kt",
+        "GatewayConfigApi.kt",
+        "ProjectApi.kt",
+        "ProjectUploadApi.kt",
+        "TagApi.kt",
+        "TemplateApi.kt",
+        "ProjectConfigApi.kt",
+    ).map { fileName ->
+        generatedApiOutputDir.file(fileName).asFile
+    } +
+        listOf(
+            generatedApiOutputDir.file("Apis.kt").asFile,
+            generatedApiOutputDir.file("ApisModule.kt").asFile,
+            generatedApiAggregatorOutputDir.file("Apis.kt").asFile,
+            generatedApiAggregatorOutputDir.file("ApisModule.kt").asFile,
+        )
+
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external")
     arg("apiClientOutputDir", generatedApiOutputDir.asFile.absolutePath)
@@ -55,21 +74,12 @@ kotlin {
 }
 
 val cleanHostConfigGeneratedApis by tasks.registering(Delete::class) {
-    delete(
-        generatedApiOutputDir.file("CloudAccessApi.kt").asFile,
-        generatedApiOutputDir.file("GatewayConfigApi.kt").asFile,
-        generatedApiOutputDir.file("ProjectApi.kt").asFile,
-        generatedApiOutputDir.file("ProjectUploadApi.kt").asFile,
-        generatedApiOutputDir.file("TagApi.kt").asFile,
-        generatedApiOutputDir.file("TemplateApi.kt").asFile,
-        generatedApiOutputDir.file("ProjectConfigApi.kt").asFile,
-        generatedApiOutputDir.file("Apis.kt").asFile,
-        generatedApiOutputDir.file("ApisModule.kt").asFile,
-        generatedApiAggregatorOutputDir.file("Apis.kt").asFile,
-        generatedApiAggregatorOutputDir.file("ApisModule.kt").asFile,
-    )
+    delete(generatedApiFiles)
 }
 
-tasks.named("kspKotlinJvm") {
+tasks.matching { task ->
+    task.name == "kspKotlinJvm"
+}.configureEach {
+    outputs.files(generatedApiFiles)
     dependsOn(cleanHostConfigGeneratedApis)
 }
