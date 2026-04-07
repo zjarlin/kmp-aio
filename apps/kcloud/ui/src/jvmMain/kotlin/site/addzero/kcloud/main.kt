@@ -7,7 +7,7 @@ import site.addzero.kcloud.bootstrap.App
 fun main() = application {
     Window(
         onCloseRequest = ::exitApplication,
-        title = "demo",
+        title = "OKMY DICS",
     ) {
         App()
     }
