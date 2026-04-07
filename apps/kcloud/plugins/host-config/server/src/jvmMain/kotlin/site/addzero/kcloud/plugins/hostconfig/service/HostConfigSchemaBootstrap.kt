@@ -18,7 +18,35 @@ class HostConfigSchemaBootstrap(
     init {
         JimmerSqlScriptSupport.executeClasspathSql(
             dataSource = dataSource,
-            resourcePath = "sql/host-config-schema-sqlite.sql",
+            resourcePath = resolveSchemaScript(dataSource),
         )
+    }
+
+    private fun resolveSchemaScript(
+        dataSource: DataSource,
+    ): String {
+        dataSource.connection.use { connection ->
+            val productName = connection.metaData.databaseProductName
+            val jdbcUrl = connection.metaData.url
+
+            return when {
+                productName.contains("sqlite", ignoreCase = true) ||
+                    jdbcUrl.contains(":sqlite:", ignoreCase = true) -> {
+                    "sql/host-config-schema-sqlite.sql"
+                }
+
+                productName.contains("mysql", ignoreCase = true) ||
+                    jdbcUrl.contains(":mysql:", ignoreCase = true) -> {
+                    "sql/host-config-schema-mysql.sql"
+                }
+
+                else -> {
+                    error(
+                        "HostConfigSchemaBootstrap does not support database '$productName' ($jdbcUrl). " +
+                            "Please provide a matching schema script.",
+                    )
+                }
+            }
+        }
     }
 }

@@ -6,6 +6,8 @@ xcuserdata
 !src/**/build/
 local.properties
 .idea
+!.idea/icon.svg
+!.idea/icon_dark.svg
 .DS_Store
 captures
 .externalNativeBuild
@@ -30,3 +32,8 @@ out/
 /.tmp-liquiddemo-run.log
 /.tmp-vibepocket-run.log
 /.vscode
+/apps/kcloud/plugins/mcu-console/ui/.idea/.gitignore
+/apps/kcloud/plugins/mcu-console/ui/.idea/AndroidProjectSystem.xml
+/apps/kcloud/plugins/mcu-console/ui/.idea/gradle.xml
+/apps/kcloud/plugins/mcu-console/ui/.idea/misc.xml
+/apps/kcloud/plugins/mcu-console/ui/.idea/vcs.xml

@@ -1,34 +1,40 @@
 package site.addzero.kcloud.plugins.hostconfig.api.external
 
 import de.jensklingenberg.ktorfit.Ktorfit
+import org.koin.core.annotation.Single
 
 /**
- * host-config 生成 API 的稳定工厂入口。
+ * host-config 外部 API 的 Koin 叶子入口。
  *
- * 这里显式接收 `Ktorfit`，避免旧版聚合器模板把 Koin service locator 藏进生成代码里。
+ * 这里直接把 Ktorfit 代理实例做成 `@Single`，这样根应用只需要广域扫描，
+ * 不需要再显式 include 额外的 provider module。
  */
-object HostConfigApiClients {
-    fun cloudAccessApi(ktorfit: Ktorfit): CloudAccessApi {
-        return ktorfit.createCloudAccessApi()
-    }
+@Single
+class CloudAccessApiClient(
+    ktorfit: Ktorfit,
+) : CloudAccessApi by ktorfit.createCloudAccessApi()
 
-    fun gatewayConfigApi(ktorfit: Ktorfit): GatewayConfigApi {
-        return ktorfit.createGatewayConfigApi()
-    }
+@Single
+class GatewayConfigApiClient(
+    ktorfit: Ktorfit,
+) : GatewayConfigApi by ktorfit.createGatewayConfigApi()
 
-    fun projectApi(ktorfit: Ktorfit): ProjectApi {
-        return ktorfit.createProjectApi()
-    }
+@Single
+class ProjectApiClient(
+    ktorfit: Ktorfit,
+) : ProjectApi by ktorfit.createProjectApi()
 
-    fun projectUploadApi(ktorfit: Ktorfit): ProjectUploadApi {
-        return ktorfit.createProjectUploadApi()
-    }
+@Single
+class ProjectUploadApiClient(
+    ktorfit: Ktorfit,
+) : ProjectUploadApi by ktorfit.createProjectUploadApi()
 
-    fun tagApi(ktorfit: Ktorfit): TagApi {
-        return ktorfit.createTagApi()
-    }
+@Single
+class TagApiClient(
+    ktorfit: Ktorfit,
+) : TagApi by ktorfit.createTagApi()
 
-    fun templateApi(ktorfit: Ktorfit): TemplateApi {
-        return ktorfit.createTemplateApi()
-    }
-}
+@Single
+class TemplateApiClient(
+    ktorfit: Ktorfit,
+) : TemplateApi by ktorfit.createTemplateApi()

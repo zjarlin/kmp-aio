@@ -1,0 +1,43 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">kmp-aio mark</title>
+  <desc id="desc">A modular K-shaped monogram for the kmp-aio repository.</desc>
+  <defs>
+    <linearGradient id="bg" x1="80" y1="64" x2="432" y2="448" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#134E4A"/>
+    </linearGradient>
+    <radialGradient id="glowWarm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(160 156) rotate(54.1623) scale(176.068)">
+      <stop stop-color="#FF6B4A" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#FF6B4A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowCool" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 344) rotate(132.733) scale(214.321)">
+      <stop stop-color="#38BDF8" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#bg)"/>
+  <circle cx="176" cy="160" r="128" fill="url(#glowWarm)"/>
+  <circle cx="352" cy="336" r="144" fill="url(#glowCool)"/>
+
+  <g opacity="0.14" stroke="#F8FAFC" stroke-width="10">
+    <path d="M128 112H208"/>
+    <path d="M128 400H208"/>
+    <path d="M304 112H384"/>
+    <path d="M320 400H384"/>
+  </g>
+
+  <g stroke="#F8FAFC" stroke-width="48" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M152 116V396"/>
+    <path d="M192 256L320 144"/>
+    <path d="M192 256L340 372"/>
+  </g>
+
+  <g>
+    <circle cx="152" cy="116" r="28" fill="#FF6B4A"/>
+    <circle cx="152" cy="396" r="28" fill="#2DD4BF"/>
+    <circle cx="192" cy="256" r="30" fill="#FDBA74"/>
+    <circle cx="320" cy="144" r="28" fill="#38BDF8"/>
+    <circle cx="340" cy="372" r="28" fill="#A3E635"/>
+  </g>
+</svg>

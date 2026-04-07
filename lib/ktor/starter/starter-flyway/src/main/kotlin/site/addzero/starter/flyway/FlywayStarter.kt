@@ -3,30 +3,31 @@ package site.addzero.starter.flyway
 import io.ktor.server.application.*
 import org.flywaydb.core.Flyway
 import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
-import site.addzero.starter.KtorAppStarter
+import site.addzero.starter.AppStarter
 
 @Module
+@Configuration
 @ComponentScan("site.addzero.starter.flyway")
 class FlywayStarterKoinModule
 @Named("flywayStarter")
 @Single
 class FlywayStarter(
     private val configProviders: List<FlywayConfigSpi>,
-) : KtorAppStarter {
+) : AppStarter {
     override val order = 200
     override val enable: Boolean
         get() = configProviders.isNotEmpty()
 
-    override fun Application.onInstall() {
-        val configPlan = resolvePlan() ?: run {
-            log.warn("No FlywayConfigSpi registered, skipping Flyway starter")
+    override fun onInstall(application: Application) {
+        val configPlan = resolvePlan(application) ?: run {
             return
         }
         if (!configPlan.enabled) {
-            log.info("Flyway starter disabled by config")
+            application.log.info("Flyway starter disabled by config")
             return
         }
         val datasources = resolveDatasources(configPlan)
@@ -34,7 +35,7 @@ class FlywayStarter(
             .filter { it.flywayEnabled }
 
         if (datasources.isEmpty()) {
-            log.warn("No datasources configured for Flyway migration")
+            application.log.warn("No datasources configured for Flyway migration")
             return
         }
 
@@ -44,24 +45,25 @@ class FlywayStarter(
         for (ds in datasources) {
             val mergedDefaults = ds.defaults.mergeWith(globalDefaults)
 
-            executeMigration(ds, mergedDefaults)
+            executeMigration(application, ds, mergedDefaults)
         }
     }
 
-    private fun Application.resolvePlan(): FlywayConfigPlan? {
+    private fun resolvePlan(application: Application): FlywayConfigPlan? {
         if (configProviders.isEmpty()) {
+            application.log.warn("No FlywayConfigSpi registered, skipping Flyway starter")
             return null
         }
         val providers = configProviders.sortedBy(FlywayConfigSpi::order)
         if (providers.size > 1) {
-            log.warn(
+            application.log.warn(
                 "Multiple FlywayConfigSpi registered, using ${providers.first()::class.qualifiedName}",
             )
         }
         return providers.first().plan()
     }
 
-    private fun Application.resolveDatasources(
+    private fun resolveDatasources(
         configPlan: FlywayConfigPlan,
     ): List<FlywayDatasourcePlan> {
         val resolved = LinkedHashMap<String, FlywayDatasourcePlan>()
@@ -75,11 +77,12 @@ class FlywayStarter(
         return resolved.values.toList()
     }
 
-    private fun Application.executeMigration(
+    private fun executeMigration(
+        application: Application,
         ds: FlywayDatasourcePlan,
         defaults: FlywayDefaults,
     ) {
-        log.info("Executing Flyway migration for datasource: ${ds.name}")
+        application.log.info("Executing Flyway migration for datasource: ${ds.name}")
 
         val flywayConfig = Flyway.configure()
             .dataSource(ds.url, ds.user, ds.password)
@@ -117,6 +120,6 @@ class FlywayStarter(
         val flyway = flywayConfig.load()
         val result = flyway.migrate()
 
-        log.info("Datasource [${ds.name}] migration completed: ${result.migrationsExecuted} migrations executed")
+        application.log.info("Datasource [${ds.name}] migration completed: ${result.migrationsExecuted} migrations executed")
     }
 }

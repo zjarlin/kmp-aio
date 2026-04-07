@@ -1,0 +1,47 @@
+<svg width="1120" height="320" viewBox="0 0 1120 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">kmp-aio logo</title>
+  <desc id="desc">Horizontal logo for the kmp-aio Kotlin Multiplatform monorepo.</desc>
+  <defs>
+    <linearGradient id="bg" x1="44" y1="32" x2="276" y2="284" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#134E4A"/>
+    </linearGradient>
+    <radialGradient id="glowWarm" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(134 126) rotate(54.1623) scale(128)">
+      <stop stop-color="#FF6B4A" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#FF6B4A" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowCool" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(226 210) rotate(132.733) scale(152)">
+      <stop stop-color="#38BDF8" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#38BDF8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="24" y="24" width="272" height="272" rx="72" fill="url(#bg)"/>
+  <circle cx="136" cy="126" r="94" fill="url(#glowWarm)"/>
+  <circle cx="228" cy="214" r="108" fill="url(#glowCool)"/>
+
+  <g opacity="0.14" stroke="#F8FAFC" stroke-width="8">
+    <path d="M86 84H146"/>
+    <path d="M86 236H146"/>
+    <path d="M208 84H256"/>
+    <path d="M224 236H262"/>
+  </g>
+
+  <g stroke="#F8FAFC" stroke-width="34" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M102 90V230"/>
+    <path d="M132 160L216 94"/>
+    <path d="M132 160L232 238"/>
+  </g>
+
+  <g>
+    <circle cx="102" cy="90" r="20" fill="#FF6B4A"/>
+    <circle cx="102" cy="230" r="20" fill="#2DD4BF"/>
+    <circle cx="132" cy="160" r="22" fill="#FDBA74"/>
+    <circle cx="216" cy="94" r="20" fill="#38BDF8"/>
+    <circle cx="232" cy="238" r="20" fill="#A3E635"/>
+  </g>
+
+  <text x="348" y="144" fill="#0F172A" font-family="'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="96" font-weight="800" letter-spacing="-3">kmp<tspan fill="#FF6B4A">-aio</tspan></text>
+  <text x="350" y="198" fill="#475569" font-family="'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="4">KOTLIN MULTIPLATFORM MONOREPO</text>
+  <text x="350" y="244" fill="#64748B" font-family="'Segoe UI', 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif" font-size="24" font-weight="500">apps • libs • server • shared</text>
+</svg>

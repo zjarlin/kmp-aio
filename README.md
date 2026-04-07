@@ -1,3 +1,5 @@
+![kmp-aio logo](./assets/branding/kmp-aio-logo.svg)
+
 # kmp-aio - Kotlin Multiplatform Monorepo
 
 kmp-aio 是一个基于 Kotlin Multiplatform 的 Monorepo 项目，采用模块化架构，支持快速复制业务模块创建新应用。

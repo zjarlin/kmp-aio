@@ -7,19 +7,8 @@ import org.koin.core.annotation.Module
 import org.koin.core.context.startKoin
 import org.koin.mp.KoinPlatformTools
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.kcloud.jimmer.di.JimmerKoinModule
-import site.addzero.starter.flyway.FlywayStarterKoinModule
-import site.addzero.starter.openapi.OpenApiStarterKoinModule
-import site.addzero.starter.serialization.SerializationStarterKoinModule
 
-@Module(
-    includes = [
-        JimmerKoinModule::class,
-        OpenApiStarterKoinModule::class,
-        SerializationStarterKoinModule::class,
-        FlywayStarterKoinModule::class,
-    ],
-)
+@Module
 @ComponentScan("site.addzero")
 @Configuration
 class KCloudServerModule

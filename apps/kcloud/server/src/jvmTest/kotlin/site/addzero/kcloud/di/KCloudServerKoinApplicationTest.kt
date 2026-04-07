@@ -13,8 +13,8 @@ import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.DatasourcePropertiesSpi
 import site.addzero.kcloud.plugins.hostconfig.service.ProjectService
+import site.addzero.starter.AppStarter
 import site.addzero.starter.banner.BannerStarter
-import site.addzero.starter.KtorAppStarter
 import site.addzero.starter.openapi.OpenApiStarter
 import site.addzero.starter.serialization.SerializationStarter
 import site.addzero.starter.statuspages.StatusPagesStarter
@@ -37,7 +37,7 @@ class KCloudServerKoinApplicationTest {
         }
 
         try {
-            val starters = app.koin.getAll<KtorAppStarter>()
+            val starters = app.koin.getAll<AppStarter>()
 
             assertTrue(starters.any { it is BannerStarter })
             assertTrue(starters.any { it is OpenApiStarter })

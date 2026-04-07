@@ -1,3 +1,7 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
@@ -31,6 +35,11 @@ val routeOwnerModuleDir =
         .first()
         .absolutePath
 
+//val generateHostConfigUiApis =
+//    project(":apps:kcloud:plugins:host-config:server")
+//        .tasks
+//        .named("kspKotlinJvm")
+
 ksp {
     arg("sharedSourceDir", sharedSourceDir)
     arg("routeGenPkg", "site.addzero.generated")
@@ -54,3 +63,13 @@ kotlin {
         implementation(libs.findLibrary("io-github-robinpcrd-cupertino-icons-extended").get())
     }
 }
+
+//tasks.matching { task ->
+//    task.name in setOf(
+//        "kspCommonMainKotlinMetadata",
+//        "compileCommonMainKotlinMetadata",
+//        "compileKotlinJvm",
+//    )
+//}.configureEach {
+//    dependsOn(generateHostConfigUiApis)
+//}

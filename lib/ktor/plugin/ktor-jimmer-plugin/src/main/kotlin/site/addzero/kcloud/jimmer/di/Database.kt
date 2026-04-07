@@ -14,6 +14,7 @@ import org.babyfish.jimmer.sql.runtime.AbstractScalarProvider
 import org.babyfish.jimmer.sql.runtime.ConnectionManager.simpleConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
 import org.koin.core.annotation.ComponentScan
+import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteInstantScalarProvider
@@ -24,7 +25,8 @@ import java.sql.DriverManager
 import javax.sql.DataSource
 
 @Module
-@ComponentScan("site.addzero.kcloud.jimmer")
+@Configuration
+//@ComponentScan("site.addzero.kcloud.jimmer")
 class JimmerKoinModule {
     @Single
     fun dataSource(
