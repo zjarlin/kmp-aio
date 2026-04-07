@@ -7,8 +7,6 @@ import org.koin.core.annotation.Module
 import org.koin.core.context.startKoin
 import org.koin.mp.KoinPlatformTools
 import org.koin.plugin.module.dsl.withConfiguration
-import site.addzero.core.network.HttpClientModule
-import site.addzero.kcloud.plugins.hostconfig.network.HostConfigApiModule
 
 //@Module
 //@ComponentScan("site.addzero")
@@ -17,9 +15,7 @@ import site.addzero.kcloud.plugins.hostconfig.network.HostConfigApiModule
 @Configuration
 class KCloudUiModule
 
-@KoinApplication(
-//    modules = [KCloudUiModule::class, HttpClientModule::class, HostConfigApiModule::class],
-)
+@KoinApplication
 object KCloudUiKoinApplication
 
 fun initUiKoin() {

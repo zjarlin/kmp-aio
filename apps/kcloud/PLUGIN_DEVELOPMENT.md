@@ -138,12 +138,12 @@ Important repo rules:
 - Do not hand-write a parallel set of Ktorfit interfaces for plugin controllers.
 - API file names matter because generated client names derive from controller source names.
 - Emit generated API interfaces into a real UI source root when the UI module needs Ktorfit KSP to process them.
-- A small repo-local fallback aggregator object is acceptable when it only bridges generated `createXxxApi()` extensions into a stable entry point.
+- `controller2api` 的 `koin` 聚合风格应直接生成稳定入口对象和对应的 Koin module，不要再手写一层逐个 `@Single` 透传绑定。
 
 Current `host-config` example:
 
-- Server writes generated interfaces into `apps/kcloud/plugins/host-config/ui/src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
-- UI keeps `Apis.kt` as a stable aggregator over generated `createXxxApi()` functions
+- Server writes generated interfaces and Koin aggregation artifacts into `apps/kcloud/plugins/host-config/ui/src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
+- Generated outputs include `Apis.kt` and `ApisModule.kt`
 
 ## KCloud Frontend Stack
 

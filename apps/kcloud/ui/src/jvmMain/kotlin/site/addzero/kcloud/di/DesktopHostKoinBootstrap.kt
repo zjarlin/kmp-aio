@@ -16,15 +16,7 @@ class JvmUIModule
 /**
  * 桌面宿主把 UI 和内嵌 Ktor server 放在同一个 JVM 时，只启动这一套全局 Koin。
  */
-@KoinApplication(
-//    modules = [
-//        KCloudUiModule::class,
-//        KCloudServerModule::class,
-//        HttpClientModule::class,
-//        HostConfigApiModule::class,
-//        JimmerKoinModule::class,
-//    ],
-)
+@KoinApplication
 object KCloudDesktopHostKoinApplication
 
 fun initDesktopHostKoin() {

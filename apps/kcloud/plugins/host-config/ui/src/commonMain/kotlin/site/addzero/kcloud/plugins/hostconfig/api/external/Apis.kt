@@ -4,11 +4,9 @@ import de.jensklingenberg.ktorfit.Ktorfit
 import org.koin.mp.KoinPlatform
 
 /**
- * Aggregates controller2api-generated Ktorfit interfaces for host-config.
+ * 聚合后的 Ktorfit 服务提供者
  *
- * The upstream processor is expected to generate this object, but we keep a
- * repo-local fallback here so the plugin can compile even when only the
- * interface files are emitted.
+ * 仅聚合 controller2api 生成的接口，不扫描手写接口。
  */
 object Apis {
     private fun ktorfit(): Ktorfit = KoinPlatform.getKoin().get()
