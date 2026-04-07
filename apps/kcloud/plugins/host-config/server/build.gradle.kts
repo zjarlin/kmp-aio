@@ -9,6 +9,13 @@ val generatedApiOutputDir =
         .resolve("src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external")
         .absolutePath
 
+/** API 聚合入口生成目录。 */
+val generatedApiAggregatorOutputDir =
+    project(":apps:kcloud:plugins:host-config:ui")
+        .projectDir
+        .resolve("build/generated/source/controller2api/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external")
+        .absolutePath
+
 /** 共享源码目录。 */
 val sharedSourceDir =
     project(":apps:kcloud:plugins:host-config:shared")
@@ -31,6 +38,7 @@ ksp {
     arg("apiClientOutputDir", generatedApiOutputDir)
     arg("apiClientAggregatorObjectName", "Apis")
     arg("apiClientAggregatorStyle", "koin")
+    arg("apiClientAggregatorOutputDir", generatedApiAggregatorOutputDir)
     arg("sharedSourceDir", sharedSourceDir)
     arg("sharedComposeSourceDir", sharedComposeSourceDir)
     arg("backendServerSourceDir", backendServerSourceDir)
@@ -54,6 +62,7 @@ tasks.matching { task ->
 }.configureEach {
     doFirst {
         val apiOutputDir = file(generatedApiOutputDir)
+        val aggregatorOutputDir = file(generatedApiAggregatorOutputDir)
         listOf(
             "CloudAccessApi.kt",
             "GatewayConfigApi.kt",
@@ -64,6 +73,13 @@ tasks.matching { task ->
             "ProjectConfigApi.kt",
         ).forEach { fileName ->
             delete(apiOutputDir.resolve(fileName))
+        }
+        listOf(
+            "Apis.kt",
+            "ApisModule.kt",
+        ).forEach { fileName ->
+            delete(apiOutputDir.resolve(fileName))
+            delete(aggregatorOutputDir.resolve(fileName))
         }
     }
 }

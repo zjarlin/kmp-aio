@@ -138,12 +138,14 @@ Important repo rules:
 - Do not hand-write a parallel set of Ktorfit interfaces for plugin controllers.
 - API file names matter because generated client names derive from controller source names.
 - Emit generated API interfaces into a real UI source root when the UI module needs Ktorfit KSP to process them.
-- `controller2api` 的 `koin` 聚合风格应直接生成稳定入口对象和对应的 Koin module，不要再手写一层逐个 `@Single` 透传绑定。
+- 当 `controller2api` 同时要产 Ktorfit 接口和 Koin 聚合入口时，优先把接口输出到 `src/commonMain`，把 `Apis.kt` / `ApisModule.kt` 这类聚合入口输出到 UI 模块自己的 `build/generated/...` 并挂进 source set。
+- `controller2api` 的 `koin` 聚合风格应直接生成稳定入口对象，以及同时带 `@Module + @Configuration` 的 Koin module，不要再手写一层逐个 `@Single` 透传绑定。
 
 Current `host-config` example:
 
-- Server writes generated interfaces and Koin aggregation artifacts into `apps/kcloud/plugins/host-config/ui/src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
-- Generated outputs include `Apis.kt` and `ApisModule.kt`
+- Server writes generated interfaces into `apps/kcloud/plugins/host-config/ui/src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
+- Server writes `Apis.kt` and `ApisModule.kt` (`@Module + @Configuration`) into `apps/kcloud/plugins/host-config/ui/build/generated/source/controller2api/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
+- UI module adds `build/generated/source/controller2api/commonMain/kotlin` into `commonMain`
 
 ## KCloud Frontend Stack
 

@@ -7,14 +7,14 @@ import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
 import site.addzero.cupertino.workbench.scaffolding.RenderCupertinoWorkbenchScaffolding
 import site.addzero.cupertino.workbench.theme.CupertinoWorkbenchTheme
-import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
-import site.addzero.kcloud.shell.spi_impl.ScaffoldingImpl
 import site.addzero.kcloud.theme.ShellThemeState
 import site.addzero.kcloud.theme.resolveDarkTheme
+import site.addzero.kcloud.shell.spi_impl.sys_stats.ShellState
+import site.addzero.workbenchshell.spi.scaffolding.ScaffoldingSpi
 
 @Composable
 fun RenderWorkbenchWindow(
-    scaffolding: ScaffoldingImpl,
+    scaffolding: ScaffoldingSpi,
     shellThemeState: ShellThemeState = koinInject(),
     shellState: ShellState = koinInject(),
 ) {

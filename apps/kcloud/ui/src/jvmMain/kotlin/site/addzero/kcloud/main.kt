@@ -5,6 +5,7 @@ package site.addzero.kcloud
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
 import site.addzero.kcloud.bootstrap.App
+import site.addzero.kcloud.bootstrap.UiKoinBootstrapMode
 import site.addzero.kcloud.di.initDesktopHostKoin
 import site.addzero.kcloud.server.startServer
 
@@ -23,7 +24,9 @@ fun main() {
             },
             title = "OKMY DICS",
         ) {
-            App()
+            App(
+                koinBootstrapMode = UiKoinBootstrapMode.AlreadyStarted,
+            )
         }
     }
 }

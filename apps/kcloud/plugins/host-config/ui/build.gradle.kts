@@ -8,6 +8,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
+val generatedApiAggregatorSourceDir = layout.projectDirectory.dir("build/generated/source/controller2api/commonMain/kotlin")
 
 val sharedSourceDir =
     project(":apps:kcloud:shared")
@@ -43,6 +44,12 @@ dependencies {
 }
 
 kotlin {
+    sourceSets {
+        commonMain {
+            kotlin.srcDir(generatedApiAggregatorSourceDir)
+        }
+    }
+
     dependencies {
         implementation(project(":apps:kcloud:shared"))
         implementation(project(":apps:kcloud:plugins:host-config:shared"))
