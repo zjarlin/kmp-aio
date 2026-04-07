@@ -4,19 +4,22 @@ package site.addzero.kcloud
 
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.application
+import io.ktor.server.engine.ApplicationEngine
+import java.net.BindException
 import site.addzero.kcloud.bootstrap.App
 import site.addzero.kcloud.bootstrap.UiKoinBootstrapMode
 import site.addzero.kcloud.di.initDesktopHostKoin
+import site.addzero.kcloud.runtime.KCloudHostRuntime
 import site.addzero.kcloud.server.startServer
 
 fun main() {
     initDesktopHostKoin()
-    val serverEngine = startServer(wait = false)
+    val serverEngine = startServerOrReuseExisting()
 
     application {
         Window(
             onCloseRequest = {
-                serverEngine.stop(
+                serverEngine?.stop(
                     gracePeriodMillis = 1_000,
                     timeoutMillis = 2_000,
                 )
@@ -29,4 +32,31 @@ fun main() {
             )
         }
     }
+}
+
+private fun startServerOrReuseExisting(): ApplicationEngine? {
+    return try {
+        startServer(wait = false)
+    } catch (throwable: Throwable) {
+        if (throwable.hasCause<BindException>()) {
+            println(
+                "Embedded server port ${KCloudHostRuntime.DEFAULT_SERVER_PORT} is already in use; " +
+                    "reusing the existing backend instance.",
+            )
+            null
+        } else {
+            throw throwable
+        }
+    }
+}
+
+private inline fun <reified T : Throwable> Throwable.hasCause(): Boolean {
+    var current: Throwable? = this
+    while (current != null) {
+        if (current is T) {
+            return true
+        }
+        current = current.cause
+    }
+    return false
 }
