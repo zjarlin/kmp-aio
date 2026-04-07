@@ -1,3 +1,7 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
@@ -18,6 +22,9 @@ val routeOwnerModuleDir =
     project(":apps:kcloud:ui").extensions.getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>().sourceSets.getByName(
         "commonMain"
     ).kotlin.srcDirs.first().absolutePath
+dependencies{
+    kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
+}
 
 ksp {
     //route 上下文

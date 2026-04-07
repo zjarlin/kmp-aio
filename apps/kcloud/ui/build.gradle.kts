@@ -29,6 +29,8 @@ val desktopMainClass = "site.addzero.kcloud.bootstrap.MainKt"
 
 kotlin {
     dependencies {
+        implementation(libs.findLibrary("site-addzero-route-core").get())
+
         implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
         implementation(libs.findLibrary("compose-cupertino-workbench").get())
         implementation(libs.findLibrary("scaffold-spi").get())
