@@ -6,11 +6,17 @@
 - 为对应数据源创建默认 `KSqlClient`
 - 暴露 Koin SPI，让消费方补充 schema / bootstrap / 兼容逻辑
 
+当前内置支持的 JDBC 类型有：
+
+- SQLite
+- PostgreSQL
+- MySQL / MariaDB
+
 它不再内置任何业务表结构，也不会自动执行 `autoddl`。
 
 ## What This Library Does Not Own
 
-- 不提供 `schema-sqlite.sql` / `schema-postgres.sql`
+- 不提供 `schema-sqlite.sql` / `schema-postgres.sql` / `schema-mysql.sql`
 - 不声明任何业务表
 - 不决定是否做 `autoddl`
 - 不做业务侧的历史数据修正
@@ -67,7 +73,7 @@ System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
 它会在 `DataSource` 创建完成后、`KSqlClient` 创建前执行，适合做：
 
 - 执行消费方自己的 schema SQL
-- sqlite / postgres 的初始化差异
+- sqlite / postgres / mysql 的初始化差异
 - 历史库兼容修正
 
 如果多个插件都实现了这个 SPI，Koin 会把它们聚合成 `List<JimmerDatasourceBootstrapSpi>`，按 `order` 从小到大执行。
@@ -105,6 +111,13 @@ class MyServerSchemaBootstrapper : JimmerDatasourceBootstrapSpi {
                     resourcePath = "sql/schema-postgres.sql",
                 )
             }
+
+            context.properties.driver.contains("mysql", ignoreCase = true) -> {
+                JimmerSqlScriptSupport.executeClasspathSql(
+                    dataSource = context.dataSource,
+                    resourcePath = "sql/schema-mysql.sql",
+                )
+            }
         }
     }
 }
@@ -127,6 +140,7 @@ class MyServerSchemaBootstrapper : JimmerDatasourceBootstrapSpi {
 ```text
 apps/my-server/src/jvmMain/resources/sql/schema-sqlite.sql
 apps/my-server/src/jvmMain/resources/sql/schema-postgres.sql
+apps/my-server/src/jvmMain/resources/sql/schema-mysql.sql
 ```
 
 如果你希望按业务插件拆分，也可以让每个插件各自提供一个 `JimmerDatasourceBootstrapSpi`，各自执行自己的 SQL 资源。库本身不会合并这些资源，也不会替你做中心注册表。

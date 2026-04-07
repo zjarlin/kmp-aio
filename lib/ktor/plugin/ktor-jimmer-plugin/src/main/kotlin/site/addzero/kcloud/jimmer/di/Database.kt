@@ -76,7 +76,7 @@ internal fun DatasourceProperties.toDatasource(): DataSource {
             )
         }
 
-        isMysq(jdbcUrl) -> {
+        isMySql(jdbcUrl) -> {
             createHikariDataSource(
                 jdbcUrl = jdbcUrl,
                 username = user,
@@ -107,7 +107,7 @@ internal fun DatasourceProperties.toDatasource(): DataSource {
 internal fun guessDialect(jdbcUrl: String): Dialect {
     return when {
         isSqlLite(jdbcUrl) -> SQLiteDialect()
-        isMysq(jdbcUrl) -> MySqlDialect()
+        isMySql(jdbcUrl) -> MySqlDialect()
         isPg(jdbcUrl) -> PostgresDialect()
         else -> DefaultDialect.INSTANCE
     }
@@ -115,7 +115,7 @@ internal fun guessDialect(jdbcUrl: String): Dialect {
 
 internal fun isSqlLite(jdbcUrl: String): Boolean = jdbcUrl.startsWith("jdbc:sqlite:")
 
-internal fun isMysq(jdbcUrl: String): Boolean = jdbcUrl.startsWith("jdbc:mysql:") || jdbcUrl.startsWith("jdbc:mariadb:")
+internal fun isMySql(jdbcUrl: String): Boolean = jdbcUrl.startsWith("jdbc:mysql:") || jdbcUrl.startsWith("jdbc:mariadb:")
 
 internal fun isPg(jdbcUrl: String): Boolean {
     val startsWith = jdbcUrl.startsWith("jdbc:postgresql:")
