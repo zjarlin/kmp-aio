@@ -6,8 +6,6 @@ import site.addzero.kcloud.bootstrap.App
 import site.addzero.kcloud.di.initKoin
 
 fun main() = application {
-
-    initKoin()
     Window(
         onCloseRequest = ::exitApplication,
         title = "OKMY DICS",
