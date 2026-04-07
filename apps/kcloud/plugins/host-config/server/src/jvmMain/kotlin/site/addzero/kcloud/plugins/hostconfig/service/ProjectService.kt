@@ -263,21 +263,23 @@ class ProjectService(
         val current = loadModule(moduleId)
         when {
             request.protocolId != null -> {
-                ensureProtocolExists(request.protocolId)
-                ensureModuleNameUnique(request.protocolId, current.name, moduleId)
-                moveModule(moduleId, current.protocol.id, request.protocolId, request.sortIndex)
+                val targetProtocolId = request.protocolId!!
+                ensureProtocolExists(targetProtocolId)
+                ensureModuleNameUnique(targetProtocolId, current.name, moduleId)
+                moveModule(moduleId, current.protocol.id, targetProtocolId, request.sortIndex)
             }
 
             request.projectId != null -> {
-                ensureProjectExists(request.projectId)
-                val targetProtocolId = resolveProjectProtocolId(request.projectId, current.moduleTemplate.protocolTemplate.id)
+                val targetProjectId = request.projectId!!
+                ensureProjectExists(targetProjectId)
+                val targetProtocolId = resolveProjectProtocolId(targetProjectId, current.moduleTemplate.protocolTemplate.id)
                 ensureModuleNameUnique(targetProtocolId, current.name, moduleId)
                 moveModuleInProjectTree(
                     moduleId = moduleId,
                     currentProtocolId = current.protocol.id,
                     targetProtocolId = targetProtocolId,
                     sourceProjectId = request.sourceProjectId ?: resolveProjectIdByProtocol(current.protocol.id),
-                    targetProjectId = request.projectId,
+                    targetProjectId = targetProjectId,
                     sortIndex = request.sortIndex,
                 )
             }

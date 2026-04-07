@@ -6,8 +6,11 @@ import io.ktor.server.application.install
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import kotlinx.serialization.SerializationException
+import site.addzero.starter.statuspages.spi.StatusPagesSpi
 
-fun Application.installDefaultStatusPages() {
+fun Application.installDefaultStatusPages(
+    contributors: List<StatusPagesSpi> = emptyList(),
+) {
     install(StatusPages) {
         exception<HttpStatusException> { call, cause ->
             call.respond(cause.status, ErrorResponse(cause.status.value, cause.message))
@@ -31,6 +34,11 @@ fun Application.installDefaultStatusPages() {
                 ErrorResponse(500, cause.message ?: "Internal Server Error"),
             )
             call.application.environment.log.error("Unhandled exception: ${cause.message}", cause)
+        }
+        contributors.sortedBy(StatusPagesSpi::order).forEach { contributor ->
+            with(contributor) {
+                configure(this@installDefaultStatusPages)
+            }
         }
     }
 }

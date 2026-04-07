@@ -3,12 +3,12 @@ package site.addzero.kcloud.plugins.hostconfig.service
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
-import org.springframework.stereotype.Service
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
-@Service
+@Single
 class TemplateService(
     private val sql: KSqlClient,
 ) {
@@ -22,9 +22,10 @@ class TemplateService(
     }
 
     fun listProtocolTemplates(): List<TemplateOptionResponse> {
-        return sql.findAll(Fetchers.protocolTemplate) {
+        return sql.createQuery(ProtocolTemplate::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
-        }.filter {
+            select(table.fetch(Fetchers.protocolTemplate))
+        }.execute().filter {
             it.code in SUPPORTED_PROTOCOL_TEMPLATE_CODES
         }.map {
             TemplateOptionResponse(
@@ -56,9 +57,10 @@ class TemplateService(
     }
 
     fun listDeviceTypes(): List<TemplateOptionResponse> {
-        return sql.findAll(Fetchers.deviceType) {
+        return sql.createQuery(DeviceType::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
-        }.map {
+            select(table.fetch(Fetchers.deviceType))
+        }.execute().map {
             TemplateOptionResponse(
                 id = it.id,
                 code = it.code,
@@ -70,9 +72,10 @@ class TemplateService(
     }
 
     fun listRegisterTypes(): List<TemplateOptionResponse> {
-        return sql.findAll(Fetchers.registerType) {
+        return sql.createQuery(RegisterType::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
-        }.map {
+            select(table.fetch(Fetchers.registerType))
+        }.execute().map {
             TemplateOptionResponse(
                 id = it.id,
                 code = it.code,
@@ -84,9 +87,10 @@ class TemplateService(
     }
 
     fun listDataTypes(): List<TemplateOptionResponse> {
-        return sql.findAll(Fetchers.dataType) {
+        return sql.createQuery(DataType::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
-        }.map {
+            select(table.fetch(Fetchers.dataType))
+        }.execute().map {
             TemplateOptionResponse(
                 id = it.id,
                 code = it.code,

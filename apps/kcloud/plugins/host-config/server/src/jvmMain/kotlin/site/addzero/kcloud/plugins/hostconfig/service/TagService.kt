@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
+import java.math.BigDecimal
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
@@ -7,11 +8,10 @@ import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
-import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.hostconfig.api.common.BusinessValidationException
 import site.addzero.kcloud.plugins.hostconfig.api.common.ConflictException
+import site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.api.common.PageResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.ReplaceTagValueTextsRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagCreateRequest
@@ -20,22 +20,19 @@ import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagValueTextResponse
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
-import site.addzero.kcloud.plugins.hostconfig.repository.DeviceRepository
-import site.addzero.kcloud.plugins.hostconfig.repository.TagRepository
-import site.addzero.kcloud.plugins.hostconfig.repository.TagValueTextRepository
 
-@Service
+@Single
 class TagService(
     private val sql: KSqlClient,
-    private val jdbcTemplate: JdbcTemplate,
-    private val deviceRepository: DeviceRepository,
-    private val tagRepository: TagRepository,
-    private val tagValueTextRepository: TagValueTextRepository,
+    private val jdbc: HostConfigJdbc,
 ) {
-
     fun getTag(tagId: Long): TagResponse = loadTag(tagId).toResponse()
 
-    fun listTags(deviceId: Long, offset: Int, size: Int): PageResponse<TagResponse> {
+    fun listTags(
+        deviceId: Long,
+        offset: Int,
+        size: Int,
+    ): PageResponse<TagResponse> {
         ensureDeviceExists(deviceId)
         val safeSize = size.coerceAtLeast(1)
         val safeOffset = offset.coerceAtLeast(0)
@@ -46,11 +43,7 @@ class TagService(
         }
         val total = query.fetchUnlimitedCount()
         val rows = query.limit(safeSize, safeOffset.toLong()).execute()
-        val pages = if (total == 0L) {
-            0
-        } else {
-            ((total + safeSize - 1) / safeSize).toInt()
-        }
+        val pages = if (total == 0L) 0 else ((total + safeSize - 1) / safeSize).toInt()
         return PageResponse(
             d = rows.map { it.toResponse() },
             t = total,
@@ -58,13 +51,24 @@ class TagService(
         )
     }
 
-    @Transactional
-    fun createTag(deviceId: Long, request: TagCreateRequest): TagResponse {
+    fun createTag(
+        deviceId: Long,
+        request: TagCreateRequest,
+    ): TagResponse {
         ensureDeviceExists(deviceId)
         ensureDataTypeExists(request.dataTypeId)
         ensureRegisterTypeExists(request.registerTypeId)
         request.forwardRegisterTypeId?.let(::ensureRegisterTypeExists)
-        validateTagRequest(request.scalingEnabled, request.rawMin != null, request.rawMax != null, request.engMin != null, request.engMax != null, request.forwardEnabled, request.forwardRegisterTypeId, request.forwardRegisterAddress)
+        validateTagRequest(
+            scalingEnabled = request.scalingEnabled,
+            hasRawMin = request.rawMin != null,
+            hasRawMax = request.rawMax != null,
+            hasEngMin = request.engMin != null,
+            hasEngMax = request.engMax != null,
+            forwardEnabled = request.forwardEnabled,
+            forwardRegisterTypeId = request.forwardRegisterTypeId,
+            forwardRegisterAddress = request.forwardRegisterAddress,
+        )
         val name = request.name.trim()
         ensureTagNameUnique(deviceId, name, null)
         ensureTagAddressUnique(deviceId, request.registerTypeId, request.registerAddress, null)
@@ -84,29 +88,40 @@ class TagService(
             this.debounceMs = request.debounceMs
             this.sortIndex = request.sortIndex
             this.scalingEnabled = request.scalingEnabled
-            this.scalingOffset = request.scalingOffset
-            this.rawMin = request.rawMin
-            this.rawMax = request.rawMax
-            this.engMin = request.engMin
-            this.engMax = request.engMax
+            this.scalingOffset = request.scalingOffset.toDecimalOrNull()
+            this.rawMin = request.rawMin.toDecimalOrNull()
+            this.rawMax = request.rawMax.toDecimalOrNull()
+            this.engMin = request.engMin.toDecimalOrNull()
+            this.engMax = request.engMax.toDecimalOrNull()
             this.forwardEnabled = request.forwardEnabled
             this.forwardRegisterAddress = request.forwardRegisterAddress
             this.createdAt = now
             this.updatedAt = now
         }
-        val tag = tagRepository.saveCommand(entity) {
+        val tag = sql.saveCommand(entity) {
             setMode(SaveMode.INSERT_ONLY)
         }.execute().modifiedEntity
         return loadTag(tag.id).toResponse()
     }
 
-    @Transactional
-    fun updateTag(tagId: Long, request: TagUpdateRequest): TagResponse {
+    fun updateTag(
+        tagId: Long,
+        request: TagUpdateRequest,
+    ): TagResponse {
         val current = loadTag(tagId)
         ensureDataTypeExists(request.dataTypeId)
         ensureRegisterTypeExists(request.registerTypeId)
         request.forwardRegisterTypeId?.let(::ensureRegisterTypeExists)
-        validateTagRequest(request.scalingEnabled, request.rawMin != null, request.rawMax != null, request.engMin != null, request.engMax != null, request.forwardEnabled, request.forwardRegisterTypeId, request.forwardRegisterAddress)
+        validateTagRequest(
+            scalingEnabled = request.scalingEnabled,
+            hasRawMin = request.rawMin != null,
+            hasRawMax = request.rawMax != null,
+            hasEngMin = request.engMin != null,
+            hasEngMax = request.engMax != null,
+            forwardEnabled = request.forwardEnabled,
+            forwardRegisterTypeId = request.forwardRegisterTypeId,
+            forwardRegisterAddress = request.forwardRegisterAddress,
+        )
         val name = request.name.trim()
         ensureTagNameUnique(current.device.id, name, tagId)
         ensureTagAddressUnique(current.device.id, request.registerTypeId, request.registerAddress, tagId)
@@ -126,30 +141,32 @@ class TagService(
             this.debounceMs = request.debounceMs
             this.sortIndex = request.sortIndex
             this.scalingEnabled = request.scalingEnabled
-            this.scalingOffset = request.scalingOffset
-            this.rawMin = request.rawMin
-            this.rawMax = request.rawMax
-            this.engMin = request.engMin
-            this.engMax = request.engMax
+            this.scalingOffset = request.scalingOffset.toDecimalOrNull()
+            this.rawMin = request.rawMin.toDecimalOrNull()
+            this.rawMax = request.rawMax.toDecimalOrNull()
+            this.engMin = request.engMin.toDecimalOrNull()
+            this.engMax = request.engMax.toDecimalOrNull()
             this.forwardEnabled = request.forwardEnabled
             this.forwardRegisterAddress = request.forwardRegisterAddress
             this.updatedAt = now()
         }
-        val tag = tagRepository.saveCommand(entity) {
+        sql.saveCommand(entity) {
             setMode(SaveMode.UPDATE_ONLY)
-        }.execute().modifiedEntity
-        return loadTag(tag.id).toResponse()
+        }.execute()
+        return loadTag(tagId).toResponse()
     }
 
-    @Transactional
-    fun replaceValueTexts(tagId: Long, request: ReplaceTagValueTextsRequest): List<TagValueTextResponse> {
+    fun replaceValueTexts(
+        tagId: Long,
+        request: ReplaceTagValueTextsRequest,
+    ): List<TagValueTextResponse> {
         loadTag(tagId)
         sql.createDelete(TagValueText::class) {
             where(table.tag.id eq tagId)
         }.execute()
-        if (request.items.isNotEmpty()) {
-            val now = now()
-            val entities = request.items.map { item ->
+        val now = now()
+        request.items.forEach { item ->
+            sql.saveCommand(
                 new(TagValueText::class).by {
                     this.tagId = tagId
                     this.rawValue = item.rawValue.trim()
@@ -157,17 +174,18 @@ class TagService(
                     this.sortIndex = item.sortIndex
                     this.createdAt = now
                     this.updatedAt = now
-                }
-            }
-            tagValueTextRepository.saveEntitiesCommand(entities) {
+                },
+            ) {
                 setMode(SaveMode.INSERT_ONLY)
             }.execute()
         }
         return loadTag(tagId).toResponse().valueTexts
     }
 
-    @Transactional
-    fun updateTagPosition(tagId: Long, request: TagPositionUpdateRequest): TagResponse {
+    fun updateTagPosition(
+        tagId: Long,
+        request: TagPositionUpdateRequest,
+    ): TagResponse {
         val current = loadTag(tagId)
         ensureDeviceExists(request.deviceId)
         ensureTagNameUnique(request.deviceId, current.name, tagId)
@@ -176,12 +194,9 @@ class TagService(
         return loadTag(tagId).toResponse()
     }
 
-    @Transactional
     fun deleteTag(tagId: Long) {
-        if (!tagRepository.existsById(tagId)) {
-            throw site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException("Tag not found")
-        }
-        jdbcTemplate.update("DELETE FROM tag WHERE id = ?", tagId)
+        loadTag(tagId)
+        jdbc.update("DELETE FROM host_config_tag WHERE id = ?", tagId)
     }
 
     private fun validateTagRequest(
@@ -202,7 +217,11 @@ class TagService(
         }
     }
 
-    private fun ensureTagNameUnique(deviceId: Long, name: String, excludeId: Long?) {
+    private fun ensureTagNameUnique(
+        deviceId: Long,
+        name: String,
+        excludeId: Long?,
+    ) {
         val exists = sql.exists(Tag::class) {
             where(table.device.id eq deviceId)
             where(table.name eq name)
@@ -215,7 +234,12 @@ class TagService(
         }
     }
 
-    private fun ensureTagAddressUnique(deviceId: Long, registerTypeId: Long, registerAddress: Int, excludeId: Long?) {
+    private fun ensureTagAddressUnique(
+        deviceId: Long,
+        registerTypeId: Long,
+        registerAddress: Int,
+        excludeId: Long?,
+    ) {
         val exists = sql.exists(Tag::class) {
             where(table.device.id eq deviceId)
             where(table.registerType.id eq registerTypeId)
@@ -230,8 +254,11 @@ class TagService(
     }
 
     private fun ensureDeviceExists(deviceId: Long) {
-        if (!deviceRepository.existsById(deviceId)) {
-            throw site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException("Device not found")
+        val exists = sql.exists(Device::class) {
+            where(table.id eq deviceId)
+        }
+        if (!exists) {
+            throw NotFoundException("Device not found")
         }
     }
 
@@ -240,7 +267,7 @@ class TagService(
             where(table.id eq dataTypeId)
         }
         if (!exists) {
-            throw site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException("Data type not found")
+            throw NotFoundException("Data type not found")
         }
     }
 
@@ -249,59 +276,76 @@ class TagService(
             where(table.id eq registerTypeId)
         }
         if (!exists) {
-            throw site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException("Register type not found")
+            throw NotFoundException("Register type not found")
         }
     }
 
-    private fun loadTag(tagId: Long): Tag {
-        return tagRepository
-            .findById(tagId, Fetchers.tagDetail)
-            .orElseThrow { site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException("Tag not found") }
-    }
+    private fun loadTag(tagId: Long): Tag =
+        sql.createQuery(Tag::class) {
+            where(table.id eq tagId)
+            select(table.fetch(Fetchers.tagDetail))
+        }.execute().firstOrNull() ?: throw NotFoundException("Tag not found")
 
-    private fun moveTag(tagId: Long, currentDeviceId: Long, targetDeviceId: Long, sortIndex: Int) {
+    private fun moveTag(
+        tagId: Long,
+        currentDeviceId: Long,
+        targetDeviceId: Long,
+        sortIndex: Int,
+    ) {
         if (currentDeviceId == targetDeviceId) {
             val orderedIds = reorderIds(
-                queryIds("SELECT id FROM tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC", currentDeviceId),
+                jdbc.queryIds(
+                    "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
+                    currentDeviceId,
+                ),
                 tagId,
                 sortIndex,
             )
-            batchUpdateSort("UPDATE tag SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
+            batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
             return
         }
 
-        jdbcTemplate.update(
-            "UPDATE tag SET device_id = ?, updated_at = ? WHERE id = ?",
+        jdbc.update(
+            "UPDATE host_config_tag SET device_id = ?, updated_at = ? WHERE id = ?",
             targetDeviceId,
             now(),
             tagId,
         )
-        val oldIds = queryIds("SELECT id FROM tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC", currentDeviceId)
+        val oldIds = jdbc.queryIds(
+            "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
+            currentDeviceId,
+        )
         val newIds = reorderIds(
-            queryIds("SELECT id FROM tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC", targetDeviceId),
+            jdbc.queryIds(
+                "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
+                targetDeviceId,
+            ),
             tagId,
             sortIndex,
         )
-        batchUpdateSort("UPDATE tag SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
-        batchUpdateSort("UPDATE tag SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
+        batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
+        batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
     }
 
-    private fun queryIds(sql: String, vararg args: Any): MutableList<Long> =
-        jdbcTemplate.query(sql, { rs, _ -> rs.getLong(1) }, *args).toMutableList()
-
-    private fun reorderIds(ids: MutableList<Long>, movedId: Long, targetIndex: Int): MutableList<Long> {
+    private fun reorderIds(
+        ids: MutableList<Long>,
+        movedId: Long,
+        targetIndex: Int,
+    ): MutableList<Long> {
         ids.remove(movedId)
         ids.add(targetIndex.coerceIn(0, ids.size), movedId)
         return ids
     }
 
-    private fun batchUpdateSort(sql: String, orderedIds: List<Long>) {
-        if (orderedIds.isEmpty()) {
-            return
-        }
-        val now = now()
-        val batchArgs = orderedIds.mapIndexed { index, id -> arrayOf<Any>(index, now, id) }
-        jdbcTemplate.batchUpdate(sql, batchArgs)
+    private fun batchUpdateSort(
+        sql: String,
+        orderedIds: List<Long>,
+    ) {
+        jdbc.batchUpdateSort(
+            sql = sql,
+            orderedIds = orderedIds,
+            updatedAt = now(),
+        )
     }
 
     private fun Tag.toResponse(): TagResponse =
@@ -323,11 +367,11 @@ class TagService(
             debounceMs = debounceMs,
             sortIndex = sortIndex,
             scalingEnabled = scalingEnabled,
-            scalingOffset = scalingOffset,
-            rawMin = rawMin,
-            rawMax = rawMax,
-            engMin = engMin,
-            engMax = engMax,
+            scalingOffset = scalingOffset.toApiDecimal(),
+            rawMin = rawMin.toApiDecimal(),
+            rawMax = rawMax.toApiDecimal(),
+            engMin = engMin.toApiDecimal(),
+            engMax = engMax.toApiDecimal(),
             forwardEnabled = forwardEnabled,
             forwardRegisterTypeId = forwardRegisterType?.id,
             forwardRegisterTypeCode = forwardRegisterType?.code,
@@ -347,6 +391,12 @@ class TagService(
 
     private fun String?.cleanNullable(): String? =
         this?.trim()?.ifBlank { null }
+
+    private fun String?.toDecimalOrNull(): BigDecimal? =
+        this.cleanNullable()?.toBigDecimalOrNull()
+
+    private fun BigDecimal?.toApiDecimal(): String? =
+        this?.stripTrailingZeros()?.toPlainString()
 
     private fun now(): Long = System.currentTimeMillis()
 }

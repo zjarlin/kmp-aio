@@ -313,7 +313,6 @@ private data class SceneMeta(
 )
 
 private fun Screen.resolveSceneMeta(): SceneMeta {
-    val sceneName = normalizeSceneName(sceneName.trim())
     if (sceneName.isBlank()) {
         return SceneMeta(
             id = UNASSIGNED_SCENE_ID,
@@ -328,15 +327,6 @@ private fun Screen.resolveSceneMeta(): SceneMeta {
         iconName = sceneIcon.ifBlank { "Apps" },
         sort = sceneOrder,
     )
-}
-
-private fun normalizeSceneName(
-    sceneName: String,
-): String {
-    return when (sceneName) {
-        "物联网上位机" -> "物联网"
-        else -> sceneName
-    }
 }
 
 private fun Screen.resolveParentName(): String {

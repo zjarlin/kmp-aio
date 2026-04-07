@@ -9,9 +9,18 @@ class JimmerConfig : DatasourcePropertiesSpi {
     override fun datasources(): List<DatasourceProperties> {
         return listOf(
             DatasourceProperties(
-                name = "sqlite",
+                name = "mysql",
                 enabled = true,
                 default = true,
+                url = "jdbc:mysql://192.168.31.133:3306/mysql",
+                driverClassName = "com.mysql.cj.jdbc.Driver",
+                user = "root",
+                password = "test123456",
+            ),
+            DatasourceProperties(
+                name = "sqlite",
+                enabled = false,
+                default = false,
                 url = serverSqliteJdbcUrl(),
                 driverClassName = "org.sqlite.JDBC",
                 user = "",

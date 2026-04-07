@@ -19,9 +19,11 @@ class ScaffoldingImpl(private val contributors: List<WorkbenchTopBarActionContri
     override val pageTitle = "KCloud"
     override val brandLabel = "OKMY DICS"
 
-    /**
+//    /**
+//     [旗帜位] 顶栏最左边的一小块，像门头招牌，通常放品牌名或产品身份。
+//     */
+
     // [旗帜位] 顶栏最左边的一小块，像门头招牌，通常放品牌名或产品身份。
-     */
     @Composable
     override fun RowScope.RenderBrand() {
         Column(
@@ -47,12 +49,12 @@ class ScaffoldingImpl(private val contributors: List<WorkbenchTopBarActionContri
 //            Render()
 //        }
     }
-
     /**
     // [浮层位] 悬在主页面上方的一层，像舞台上方吊着的幕布，通常放弹窗、助手面板、全局覆盖层。
      */
+
     @Composable
     override fun RenderOverlay() {
-        Text("Overlay")
+//        Text("Overlay")
     }
 }

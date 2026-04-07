@@ -14,11 +14,7 @@ import site.addzero.kcloud.shell.navigation.resolveSelectedId
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.workbenchshell.spi.sidebar.SidebarRender
 
-@Single(
-    binds = [
-        SidebarRender::class,
-    ],
-)
+@Single
 class SidebarRenderer(
     private val routeCatalog: RouteCatalog,
     private val shellState: ShellState,

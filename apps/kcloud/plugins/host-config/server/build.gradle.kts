@@ -6,7 +6,7 @@ plugins {
 val generatedApiOutputDir =
     project(":apps:kcloud:plugins:host-config:ui")
         .projectDir
-        .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external")
+        .resolve("src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external")
         .absolutePath
 
 /** 共享源码目录。 */
@@ -29,9 +29,14 @@ val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePa
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external")
     arg("apiClientOutputDir", generatedApiOutputDir)
+    arg("apiClientAggregatorObjectName", "Apis")
+    arg("apiClientAggregatorStyle", "koin")
     arg("sharedSourceDir", sharedSourceDir)
     arg("sharedComposeSourceDir", sharedComposeSourceDir)
     arg("backendServerSourceDir", backendServerSourceDir)
+    arg("entity2Iso.enabled", "false")
+    arg("entity2Form.enabled", "false")
+    arg("entity2Mcp.enabled", "false")
 }
 
 kotlin {
@@ -39,6 +44,26 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:plugins:host-config:shared"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(project(":lib:ktor:starter:starter-statuspages"))
+        }
+    }
+}
+
+tasks.matching { task ->
+    task.name == "kspKotlinJvm"
+}.configureEach {
+    doFirst {
+        val apiOutputDir = file(generatedApiOutputDir)
+        listOf(
+            "CloudAccessApi.kt",
+            "GatewayConfigApi.kt",
+            "ProjectApi.kt",
+            "ProjectUploadApi.kt",
+            "TagApi.kt",
+            "TemplateApi.kt",
+            "ProjectConfigApi.kt",
+        ).forEach { fileName ->
+            delete(apiOutputDir.resolve(fileName))
         }
     }
 }

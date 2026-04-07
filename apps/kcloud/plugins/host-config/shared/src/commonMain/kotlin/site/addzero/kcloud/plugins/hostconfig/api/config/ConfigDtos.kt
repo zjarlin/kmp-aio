@@ -1,6 +1,5 @@
 package site.addzero.kcloud.plugins.hostconfig.api.config
 
-import java.math.BigDecimal
 import kotlinx.serialization.Serializable
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
@@ -24,7 +23,7 @@ data class ProjectMqttConfigRequest(
     val keepAliveSec: Int? = null,
     val qos: Int? = null,
     val reportPeriodSec: Int? = null,
-    val precision: BigDecimal? = null,
+    val precision: String? = null,
     val valueChangeRatioEnabled: Boolean = false,
     val cloudControlDisabled: Boolean = false,
 )
@@ -49,7 +48,7 @@ data class ProjectMqttConfigResponse(
     val keepAliveSec: Int?,
     val qos: Int?,
     val reportPeriodSec: Int?,
-    val precision: BigDecimal?,
+    val precision: String?,
     val valueChangeRatioEnabled: Boolean,
     val cloudControlDisabled: Boolean,
 )

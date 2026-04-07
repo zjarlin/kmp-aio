@@ -20,8 +20,6 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
-    //addzero组件库
-    id("site.addzero.buildlogic.conventions.addzero-component")
 }
 
 val libs = versionCatalogs.named("libs")
@@ -32,6 +30,7 @@ kotlin {
         implementation(libs.findLibrary("site-addzero-route-core").get())
 
         implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
+        implementation(project(":apps:kcloud:plugins:host-config:ui"))
         implementation(libs.findLibrary("compose-cupertino-workbench").get())
         implementation(libs.findLibrary("scaffold-spi").get())
         implementation(project(":apps:kcloud:shared"))

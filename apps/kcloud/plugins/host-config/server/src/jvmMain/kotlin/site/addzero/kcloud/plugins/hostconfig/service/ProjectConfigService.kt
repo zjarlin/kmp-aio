@@ -1,18 +1,19 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
+import java.math.BigDecimal
+import java.nio.charset.StandardCharsets
+import java.util.concurrent.ConcurrentHashMap
 import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
+import org.babyfish.jimmer.sql.kt.exists
+import org.koin.core.annotation.Single
 import org.springframework.core.io.Resource
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentHashMap
 import site.addzero.kcloud.plugins.hostconfig.api.common.BusinessValidationException
 import site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
@@ -25,56 +26,49 @@ import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActi
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
-import site.addzero.kcloud.plugins.hostconfig.repository.ProjectModbusServerConfigRepository
-import site.addzero.kcloud.plugins.hostconfig.repository.ProjectMqttConfigRepository
-import site.addzero.kcloud.plugins.hostconfig.repository.ProjectRepository
 
-@Service
+@Single
 class ProjectConfigService(
     private val sql: KSqlClient,
-    private val projectRepository: ProjectRepository,
-    private val mqttConfigRepository: ProjectMqttConfigRepository,
-    private val modbusServerConfigRepository: ProjectModbusServerConfigRepository,
     private val projectBackupArchiveService: ProjectBackupArchiveService,
 ) {
     private val uploadOperationStates = ConcurrentHashMap<Long, ProjectUploadOperationResponse>()
 
     fun getMqttConfig(projectId: Long): ProjectMqttConfigResponse {
         ensureProjectExists(projectId)
-        val config = sql.findOneOrNull(Fetchers.mqttConfig) {
-            where(table.project.id eq projectId)
-        }
-        return config?.toResponse() ?: ProjectMqttConfigResponse(
-            id = null,
-            enabled = false,
-            breakpointResume = false,
-            gatewayName = null,
-            vendor = null,
-            host = null,
-            port = null,
-            topic = null,
-            gatewayId = null,
-            authEnabled = false,
-            username = null,
-            passwordEncrypted = null,
-            tlsEnabled = false,
-            certFileRef = null,
-            clientId = null,
-            keepAliveSec = null,
-            qos = null,
-            reportPeriodSec = null,
-            precision = null,
-            valueChangeRatioEnabled = false,
-            cloudControlDisabled = false,
-        )
+        val config = loadMqttConfig(projectId)
+        return config?.toResponse()
+            ?: ProjectMqttConfigResponse(
+                id = null,
+                enabled = false,
+                breakpointResume = false,
+                gatewayName = null,
+                vendor = null,
+                host = null,
+                port = null,
+                topic = null,
+                gatewayId = null,
+                authEnabled = false,
+                username = null,
+                passwordEncrypted = null,
+                tlsEnabled = false,
+                certFileRef = null,
+                clientId = null,
+                keepAliveSec = null,
+                qos = null,
+                reportPeriodSec = null,
+                precision = null,
+                valueChangeRatioEnabled = false,
+                cloudControlDisabled = false,
+            )
     }
 
-    @Transactional
-    fun updateMqttConfig(projectId: Long, request: ProjectMqttConfigRequest): ProjectMqttConfigResponse {
+    fun updateMqttConfig(
+        projectId: Long,
+        request: ProjectMqttConfigRequest,
+    ): ProjectMqttConfigResponse {
         ensureProjectExists(projectId)
-        val existing = sql.findOneOrNull(Fetchers.mqttConfig) {
-            where(table.project.id eq projectId)
-        }
+        val existing = loadMqttConfig(projectId)
         val now = now()
         val entity = new(ProjectMqttConfig::class).by {
             existing?.let { id = it.id }
@@ -96,49 +90,47 @@ class ProjectConfigService(
             this.keepAliveSec = request.keepAliveSec
             this.qos = request.qos
             this.reportPeriodSec = request.reportPeriodSec
-            this.precision = request.precision
+            this.precision = request.precision.toDecimalOrNull()
             this.valueChangeRatioEnabled = request.valueChangeRatioEnabled
             this.cloudControlDisabled = request.cloudControlDisabled
             this.createdAt = existing?.createdAt ?: now
             this.updatedAt = now
         }
-        val config = mqttConfigRepository.saveCommand(entity) {
+        val config = sql.saveCommand(entity) {
             setMode(if (existing == null) SaveMode.INSERT_ONLY else SaveMode.UPDATE_ONLY)
         }.execute().modifiedEntity
-        return config.toResponse()
+        return loadMqttConfig(config.project.id)?.toResponse()
+            ?: throw NotFoundException("MQTT config not found")
     }
 
-    fun getModbusServerConfig(projectId: Long, transportType: TransportType): ProjectModbusServerConfigResponse {
+    fun getModbusServerConfig(
+        projectId: Long,
+        transportType: TransportType,
+    ): ProjectModbusServerConfigResponse {
         ensureProjectExists(projectId)
-        val config = sql.findOneOrNull(Fetchers.modbusConfig) {
-            where(table.project.id eq projectId)
-            where(table.transportType eq transportType)
-        }
-        return config?.toResponse() ?: ProjectModbusServerConfigResponse(
-            id = null,
-            transportType = transportType,
-            enabled = false,
-            tcpPort = null,
-            portName = null,
-            baudRate = null,
-            dataBits = null,
-            stopBits = null,
-            parity = null,
-            stationNo = null,
-        )
+        val config = loadModbusConfig(projectId, transportType)
+        return config?.toResponse()
+            ?: ProjectModbusServerConfigResponse(
+                id = null,
+                transportType = transportType,
+                enabled = false,
+                tcpPort = null,
+                portName = null,
+                baudRate = null,
+                dataBits = null,
+                stopBits = null,
+                parity = null,
+                stationNo = null,
+            )
     }
 
-    @Transactional
     fun updateModbusServerConfig(
         projectId: Long,
         transportType: TransportType,
         request: ProjectModbusServerConfigRequest,
     ): ProjectModbusServerConfigResponse {
         ensureProjectExists(projectId)
-        val existing = sql.findOneOrNull(Fetchers.modbusConfig) {
-            where(table.project.id eq projectId)
-            where(table.transportType eq transportType)
-        }
+        val existing = loadModbusConfig(projectId, transportType)
         val now = now()
         val entity = new(ProjectModbusServerConfig::class).by {
             existing?.let { id = it.id }
@@ -155,35 +147,40 @@ class ProjectConfigService(
             this.createdAt = existing?.createdAt ?: now
             this.updatedAt = now
         }
-        val config = modbusServerConfigRepository.saveCommand(entity) {
+        sql.saveCommand(entity) {
             setMode(if (existing == null) SaveMode.INSERT_ONLY else SaveMode.UPDATE_ONLY)
-        }.execute().modifiedEntity
-        return config.toResponse()
+        }.execute()
+        return loadModbusConfig(projectId, transportType)?.toResponse()
+            ?: throw NotFoundException("Modbus server config not found")
     }
 
     fun getProjectUploadStatus(projectId: Long): ProjectUploadOperationResponse {
         ensureProjectExists(projectId)
-        val idle = uploadOperationStates[projectId] ?: ProjectUploadOperationResponse(
-            projectId = projectId,
-            operation = "IDLE",
-            progress = 0,
-            statusText = "待开始",
-            detailText = "尚未发起上传工程或远程操作",
-            ipAddress = null,
-            projectPath = null,
-            selectedFileName = null,
-            includeDriverConfig = true,
-            includeFirmwareUpgrade = false,
-            fastMode = false,
-            backupFileName = null,
-            backupDownloadUrl = null,
-            backupSizeBytes = null,
-            updatedAt = now(),
-        )
+        val idle = uploadOperationStates[projectId]
+            ?: ProjectUploadOperationResponse(
+                projectId = projectId,
+                operation = "IDLE",
+                progress = 0,
+                statusText = "待开始",
+                detailText = "尚未发起上传工程或远程操作",
+                ipAddress = null,
+                projectPath = null,
+                selectedFileName = null,
+                includeDriverConfig = true,
+                includeFirmwareUpgrade = false,
+                fastMode = false,
+                backupFileName = null,
+                backupDownloadUrl = null,
+                backupSizeBytes = null,
+                updatedAt = now(),
+            )
         return attachBackupMetadata(projectId, idle)
     }
 
-    fun uploadProject(projectId: Long, request: ProjectUploadRequest): ProjectUploadOperationResponse {
+    fun uploadProject(
+        projectId: Long,
+        request: ProjectUploadRequest,
+    ): ProjectUploadOperationResponse {
         ensureProjectExists(projectId)
         if (request.projectPath.cleanNullable() == null && request.selectedFileName.cleanNullable() == null) {
             throw BusinessValidationException("Project path or selected file name is required")
@@ -260,8 +257,27 @@ class ProjectConfigService(
             .body(resource)
     }
 
+    private fun loadMqttConfig(projectId: Long): ProjectMqttConfig? =
+        sql.createQuery(ProjectMqttConfig::class) {
+            where(table.project.id eq projectId)
+            select(table.fetch(Fetchers.mqttConfig))
+        }.execute().firstOrNull()
+
+    private fun loadModbusConfig(
+        projectId: Long,
+        transportType: TransportType,
+    ): ProjectModbusServerConfig? =
+        sql.createQuery(ProjectModbusServerConfig::class) {
+            where(table.project.id eq projectId)
+            where(table.transportType eq transportType)
+            select(table.fetch(Fetchers.modbusConfig))
+        }.execute().firstOrNull()
+
     private fun ensureProjectExists(projectId: Long) {
-        if (!projectRepository.existsById(projectId)) {
+        val exists = sql.exists(Project::class) {
+            where(table.id eq projectId)
+        }
+        if (!exists) {
             throw NotFoundException("Project not found")
         }
     }
@@ -304,7 +320,10 @@ class ProjectConfigService(
         return enriched
     }
 
-    private fun attachBackupMetadata(projectId: Long, response: ProjectUploadOperationResponse): ProjectUploadOperationResponse {
+    private fun attachBackupMetadata(
+        projectId: Long,
+        response: ProjectUploadOperationResponse,
+    ): ProjectUploadOperationResponse {
         if (response.backupFileName != null && response.backupDownloadUrl != null && response.backupSizeBytes != null) {
             return response
         }
@@ -317,7 +336,7 @@ class ProjectConfigService(
     }
 
     private fun buildBackupDownloadUrl(projectId: Long): String =
-        "/api/v1/projects/$projectId/upload-project/backup"
+        "/api/host-config/v1/projects/$projectId/upload-project/backup"
 
     private fun ProjectMqttConfig.toResponse(): ProjectMqttConfigResponse =
         ProjectMqttConfigResponse(
@@ -339,7 +358,7 @@ class ProjectConfigService(
             keepAliveSec = keepAliveSec,
             qos = qos,
             reportPeriodSec = reportPeriodSec,
-            precision = precision,
+            precision = precision.toApiDecimal(),
             valueChangeRatioEnabled = valueChangeRatioEnabled,
             cloudControlDisabled = cloudControlDisabled,
         )
@@ -360,6 +379,12 @@ class ProjectConfigService(
 
     private fun String?.cleanNullable(): String? =
         this?.trim()?.ifBlank { null }
+
+    private fun String?.toDecimalOrNull(): BigDecimal? =
+        this.cleanNullable()?.toBigDecimalOrNull()
+
+    private fun BigDecimal?.toApiDecimal(): String? =
+        this?.stripTrailingZeros()?.toPlainString()
 
     private fun ProjectUploadRemoteAction.toLabel(): String =
         when (this) {

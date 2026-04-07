@@ -9,10 +9,10 @@ import org.koin.plugin.module.dsl.withConfiguration
 
 @Module
 @ComponentScan("site.addzero")
-class KoinRootModule
+class KoinServerModule
 
 @KoinApplication(
-    modules = [KoinRootModule::class],
+    modules = [KoinServerModule::class],
 )
 object KoinApp
 

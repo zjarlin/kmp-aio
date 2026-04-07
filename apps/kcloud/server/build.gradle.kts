@@ -7,6 +7,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:shared"))
 //            implementation(project(":apps:kcloud:plugins:system:ai-chat:server"))
+            implementation(project(":apps:kcloud:plugins:host-config:server"))
             implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-koin"))
             implementation(project(":lib:ktor:starter:starter-serialization"))
@@ -22,4 +23,3 @@ kotlin {
 //        }
     }
 }
-
