@@ -4,8 +4,8 @@ import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
-import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.template.ModuleTemplateOptionResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.template.TemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
 @Single

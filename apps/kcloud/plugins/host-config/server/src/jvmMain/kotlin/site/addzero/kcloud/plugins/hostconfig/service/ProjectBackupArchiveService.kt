@@ -15,9 +15,9 @@ import kotlinx.serialization.modules.contextual
 import org.koin.core.annotation.Single
 import org.springframework.core.io.FileSystemResource
 import site.addzero.core.network.json.AnySerializer
-import site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException
-import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
-import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
+import site.addzero.kcloud.plugins.hostconfig.routes.project.ProjectResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.project.ProjectTreeResponse
 
 @Single
 class ProjectBackupArchiveService(

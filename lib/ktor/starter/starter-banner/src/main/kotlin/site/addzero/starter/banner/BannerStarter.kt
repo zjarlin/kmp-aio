@@ -6,10 +6,11 @@ import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import site.addzero.ktor.banner.Banner
 import site.addzero.starter.AppStarter
+import site.addzero.starter.AppStarterTest
 
-@Module
-@ComponentScan("site.addzero.starter.banner")
-class BannerStarterKoinModule
+//@Module
+//@ComponentScan("site.addzero.starter.banner")
+//class BannerStarterKoinModule
 
 @Single
 class BannerStarter(val config: BannerConfigSpi) : AppStarter<Application> {
@@ -26,3 +27,13 @@ class BannerStarter(val config: BannerConfigSpi) : AppStarter<Application> {
         }
     }
 }
+
+@Single
+class BannerStarterTest(val config: BannerConfigSpi) : AppStarterTest {
+    override fun onstart() {
+        println(config)
+    }
+
+
+}
+

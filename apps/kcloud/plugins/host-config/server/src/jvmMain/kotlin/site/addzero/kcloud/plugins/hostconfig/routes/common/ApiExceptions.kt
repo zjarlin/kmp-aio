@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.hostconfig.api.common
+package site.addzero.kcloud.plugins.hostconfig.routes.common
 
 open class ApiException(
     val status: Int,

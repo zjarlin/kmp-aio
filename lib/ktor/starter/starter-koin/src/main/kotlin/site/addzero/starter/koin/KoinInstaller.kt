@@ -8,6 +8,7 @@ import org.koin.ktor.plugin.Koin
 import org.koin.ktor.plugin.KoinApplicationStarted
 import org.koin.logger.slf4jLogger
 import site.addzero.starter.AppStarter
+import site.addzero.starter.AppStarterTest
 
 
 /**
@@ -33,8 +34,10 @@ fun Application.runStarters() {
     fun execute() {
         val app = this
         val koin = app.getKoin()
-        val starters = koin
-            .getAll<AppStarter<Application>>()
+        val all = koin .getAll<AppStarter<Application>>()
+        val all1 = koin .getAll<AppStarterTest>()
+
+        val starters = all
             .filter { starter -> starter.enable }
             .sortedBy { it.order }
         for (starter in starters) {

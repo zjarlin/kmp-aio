@@ -9,16 +9,16 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.hostconfig.api.common.BusinessValidationException
-import site.addzero.kcloud.plugins.hostconfig.api.common.ConflictException
-import site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException
-import site.addzero.kcloud.plugins.hostconfig.api.common.PageResponse
-import site.addzero.kcloud.plugins.hostconfig.api.tag.ReplaceTagValueTextsRequest
-import site.addzero.kcloud.plugins.hostconfig.api.tag.TagCreateRequest
-import site.addzero.kcloud.plugins.hostconfig.api.tag.TagPositionUpdateRequest
-import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
-import site.addzero.kcloud.plugins.hostconfig.api.tag.TagUpdateRequest
-import site.addzero.kcloud.plugins.hostconfig.api.tag.TagValueTextResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.common.BusinessValidationException
+import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
+import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
+import site.addzero.kcloud.plugins.hostconfig.routes.common.PageResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.tag.ReplaceTagValueTextsRequest
+import site.addzero.kcloud.plugins.hostconfig.routes.tag.TagCreateRequest
+import site.addzero.kcloud.plugins.hostconfig.routes.tag.TagPositionUpdateRequest
+import site.addzero.kcloud.plugins.hostconfig.routes.tag.TagResponse
+import site.addzero.kcloud.plugins.hostconfig.routes.tag.TagUpdateRequest
+import site.addzero.kcloud.plugins.hostconfig.routes.tag.TagValueTextResponse
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
 @Single

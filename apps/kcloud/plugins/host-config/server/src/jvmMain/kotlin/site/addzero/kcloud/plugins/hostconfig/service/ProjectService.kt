@@ -8,8 +8,6 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.hostconfig.api.common.ConflictException
-import site.addzero.kcloud.plugins.hostconfig.api.common.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -33,6 +31,8 @@ import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.TagTreeNode
+import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
+import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
 @Single

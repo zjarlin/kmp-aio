@@ -4,9 +4,10 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.statuspages.StatusPagesConfig
 import io.ktor.server.response.respond
+import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.hostconfig.api.common.ApiErrorResponse
-import site.addzero.kcloud.plugins.hostconfig.api.common.ApiException
+import site.addzero.kcloud.plugins.hostconfig.routes.common.ApiException
 import site.addzero.starter.statuspages.spi.StatusPagesSpi
 
 /**
