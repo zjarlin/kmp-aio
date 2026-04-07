@@ -6,7 +6,7 @@ import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import org.koin.ktor.ext.getKoin
 import site.addzero.kcloud.s3.spi.S3ConfigSpi
-import site.addzero.starter.AppStarter
+import site.addzero.starter.KtorAppStarter
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider
 import software.amazon.awssdk.regions.Region
@@ -33,7 +33,7 @@ class S3KoinModule {
  * S3 自动引导实现类。符合 AppStarter 接口，通过 Koin 自动发现。
  */
 @Single
-class S3Starter(val s3ConfigSpi: S3ConfigSpi) : AppStarter<Application> {
+class S3Starter(val s3ConfigSpi: S3ConfigSpi) : KtorAppStarter {
     override val order get() = 60
     override val enable: Boolean
         get() = s3ConfigSpi.enabled

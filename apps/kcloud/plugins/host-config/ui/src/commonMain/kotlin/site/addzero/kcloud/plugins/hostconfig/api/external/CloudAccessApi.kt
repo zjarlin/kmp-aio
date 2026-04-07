@@ -18,7 +18,8 @@ interface CloudAccessApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse
  */
-    @GET("/api/host-config/v1/projects/{projectId}/mqtt-config")    suspend fun getMqttConfig(
+    @GET("/api/host-config/v1/projects/{projectId}/mqtt-config")
+    suspend fun getMqttConfig(
         @Path("projectId") projectId: kotlin.Long
     ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse
 
@@ -31,7 +32,9 @@ interface CloudAccessApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse
  */
-    @PUT("/api/host-config/v1/projects/{projectId}/mqtt-config")    suspend fun updateMqttConfig(
+    @PUT("/api/host-config/v1/projects/{projectId}/mqtt-config")
+    @Headers("Content-Type: application/json")
+    suspend fun updateMqttConfig(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse

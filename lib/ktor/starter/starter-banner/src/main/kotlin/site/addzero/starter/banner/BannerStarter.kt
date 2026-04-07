@@ -6,8 +6,8 @@ import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import site.addzero.ktor.banner.Banner
-import site.addzero.starter.AppStarter
 import site.addzero.starter.AppStarterTest
+import site.addzero.starter.KtorAppStarter
 
 //@Module
 //@ComponentScan("site.addzero.starter.banner")
@@ -20,7 +20,7 @@ class BannerModule
 
 
 @Single
-class BannerStarter(val config: BannerConfigSpi) : AppStarter<Application> {
+class BannerStarter(val config: BannerConfigSpi) : KtorAppStarter {
     override val order get() = 30
 
     override val enable: Boolean
@@ -43,4 +43,3 @@ class BannerStarterTest(val config: BannerConfigSpi) : AppStarterTest {
 
 
 }
-

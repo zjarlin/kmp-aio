@@ -2,7 +2,7 @@ package site.addzero.starter.statuspages
 
 import io.ktor.server.application.*
 import org.koin.core.annotation.*
-import site.addzero.starter.AppStarter
+import site.addzero.starter.KtorAppStarter
 import site.addzero.starter.statuspages.spi.StatusPagesSpi
 
 //@Module
@@ -12,7 +12,7 @@ import site.addzero.starter.statuspages.spi.StatusPagesSpi
 @Single
 class StatusPagesStarter(
     private val contributors: List<StatusPagesSpi>,
-) : AppStarter<Application> {
+) : KtorAppStarter {
     override val enable
         get() = true
 

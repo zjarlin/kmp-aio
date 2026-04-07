@@ -21,3 +21,11 @@ interface AppStarter <T>{
     /** 执行安装逻辑 */
     fun T.onInstall()
 }
+
+/**
+ * Ktor `Application` 启动器的稳定 DI 入口。
+ *
+ * Koin 自动绑定不会把 `AppStarter<T>` 的泛型参数当成区分 key，
+ * 所以运行时注入不要直接依赖 `AppStarter<Application>`，而是统一依赖这个特化接口。
+ */
+interface KtorAppStarter : AppStarter<Application>

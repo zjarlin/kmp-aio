@@ -10,8 +10,8 @@ import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.di.initServerKoin
 import site.addzero.kcloud.plugins.hostconfig.routes.cloud.generated.springktor.registerGeneratedSpringRoutes
 import site.addzero.kcloud.runtime.KCloudHostRuntime
-import site.addzero.starter.AppStarter
 import site.addzero.starter.AppStarterTest
+import site.addzero.starter.KtorAppStarter
 
 /**
  * Server 入口。
@@ -60,7 +60,7 @@ fun Application.runStarters() {
     starterTests.forEach { starter ->
         log.info("Loaded starter test: ${starter::class.simpleName}")
     }
-    val starters = koin.getAll<AppStarter<Application>>()
+    val starters = koin.getAll<KtorAppStarter>()
         .filter { starter -> starter.enable }
         .sortedBy { it.order }
     for (starter in starters) {

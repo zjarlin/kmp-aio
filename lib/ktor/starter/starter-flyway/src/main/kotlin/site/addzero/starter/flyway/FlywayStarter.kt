@@ -6,7 +6,7 @@ import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Named
 import org.koin.core.annotation.Single
-import site.addzero.starter.AppStarter
+import site.addzero.starter.KtorAppStarter
 
 @Module
 @ComponentScan("site.addzero.starter.flyway")
@@ -15,7 +15,7 @@ class FlywayStarterKoinModule
 @Single
 class FlywayStarter(
     private val configProviders: List<FlywayConfigSpi>,
-) : AppStarter<Application> {
+) : KtorAppStarter {
     override val order = 200
     override val enable: Boolean
         get() = configProviders.isNotEmpty()

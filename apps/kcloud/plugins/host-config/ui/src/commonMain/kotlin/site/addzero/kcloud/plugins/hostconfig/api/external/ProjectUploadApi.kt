@@ -20,7 +20,8 @@ interface ProjectUploadApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
  */
-    @GET("/api/host-config/v1/projects/{projectId}/upload-project")    suspend fun getProjectUploadStatus(
+    @GET("/api/host-config/v1/projects/{projectId}/upload-project")
+    suspend fun getProjectUploadStatus(
         @Path("projectId") projectId: kotlin.Long
     ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
 
@@ -33,7 +34,9 @@ interface ProjectUploadApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
  */
-    @POST("/api/host-config/v1/projects/{projectId}/upload-project")    suspend fun uploadProject(
+    @POST("/api/host-config/v1/projects/{projectId}/upload-project")
+    @Headers("Content-Type: application/json")
+    suspend fun uploadProject(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
@@ -48,7 +51,9 @@ interface ProjectUploadApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
  */
-    @POST("/api/host-config/v1/projects/{projectId}/upload-project/actions/{action}")    suspend fun triggerProjectUploadRemoteAction(
+    @POST("/api/host-config/v1/projects/{projectId}/upload-project/actions/{action}")
+    @Headers("Content-Type: application/json")
+    suspend fun triggerProjectUploadRemoteAction(
         @Path("projectId") projectId: kotlin.Long,
         @Path("action") action: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
@@ -62,7 +67,8 @@ interface ProjectUploadApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.Any
  */
-    @GET("/api/host-config/v1/projects/{projectId}/upload-project/backup")    suspend fun downloadProjectBackup(
+    @GET("/api/host-config/v1/projects/{projectId}/upload-project/backup")
+    suspend fun downloadProjectBackup(
         @Path("projectId") projectId: kotlin.Long
     ): kotlin.Any
 

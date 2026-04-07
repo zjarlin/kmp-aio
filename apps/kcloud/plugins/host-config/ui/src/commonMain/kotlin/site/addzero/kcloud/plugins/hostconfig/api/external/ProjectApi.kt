@@ -32,7 +32,8 @@ interface ProjectApi {
  * 路径: /api/host-config/v1/projects
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse>
  */
-    @GET("/api/host-config/v1/projects")    suspend fun listProjects(): kotlin.collections.List<site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse>
+    @GET("/api/host-config/v1/projects")
+    suspend fun listProjects(): kotlin.collections.List<site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse>
 
 /**
  * createProject
@@ -42,7 +43,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
  */
-    @POST("/api/host-config/v1/projects")    suspend fun createProject(
+    @POST("/api/host-config/v1/projects")
+    @Headers("Content-Type: application/json")
+    suspend fun createProject(
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectCreateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 
@@ -54,7 +57,8 @@ interface ProjectApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
  */
-    @GET("/api/host-config/v1/projects/{projectId}")    suspend fun getProject(
+    @GET("/api/host-config/v1/projects/{projectId}")
+    suspend fun getProject(
         @Path("projectId") projectId: kotlin.Long
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 
@@ -67,7 +71,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
  */
-    @PUT("/api/host-config/v1/projects/{projectId}")    suspend fun updateProject(
+    @PUT("/api/host-config/v1/projects/{projectId}")
+    @Headers("Content-Type: application/json")
+    suspend fun updateProject(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
@@ -81,7 +87,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectPositionUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
  */
-    @PUT("/api/host-config/v1/projects/{projectId}/position")    suspend fun updateProjectPosition(
+    @PUT("/api/host-config/v1/projects/{projectId}/position")
+    @Headers("Content-Type: application/json")
+    suspend fun updateProjectPosition(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectPositionUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
@@ -94,7 +102,8 @@ interface ProjectApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.Unit
  */
-    @DELETE("/api/host-config/v1/projects/{projectId}")    suspend fun deleteProject(
+    @DELETE("/api/host-config/v1/projects/{projectId}")
+    suspend fun deleteProject(
         @Path("projectId") projectId: kotlin.Long
     ): kotlin.Unit
 
@@ -106,7 +115,8 @@ interface ProjectApi {
  *   - projectId: kotlin.Long (PathVariable)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse
  */
-    @GET("/api/host-config/v1/projects/{projectId}/tree")    suspend fun getProjectTree(
+    @GET("/api/host-config/v1/projects/{projectId}/tree")
+    suspend fun getProjectTree(
         @Path("projectId") projectId: kotlin.Long
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse
 
@@ -116,7 +126,8 @@ interface ProjectApi {
  * 路径: /api/host-config/v1/protocols
  * 返回类型: kotlin.collections.List<site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCatalogItemResponse>
  */
-    @GET("/api/host-config/v1/protocols")    suspend fun listProtocols(): kotlin.collections.List<site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCatalogItemResponse>
+    @GET("/api/host-config/v1/protocols")
+    suspend fun listProtocols(): kotlin.collections.List<site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCatalogItemResponse>
 
 /**
  * createProtocol
@@ -127,7 +138,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
  */
-    @POST("/api/host-config/v1/projects/{projectId}/protocols")    suspend fun createProtocol(
+    @POST("/api/host-config/v1/projects/{projectId}/protocols")
+    @Headers("Content-Type: application/json")
+    suspend fun createProtocol(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCreateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
@@ -141,7 +154,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.LinkExistingProtocolRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
  */
-    @POST("/api/host-config/v1/projects/{projectId}/protocol-links")    suspend fun linkProtocol(
+    @POST("/api/host-config/v1/projects/{projectId}/protocol-links")
+    @Headers("Content-Type: application/json")
+    suspend fun linkProtocol(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.LinkExistingProtocolRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
@@ -155,7 +170,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
  */
-    @PUT("/api/host-config/v1/protocols/{protocolId}")    suspend fun updateProtocol(
+    @PUT("/api/host-config/v1/protocols/{protocolId}")
+    @Headers("Content-Type: application/json")
+    suspend fun updateProtocol(
         @Path("protocolId") protocolId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
@@ -169,7 +186,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolPositionUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
  */
-    @PUT("/api/host-config/v1/protocols/{protocolId}/position")    suspend fun updateProtocolPosition(
+    @PUT("/api/host-config/v1/protocols/{protocolId}/position")
+    @Headers("Content-Type: application/json")
+    suspend fun updateProtocolPosition(
         @Path("protocolId") protocolId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolPositionUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
@@ -183,7 +202,8 @@ interface ProjectApi {
  *   - protocolId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.Unit
  */
-    @DELETE("/api/host-config/v1/projects/{projectId}/protocols/{protocolId}")    suspend fun deleteProtocol(
+    @DELETE("/api/host-config/v1/projects/{projectId}/protocols/{protocolId}")
+    suspend fun deleteProtocol(
         @Path("projectId") projectId: kotlin.Long,
         @Path("protocolId") protocolId: kotlin.Long
     ): kotlin.Unit
@@ -197,7 +217,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
  */
-    @POST("/api/host-config/v1/protocols/{protocolId}/modules")    suspend fun createModule(
+    @POST("/api/host-config/v1/protocols/{protocolId}/modules")
+    @Headers("Content-Type: application/json")
+    suspend fun createModule(
         @Path("protocolId") protocolId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
@@ -211,7 +233,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
  */
-    @POST("/api/host-config/v1/projects/{projectId}/modules")    suspend fun createProjectModule(
+    @POST("/api/host-config/v1/projects/{projectId}/modules")
+    @Headers("Content-Type: application/json")
+    suspend fun createProjectModule(
         @Path("projectId") projectId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
@@ -225,7 +249,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
  */
-    @PUT("/api/host-config/v1/modules/{moduleId}")    suspend fun updateModule(
+    @PUT("/api/host-config/v1/modules/{moduleId}")
+    @Headers("Content-Type: application/json")
+    suspend fun updateModule(
         @Path("moduleId") moduleId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
@@ -239,7 +265,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.ModulePositionUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
  */
-    @PUT("/api/host-config/v1/modules/{moduleId}/position")    suspend fun updateModulePosition(
+    @PUT("/api/host-config/v1/modules/{moduleId}/position")
+    @Headers("Content-Type: application/json")
+    suspend fun updateModulePosition(
         @Path("moduleId") moduleId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.ModulePositionUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
@@ -252,7 +280,8 @@ interface ProjectApi {
  *   - moduleId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.Unit
  */
-    @DELETE("/api/host-config/v1/modules/{moduleId}")    suspend fun deleteModule(
+    @DELETE("/api/host-config/v1/modules/{moduleId}")
+    suspend fun deleteModule(
         @Path("moduleId") moduleId: kotlin.Long
     ): kotlin.Unit
 
@@ -265,7 +294,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
  */
-    @POST("/api/host-config/v1/modules/{moduleId}/devices")    suspend fun createDevice(
+    @POST("/api/host-config/v1/modules/{moduleId}/devices")
+    @Headers("Content-Type: application/json")
+    suspend fun createDevice(
         @Path("moduleId") moduleId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -279,7 +310,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
  */
-    @PUT("/api/host-config/v1/devices/{deviceId}")    suspend fun updateDevice(
+    @PUT("/api/host-config/v1/devices/{deviceId}")
+    @Headers("Content-Type: application/json")
+    suspend fun updateDevice(
         @Path("deviceId") deviceId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -293,7 +326,9 @@ interface ProjectApi {
  *   - request: site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest (RequestBody)
  * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
  */
-    @PUT("/api/host-config/v1/devices/{deviceId}/position")    suspend fun updateDevicePosition(
+    @PUT("/api/host-config/v1/devices/{deviceId}/position")
+    @Headers("Content-Type: application/json")
+    suspend fun updateDevicePosition(
         @Path("deviceId") deviceId: kotlin.Long,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -306,7 +341,8 @@ interface ProjectApi {
  *   - deviceId: kotlin.Long (PathVariable)
  * 返回类型: kotlin.Unit
  */
-    @DELETE("/api/host-config/v1/devices/{deviceId}")    suspend fun deleteDevice(
+    @DELETE("/api/host-config/v1/devices/{deviceId}")
+    suspend fun deleteDevice(
         @Path("deviceId") deviceId: kotlin.Long
     ): kotlin.Unit
 
