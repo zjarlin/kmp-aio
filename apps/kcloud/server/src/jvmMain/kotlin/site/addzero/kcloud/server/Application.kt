@@ -6,7 +6,7 @@ import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.routing.routing
-import org.koin.ktor.ext.getKoin
+import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.di.initServerKoin
 import site.addzero.kcloud.plugins.hostconfig.routes.cloud.generated.springktor.registerGeneratedSpringRoutes
 import site.addzero.kcloud.runtime.KCloudHostRuntime
@@ -55,18 +55,19 @@ fun Application.module() {
  */
 fun Application.runStarters() {
     fun execute() {
-        val app = this
-        val koin = app.getKoin()
-        val all = koin .getAll<AppStarter<Application>>()
-        val all1 = koin .getAll<AppStarterTest>()
+//        val app = this
+//        val koin = app.getKoin()
+        val koin = KoinPlatform.getKoin()
+        val all = koin.getAll<AppStarter<Application>>()
+        val all1 = koin.getAll<AppStarterTest>()
 
-        val starters = all
-            .filter { starter -> starter.enable }
-            .sortedBy { it.order }
-        for (starter in starters) {
-            log.info("Installing starter: ${starter::class.simpleName} (order=${starter.order})")
-            with(starter) { app.onInstall() }
-        }
+//        val starters = all
+//            .filter { starter -> starter.enable }
+//            .sortedBy { it.order }
+//        for (starter in starters) {
+//            log.info("Installing starter: ${starter::class.simpleName} (order=${starter.order})")
+//            with(starter) { app.onInstall() }
+//        }
     }
     execute()
 }

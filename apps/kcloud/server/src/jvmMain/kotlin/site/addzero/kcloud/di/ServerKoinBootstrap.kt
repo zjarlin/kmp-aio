@@ -17,7 +17,8 @@ import site.addzero.kcloud.jimmer.di.JimmerKoinModule
 class KCloudServerModule
 
 @KoinApplication(
-//    modules = [KCloudServerModule::class, JimmerKoinModule::class],
+    modules = [KCloudServerModule::class, JimmerKoinModule::class
+    ],
 )
 object KCloudServerKoinApplication
 
