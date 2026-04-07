@@ -24,26 +24,3 @@ fun Application.installKoin(configure: KoinApplication.() -> Unit = {}) {
     }
 }
 
-/**
- * 执行所有已注册的 AppStarter。
- *
- * 从 Koin 容器中获取所有 AppStarter 实现，按 order 排序，
- * 过滤条件后依次执行 onInstall()。
- */
-fun Application.runStarters() {
-    fun execute() {
-        val app = this
-        val koin = app.getKoin()
-        val all = koin .getAll<AppStarter<Application>>()
-        val all1 = koin .getAll<AppStarterTest>()
-
-        val starters = all
-            .filter { starter -> starter.enable }
-            .sortedBy { it.order }
-        for (starter in starters) {
-            log.info("Installing starter: ${starter::class.simpleName} (order=${starter.order})")
-            with(starter) { app.onInstall() }
-        }
-    }
-    execute()
-}
