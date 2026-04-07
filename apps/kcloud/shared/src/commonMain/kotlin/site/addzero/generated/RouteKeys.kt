@@ -11,7 +11,6 @@ import site.addzero.annotation.RouteScene
 object RouteKeys {
     const val MCU_CONTROL_SCREEN = "mcu/control"
     const val MCU_FLASH_SCREEN = "mcu/flash"
-    const val MCU_ONLINE_DEV_SCREEN = "mcu/online-dev"
     const val MCU_DEBUG_SCREEN = "mcu/debug"
 
     /**
@@ -20,7 +19,6 @@ object RouteKeys {
     val allMeta = listOf(
         Route(value = "设备会话", title = "控制台", routePath = "mcu/control", icon = "PowerSettingsNew", order = 0.0, placement = RoutePlacement(scene = RouteScene(name = "物联网上位机", icon = "Build", order = 0), defaultInScene = true), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.control.McuControlScreen", simpleName = "McuControlScreen"),
         Route(value = "开发工具", title = "烧录", routePath = "mcu/flash", icon = "Upload", order = 10.0, placement = RoutePlacement(scene = RouteScene(name = "物联网上位机", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.flash.McuFlashScreen", simpleName = "McuFlashScreen"),
-        Route(value = "开发工具", title = "在线开发", routePath = "mcu/online-dev", icon = "Code", order = 15.0, placement = RoutePlacement(scene = RouteScene(name = "物联网上位机", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.onlinedev.McuOnlineDevScreen", simpleName = "McuOnlineDevScreen"),
         Route(value = "开发工具", title = "调试", routePath = "mcu/debug", icon = "BugReport", order = 20.0, placement = RoutePlacement(scene = RouteScene(name = "物联网上位机", icon = "Build", order = 0), defaultInScene = false), qualifiedName = "site.addzero.kcloud.plugins.mcuconsole.debug.McuDebugScreen", simpleName = "McuDebugScreen")
     )
 }

@@ -15,7 +15,6 @@ object RouteTable {
     val allRoutes: Map<String, RouteContent> = mutableMapOf<String, RouteContent>().apply {
         put(RouteKeys.MCU_CONTROL_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.control.McuControlScreen() })
         put(RouteKeys.MCU_FLASH_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.flash.McuFlashScreen() })
-        put(RouteKeys.MCU_ONLINE_DEV_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.onlinedev.McuOnlineDevScreen() })
         put(RouteKeys.MCU_DEBUG_SCREEN, { site.addzero.kcloud.plugins.mcuconsole.debug.McuDebugScreen() })
     }
 

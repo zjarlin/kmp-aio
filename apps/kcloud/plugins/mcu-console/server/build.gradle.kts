@@ -26,8 +26,8 @@ val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui") .pro
 /** 当前server源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
 
-dependencies {
-}
+//dependencies {
+//}
 
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external")
