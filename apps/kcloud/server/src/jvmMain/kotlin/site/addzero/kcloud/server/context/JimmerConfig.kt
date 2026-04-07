@@ -12,7 +12,7 @@ class JimmerConfig : DatasourcePropertiesSpi {
                 name = "mysql",
                 enabled = true,
                 default = true,
-                url = "jdbc:mysql://192.168.31.133:3306/mysql",
+                url = serverMysqlJdbcUrl(schema = KCLOUD_SERVER_MYSQL_SCHEMA),
                 driverClassName = "com.mysql.cj.jdbc.Driver",
                 user = "root",
                 password = "test123456",
@@ -37,4 +37,12 @@ class JimmerConfig : DatasourcePropertiesSpi {
             ),
         )
     }
+}
+
+private const val KCLOUD_SERVER_MYSQL_SCHEMA = "okmy_dics"
+
+private fun serverMysqlJdbcUrl(
+    schema: String,
+): String {
+    return "jdbc:mysql://192.168.31.133:3306/$schema?createDatabaseIfNotExist=true"
 }

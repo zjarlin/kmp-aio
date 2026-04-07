@@ -23,7 +23,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val desktopMainClass = "site.addzero.kcloud.bootstrap.MainKt"
+val desktopMainClass = "site.addzero.kcloud.MainKt"
 
 kotlin {
     dependencies {
@@ -48,9 +48,9 @@ kotlin {
         }
     }
 }
-//kotlin.jvm().mainRun {
-//    mainClass.set(desktopMainClass)
-//}
+kotlin.jvm().mainRun {
+    mainClass.set(desktopMainClass)
+}
 
 compose.desktop {
     application {
