@@ -32,7 +32,7 @@ class CodegenContextViewModel(
     fun refresh() {
         viewModelScope.launch {
             val currentSelection = screenState.selectedContextId
-            screenState = screenState.copy(loading = true, errorMessage = null, statusMessage = null)
+            screenState = screenState.copy(loading = true, errorMessage = null, statusMessage = null, generatedFiles = emptyList())
             runCatching {
                 val templates = templateApi.listProtocolTemplates()
                 val contexts = contextApi.listContexts()
@@ -70,6 +70,7 @@ class CodegenContextViewModel(
                     editor = detail.toEditor(),
                     errorMessage = null,
                     statusMessage = null,
+                    generatedFiles = emptyList(),
                 )
             }.onFailure { throwable ->
                 screenState = screenState.copy(
@@ -84,6 +85,7 @@ class CodegenContextViewModel(
             selectedContextId = null,
             statusMessage = "New context draft created.",
             errorMessage = null,
+            generatedFiles = emptyList(),
             editor = CodegenContextEditorState.empty().copy(
                 protocolTemplateId = screenState.protocolTemplates.firstOrNull()?.id,
             ),
@@ -92,7 +94,7 @@ class CodegenContextViewModel(
 
     fun save() {
         viewModelScope.launch {
-            screenState = screenState.copy(saving = true, errorMessage = null, statusMessage = null)
+            screenState = screenState.copy(saving = true, errorMessage = null, statusMessage = null, generatedFiles = emptyList())
             runCatching {
                 val saved = contextApi.saveContext(screenState.editor.toDto())
                 val contexts = contextApi.listContexts()
@@ -115,7 +117,7 @@ class CodegenContextViewModel(
     fun deleteSelected() {
         val selectedId = screenState.selectedContextId ?: return
         viewModelScope.launch {
-            screenState = screenState.copy(deleting = true, errorMessage = null, statusMessage = null)
+            screenState = screenState.copy(deleting = true, errorMessage = null, statusMessage = null, generatedFiles = emptyList())
             runCatching {
                 contextApi.deleteContext(selectedId)
                 val contexts = contextApi.listContexts()
@@ -144,12 +146,13 @@ class CodegenContextViewModel(
     fun generateSelected() {
         val selectedId = screenState.selectedContextId ?: return
         viewModelScope.launch {
-            screenState = screenState.copy(generating = true, errorMessage = null, statusMessage = null)
+            screenState = screenState.copy(generating = true, errorMessage = null, statusMessage = null, generatedFiles = emptyList())
             runCatching {
                 val response = contextApi.generateContext(selectedId)
                 screenState = screenState.copy(
                     generating = false,
                     statusMessage = response.message,
+                    generatedFiles = response.generatedFiles,
                 )
             }.onFailure { throwable ->
                 screenState = screenState.copy(

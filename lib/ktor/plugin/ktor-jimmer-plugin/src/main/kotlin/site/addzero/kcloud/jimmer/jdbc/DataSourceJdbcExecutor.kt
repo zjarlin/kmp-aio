@@ -1,4 +1,4 @@
-package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
+package site.addzero.kcloud.jimmer.jdbc
 
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -6,10 +6,10 @@ import javax.sql.DataSource
 import org.koin.core.annotation.Single
 
 @Single
-class CodegenContextJdbc(
+class DataSourceJdbcExecutor(
     private val dataSource: DataSource,
-) {
-    fun <T> withTransaction(
+) : JdbcExecutor {
+    override fun <T> withTransaction(
         block: (Connection) -> T,
     ): T {
         dataSource.connection.use { connection ->
@@ -28,37 +28,41 @@ class CodegenContextJdbc(
         }
     }
 
-    fun queryIds(
+    override fun queryIds(
         connection: Connection,
         sql: String,
         vararg args: Any?,
     ): List<Long> {
         connection.prepareStatement(sql).use { statement ->
             bindArgs(statement, args.asList())
-            statement.executeQuery().use { rs ->
+            statement.executeQuery().use { resultSet ->
                 val rows = mutableListOf<Long>()
-                while (rs.next()) {
-                    rows += rs.getLong(1)
+                while (resultSet.next()) {
+                    rows += resultSet.getLong(1)
                 }
                 return rows
             }
         }
     }
 
-    fun queryCount(
+    override fun queryCount(
         connection: Connection,
         sql: String,
         vararg args: Any?,
     ): Long {
         connection.prepareStatement(sql).use { statement ->
             bindArgs(statement, args.asList())
-            statement.executeQuery().use { rs ->
-                return if (rs.next()) rs.getLong(1) else 0L
+            statement.executeQuery().use { resultSet ->
+                return if (resultSet.next()) {
+                    resultSet.getLong(1)
+                } else {
+                    0L
+                }
             }
         }
     }
 
-    fun update(
+    override fun update(
         connection: Connection,
         sql: String,
         vararg args: Any?,
@@ -69,7 +73,7 @@ class CodegenContextJdbc(
         }
     }
 
-    fun insertAndReturnId(
+    override fun insertAndReturnId(
         connection: Connection,
         sql: String,
         vararg args: Any?,
@@ -77,9 +81,9 @@ class CodegenContextJdbc(
         connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS).use { statement ->
             bindArgs(statement, args.asList())
             statement.executeUpdate()
-            statement.generatedKeys.use { keys ->
-                if (keys.next()) {
-                    return keys.getLong(1)
+            statement.generatedKeys.use { generatedKeys ->
+                if (generatedKeys.next()) {
+                    return generatedKeys.getLong(1)
                 }
             }
         }

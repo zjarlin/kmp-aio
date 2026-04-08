@@ -8,6 +8,7 @@ import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextSummaryDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
@@ -27,7 +28,7 @@ import site.addzero.kcloud.plugins.hostconfig.service.Fetchers
 @Single
 class CodegenContextService(
     private val sql: KSqlClient,
-    private val jdbc: CodegenContextJdbc,
+    private val jdbc: JdbcExecutor,
     private val contractGenerator: CodegenContextContractGenerator,
 ) {
     private companion object {

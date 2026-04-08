@@ -104,6 +104,19 @@ fun CodegenContextScreen() {
                 CodegenStatusStrip(message)
             }
 
+            if (state.generatedFiles.isNotEmpty()) {
+                CodegenPanel(
+                    title = "Generated Artifacts",
+                    subtitle = "当前生成按钮已写入这些文件，下一次 mcu-console 构建会优先消费 metadata 快照。",
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        state.generatedFiles.forEach { file ->
+                            CodegenStatusStrip(file)
+                        }
+                    }
+                }
+            }
+
             CodegenPanel(
                 title = state.editor.name.ifBlank { "未命名 context" },
                 subtitle = "协议感知 schema 上下文，当前只生成 mcu-console Modbus 契约。",

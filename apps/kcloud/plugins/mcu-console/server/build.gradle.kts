@@ -1,8 +1,16 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
+    id("site.addzero.ksp.modbus-rtu")
 }
 
 val libs = versionCatalogs.named("libs")
+val generatedMetadataDir = layout.projectDirectory.dir("generated/modbus-metadata")
+val generatedMetadataDbFile = generatedMetadataDir.file("codegen-context.sqlite").asFile
+val generatedMetadataTransportMarkerFile = generatedMetadataDir.file("selected-transport.txt").asFile
+val useCodegenContextMetadata =
+    generatedMetadataDbFile.exists() &&
+        generatedMetadataTransportMarkerFile.exists() &&
+        generatedMetadataTransportMarkerFile.readText().trim().equals("rtu", ignoreCase = true)
 
 /** Api生成目录 */
 val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:ui") .projectDir .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external") .absolutePath
@@ -45,6 +53,43 @@ ksp {
     arg("enumOutputPackage", "site.addzero.kcloud.plugins.mcuconsole.generated.enums")
     arg("iso2DataProviderPackage", "site.addzero.kcloud.plugins.mcuconsole.generated.forms.dataprovider")
     arg("mcpPackageName", "site.addzero.kcloud.plugins.mcuconsole.generated.mcp")
+}
+
+modbusRtu {
+    codegenModes.set(listOf("server"))
+    contractPackages.set(
+        listOf(
+            "site.addzero.kcloud.plugins.mcuconsole.modbus.device",
+        ),
+    )
+    metadataProviders.set(
+        if (useCodegenContextMetadata) {
+            listOf("database")
+        } else {
+            listOf("interfaces")
+        },
+    )
+    if (useCodegenContextMetadata) {
+        databaseDriverClass.set("org.sqlite.JDBC")
+        databaseJdbcUrl.set("jdbc:sqlite:${generatedMetadataDbFile.absolutePath}")
+        databaseQuery.set(
+            """
+            SELECT payload
+            FROM codegen_context_modbus_contract
+            WHERE consumer_target = 'MCU_CONSOLE'
+              AND enabled = 1
+              AND selected = 1
+              AND transport = '${'$'}{transport}'
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """.trimIndent(),
+        )
+        databaseJsonColumn.set("payload")
+    }
+}
+
+dependencies {
+    add("kspJvm", libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
 }
 
 kotlin {

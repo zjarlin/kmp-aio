@@ -1,6 +1,25 @@
 pluginManagement {
+    val modbusGradlePluginVersion = file("checkouts/build-logic/gradle/libs.versions.toml")
+        .takeIf { it.isFile }
+        ?.readText()
+        ?.let { catalogText ->
+            Regex("""(?m)^modbus-gradle-plugin\s*=\s*"([^"]+)"""")
+                .find(catalogText)
+                ?.groupValues
+                ?.get(1)
+        }
+    plugins {
+        modbusGradlePluginVersion?.let { version ->
+            id("site.addzero.ksp.modbus-rtu") version version
+            id("site.addzero.ksp.modbus-tcp") version version
+        }
+    }
     repositories {
-        mavenLocal()
+        mavenLocal {
+            content {
+                includeGroupByRegex("site\\.addzero(\\..+)?")
+            }
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -21,6 +40,16 @@ val excludedTopLevelDirs = setOf("build", "checkouts", "kotlin-js-store")
 val excludedDirNames = setOf("build", "node_modules")
 
 dependencyResolutionManagement {
+    repositories {
+        mavenLocal {
+            content {
+                includeGroupByRegex("site\\.addzero(\\..+)?")
+            }
+        }
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
     if (buildLogicCatalogFile.isFile) {
         versionCatalogs {
             create("libs") {

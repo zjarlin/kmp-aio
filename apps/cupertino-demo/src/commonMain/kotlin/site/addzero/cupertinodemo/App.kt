@@ -94,9 +94,7 @@ fun App() {
             if (state.showAlert) {
                 CupertinoAlertDialog(
                     onDismissRequest = state::dismissAlert,
-                    title = {
-                        CupertinoText("脚手架已经换成纯 Cupertino")
-                    },
+                    title = { org.koin.compose.koinInject<AppCupertinoAlertDialogTitleSpi>().Render() },
                     message = {
                         CupertinoText("顶部栏、侧边栏、内容工作区和状态区现在都按 Cupertino 方式组织，M3 不再作为主界面暴露。")
                     },
@@ -160,6 +158,7 @@ fun App() {
         }
     }
 }
+
 
 @Composable
 private fun CupertinoDemoTheme(
@@ -620,3 +619,16 @@ private fun adaptiveTriStateLabel(state: ToggleableState): String =
         ToggleableState.Indeterminate -> "Indeterminate"
         ToggleableState.On -> "On"
     }
+
+interface AppCupertinoAlertDialogTitleSpi {
+    @androidx.compose.runtime.Composable
+    fun Render()
+}
+
+@org.koin.core.annotation.Single
+class DefaultAppCupertinoAlertDialogTitleSpi : AppCupertinoAlertDialogTitleSpi {
+    @androidx.compose.runtime.Composable
+    override fun Render() {
+        CupertinoText("脚手架已经换成纯 Cupertino")
+    }
+}

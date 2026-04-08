@@ -1,10 +1,11 @@
 # ktor-jimmer-plugin
 
-`ktor-jimmer-plugin` 只负责三件事：
+`ktor-jimmer-plugin` 主要负责四件事：
 
 - 按 `datasources.*` 配置创建 `DataSource`
 - 为对应数据源创建默认 `KSqlClient`
 - 暴露 Koin SPI，让消费方补充 schema / bootstrap / 兼容逻辑
+- 暴露可复用的 `JdbcExecutor`，给仍需直写 SQL 的消费方复用事务和参数绑定
 
 当前内置支持的 JDBC 类型有：
 

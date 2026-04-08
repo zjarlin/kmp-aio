@@ -342,24 +342,23 @@ private fun McuFlashStatusPanel(
             )
         }
         McuFlashProgressBar(progress)
+        val statusRows = listOf(
+            "当前阶段" to state.status.currentStage.orDash(),
+            "发送字节" to "${state.status.bytesSent.toSizeLabel()} / ${state.status.totalBytes.toSizeLabel()}",
+            "固件路径" to state.status.firmwarePath.orDash(),
+            "烧录地址" to state.status.flashStartAddress?.toHexAddress().orDash(),
+            "校验结果" to state.status.verified.toYesNo(),
+            "是否启动应用" to state.status.startedApplication.toYesNo(),
+            "开始时间" to state.status.startedAt.orDash(),
+            "结束时间" to state.status.finishedAt.orDash(),
+            "最近更新" to state.status.updatedAt.orDash(),
+        )
         Column(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            McuFlashKeyValueRow("当前阶段", state.status.currentStage.orDash())
-            McuFlashKeyValueRow(
-                "发送字节",
-                "${state.status.bytesSent.toSizeLabel()} / ${state.status.totalBytes.toSizeLabel()}",
-            )
-            McuFlashKeyValueRow("固件路径", state.status.firmwarePath.orDash())
-            McuFlashKeyValueRow(
-                "烧录地址",
-                state.status.flashStartAddress?.toHexAddress().orDash(),
-            )
-            McuFlashKeyValueRow("校验结果", state.status.verified.toYesNo())
-            McuFlashKeyValueRow("是否启动应用", state.status.startedApplication.toYesNo())
-            McuFlashKeyValueRow("开始时间", state.status.startedAt.orDash())
-            McuFlashKeyValueRow("结束时间", state.status.finishedAt.orDash())
-            McuFlashKeyValueRow("最近更新", state.status.updatedAt.orDash())
+            statusRows.forEach { (label, value) ->
+                McuFlashKeyValueRow(label, value)
+            }
         }
     }
 }
@@ -369,39 +368,32 @@ private fun McuFlashRuntimeSummaryPanel(
     state: McuFlashScreenState,
 ) {
     val profile = state.selectedProfile
+    val summaryRows = listOf(
+        "当前配置" to profile?.title.orDash(),
+        "传输方式" to profile?.transport.orDash(),
+        "默认起始地址" to profile?.defaultStartAddress?.toHexAddress().orDash(),
+        "支持 chipId" to profile?.supportedChipIds.toChipIdLabel(),
+        "固件提示" to profile?.artifactHint.orDash(),
+        "目标 chipId" to state.status.targetChipId?.toChipIdLabel().orDash(),
+        "目标电压" to state.status.targetVoltageMillivolts?.toVoltageLabel().orDash(),
+        "运行中探针" to state.status.probeSerialNumber?.let { serial ->
+            "${state.status.probeDescription.orDash()} / $serial"
+        }.orDash(),
+        "预选探针" to if (state.useAutoProbeSelection) {
+            "自动选择"
+        } else {
+            state.selectedProbe?.let { probe ->
+                "${probe.displayName()} / ${probe.serialNumber.orDash()}"
+            }.orDash()
+        },
+    )
     McuFlashPanel(
         title = "运行摘要",
         subtitle = "便于确认当前目标、电压和探针落点。",
     ) {
-        McuFlashKeyValueRow("当前配置", profile?.title.orDash())
-        McuFlashKeyValueRow("传输方式", profile?.transport.orDash())
-        McuFlashKeyValueRow("默认起始地址", profile?.defaultStartAddress?.toHexAddress().orDash())
-        McuFlashKeyValueRow("支持 chipId", profile?.supportedChipIds.toChipIdLabel())
-        McuFlashKeyValueRow("固件提示", profile?.artifactHint.orDash())
-        McuFlashKeyValueRow(
-            "目标 chipId",
-            state.status.targetChipId?.toChipIdLabel().orDash(),
-        )
-        McuFlashKeyValueRow(
-            "目标电压",
-            state.status.targetVoltageMillivolts?.toVoltageLabel().orDash(),
-        )
-        McuFlashKeyValueRow(
-            "运行中探针",
-            state.status.probeSerialNumber?.let { serial ->
-                "${state.status.probeDescription.orDash()} / $serial"
-            }.orDash(),
-        )
-        McuFlashKeyValueRow(
-            "预选探针",
-            if (state.useAutoProbeSelection) {
-                "自动选择"
-            } else {
-                state.selectedProbe?.let { probe ->
-                    "${probe.displayName()} / ${probe.serialNumber.orDash()}"
-                }.orDash()
-            },
-        )
+        summaryRows.forEach { (label, value) ->
+            McuFlashKeyValueRow(label, value)
+        }
     }
 }
 

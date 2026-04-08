@@ -7,6 +7,7 @@ import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.DeviceDefinition
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder4
 import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
@@ -54,6 +55,9 @@ interface Device {
 
     @ManyToOne
     val deviceType: DeviceType
+
+    @ManyToOne
+    val deviceDefinition: DeviceDefinition?
 
     @OneToMany(mappedBy = "device")
     val tags: List<Tag>

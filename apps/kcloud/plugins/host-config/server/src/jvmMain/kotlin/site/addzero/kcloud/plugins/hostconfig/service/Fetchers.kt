@@ -2,6 +2,12 @@ package site.addzero.kcloud.plugins.hostconfig.service
 
 import org.babyfish.jimmer.sql.fetcher.Fetcher
 import org.babyfish.jimmer.sql.kt.fetcher.newFetcher
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.DeviceDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.FeatureDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.LabelDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.ProductDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.ProductDefinitionLabelLink
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.PropertyDefinition
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 import site.addzero.kcloud.plugins.hostconfig.model.entity.Device
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
@@ -40,6 +46,9 @@ object Fetchers {
                     devices {
                         allScalarFields()
                         deviceType {
+                            allScalarFields()
+                        }
+                        deviceDefinition {
                             allScalarFields()
                         }
                         tags {
@@ -91,6 +100,9 @@ object Fetchers {
             allScalarFields()
         }
         deviceType {
+            allScalarFields()
+        }
+        deviceDefinition {
             allScalarFields()
         }
     }
@@ -147,5 +159,90 @@ object Fetchers {
 
     val tagValueText: Fetcher<TagValueText> = newFetcher(TagValueText::class).by {
         allScalarFields()
+    }
+
+    val productDefinitionTree: Fetcher<ProductDefinition> = newFetcher(ProductDefinition::class).by {
+        allScalarFields()
+        labelLinks {
+            allScalarFields()
+            label {
+                allScalarFields()
+            }
+        }
+        devices {
+            allScalarFields()
+            deviceType {
+                allScalarFields()
+            }
+            properties {
+                allScalarFields()
+                dataType {
+                    allScalarFields()
+                }
+            }
+            features {
+                allScalarFields()
+            }
+        }
+    }
+
+    val productDefinitionScalar: Fetcher<ProductDefinition> = newFetcher(ProductDefinition::class).by {
+        allScalarFields()
+        labelLinks {
+            allScalarFields()
+            label {
+                allScalarFields()
+            }
+        }
+    }
+
+    val deviceDefinitionDetail: Fetcher<DeviceDefinition> = newFetcher(DeviceDefinition::class).by {
+        allScalarFields()
+        product {
+            allScalarFields()
+        }
+        deviceType {
+            allScalarFields()
+        }
+        properties {
+            allScalarFields()
+            dataType {
+                allScalarFields()
+            }
+        }
+        features {
+            allScalarFields()
+        }
+    }
+
+    val propertyDefinitionDetail: Fetcher<PropertyDefinition> = newFetcher(PropertyDefinition::class).by {
+        allScalarFields()
+        deviceDefinition {
+            allScalarFields()
+        }
+        dataType {
+            allScalarFields()
+        }
+    }
+
+    val featureDefinitionDetail: Fetcher<FeatureDefinition> = newFetcher(FeatureDefinition::class).by {
+        allScalarFields()
+        deviceDefinition {
+            allScalarFields()
+        }
+    }
+
+    val labelDefinition: Fetcher<LabelDefinition> = newFetcher(LabelDefinition::class).by {
+        allScalarFields()
+    }
+
+    val productDefinitionLabelLink: Fetcher<ProductDefinitionLabelLink> = newFetcher(ProductDefinitionLabelLink::class).by {
+        allScalarFields()
+        product {
+            allScalarFields()
+        }
+        label {
+            allScalarFields()
+        }
     }
 }

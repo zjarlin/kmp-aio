@@ -3,6 +3,7 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
+    id("site.addzero.buildlogic.other.repositories-conventions")
     id("site.addzero.buildlogic.kmp.cmp-lib")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
@@ -39,6 +40,7 @@ kotlin {
             implementation(libs.findLibrary("scaffold-spi").get())
             implementation(libs.findLibrary("site-addzero-route-core").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
+            implementation(libs.findLibrary("site-addzero-compose-native-component-text").get())
             implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         }
     }

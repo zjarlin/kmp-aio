@@ -754,7 +754,7 @@ class ProjectsViewModel(
                 entityId = project.id,
                 label = project.name,
                 caption = project.description,
-                children = buildProtocolNodes(project) + buildProjectModuleNodes(project),
+                children = buildProjectModuleNodes(project),
             )
         }
     }
@@ -784,7 +784,7 @@ class ProjectsViewModel(
     ): List<HostConfigTreeNode> {
         return buildModuleNodes(
             projectId = project.id,
-            modules = project.modules,
+            modules = project.modules + project.protocols.flatMap { protocol -> protocol.modules },
         )
     }
 
@@ -798,7 +798,7 @@ class ProjectsViewModel(
                 kind = HostConfigNodeKind.MODULE,
                 projectId = projectId,
                 entityId = module.id,
-                parentEntityId = module.protocolId,
+                parentEntityId = projectId,
                 label = module.name,
                 caption = module.moduleTemplateName,
                 children = module.devices.map { device ->

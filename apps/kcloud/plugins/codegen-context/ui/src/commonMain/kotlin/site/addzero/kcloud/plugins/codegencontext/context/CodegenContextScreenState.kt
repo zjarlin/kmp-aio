@@ -14,6 +14,7 @@ data class CodegenContextScreenState(
     val deleting: Boolean = false,
     val errorMessage: String? = null,
     val statusMessage: String? = null,
+    val generatedFiles: List<String> = emptyList(),
     val protocolTemplates: List<ProtocolTemplateOptionDto> = emptyList(),
     val contexts: List<CodegenContextSummaryDto> = emptyList(),
     val selectedContextId: Long? = null,
