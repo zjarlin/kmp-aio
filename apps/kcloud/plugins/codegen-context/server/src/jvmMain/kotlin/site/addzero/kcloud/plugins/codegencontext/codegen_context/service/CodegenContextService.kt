@@ -410,6 +410,7 @@ class CodegenContextService(
         }
         when (field.transportType) {
             CodegenTransportType.BOOL_COIL,
+            CodegenTransportType.U8,
             CodegenTransportType.U16,
             CodegenTransportType.U32_BE -> {
                 if (field.length != 1) {
@@ -417,6 +418,7 @@ class CodegenContextService(
                 }
             }
 
+            CodegenTransportType.BYTE_ARRAY,
             CodegenTransportType.STRING_ASCII,
             CodegenTransportType.STRING_UTF8 -> Unit
         }
@@ -659,8 +661,10 @@ private fun CodegenFunctionCode.expectsCoilSpace(): Boolean =
 private fun CodegenTransportType.registerWidth(length: Int): Int =
     when (this) {
         CodegenTransportType.BOOL_COIL,
+        CodegenTransportType.U8,
         CodegenTransportType.U16 -> 1
         CodegenTransportType.U32_BE -> 2
+        CodegenTransportType.BYTE_ARRAY -> (length + 1) / 2
         CodegenTransportType.STRING_ASCII,
         CodegenTransportType.STRING_UTF8 -> length
     }

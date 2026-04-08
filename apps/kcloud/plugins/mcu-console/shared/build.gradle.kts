@@ -7,18 +7,32 @@ plugins {
 }
 val libs = versionCatalogs.named("libs")
 
-val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
+val generatedKspSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val generatedContractSourceDir = layout.buildDirectory.dir("generated/codegen-context/commonMain/kotlin")
 val addzeroLibJvmVersion: String by project
+val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:server:generateMcuConsoleContracts"
 
 kotlin {
     sourceSets {
         commonMain {
-            kotlin.srcDir(generatedApiSourceDir)
+            kotlin.srcDir(generatedKspSourceDir)
+            kotlin.srcDir(generatedContractSourceDir)
             dependencies {
                 implementation(libs.findLibrary("modbus-runtime").get())
 //                implementation(libs.findLibrary("modbus-runtime").get())
 //                implementation(libs.findLibrary("modbus-runtime").get())
             }
+        }
+    }
+}
+
+tasks.configureEach {
+    when (name) {
+        "compileKotlinJvm",
+        "jvmSourcesJar",
+        "jvmJar",
+        -> {
+            dependsOn(generateMcuConsoleContractsTask)
         }
     }
 }

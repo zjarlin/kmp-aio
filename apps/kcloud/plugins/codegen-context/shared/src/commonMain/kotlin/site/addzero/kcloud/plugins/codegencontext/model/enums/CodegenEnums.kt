@@ -28,8 +28,10 @@ enum class CodegenFunctionCode {
 @Serializable
 enum class CodegenTransportType {
     BOOL_COIL,
+    U8,
     U16,
     U32_BE,
+    BYTE_ARRAY,
     STRING_ASCII,
     STRING_UTF8,
 }

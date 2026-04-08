@@ -1,11 +1,10 @@
 # ktor-jimmer-plugin
 
-`ktor-jimmer-plugin` 主要负责四件事：
+`ktor-jimmer-plugin` 主要负责三件事：
 
 - 按 `datasources.*` 配置创建 `DataSource`
 - 为对应数据源创建默认 `KSqlClient`
-- 暴露 Koin SPI，让消费方补充 schema / bootstrap / 兼容逻辑
-- 暴露可复用的 `JdbcExecutor`，给仍需直写 SQL 的消费方复用事务和参数绑定
+- 暴露可复用的 `JdbcExecutor`，给业务侧补 Jimmer 不擅长表达的手写 SQL
 
 当前内置支持的 JDBC 类型有：
 
@@ -17,12 +16,13 @@
 
 ## What This Library Does Not Own
 
+- 不负责自动建表
 - 不提供 `schema-sqlite.sql` / `schema-postgres.sql` / `schema-mysql.sql`
 - 不声明任何业务表
 - 不决定是否做 `autoddl`
 - 不做业务侧的历史数据修正
 
-这些都属于消费方，例如 `apps/kcloud/server` 或具体业务插件自己的 `resources/sql/*`。
+这些都属于消费方，例如 `apps/kcloud/server` 或具体业务插件自己的 Flyway migration。
 
 ## Koin Wiring
 
@@ -57,101 +57,37 @@ installKoin {
 }
 ```
 
-如果你有桌面端内嵌 server 的 sqlite fallback，还需要：
+## Schema Policy
 
-```kotlin
-System.setProperty(JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY, "true")
-```
+业务表结构统一建议交给 Flyway：
 
-对应常量：
-
-- `site.addzero.kcloud.jimmer.di.JIMMER_EMBEDDED_DESKTOP_MODE_PROPERTY`
-
-## Consumer SPI
-
-库提供的扩展点是 `JimmerDatasourceBootstrapSpi`。
-
-它会在 `DataSource` 创建完成后、`KSqlClient` 创建前执行，适合做：
-
-- 执行消费方自己的 schema SQL
-- sqlite / postgres / mysql 的初始化差异
-- 历史库兼容修正
-
-如果多个插件都实现了这个 SPI，Koin 会把它们聚合成 `List<JimmerDatasourceBootstrapSpi>`，按 `order` 从小到大执行。
-
-### 3. Register a Bootstrapper
-
-最稳妥的方式是由消费方显式提供一个 Koin module：
-
-```kotlin
-@Module
-class MyServerJimmerKoinModule {
-    @Single
-    fun provideDatasourceBootstrapper(): JimmerDatasourceBootstrapSpi {
-        return MyServerSchemaBootstrapper()
-    }
-}
-```
-
-实现示例：
-
-```kotlin
-class MyServerSchemaBootstrapper : JimmerDatasourceBootstrapSpi {
-    override fun onDataSourceReady(context: DatasourceBootstrapContext) {
-        when {
-            context.properties.driver.contains("sqlite", ignoreCase = true) -> {
-                JimmerSqlScriptSupport.executeClasspathSql(
-                    dataSource = context.dataSource,
-                    resourcePath = "sql/schema-sqlite.sql",
-                )
-            }
-
-            context.properties.driver.contains("postgres", ignoreCase = true) -> {
-                JimmerSqlScriptSupport.executeClasspathSql(
-                    dataSource = context.dataSource,
-                    resourcePath = "sql/schema-postgres.sql",
-                )
-            }
-
-            context.properties.driver.contains("mysql", ignoreCase = true) -> {
-                JimmerSqlScriptSupport.executeClasspathSql(
-                    dataSource = context.dataSource,
-                    resourcePath = "sql/schema-mysql.sql",
-                )
-            }
-        }
-    }
-}
-```
+- 建表、改表、补索引、历史 DDL 迁移放到 `db/migration/**`
+- 运行时不要通过 `JdbcExecutor` 或 `JimmerSqlScriptSupport` 手工执行 DDL
+- `JdbcExecutor` 只用于 Jimmer 不擅长表达的查询、批量更新、历史数据修正这类手写 SQL
+- 如果某个迁移必须写原生 SQL，也应放进 Flyway migration，而不是塞回应用启动流程
 
 辅助类：
 
+- `site.addzero.kcloud.jimmer.jdbc.JdbcExecutor`
 - `site.addzero.kcloud.jimmer.support.JimmerSqlScriptSupport`
 
-可用方法：
-
-- `loadClasspathSql(resourcePath)`
-- `executeStatements(dataSource, sql)`
-- `executeClasspathSql(dataSource, resourcePath)`
+其中 `JimmerSqlScriptSupport` 只适合执行已经明确受控的 SQL 片段，不应用来承担 schema 自动初始化。
 
 ## Resource Layout
 
-把 SQL 放在消费方自己的资源目录：
-
 ```text
-apps/my-server/src/jvmMain/resources/sql/schema-sqlite.sql
-apps/my-server/src/jvmMain/resources/sql/schema-postgres.sql
-apps/my-server/src/jvmMain/resources/sql/schema-mysql.sql
+apps/my-server/src/jvmMain/resources/db/migration/mysql/V2026_04_08_001__init.sql
+apps/my-plugin/server/src/jvmMain/resources/db/migration/mysql/V2026_04_08_101__feature_schema.sql
 ```
 
-如果你希望按业务插件拆分，也可以让每个插件各自提供一个 `JimmerDatasourceBootstrapSpi`，各自执行自己的 SQL 资源。库本身不会合并这些资源，也不会替你做中心注册表。
+只要这些资源在运行时类路径上，Flyway 就会统一扫描并执行。
 
 ## Current KCloud Example
 
 当前仓库里的落地方式：
 
-- 库模块只保留 `JimmerKoinModule`、驱动 SPI、bootstrap SPI、SQL helper
-- `apps/kcloud/server` 提供 `KCloudServerJimmerKoinModule`
-- `apps/kcloud/server/src/jvmMain/resources/sql/` 持有实际 schema
+- 库模块只保留 `JimmerKoinModule`、数据源 SPI、`JdbcExecutor` 和 SQL helper
+- `apps/kcloud/server` 提供 MySQL 数据源与 Flyway 配置
+- `apps/kcloud/plugins/**/server/src/jvmMain/resources/db/migration/mysql/` 持有各插件自己的 schema 与演进脚本
 
-也就是说，`autoddl` 和业务表结构现在完全归消费方所有，而不是 `ktor-jimmer-plugin`。
+也就是说，Jimmer 只负责数据源和 ORM，业务 schema 迁移统一归 Flyway，而不是 `ktor-jimmer-plugin`。

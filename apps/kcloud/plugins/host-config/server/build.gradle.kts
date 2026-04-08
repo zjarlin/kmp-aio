@@ -6,17 +6,13 @@ plugins {
 
 val hostConfigUiProjectDir = layout.projectDirectory.dir("../ui")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
+val generatedApiRootDir =
+    hostConfigUiProjectDir.dir("build/generated/source/controller2api/commonMain/kotlin")
 
 /** API 生成目录。 */
 val generatedApiOutputDir =
-    hostConfigUiProjectDir.dir(
-        "src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external",
-    )
-
-/** API 聚合入口生成目录。 */
-val generatedApiAggregatorOutputDir =
-    hostConfigUiProjectDir.dir(
-        "build/generated/source/controller2api/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external",
+    generatedApiRootDir.dir(
+        "site/addzero/kcloud/plugins/hostconfig/api/external/generated",
     )
 
 /** 共享源码目录。 */
@@ -46,16 +42,14 @@ val generatedApiFiles =
         listOf(
             generatedApiOutputDir.file("Apis.kt").asFile,
             generatedApiOutputDir.file("ApisModule.kt").asFile,
-            generatedApiAggregatorOutputDir.file("Apis.kt").asFile,
-            generatedApiAggregatorOutputDir.file("ApisModule.kt").asFile,
         )
 
 ksp {
-    arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external")
+    arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir.asFile.absolutePath)
     arg("apiClientAggregatorObjectName", "Apis")
     arg("apiClientAggregatorStyle", "koin")
-    arg("apiClientAggregatorOutputDir", generatedApiAggregatorOutputDir.asFile.absolutePath)
+    arg("apiClientAggregatorOutputDir", generatedApiOutputDir.asFile.absolutePath)
     arg("sharedSourceDir", sharedSourceDir.asFile.absolutePath)
     arg("sharedComposeSourceDir", sharedComposeSourceDir.asFile.absolutePath)
     arg("backendServerSourceDir", backendServerSourceDir.asFile.absolutePath)
@@ -69,6 +63,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:plugins:host-config:shared"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
             implementation("site.addzero:spec-iot:2026.03.13")
         }
@@ -76,7 +71,7 @@ kotlin {
 }
 
 val cleanHostConfigGeneratedApis by tasks.registering(Delete::class) {
-    delete(generatedApiFiles)
+    delete(generatedApiRootDir.asFile)
 }
 
 tasks.matching { task ->

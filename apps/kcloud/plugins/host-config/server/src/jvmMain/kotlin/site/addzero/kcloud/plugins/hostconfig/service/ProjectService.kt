@@ -920,19 +920,23 @@ class ProjectService(
         )
 
     private fun resolveProjectProtocolId(projectId: Long, protocolTemplateId: Long): Long {
-        return jdbc.queryList(
+        val protocolIds = jdbc.queryList(
             """
             SELECT pp.protocol_id
             FROM host_config_project_protocol pp
             JOIN host_config_protocol_instance pi ON pi.id = pp.protocol_id
             WHERE pp.project_id = ? AND pi.protocol_template_id = ?
             ORDER BY pp.sort_index ASC, pp.id ASC
-            LIMIT 1
+            LIMIT 2
             """.trimIndent(),
             projectId,
             protocolTemplateId,
-        ) { rs -> rs.getLong(1) }.firstOrNull()
-            ?: throw ConflictException("Please link a matching protocol before creating or moving the module")
+        ) { rs -> rs.getLong(1) }
+        return when (protocolIds.size) {
+            0 -> throw ConflictException("Please link a matching protocol before creating or moving the module")
+            1 -> protocolIds.first()
+            else -> throw ConflictException("Multiple matching protocols are linked to the project. Please choose the target protocol explicitly")
+        }
     }
 
     private fun resolveProjectIdByProtocol(protocolId: Long): Long {

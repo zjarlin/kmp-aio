@@ -11,6 +11,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.BusinessValidationException
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.NotFoundException
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenFunctionCode
@@ -33,7 +34,7 @@ class CodegenContextServiceTest {
 
             assertNotNull(saved.id)
             assertEquals("MODBUS_RTU_CLIENT", saved.protocolTemplateCode)
-            assertEquals("Modbus RTU Client", saved.protocolTemplateName)
+            assertEquals("ModbusRTUClient", saved.protocolTemplateName)
             assertEquals(2, saved.schemas.size)
             assertTrue(saved.schemas.all { schema -> schema.id != null })
             assertTrue(saved.schemas.flatMap { schema -> schema.fields }.all { field -> field.id != null })
@@ -253,8 +254,153 @@ class CodegenContextServiceTest {
                             assertTrue(resultSet.next())
                             assertEquals(1, resultSet.getInt("selected"))
                             val payload = resultSet.getString("payload")
-                            assertContains(payload, "\"interfaceSimpleName\": \"DeviceApi\"")
-                            assertContains(payload, "\"interfaceSimpleName\": \"DeviceWriteApi\"")
+                            assertContains(payload, "\"interfaceSimpleName\":\"DeviceApi\"")
+                            assertContains(payload, "\"interfaceSimpleName\":\"DeviceWriteApi\"")
+                        }
+                    }
+                }
+            } finally {
+                deleteWorkspace(workspaceRoot)
+            }
+        }
+    }
+
+    @Test
+    fun shouldGenerateFlashConfigContractsWithU8AndByteArrayFields() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val saved =
+                fixture.service.saveContext(
+                    baseContextRequest(
+                        protocolTemplateId = template.id,
+                        code = "CTX_FLASH_CONFIG",
+                    ).copy(
+                        schemas =
+                            listOf(
+                                CodegenSchemaDto(
+                                    name = "读取 Flash 配置",
+                                    description = "读取 Flash 持久化配置。",
+                                    sortIndex = 0,
+                                    direction = CodegenSchemaDirection.READ,
+                                    functionCode = CodegenFunctionCode.READ_HOLDING_REGISTERS,
+                                    baseAddress = 200,
+                                    methodName = "getFlashConfig",
+                                    modelName = "FlashConfig",
+                                    fields =
+                                        listOf(
+                                            CodegenFieldDto(
+                                                name = "魔术字",
+                                                description = "魔术字。",
+                                                sortIndex = 0,
+                                                propertyName = "magicWord",
+                                                transportType = CodegenTransportType.U32_BE,
+                                                registerOffset = 0,
+                                            ),
+                                            CodegenFieldDto(
+                                                name = "端口配置",
+                                                description = "24 路端口配置。",
+                                                sortIndex = 1,
+                                                propertyName = "portConfig",
+                                                transportType = CodegenTransportType.BYTE_ARRAY,
+                                                registerOffset = 2,
+                                                length = 24,
+                                            ),
+                                            CodegenFieldDto(
+                                                name = "从机地址",
+                                                description = "Modbus 从机地址。",
+                                                sortIndex = 2,
+                                                propertyName = "slaveAddress",
+                                                transportType = CodegenTransportType.U8,
+                                                registerOffset = 14,
+                                            ),
+                                        ),
+                                ),
+                                CodegenSchemaDto(
+                                    name = "写入 Flash 配置",
+                                    description = "写入 Flash 持久化配置。",
+                                    sortIndex = 10,
+                                    direction = CodegenSchemaDirection.WRITE,
+                                    functionCode = CodegenFunctionCode.WRITE_MULTIPLE_REGISTERS,
+                                    baseAddress = 200,
+                                    methodName = "writeFlashConfig",
+                                    fields =
+                                        listOf(
+                                            CodegenFieldDto(
+                                                name = "魔术字",
+                                                description = "魔术字。",
+                                                sortIndex = 0,
+                                                propertyName = "magicWord",
+                                                transportType = CodegenTransportType.U32_BE,
+                                                registerOffset = 0,
+                                            ),
+                                            CodegenFieldDto(
+                                                name = "端口配置",
+                                                description = "24 路端口配置。",
+                                                sortIndex = 1,
+                                                propertyName = "portConfig",
+                                                transportType = CodegenTransportType.BYTE_ARRAY,
+                                                registerOffset = 2,
+                                                length = 24,
+                                            ),
+                                            CodegenFieldDto(
+                                                name = "从机地址",
+                                                description = "Modbus 从机地址。",
+                                                sortIndex = 2,
+                                                propertyName = "slaveAddress",
+                                                transportType = CodegenTransportType.U8,
+                                                registerOffset = 14,
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+                )
+            val workspaceRoot = createGeneratorWorkspace()
+
+            try {
+                val response =
+                    withRepoRoot(workspaceRoot) {
+                        fixture.service.generateContracts(saved.id!!)
+                    }
+
+                assertEquals(3, response.generatedFiles.size)
+                val deviceApi =
+                    workspaceRoot.resolve(
+                        "apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin/" +
+                            "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt",
+                    ).readText()
+                val deviceWriteApi =
+                    workspaceRoot.resolve(
+                        "apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin/" +
+                            "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceWriteApi.kt",
+                    ).readText()
+                val flashRegisters =
+                    workspaceRoot.resolve(
+                        "apps/kcloud/plugins/mcu-console/shared/build/generated/codegen-context/commonMain/kotlin/" +
+                            "site/addzero/kcloud/plugins/mcuconsole/modbus/device/FlashConfigRegisters.kt",
+                    ).readText()
+
+                assertContains(deviceApi, "suspend fun getFlashConfig(): FlashConfigRegisters")
+                assertContains(deviceWriteApi, "suspend fun writeFlashConfig(")
+                assertContains(deviceWriteApi, "portConfig: ByteArray")
+                assertContains(deviceWriteApi, "slaveAddress: Int")
+                assertContains(flashRegisters, "val portConfig: ByteArray")
+                fixture.dataSource.connection.use { connection ->
+                    connection.prepareStatement(
+                        """
+                        SELECT payload
+                        FROM codegen_context_modbus_contract
+                        WHERE context_id = ? AND transport = 'rtu'
+                        """.trimIndent(),
+                    ).use { statement ->
+                        statement.setLong(1, saved.id!!)
+                        statement.executeQuery().use { resultSet ->
+                            assertTrue(resultSet.next())
+                            val payload = resultSet.getString("payload")
+                            assertContains(payload, "\"codecName\":\"BYTE_ARRAY\"")
+                            assertContains(payload, "\"codecName\":\"U8\"")
+                            assertContains(payload, "\"valueKind\":\"BYTES\"")
+                            assertContains(payload, "\"length\":24")
                         }
                     }
                 }

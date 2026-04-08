@@ -13,6 +13,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
+val generatedApiSourceDir = layout.buildDirectory.dir("generated/source/controller2api/commonMain/kotlin")
 
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")
@@ -40,15 +41,20 @@ dependencies {
 
 kotlin {
     sourceSets {
-        commonMain.dependencies {
-            implementation(project(":apps:kcloud:shared"))
-            implementation(project(":apps:kcloud:plugins:host-config:shared"))
-            implementation(libs.findLibrary("compose-cupertino-workbench").get())
-            implementation(libs.findLibrary("site-addzero-route-core").get())
-            implementation(libs.findLibrary("site-addzero-network-starter").get())
-            implementation(libs.findLibrary("scaffold-spi").get())
-            implementation(libs.findLibrary("io-github-robinpcrd-cupertino").get())
-            implementation(libs.findLibrary("io-github-robinpcrd-cupertino-icons-extended").get())
+        commonMain {
+            kotlin.srcDir(generatedApiSourceDir)
+            dependencies {
+                implementation(project(":apps:kcloud:shared"))
+                implementation(project(":apps:kcloud:plugins:host-config:shared"))
+                implementation(libs.findLibrary("compose-cupertino-workbench").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+                implementation(libs.findLibrary("site-addzero-route-core").get())
+                implementation(libs.findLibrary("site-addzero-network-starter").get())
+                implementation(libs.findLibrary("scaffold-spi").get())
+                implementation(libs.findLibrary("io-github-robinpcrd-cupertino").get())
+                implementation(libs.findLibrary("io-github-robinpcrd-cupertino-icons-extended").get())
+            }
         }
     }
 }

@@ -13,10 +13,23 @@ import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 import org.koin.core.annotation.Single
+import site.addzero.device.protocol.modbus.codegen.ModbusContractDefaultsResolver
+import site.addzero.device.protocol.modbus.codegen.ModbusDtoCustomization
+import site.addzero.device.protocol.modbus.codegen.ModbusKotlinContractGenerationRequest
+import site.addzero.device.protocol.modbus.codegen.ModbusKotlinContractGenerator
+import site.addzero.device.protocol.modbus.codegen.ModbusMetadataJsonCodec
+import site.addzero.device.protocol.modbus.codegen.model.GeneratedArtifact
+import site.addzero.device.protocol.modbus.codegen.model.ModbusDocModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusFieldModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusOperationModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusParameterModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusPropertyModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusReturnKind
+import site.addzero.device.protocol.modbus.codegen.model.ModbusReturnTypeModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusServiceModel
+import site.addzero.device.protocol.modbus.codegen.model.ModbusTransportKind
+import site.addzero.device.protocol.modbus.codegen.model.ModbusValueKind
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
@@ -33,14 +46,6 @@ private const val METADATA_TABLE = "codegen_context_modbus_contract"
 class CodegenContextContractGenerator(
     private val dataSource: DataSource,
 ) {
-    private val metadataJson =
-        Json {
-            prettyPrint = true
-            prettyPrintIndent = "  "
-            encodeDefaults = true
-            explicitNulls = false
-        }
-
     fun generate(
         context: CodegenContextDetailDto,
     ): GenerateContractsResponseDto {
@@ -71,29 +76,70 @@ class CodegenContextContractGenerator(
         context: CodegenContextDetailDto,
         workspaceRoot: Path,
     ): RenderedContracts {
-        val sortedSchemas = context.schemas.sortedBy { it.sortIndex }
-        val readSchemas = sortedSchemas.filter { it.direction.name == "READ" }
-        val writeSchemas = sortedSchemas.filter { it.direction.name == "WRITE" }
+        val services = context.toModbusServices()
+        val dtoCustomizations = buildDtoCustomizations(context, workspaceRoot)
+        val artifacts =
+            ModbusKotlinContractGenerator.render(
+                ModbusKotlinContractGenerationRequest(
+                    services = services,
+                    fileHeader = GENERATED_MARKER,
+                    dtoCustomizations = dtoCustomizations,
+                ),
+            )
+        val artifactsByFile = artifacts.associateBy { artifact -> artifact.fileName }
         val registerDtos =
-            readSchemas.associate { schema ->
-                val modelName = schema.modelName.orEmpty()
-                "${modelName}Registers.kt" to renderRegisterDto(schema, workspaceRoot)
-            }
+            artifacts
+                .filter { artifact -> artifact.fileName.endsWith("Registers") }
+                .associate { artifact -> "${artifact.fileName}.kt" to artifact.content.normalizeGeneratedKotlin() }
         return RenderedContracts(
-            deviceApi = renderReadApi(readSchemas),
-            deviceWriteApi = renderWriteApi(writeSchemas),
+            deviceApi = requireArtifact(artifactsByFile, "DeviceApi"),
+            deviceWriteApi = requireArtifact(artifactsByFile, "DeviceWriteApi"),
             registerDtos = registerDtos,
-            metadataPayload = renderMetadataPayload(context, readSchemas, writeSchemas),
-            transportId = context.modbusTransportId(),
+            metadataPayload = ModbusMetadataJsonCodec.encodeServices(services),
+            transportId = context.modbusTransport().transportId,
         )
+    }
+
+    private fun requireArtifact(
+        artifactsByFile: Map<String, GeneratedArtifact>,
+        fileName: String,
+    ): String {
+        return artifactsByFile[fileName]
+            ?.content
+            ?.normalizeGeneratedKotlin()
+            ?: throw BusinessValidationException("Missing generated Kotlin artifact: $fileName")
+    }
+
+    private fun buildDtoCustomizations(
+        context: CodegenContextDetailDto,
+        workspaceRoot: Path,
+    ): Map<String, ModbusDtoCustomization> {
+        return context.schemas
+            .filter { schema -> schema.direction.name == "READ" && !schema.modelName.isNullOrBlank() }
+            .associate { schema ->
+                val modelName = requireNotNull(schema.modelName)
+                val dtoQualifiedName = "$MCU_DEVICE_PACKAGE.${modelName}Registers"
+                dtoQualifiedName to
+                    ModbusDtoCustomization(
+                        summary = schema.description.cleanDocSummary() ?: schema.name,
+                        propertyDocs =
+                            schema.fields.associate { field ->
+                                field.propertyName to
+                                    (
+                                        field.description.cleanDocSummary()
+                                            ?: field.name
+                                        )
+                            },
+                    )
+            }
     }
 
     private fun locateGeneratedRoots(): GeneratedRoots {
         val workspaceRoot = locateWorkspaceRoot()
         val serverRoot =
-            workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin")
+            workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin")
         val sharedRoot =
-            workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin")
+            workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/build/generated/codegen-context/commonMain/kotlin")
         val serverPackageDir = safeResolve(serverRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
         val sharedPackageDir = safeResolve(sharedRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
         return GeneratedRoots(
@@ -155,7 +201,6 @@ class CodegenContextContractGenerator(
         rendered: RenderedContracts,
     ) {
         dataSource.connection.use { connection ->
-            ensureMetadataTable(connection)
             connection.autoCommit = false
             try {
                 val now = Instant.now()
@@ -208,62 +253,6 @@ class CodegenContextContractGenerator(
         }
     }
 
-    private fun ensureMetadataTable(
-        connection: Connection,
-    ) {
-        val createTableSql =
-            when {
-                connection.isMySql() ->
-                    """
-                    CREATE TABLE IF NOT EXISTS $METADATA_TABLE (
-                        context_id BIGINT NOT NULL,
-                        context_code VARCHAR(255) NOT NULL,
-                        context_name VARCHAR(255) NOT NULL,
-                        enabled TINYINT(1) NOT NULL,
-                        consumer_target VARCHAR(64) NOT NULL,
-                        protocol_template_code VARCHAR(255) NOT NULL,
-                        transport VARCHAR(32) NOT NULL,
-                        selected TINYINT(1) NOT NULL DEFAULT 0,
-                        payload LONGTEXT NOT NULL,
-                        updated_at DATETIME(3) NOT NULL,
-                        PRIMARY KEY (context_id, transport),
-                        CONSTRAINT fk_codegen_context_modbus_contract_context
-                            FOREIGN KEY (context_id) REFERENCES codegen_context_context(id)
-                            ON DELETE CASCADE,
-                        KEY idx_codegen_context_modbus_contract_selected (consumer_target, transport, selected, updated_at)
-                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-                    """.trimIndent()
-
-                connection.isSqlite() ->
-                    """
-                    CREATE TABLE IF NOT EXISTS $METADATA_TABLE (
-                        context_id INTEGER NOT NULL,
-                        context_code TEXT NOT NULL,
-                        context_name TEXT NOT NULL,
-                        enabled INTEGER NOT NULL,
-                        consumer_target TEXT NOT NULL,
-                        protocol_template_code TEXT NOT NULL,
-                        transport TEXT NOT NULL,
-                        selected INTEGER NOT NULL DEFAULT 0,
-                        payload TEXT NOT NULL,
-                        updated_at TEXT NOT NULL,
-                        PRIMARY KEY (context_id, transport),
-                        FOREIGN KEY(context_id) REFERENCES codegen_context_context(id) ON DELETE CASCADE
-                    )
-                    """.trimIndent()
-
-                else -> {
-                    error("Unsupported metadata snapshot database: ${connection.metaData.databaseProductName}")
-                }
-            }
-        connection.createStatement().use { statement ->
-            if (connection.isSqlite()) {
-                statement.execute("PRAGMA foreign_keys = ON")
-            }
-            statement.executeUpdate(createTableSql)
-        }
-    }
-
     private fun writeFile(
         target: Path,
         content: String,
@@ -276,214 +265,6 @@ class CodegenContextContractGenerator(
             StandardOpenOption.TRUNCATE_EXISTING,
             StandardOpenOption.WRITE,
         )
-    }
-
-    private fun renderMetadataPayload(
-        context: CodegenContextDetailDto,
-        readSchemas: List<CodegenSchemaDto>,
-        writeSchemas: List<CodegenSchemaDto>,
-    ): String {
-        val services =
-            buildList {
-                if (readSchemas.isNotEmpty()) {
-                    add(
-                        GeneratedMetadataService(
-                            interfacePackage = MCU_DEVICE_PACKAGE,
-                            interfaceSimpleName = "DeviceApi",
-                            interfaceQualifiedName = "$MCU_DEVICE_PACKAGE.DeviceApi",
-                            summary = context.name,
-                            transport = context.modbusTransportId(),
-                            operations = readSchemas.map(CodegenSchemaDto::toReadOperationPayload),
-                        ),
-                    )
-                }
-                if (writeSchemas.isNotEmpty()) {
-                    add(
-                        GeneratedMetadataService(
-                            interfacePackage = MCU_DEVICE_PACKAGE,
-                            interfaceSimpleName = "DeviceWriteApi",
-                            interfaceQualifiedName = "$MCU_DEVICE_PACKAGE.DeviceWriteApi",
-                            summary = context.name,
-                            transport = context.modbusTransportId(),
-                            operations = writeSchemas.map(CodegenSchemaDto::toWriteOperationPayload),
-                        ),
-                    )
-                }
-            }
-        return metadataJson.encodeToString(
-            GeneratedMetadataEnvelope(
-                services = services,
-            ),
-        ) + "\n"
-    }
-
-    private fun renderReadApi(
-        schemas: List<CodegenSchemaDto>,
-    ): String {
-        val body =
-            if (schemas.isEmpty()) {
-                ""
-            } else {
-                schemas.joinToString("\n\n") { schema ->
-                    """
-    @ModbusOperation(
-        address = ${schema.baseAddress},
-        functionCode = ModbusFunctionCode.${schema.functionCode.name},
-    )
-    suspend fun ${schema.methodName}(): ${schema.modelName}Registers
-                    """.trimIndent().prependIndent("    ")
-                }
-            }
-
-        return """
-// $GENERATED_MARKER
-package $MCU_DEVICE_PACKAGE
-
-import site.addzero.device.protocol.modbus.annotation.ModbusOperation
-import site.addzero.device.protocol.modbus.model.ModbusFunctionCode
-
-interface DeviceApi {
-${body.ifBlank { "" }}
-}
-        """.trimIndent() + "\n"
-    }
-
-    private fun renderWriteApi(
-        schemas: List<CodegenSchemaDto>,
-    ): String {
-        val body =
-            if (schemas.isEmpty()) {
-                ""
-            } else {
-                schemas.joinToString("\n\n") { schema ->
-                    val params =
-                        schema.fields.sortedBy { it.sortIndex }.mapIndexed { index, field ->
-                            buildString {
-                                append("        @ModbusParam(order = ")
-                                append(index)
-                                append(", codec = ModbusCodec.")
-                                append(field.transportType.name)
-                                if (field.registerOffset != 0) {
-                                    append(", registerOffset = ")
-                                    append(field.registerOffset)
-                                }
-                                if (field.bitOffset != 0) {
-                                    append(", bitOffset = ")
-                                    append(field.bitOffset)
-                                }
-                                if (requiresLength(field)) {
-                                    append(", length = ")
-                                    append(field.length)
-                                }
-                                appendLine(")")
-                                append("        ")
-                                append(field.propertyName)
-                                append(": ")
-                                append(field.transportType.kotlinTypeName())
-                            }
-                        }.joinToString(",\n", postfix = ",")
-
-                    """
-    @ModbusOperation(
-        address = ${schema.baseAddress},
-        functionCode = ModbusFunctionCode.${schema.functionCode.name},
-    )
-    suspend fun ${schema.methodName}(
-$params
-    ): ModbusCommandResult
-                    """.trimIndent().prependIndent("    ")
-                }
-            }
-
-        return """
-// $GENERATED_MARKER
-package $MCU_DEVICE_PACKAGE
-
-import site.addzero.device.protocol.modbus.annotation.ModbusOperation
-import site.addzero.device.protocol.modbus.annotation.ModbusParam
-import site.addzero.device.protocol.modbus.model.ModbusCodec
-import site.addzero.device.protocol.modbus.model.ModbusCommandResult
-import site.addzero.device.protocol.modbus.model.ModbusFunctionCode
-
-interface DeviceWriteApi {
-${body.ifBlank { "" }}
-}
-        """.trimIndent() + "\n"
-    }
-
-    private fun renderRegisterDto(
-        schema: CodegenSchemaDto,
-        workspaceRoot: Path,
-    ): String {
-        val modelName = schema.modelName ?: error("Validated READ schema requires modelName")
-        val properties =
-            schema.fields.sortedBy { it.sortIndex }.joinToString(",\n") { field ->
-                val annotationArgs =
-                    buildList {
-                        add("codec = ModbusCodec.${field.transportType.name}")
-                        add("registerOffset = ${field.registerOffset}")
-                        if (field.bitOffset != 0) {
-                            add("bitOffset = ${field.bitOffset}")
-                        }
-                        if (requiresLength(field)) {
-                            add("length = ${field.length}")
-                        }
-                    }.joinToString(", ")
-                buildString {
-                    append("    @ModbusField(")
-                    append(annotationArgs)
-                    appendLine(")")
-                    append("    val ")
-                    append(field.propertyName)
-                    append(": ")
-                    append(field.transportType.kotlinTypeName())
-                }
-            }
-        val apiModelPath =
-            workspaceRoot.resolve(
-                "apps/kcloud/plugins/mcu-console/shared/src/commonMain/kotlin/" +
-                    "site/addzero/kcloud/plugins/mcuconsole/modbus/device/$modelName.kt",
-            )
-        val toApiModel =
-            if (apiModelPath.exists()) {
-                val propertyAssignments =
-                    schema.fields.sortedBy { it.sortIndex }.joinToString(",\n") { field ->
-                        "            ${field.propertyName} = ${field.propertyName}"
-                    }
-                """
-
-    fun toApiModel(): $modelName {
-        return $modelName(
-$propertyAssignments,
-        )
-    }
-                """.trimEnd()
-            } else {
-                ""
-            }
-
-        return """
-// $GENERATED_MARKER
-package $MCU_DEVICE_PACKAGE
-
-import site.addzero.device.protocol.modbus.annotation.ModbusField
-import site.addzero.device.protocol.modbus.model.ModbusCodec
-
-data class ${modelName}Registers(
-$properties,
-) {$toApiModel
-}
-        """.trimIndent() + "\n"
-    }
-
-    private fun requiresLength(
-        field: CodegenFieldDto,
-    ): Boolean {
-        return when (field.transportType) {
-            CodegenTransportType.STRING_ASCII,
-            CodegenTransportType.STRING_UTF8 -> true
-            else -> false
-        }
     }
 }
 
@@ -501,20 +282,214 @@ internal data class GeneratedRoots(
     val sharedPackageDir: Path,
 )
 
-private fun CodegenTransportType.kotlinTypeName(): String =
-    when (this) {
-        CodegenTransportType.BOOL_COIL -> "Boolean"
-        CodegenTransportType.U16,
-        CodegenTransportType.U32_BE -> "Int"
-        CodegenTransportType.STRING_ASCII,
-        CodegenTransportType.STRING_UTF8 -> "String"
+internal data class ApiModelDoc(
+    val classSummary: String?,
+    val propertyDocs: Map<String, String>,
+)
+
+private fun CodegenContextDetailDto.toModbusServices(): List<ModbusServiceModel> {
+    val transport = modbusTransport()
+    val sortedSchemas = schemas.sortedBy(CodegenSchemaDto::sortIndex)
+    val services = mutableListOf<ModbusServiceModel>()
+
+    val readOperations =
+        sortedSchemas
+            .filter { schema -> schema.direction.name == "READ" }
+            .map { schema -> schema.toReadOperation(transport) }
+            .let(ModbusContractDefaultsResolver::resolveOperationIdsAndQuantities)
+    if (readOperations.isNotEmpty()) {
+        services +=
+            ModbusServiceModel(
+                interfacePackage = MCU_DEVICE_PACKAGE,
+                interfaceSimpleName = "DeviceApi",
+                interfaceQualifiedName = "$MCU_DEVICE_PACKAGE.DeviceApi",
+                serviceId = ModbusContractDefaultsResolver.defaultServiceId("DeviceApi"),
+                summary = name,
+                basePath = "/api/modbus",
+                transport = transport,
+                doc = ModbusDocModel(summary = description.cleanDocSummary() ?: name),
+                operations = readOperations,
+            )
     }
 
-private fun CodegenContextDetailDto.modbusTransportId(): String =
-    when (protocolTemplateCode) {
-        "MODBUS_TCP_CLIENT" -> "tcp"
-        else -> "rtu"
+    val writeOperations =
+        sortedSchemas
+            .filter { schema -> schema.direction.name == "WRITE" }
+            .map { schema -> schema.toWriteOperation(transport) }
+            .let(ModbusContractDefaultsResolver::resolveOperationIdsAndQuantities)
+    if (writeOperations.isNotEmpty()) {
+        services +=
+            ModbusServiceModel(
+                interfacePackage = MCU_DEVICE_PACKAGE,
+                interfaceSimpleName = "DeviceWriteApi",
+                interfaceQualifiedName = "$MCU_DEVICE_PACKAGE.DeviceWriteApi",
+                serviceId = ModbusContractDefaultsResolver.defaultServiceId("DeviceWriteApi"),
+                summary = name,
+                basePath = "/api/modbus",
+                transport = transport,
+                doc = ModbusDocModel(summary = description.cleanDocSummary() ?: name),
+                operations = writeOperations,
+            )
     }
+
+    return services
+}
+
+private fun CodegenSchemaDto.toReadOperation(
+    transport: ModbusTransportKind,
+): ModbusOperationModel {
+    val resolvedModelName = requireNotNull(modelName) { "Validated READ schema requires modelName." }
+    return ModbusOperationModel(
+        methodName = methodName,
+        operationId = "",
+        functionCodeName = functionCode.name,
+        address = baseAddress,
+        quantity = -1,
+        requestClassName = buildRequestClassName("DeviceApi", transport, methodName),
+        requestQualifiedName = buildRequestQualifiedName("DeviceApi", transport, methodName),
+        parameters = emptyList(),
+        returnType =
+            ModbusReturnTypeModel(
+                qualifiedName = "$MCU_DEVICE_PACKAGE.${resolvedModelName}Registers",
+                simpleName = "${resolvedModelName}Registers",
+                kind = ModbusReturnKind.DTO,
+                docSummary = description.cleanDocSummary() ?: name,
+                properties = fields.sortedBy(CodegenFieldDto::sortIndex).map { field -> field.toPropertyModel() },
+            ),
+        doc = ModbusDocModel(summary = description.cleanDocSummary() ?: name),
+    )
+}
+
+private fun CodegenSchemaDto.toWriteOperation(
+    transport: ModbusTransportKind,
+): ModbusOperationModel {
+    return ModbusOperationModel(
+        methodName = methodName,
+        operationId = "",
+        functionCodeName = functionCode.name,
+        address = baseAddress,
+        quantity = -1,
+        requestClassName = buildRequestClassName("DeviceWriteApi", transport, methodName),
+        requestQualifiedName = buildRequestQualifiedName("DeviceWriteApi", transport, methodName),
+        parameters =
+            fields
+                .sortedBy(CodegenFieldDto::sortIndex)
+                .mapIndexed { index, field -> field.toParameterModel(index) },
+        returnType =
+            ModbusReturnTypeModel(
+                qualifiedName = "site.addzero.device.protocol.modbus.model.ModbusCommandResult",
+                simpleName = "ModbusCommandResult",
+                kind = ModbusReturnKind.COMMAND_RESULT,
+            ),
+        doc = ModbusDocModel(summary = description.cleanDocSummary() ?: name),
+    )
+}
+
+private fun CodegenFieldDto.toPropertyModel(): ModbusPropertyModel =
+    ModbusPropertyModel(
+        name = propertyName,
+        qualifiedType = transportType.kotlinQualifiedTypeName(),
+        valueKind = transportType.valueKind(),
+        field =
+            ModbusFieldModel(
+                codecName = transportType.codecName(),
+                registerOffset = registerOffset,
+                bitOffset = bitOffset,
+                length = length,
+                registerWidth = transportType.registerWidth(length),
+            ),
+        doc = description.cleanDocSummary() ?: name,
+    )
+
+private fun CodegenFieldDto.toParameterModel(order: Int): ModbusParameterModel =
+    ModbusParameterModel(
+        name = propertyName,
+        qualifiedType = transportType.kotlinQualifiedTypeName(),
+        valueKind = transportType.valueKind(),
+        order = order,
+        codecName = transportType.codecName(),
+        registerOffset = registerOffset,
+        bitOffset = bitOffset,
+        registerWidth = transportType.registerWidth(length),
+        length = length,
+        doc = description.cleanDocSummary() ?: name,
+    )
+
+private fun CodegenContextDetailDto.modbusTransport(): ModbusTransportKind =
+    when (protocolTemplateCode) {
+        "MODBUS_TCP_CLIENT" -> ModbusTransportKind.TCP
+        else -> ModbusTransportKind.RTU
+    }
+
+private fun buildRequestClassName(
+    interfaceSimpleName: String,
+    transport: ModbusTransportKind,
+    methodName: String,
+): String {
+    val prefix = interfaceSimpleName + transport.transportId.replaceFirstChar(Char::uppercase)
+    return prefix + methodName.replaceFirstChar(Char::uppercase) + "Request"
+}
+
+private fun buildRequestQualifiedName(
+    interfaceSimpleName: String,
+    transport: ModbusTransportKind,
+    methodName: String,
+): String =
+    "$MCU_DEVICE_PACKAGE.generated.${buildRequestClassName(interfaceSimpleName, transport, methodName)}"
+
+private fun CodegenTransportType.codecName(): String =
+    when (this) {
+        CodegenTransportType.BOOL_COIL -> "BOOL_COIL"
+        CodegenTransportType.U8 -> "U8"
+        CodegenTransportType.U16 -> "U16"
+        CodegenTransportType.U32_BE -> "U32_BE"
+        CodegenTransportType.BYTE_ARRAY -> "BYTE_ARRAY"
+        CodegenTransportType.STRING_ASCII -> "STRING_ASCII"
+        CodegenTransportType.STRING_UTF8 -> "STRING_UTF8"
+    }
+
+private fun CodegenTransportType.valueKind(): ModbusValueKind =
+    when (this) {
+        CodegenTransportType.BOOL_COIL -> ModbusValueKind.BOOLEAN
+        CodegenTransportType.U8,
+        CodegenTransportType.U16,
+        CodegenTransportType.U32_BE -> ModbusValueKind.INT
+        CodegenTransportType.BYTE_ARRAY -> ModbusValueKind.BYTES
+        CodegenTransportType.STRING_ASCII,
+        CodegenTransportType.STRING_UTF8 -> ModbusValueKind.STRING
+    }
+
+private fun CodegenTransportType.kotlinQualifiedTypeName(): String =
+    when (this) {
+        CodegenTransportType.BOOL_COIL -> "kotlin.Boolean"
+        CodegenTransportType.U8,
+        CodegenTransportType.U16,
+        CodegenTransportType.U32_BE -> "kotlin.Int"
+        CodegenTransportType.BYTE_ARRAY -> "kotlin.ByteArray"
+        CodegenTransportType.STRING_ASCII,
+        CodegenTransportType.STRING_UTF8 -> "kotlin.String"
+    }
+
+private fun CodegenTransportType.registerWidth(
+    length: Int,
+): Int =
+    when (this) {
+        CodegenTransportType.BOOL_COIL,
+        CodegenTransportType.U8,
+        CodegenTransportType.U16 -> 1
+        CodegenTransportType.U32_BE -> 2
+        CodegenTransportType.BYTE_ARRAY -> (length + 1) / 2
+        CodegenTransportType.STRING_ASCII,
+        CodegenTransportType.STRING_UTF8 -> length
+    }
+
+internal fun String.normalizeGeneratedKotlin(): String =
+    lineSequence()
+        .joinToString("\n") { line -> line.trimEnd() }
+        .trimEnd() + "\n"
+
+internal fun String?.cleanDocSummary(): String? =
+    this?.trim()?.takeIf(String::isNotBlank)
 
 private fun String.appendUpsertClause(
     connection: Connection,
@@ -535,21 +510,6 @@ private fun String.appendUpsertClause(
                     updated_at = VALUES(updated_at)
                 """.trimIndent()
 
-        connection.isSqlite() ->
-            this +
-                """
-                
-                ON CONFLICT(context_id, transport) DO UPDATE SET
-                    context_code = excluded.context_code,
-                    context_name = excluded.context_name,
-                    enabled = excluded.enabled,
-                    consumer_target = excluded.consumer_target,
-                    protocol_template_code = excluded.protocol_template_code,
-                    selected = excluded.selected,
-                    payload = excluded.payload,
-                    updated_at = excluded.updated_at
-                """.trimIndent()
-
         else -> error("Unsupported metadata snapshot database: ${connection.metaData.databaseProductName}")
     }
 
@@ -558,187 +518,83 @@ private fun PreparedStatement.setUpdatedAt(
     connection: Connection,
     instant: Instant,
 ) {
-    if (connection.isMySql()) {
-        setTimestamp(index, java.sql.Timestamp.from(instant))
-    } else {
-        setString(index, instant.toString())
+    check(connection.isMySql()) {
+        "Unsupported metadata snapshot database: ${connection.metaData.databaseProductName}"
     }
+    setTimestamp(index, java.sql.Timestamp.from(instant))
 }
 
 private fun Connection.isMySql(): Boolean =
     metaData.databaseProductName.contains("mysql", ignoreCase = true) ||
         metaData.url.contains(":mysql:", ignoreCase = true)
 
-private fun Connection.isSqlite(): Boolean =
-    metaData.databaseProductName.contains("sqlite", ignoreCase = true) ||
-        metaData.url.contains(":sqlite:", ignoreCase = true)
+internal fun loadApiModelDoc(
+    apiModelPath: Path,
+    modelName: String,
+): ApiModelDoc? {
+    if (!apiModelPath.exists()) {
+        return null
+    }
+    val lines = Files.readAllLines(apiModelPath)
+    var pendingDoc: String? = null
+    var collectingDoc = false
+    val docLines = mutableListOf<String>()
+    var classSummary: String? = null
+    val propertyDocs = linkedMapOf<String, String>()
 
-private fun CodegenSchemaDto.toReadOperationPayload(): GeneratedMetadataOperation =
-    GeneratedMetadataOperation(
-        methodName = methodName,
-        functionCodeName = functionCode.name,
-        address = baseAddress,
-        returnType =
-            GeneratedMetadataReturnType(
-                qualifiedName = "$MCU_DEVICE_PACKAGE.${requireNotNull(modelName)}Registers",
-                simpleName = "${requireNotNull(modelName)}Registers",
-                kind = "DTO",
-                docSummary = description.orEmpty(),
-                properties =
-                    fields.sortedBy(CodegenFieldDto::sortIndex).map { field ->
-                        GeneratedMetadataProperty(
-                            name = field.propertyName,
-                            qualifiedType = field.transportType.kotlinQualifiedTypeName(),
-                            valueKind = field.transportType.valueKindName(),
-                            field =
-                                GeneratedMetadataField(
-                                    codecName = field.transportType.codecName(),
-                                    registerOffset = field.registerOffset,
-                                    bitOffset = field.bitOffset,
-                                    length = field.length,
-                                    registerWidth = field.transportType.registerWidth(field.length),
-                                ),
-                            doc = field.description.orEmpty(),
-                        )
-                    },
-            ),
-        doc = GeneratedMetadataDoc(summary = description.orEmpty().ifBlank { "Execute $methodName." }),
+    lines.forEach { rawLine ->
+        val line = rawLine.trim()
+        if (collectingDoc) {
+            docLines += line
+            if (line.contains("*/")) {
+                pendingDoc = docLines.extractKDocSummary()
+                docLines.clear()
+                collectingDoc = false
+            }
+            return@forEach
+        }
+        if (line.startsWith("/**")) {
+            docLines.clear()
+            docLines += line
+            if (line.contains("*/")) {
+                pendingDoc = docLines.extractKDocSummary()
+                docLines.clear()
+            } else {
+                collectingDoc = true
+            }
+            return@forEach
+        }
+        if (pendingDoc != null && line.startsWith("data class $modelName(")) {
+            classSummary = pendingDoc
+            pendingDoc = null
+            return@forEach
+        }
+        val propertyName =
+            Regex("""(?:val|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:""").find(line)?.groupValues?.getOrNull(1)
+        if (pendingDoc != null && propertyName != null) {
+            propertyDocs[propertyName] = pendingDoc.orEmpty()
+            pendingDoc = null
+            return@forEach
+        }
+        if (line.isNotBlank() && !line.startsWith("@")) {
+            pendingDoc = null
+        }
+    }
+
+    if (classSummary == null && propertyDocs.isEmpty()) {
+        return null
+    }
+    return ApiModelDoc(
+        classSummary = classSummary,
+        propertyDocs = propertyDocs,
     )
+}
 
-private fun CodegenSchemaDto.toWriteOperationPayload(): GeneratedMetadataOperation =
-    GeneratedMetadataOperation(
-        methodName = methodName,
-        functionCodeName = functionCode.name,
-        address = baseAddress,
-        parameters =
-            fields
-                .sortedBy(CodegenFieldDto::sortIndex)
-                .mapIndexed { index, field ->
-                    GeneratedMetadataParameter(
-                        name = field.propertyName,
-                        qualifiedType = field.transportType.kotlinQualifiedTypeName(),
-                        valueKind = field.transportType.valueKindName(),
-                        order = index,
-                        codecName = field.transportType.codecName(),
-                        registerOffset = field.registerOffset,
-                        bitOffset = field.bitOffset,
-                        registerWidth = field.transportType.registerWidth(field.length),
-                        doc = field.description.orEmpty(),
-                    )
-                },
-        returnType =
-            GeneratedMetadataReturnType(
-                qualifiedName = "site.addzero.device.protocol.modbus.model.ModbusCommandResult",
-                simpleName = "ModbusCommandResult",
-                kind = "COMMAND_RESULT",
-            ),
-        doc = GeneratedMetadataDoc(summary = description.orEmpty().ifBlank { "Execute $methodName." }),
-    )
-
-private fun CodegenTransportType.codecName(): String =
-    when (this) {
-        CodegenTransportType.BOOL_COIL -> "BOOL_COIL"
-        CodegenTransportType.U16 -> "U16"
-        CodegenTransportType.U32_BE -> "U32_BE"
-        CodegenTransportType.STRING_ASCII -> "STRING_ASCII"
-        CodegenTransportType.STRING_UTF8 -> "STRING_UTF8"
-    }
-
-private fun CodegenTransportType.valueKindName(): String =
-    when (this) {
-        CodegenTransportType.BOOL_COIL -> "BOOLEAN"
-        CodegenTransportType.U16,
-        CodegenTransportType.U32_BE -> "INT"
-        CodegenTransportType.STRING_ASCII,
-        CodegenTransportType.STRING_UTF8 -> "STRING"
-    }
-
-private fun CodegenTransportType.kotlinQualifiedTypeName(): String =
-    when (this) {
-        CodegenTransportType.BOOL_COIL -> "kotlin.Boolean"
-        CodegenTransportType.U16,
-        CodegenTransportType.U32_BE -> "kotlin.Int"
-        CodegenTransportType.STRING_ASCII,
-        CodegenTransportType.STRING_UTF8 -> "kotlin.String"
-    }
-
-private fun CodegenTransportType.registerWidth(
-    length: Int,
-): Int =
-    when (this) {
-        CodegenTransportType.BOOL_COIL,
-        CodegenTransportType.U16 -> 1
-        CodegenTransportType.U32_BE -> 2
-        CodegenTransportType.STRING_ASCII,
-        CodegenTransportType.STRING_UTF8 -> length
-    }
-
-@Serializable
-internal data class GeneratedMetadataEnvelope(
-    val services: List<GeneratedMetadataService>,
-)
-
-@Serializable
-internal data class GeneratedMetadataService(
-    val interfacePackage: String,
-    val interfaceSimpleName: String,
-    val interfaceQualifiedName: String,
-    val summary: String,
-    val transport: String,
-    val operations: List<GeneratedMetadataOperation> = emptyList(),
-)
-
-@Serializable
-internal data class GeneratedMetadataOperation(
-    val methodName: String,
-    val functionCodeName: String,
-    val address: Int,
-    val parameters: List<GeneratedMetadataParameter> = emptyList(),
-    val returnType: GeneratedMetadataReturnType,
-    val doc: GeneratedMetadataDoc = GeneratedMetadataDoc(),
-)
-
-@Serializable
-internal data class GeneratedMetadataReturnType(
-    val qualifiedName: String,
-    val simpleName: String,
-    val kind: String,
-    val docSummary: String = "",
-    val properties: List<GeneratedMetadataProperty> = emptyList(),
-)
-
-@Serializable
-internal data class GeneratedMetadataProperty(
-    val name: String,
-    val qualifiedType: String,
-    val valueKind: String,
-    val field: GeneratedMetadataField,
-    val doc: String = "",
-)
-
-@Serializable
-internal data class GeneratedMetadataField(
-    val codecName: String,
-    val registerOffset: Int,
-    val bitOffset: Int,
-    val length: Int,
-    val registerWidth: Int,
-)
-
-@Serializable
-internal data class GeneratedMetadataParameter(
-    val name: String,
-    val qualifiedType: String,
-    val valueKind: String,
-    val order: Int,
-    val codecName: String,
-    val registerOffset: Int,
-    val bitOffset: Int,
-    val registerWidth: Int,
-    val doc: String = "",
-)
-
-@Serializable
-internal data class GeneratedMetadataDoc(
-    val summary: String = "",
-)
+internal fun List<String>.extractKDocSummary(): String? =
+    map { line ->
+        line
+            .removePrefix("/**")
+            .removeSuffix("*/")
+            .removePrefix("*")
+            .trim()
+    }.firstOrNull(String::isNotBlank)

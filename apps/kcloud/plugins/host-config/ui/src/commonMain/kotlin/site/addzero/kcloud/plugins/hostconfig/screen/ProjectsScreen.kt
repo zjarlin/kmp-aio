@@ -21,11 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.MoveDown
-import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,17 +34,24 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import io.github.robinpcrd.cupertino.CupertinoActionSheet
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
+import io.github.robinpcrd.cupertino.cancel
+import io.github.robinpcrd.cupertino.default
+import io.github.robinpcrd.cupertino.destructive
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
 import org.koin.compose.viewmodel.koinViewModel
+import site.addzero.component.search_bar.AddSearchBar
+import site.addzero.component.tree.AddTree
+import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.button.WorkbenchIconButton
-import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
+import site.addzero.cupertino.workbench.material3.Icon
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
@@ -113,186 +118,334 @@ fun ProjectsScreen() {
     var protocolEditor by remember { mutableStateOf<ProtocolEditorSeed?>(null) }
     var linkProtocolSeed by remember { mutableStateOf<LinkProtocolSeed?>(null) }
     var moduleEditor by remember { mutableStateOf<ModuleEditorSeed?>(null) }
+    var moduleProtocolPickerSeed by remember { mutableStateOf<ModuleProtocolPickerSeed?>(null) }
     var deviceEditor by remember { mutableStateOf<DeviceEditorSeed?>(null) }
     var tagEditor by remember { mutableStateOf<TagEditorSeed?>(null) }
     var moveSeed by remember { mutableStateOf<MoveNodeSeed?>(null) }
     var uploadSeed by remember { mutableStateOf<UploadSeed?>(null) }
+    var nodeActionMenu by remember { mutableStateOf<NodeActionMenuSeed?>(null) }
 
-    val childCreateSpec = resolveChildCreateSpec(state)
+    val currentCreateSpec = resolveCurrentCreateSpec(state)
+    val treeViewModel = rememberTreeViewModel<site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode>()
 
-    fun openCreateAction(target: CreateTarget) {
-        when (target) {
-            CreateTarget.PROJECT -> {
-                projectEditor = ProjectEditorSeed()
+    fun openModuleEditorForProtocol(
+        projectId: Long,
+        protocol: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode,
+        existing: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode? = null,
+    ) {
+        moduleEditor = ModuleEditorSeed(
+            projectId = projectId,
+            protocolId = protocol.id,
+            existing = existing,
+            availableTemplates = resolveModuleTemplatesForProtocol(
+                state = state,
+                protocolTemplateId = protocol.protocolTemplateId,
+            ),
+            protocolName = protocol.name,
+            protocolTemplateName = protocol.protocolTemplateName,
+        )
+    }
+
+    fun openProjectModuleCreation(projectId: Long) {
+        val candidates = resolveModuleProtocolCandidates(
+            state = state,
+            projectId = projectId,
+        )
+        when (candidates.size) {
+            0 -> Unit
+            1 -> {
+                val protocol = state.projectTrees.findProtocol(candidates.first().protocolId) ?: return
+                openModuleEditorForProtocol(projectId, protocol)
             }
 
-            CreateTarget.MODULE -> {
-                val projectId = state.selectedProjectId ?: return
-                moduleEditor = ModuleEditorSeed(
+            else -> {
+                moduleProtocolPickerSeed = ModuleProtocolPickerSeed(
                     projectId = projectId,
-                    availableTemplates = resolveModuleTemplatesForSelection(state),
-                )
-            }
-
-            CreateTarget.DEVICE -> {
-                val projectId = state.selectedProjectId ?: return
-                val module = state.selectedModule ?: return
-                deviceEditor = DeviceEditorSeed(
-                    projectId = projectId,
-                    moduleId = module.id,
-                )
-            }
-
-            CreateTarget.TAG -> {
-                val projectId = state.selectedProjectId ?: return
-                val deviceId = state.activeDeviceId ?: return
-                tagEditor = TagEditorSeed(
-                    projectId = projectId,
-                    deviceId = deviceId,
+                    projectName = state.projectTrees.firstOrNull { project -> project.id == projectId }?.name.orEmpty(),
+                    candidates = candidates,
                 )
             }
         }
     }
 
-    fun editCurrentSelection() {
-        when (state.selectedNode?.kind) {
-            HostConfigNodeKind.PROJECT, null -> {
-                state.selectedProject?.let { project ->
-                    projectEditor = ProjectEditorSeed(existingId = project.id)
-                }
+    fun editNode(
+        node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
+    ) {
+        when (node.kind) {
+            HostConfigNodeKind.PROJECT -> {
+                projectEditor = ProjectEditorSeed(existingId = node.entityId)
             }
 
             HostConfigNodeKind.PROTOCOL -> {
+                val protocol = state.projectTrees.findProtocol(node.entityId) ?: return
                 protocolEditor = ProtocolEditorSeed(
-                    projectId = state.selectedProjectId ?: return,
-                    existing = state.selectedProtocol,
+                    projectId = node.projectId,
+                    existing = protocol,
                 )
             }
 
             HostConfigNodeKind.MODULE -> {
-                moduleEditor = ModuleEditorSeed(
-                    projectId = state.selectedProjectId ?: return,
-                    protocolId = state.selectedModule?.protocolId,
-                    existing = state.selectedModule,
-                    availableTemplates = resolveModuleTemplatesForSelection(state),
+                val module = state.projectTrees.findModule(node.entityId) ?: return
+                val protocol = state.projectTrees.findProtocol(module.protocolId) ?: return
+                openModuleEditorForProtocol(
+                    projectId = node.projectId,
+                    protocol = protocol,
+                    existing = module,
                 )
             }
 
             HostConfigNodeKind.DEVICE -> {
-                val moduleId = state.selectedNode?.parentEntityId ?: return
+                val device = state.projectTrees.findDevice(node.entityId) ?: return
                 deviceEditor = DeviceEditorSeed(
-                    projectId = state.selectedProjectId ?: return,
-                    moduleId = moduleId,
-                    existing = state.selectedDevice,
+                    projectId = node.projectId,
+                    moduleId = node.parentEntityId ?: return,
+                    existing = device,
                 )
             }
 
             HostConfigNodeKind.TAG -> {
-                val deviceId = state.selectedNode?.parentEntityId ?: return
+                val tag = state.selectedTagDetail
+                    ?.takeIf { detail -> detail.id == node.entityId }
+                    ?: return
                 tagEditor = TagEditorSeed(
-                    projectId = state.selectedProjectId ?: return,
-                    deviceId = deviceId,
-                    existing = state.selectedTagDetail,
+                    projectId = node.projectId,
+                    deviceId = node.parentEntityId ?: return,
+                    existing = tag,
                 )
             }
         }
     }
 
-    fun deleteCurrentSelection() {
-        when (state.selectedNode?.kind) {
-            HostConfigNodeKind.PROJECT, null -> {
-                state.selectedProject?.let { project ->
-                    viewModel.deleteProject(project.id)
-                }
+    fun deleteNode(
+        node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
+    ) {
+        when (node.kind) {
+            HostConfigNodeKind.PROJECT -> {
+                viewModel.deleteProject(node.entityId)
             }
 
             HostConfigNodeKind.PROTOCOL -> {
-                state.selectedProjectId?.let { projectId ->
-                    state.selectedProtocol?.let { protocol ->
-                        viewModel.deleteProtocol(projectId, protocol.id)
-                    }
-                }
+                viewModel.deleteProtocol(
+                    projectId = node.projectId,
+                    protocolId = node.entityId,
+                )
             }
 
             HostConfigNodeKind.MODULE -> {
-                state.selectedProjectId?.let { projectId ->
-                    state.selectedModule?.let { module ->
-                        viewModel.deleteModule(projectId, module.id)
-                    }
-                }
+                viewModel.deleteModule(
+                    projectId = node.projectId,
+                    moduleId = node.entityId,
+                )
             }
 
             HostConfigNodeKind.DEVICE -> {
-                state.selectedProjectId?.let { projectId ->
-                    state.selectedDevice?.let { device ->
-                        viewModel.deleteDevice(projectId, device.id)
-                    }
-                }
+                viewModel.deleteDevice(
+                    projectId = node.projectId,
+                    deviceId = node.entityId,
+                )
             }
 
             HostConfigNodeKind.TAG -> {
-                state.selectedProjectId?.let { projectId ->
-                    val deviceId = state.selectedNode?.parentEntityId ?: return@let
-                    state.selectedTagDetail?.let { tag ->
-                        viewModel.deleteTag(projectId, deviceId, tag.id)
+                viewModel.deleteTag(
+                    projectId = node.projectId,
+                    deviceId = node.parentEntityId ?: return,
+                    tagId = node.entityId,
+                )
+            }
+        }
+    }
+
+    fun handleNodeAction(
+        node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
+        actionType: NodeActionType,
+    ) {
+        viewModel.clearNotice()
+        when (actionType) {
+            NodeActionType.CREATE_MODULE -> {
+                when (node.kind) {
+                    HostConfigNodeKind.PROJECT -> {
+                        openProjectModuleCreation(node.projectId)
                     }
+
+                    HostConfigNodeKind.PROTOCOL -> {
+                        val protocol = state.projectTrees.findProtocol(node.entityId) ?: return
+                        openModuleEditorForProtocol(node.projectId, protocol)
+                    }
+
+                    else -> Unit
                 }
             }
+
+            NodeActionType.CREATE_PROTOCOL -> {
+                protocolEditor = ProtocolEditorSeed(projectId = node.projectId)
+            }
+
+            NodeActionType.LINK_PROTOCOL -> {
+                linkProtocolSeed = LinkProtocolSeed(projectId = node.projectId)
+            }
+
+            NodeActionType.CREATE_DEVICE -> {
+                deviceEditor = DeviceEditorSeed(
+                    projectId = node.projectId,
+                    moduleId = node.entityId,
+                )
+            }
+
+            NodeActionType.CREATE_TAG -> {
+                val deviceId = when (node.kind) {
+                    HostConfigNodeKind.DEVICE -> node.entityId
+                    HostConfigNodeKind.TAG -> node.parentEntityId
+                    else -> null
+                } ?: return
+                tagEditor = TagEditorSeed(
+                    projectId = node.projectId,
+                    deviceId = deviceId,
+                )
+            }
+
+            NodeActionType.EDIT -> {
+                editNode(node)
+            }
+
+            NodeActionType.MOVE -> {
+                moveSeed = MoveNodeSeed(node)
+            }
+
+            NodeActionType.DELETE -> {
+                deleteNode(node)
+            }
+
+            NodeActionType.UPLOAD_PROJECT -> {
+                uploadSeed = UploadSeed(node.projectId)
+            }
+        }
+    }
+
+    fun openNodeActionMenu(
+        node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
+    ) {
+        val menuSeed = resolveNodeActionMenu(
+            state = state,
+            node = node,
+        )
+        if (menuSeed.items.isNotEmpty()) {
+            nodeActionMenu = menuSeed
+        }
+    }
+
+    LaunchedEffect(treeViewModel) {
+        treeViewModel.configure(
+            getId = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.id },
+            getLabel = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.label },
+            getChildren = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.children },
+            getIcon = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.kind.icon() },
+        )
+    }
+
+    LaunchedEffect(treeViewModel, state.treeNodes) {
+        treeViewModel.setItems(
+            newItems = state.treeNodes,
+            initiallyExpandedIds = state.treeNodes.allBranchIds(),
+        )
+    }
+
+    LaunchedEffect(treeViewModel, state.selectedNodeId) {
+        treeViewModel.selectNode(state.selectedNodeId)
+    }
+
+    SideEffect {
+        treeViewModel.onNodeClick = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
+            viewModel.selectNode(node.id)
+        }
+        treeViewModel.onNodeContextMenu = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
+            openNodeActionMenu(node)
         }
     }
 
     Row(
         modifier = Modifier.fillMaxSize(),
     ) {
-        WorkbenchTreeSidebar(
-            items = state.treeNodes,
-            selectedId = state.selectedNodeId,
-            onNodeClick = { node ->
-                viewModel.selectNode(node.id)
-            },
+        Column(
             modifier = Modifier
                 .fillMaxHeight()
-                .weight(0.30f),
-            searchPlaceholder = "搜索工程树",
-            getId = { node -> node.id },
-            getLabel = { node -> node.label },
-            getChildren = { node -> node.children },
-            getIcon = { node -> node.kind.icon() },
-            header = {
-                state.errorMessage?.let { message ->
-                    HostConfigStatusStrip(message)
-                }
-                state.noticeMessage?.let { message ->
-                    HostConfigStatusStrip(message)
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    WorkbenchActionButton(
-                        text = childCreateSpec.label,
+                .weight(0.30f)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            state.errorMessage?.let { message ->
+                HostConfigStatusStrip(message)
+            }
+            state.noticeMessage?.let { message ->
+                HostConfigStatusStrip(message)
+            }
+            if (
+                state.errorMessage == null &&
+                state.noticeMessage == null &&
+                currentCreateSpec.hint != null
+            ) {
+                HostConfigStatusStrip(currentCreateSpec.hint)
+            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                WorkbenchActionButton(
+                    text = "新建当前类型",
+                    onClick = {
+                        val node = currentCreateSpec.node ?: return@WorkbenchActionButton
+                        val actionType = currentCreateSpec.actionType ?: return@WorkbenchActionButton
+                        handleNodeAction(node, actionType)
+                    },
+                    variant = WorkbenchButtonVariant.Default,
+                    enabled = currentCreateSpec.enabled,
+                )
+                WorkbenchActionButton(
+                    text = "新建工程",
+                    onClick = {
+                        viewModel.clearNotice()
+                        projectEditor = ProjectEditorSeed()
+                    },
+                    variant = WorkbenchButtonVariant.Outline,
+                )
+                WorkbenchActionButton(
+                    text = if (state.loading) "加载中" else "刷新",
+                    onClick = viewModel::refresh,
+                    variant = WorkbenchButtonVariant.Outline,
+                )
+            }
+            AddSearchBar(
+                keyword = treeViewModel.searchQuery,
+                onKeyWordChanged = { query: String ->
+                    treeViewModel.updateSearchQuery(query)
+                    if (query.isNotBlank()) {
+                        treeViewModel.performSearch()
+                    }
+                },
+                onSearch = treeViewModel::performSearch,
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "搜索工程树",
+            )
+            AddTree(
+                viewModel = treeViewModel,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                selectableLabel = true,
+                nodeTrailingContent = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
+                    WorkbenchIconButton(
                         onClick = {
-                            viewModel.clearNotice()
-                            childCreateSpec.target?.let(::openCreateAction)
+                            viewModel.selectNode(node.id)
+                            openNodeActionMenu(node)
                         },
-                        variant = WorkbenchButtonVariant.Default,
-                        enabled = childCreateSpec.enabled,
-                    )
-                    WorkbenchActionButton(
-                        text = "新建工程",
-                        onClick = {
-                            viewModel.clearNotice()
-                            openCreateAction(CreateTarget.PROJECT)
-                        },
-                        variant = WorkbenchButtonVariant.Outline,
-                    )
-                    WorkbenchActionButton(
-                        text = if (state.loading) "加载中" else "刷新",
-                        onClick = viewModel::refresh,
-                        variant = WorkbenchButtonVariant.Outline,
-                    )
-                }
-            },
-        )
+                        tooltip = "节点操作",
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreHoriz,
+                            contentDescription = null,
+                        )
+                    }
+                },
+            )
+        }
 
         Column(
             modifier = Modifier
@@ -313,18 +466,6 @@ fun ProjectsScreen() {
                     CurrentNodePanel(
                         state = state,
                         onSelectNode = viewModel::selectNode,
-                        onEditCurrent = ::editCurrentSelection,
-                        onMoveCurrent = {
-                            state.selectedNode
-                                ?.takeIf { node -> node.kind != HostConfigNodeKind.PROJECT }
-                                ?.let { node -> moveSeed = MoveNodeSeed(node) }
-                        },
-                        onDeleteCurrent = ::deleteCurrentSelection,
-                        onUploadProject = {
-                            state.selectedProjectId?.let { projectId ->
-                                uploadSeed = UploadSeed(projectId)
-                            }
-                        },
                     )
                 }
             }
@@ -348,6 +489,19 @@ fun ProjectsScreen() {
                 }
             }
         }
+    }
+
+    nodeActionMenu?.let { seed ->
+        NodeActionSheet(
+            seed = seed,
+            onDismissRequest = {
+                nodeActionMenu = null
+            },
+            onAction = { actionType ->
+                nodeActionMenu = null
+                handleNodeAction(seed.node, actionType)
+            },
+        )
     }
 
     projectEditor?.let { seed ->
@@ -391,23 +545,23 @@ fun ProjectsScreen() {
 
     protocolEditor?.let { seed ->
         ProtocolEditorDialog(
-            protocolTemplates = state.protocolTemplates.map { item ->
-                HostConfigOption(
-                    value = item.id,
-                    label = item.name,
-                    caption = item.description,
-                )
-            },
+            protocolTemplates = state.protocolTemplates,
             existing = seed.existing,
             saving = state.busy,
             onDismissRequest = {
                 protocolEditor = null
             },
             onSave = { draft ->
+                val protocolTemplateId = draft.protocolTemplateId ?: return@ProtocolEditorDialog
+                val templateCode = state.protocolTemplates
+                    .firstOrNull { item -> item.id == protocolTemplateId }
+                    ?.code
+                    ?: return@ProtocolEditorDialog
                 val request = ProtocolCreateRequest(
                     name = draft.name,
-                    protocolTemplateId = draft.protocolTemplateId ?: return@ProtocolEditorDialog,
+                    protocolTemplateId = protocolTemplateId,
                     pollingIntervalMs = draft.pollingIntervalMs.toIntOrNull() ?: 1000,
+                    transportConfig = draft.toTransportConfig(templateCode),
                     sortIndex = draft.sortIndex.toIntOrNull() ?: 0,
                 )
                 if (seed.existing == null) {
@@ -421,6 +575,7 @@ fun ProjectsScreen() {
                             name = request.name,
                             protocolTemplateId = request.protocolTemplateId,
                             pollingIntervalMs = request.pollingIntervalMs,
+                            transportConfig = request.transportConfig,
                             sortIndex = request.sortIndex,
                         ),
                     )
@@ -432,7 +587,10 @@ fun ProjectsScreen() {
 
     linkProtocolSeed?.let { seed ->
         LinkProtocolDialog(
-            options = resolveLinkableProtocols(state).map { item ->
+            options = resolveLinkableProtocols(
+                state = state,
+                projectId = seed.projectId,
+            ).map { item ->
                 HostConfigOption(
                     value = item.id,
                     label = item.name,
@@ -456,8 +614,28 @@ fun ProjectsScreen() {
         )
     }
 
+    moduleProtocolPickerSeed?.let { seed ->
+        ModuleProtocolPickerDialog(
+            seed = seed,
+            saving = state.busy,
+            onDismissRequest = {
+                moduleProtocolPickerSeed = null
+            },
+            onSave = { protocolId ->
+                val protocol = state.projectTrees.findProtocol(protocolId) ?: return@ModuleProtocolPickerDialog
+                openModuleEditorForProtocol(
+                    projectId = seed.projectId,
+                    protocol = protocol,
+                )
+                moduleProtocolPickerSeed = null
+            },
+        )
+    }
+
     moduleEditor?.let { seed ->
         ModuleEditorDialog(
+            protocolName = seed.protocolName,
+            protocolTemplateName = seed.protocolTemplateName,
             templates = seed.availableTemplates.map { item ->
                 HostConfigOption(
                     value = item.id,
@@ -477,18 +655,11 @@ fun ProjectsScreen() {
                     sortIndex = draft.sortIndex.toIntOrNull() ?: 0,
                 )
                 if (seed.existing == null) {
-                    if (seed.protocolId != null) {
-                        viewModel.createModuleUnderProtocol(
-                            projectId = seed.projectId,
-                            protocolId = seed.protocolId,
-                            request = request,
-                        )
-                    } else {
-                        viewModel.createModuleUnderProject(
-                            projectId = seed.projectId,
-                            request = request,
-                        )
-                    }
+                    viewModel.createModuleUnderProtocol(
+                        projectId = seed.projectId,
+                        protocolId = seed.protocolId ?: return@ModuleEditorDialog,
+                        request = request,
+                    )
                 } else {
                     viewModel.updateModule(
                         projectId = seed.projectId,
@@ -739,7 +910,7 @@ fun ProjectsScreen() {
         )
     }
 
-    uploadSeed?.let { seed ->
+    uploadSeed?.let { _ ->
         UploadProjectDialog(
             state = state,
             saving = state.busy,
@@ -773,10 +944,6 @@ fun ProjectsScreen() {
 private fun CurrentNodePanel(
     state: ProjectsScreenState,
     onSelectNode: (String) -> Unit,
-    onEditCurrent: () -> Unit,
-    onMoveCurrent: () -> Unit,
-    onDeleteCurrent: () -> Unit,
-    onUploadProject: () -> Unit,
 ) {
     val nodeKind = resolveSelectedNodeKind(state)
     HostConfigPanel(
@@ -791,39 +958,6 @@ private fun CurrentNodePanel(
             return@HostConfigPanel
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            WorkbenchActionButton(
-                text = "编辑当前",
-                onClick = onEditCurrent,
-                imageVector = Icons.Outlined.Edit,
-                enabled = state.selectedProjectId != null,
-            )
-            WorkbenchActionButton(
-                text = "变更上级",
-                onClick = onMoveCurrent,
-                imageVector = Icons.Outlined.MoveDown,
-                variant = WorkbenchButtonVariant.Outline,
-                enabled = state.selectedNode?.kind != null && state.selectedNode?.kind != HostConfigNodeKind.PROJECT,
-            )
-            WorkbenchActionButton(
-                text = "删除当前",
-                onClick = onDeleteCurrent,
-                imageVector = Icons.Outlined.Delete,
-                variant = WorkbenchButtonVariant.Destructive,
-                enabled = state.selectedProjectId != null,
-            )
-            WorkbenchActionButton(
-                text = "上传工程",
-                onClick = onUploadProject,
-                imageVector = Icons.Outlined.Upload,
-                variant = WorkbenchButtonVariant.Secondary,
-                enabled = nodeKind == HostConfigNodeKind.PROJECT && state.selectedProjectId != null,
-            )
-        }
-
         when (nodeKind) {
             HostConfigNodeKind.PROJECT -> {
                 val project = state.selectedProject
@@ -834,6 +968,7 @@ private fun CurrentNodePanel(
                 HostConfigKeyValueRow("描述", project?.description.orDash())
                 HostConfigKeyValueRow("备注", project?.remark.orDash())
                 HostConfigKeyValueRow("排序", project?.sortIndex?.toString() ?: "-")
+                HostConfigKeyValueRow("协议数量", projectTree?.protocols?.size?.toString() ?: "0")
                 HostConfigKeyValueRow("模块数量", modules.size.toString())
                 HostConfigKeyValueRow(
                     "设备总数",
@@ -885,12 +1020,13 @@ private fun CurrentNodePanel(
                 HostConfigKeyValueRow("轮询间隔(ms)", protocol?.pollingIntervalMs?.toString() ?: "-")
                 HostConfigKeyValueRow("排序", protocol?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("模块数量", protocol?.modules?.size?.toString() ?: "0")
+                HostConfigSectionTitle("通信配置")
+                renderTransportConfigRows(protocol?.transportConfig)
             }
 
             HostConfigNodeKind.MODULE -> {
                 val module = state.selectedModule
                 val moduleProtocol = state.selectedModuleProtocol
-                val transportConfig = moduleProtocol?.transportConfig
                 module?.let { item ->
                     HostConfigSectionTitle("板卡模型")
                     HostConfigModuleBoard(
@@ -905,14 +1041,10 @@ private fun CurrentNodePanel(
                 HostConfigKeyValueRow("模块模板", module?.moduleTemplateName.orDash())
                 HostConfigKeyValueRow("模板编码", module?.moduleTemplateCode.orDash())
                 HostConfigKeyValueRow("所属协议", moduleProtocol?.name.orDash())
-                HostConfigKeyValueRow("通信串口", transportConfig?.portName.orDash())
-                HostConfigKeyValueRow("波特率", transportConfig?.baudRate?.toString() ?: "-")
-                HostConfigKeyValueRow("数据位", transportConfig?.dataBits?.toString() ?: "-")
-                HostConfigKeyValueRow("停止位", transportConfig?.stopBits?.toString() ?: "-")
-                HostConfigKeyValueRow("校验位", transportConfig?.parity?.label() ?: "-")
-                HostConfigKeyValueRow("响应超时(ms)", transportConfig?.responseTimeoutMs?.toString() ?: "-")
                 HostConfigKeyValueRow("排序", module?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("设备数量", module?.devices?.size?.toString() ?: "0")
+                HostConfigSectionTitle("继承通信")
+                renderTransportConfigRows(moduleProtocol?.transportConfig)
             }
 
             HostConfigNodeKind.DEVICE -> {
@@ -976,7 +1108,7 @@ private fun NodeChildrenPanel(
         title = if (nodeKind == HostConfigNodeKind.TAG) "子项信息" else "下级节点",
         subtitle = when (nodeKind) {
             null -> "请选择左侧节点"
-            HostConfigNodeKind.PROJECT -> "当前工程直接挂载的协议和根模块。"
+            HostConfigNodeKind.PROJECT -> "当前工程下挂接的协议实例。"
             HostConfigNodeKind.PROTOCOL -> "当前协议下的模块。"
             HostConfigNodeKind.MODULE -> "当前模块下的设备。"
             HostConfigNodeKind.DEVICE -> "当前设备下的标签分页。"
@@ -1008,22 +1140,43 @@ private fun NodeChildrenPanel(
                     HostConfigStatusStrip("当前工程树还没有加载完成。")
                     return@HostConfigPanel
                 }
-                val modules = projectTree.allModules()
-                if (modules.isEmpty()) {
+                if (projectTree.protocols.isEmpty()) {
                     HostConfigStatusStrip("当前工程还没有下级节点。")
                     return@HostConfigPanel
                 }
-                HostConfigSectionTitle("模块")
-                modules.forEach { module ->
-                    val transportConfig = projectTree.protocols
-                        .firstOrNull { protocol -> protocol.id == module.protocolId }
-                        ?.transportConfig
+                HostConfigSectionTitle("协议")
+                projectTree.protocols.forEach { protocol ->
+                    ChildNodeCard(
+                        title = protocol.name,
+                        subtitle = "${protocol.protocolTemplateName} · ${protocol.protocolTemplateCode}",
+                        onClick = {
+                            onSelectNode(
+                                ProjectsViewModel.buildProtocolNodeId(projectTree.id, protocol.id),
+                            )
+                        },
+                    ) {
+                        HostConfigKeyValueRow("轮询间隔(ms)", protocol.pollingIntervalMs.toString())
+                        HostConfigKeyValueRow("承载模块", protocol.modules.size.toString())
+                        HostConfigKeyValueRow("排序", protocol.sortIndex.toString())
+                        renderTransportConfigRows(protocol.transportConfig)
+                    }
+                }
+            }
+
+            HostConfigNodeKind.PROTOCOL -> {
+                val projectId = state.selectedProjectId ?: return@HostConfigPanel
+                val protocol = state.selectedProtocol
+                if (protocol == null || protocol.modules.isEmpty()) {
+                    HostConfigStatusStrip("当前协议还没有下级模块。")
+                    return@HostConfigPanel
+                }
+                protocol.modules.forEach { module ->
                     ChildNodeCard(
                         title = module.name,
                         subtitle = "${module.moduleTemplateName} · ${module.moduleTemplateCode}",
                         onClick = {
                             onSelectNode(
-                                ProjectsViewModel.buildModuleNodeId(projectTree.id, module.id),
+                                ProjectsViewModel.buildModuleNodeId(projectId, module.id),
                             )
                         },
                     ) {
@@ -1034,15 +1187,10 @@ private fun NodeChildrenPanel(
                             ),
                             compact = true,
                         )
-                        HostConfigKeyValueRow("通信串口", transportConfig?.portName.orDash())
                         HostConfigKeyValueRow("设备数量", module.devices.size.toString())
                         HostConfigKeyValueRow("排序", module.sortIndex.toString())
                     }
                 }
-            }
-
-            HostConfigNodeKind.PROTOCOL -> {
-                HostConfigStatusStrip("协议节点已从主树工作台隐藏，请直接在工程下操作模块。")
             }
 
             HostConfigNodeKind.MODULE -> {
@@ -1343,10 +1491,10 @@ private fun ProjectEditorDialog(
     onSave: (ProjectDraft) -> Unit,
     onUpdateSort: (Int) -> Unit,
 ) {
-    var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
-    var description by remember(existing?.id) { mutableStateOf(existing?.description.orEmpty()) }
-    var remark by remember(existing?.id) { mutableStateOf(existing?.remark.orEmpty()) }
-    var sortIndex by remember(existing?.id) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
+    var name by remember(existing) { mutableStateOf(existing?.name.orEmpty()) }
+    var description by remember(existing) { mutableStateOf(existing?.description.orEmpty()) }
+    var remark by remember(existing) { mutableStateOf(existing?.remark.orEmpty()) }
+    var sortIndex by remember(existing) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
 
     HostConfigDialog(
         title = if (existing == null) "新建工程" else "编辑工程",
@@ -1387,16 +1535,27 @@ private fun ProjectEditorDialog(
 
 @Composable
 private fun ProtocolEditorDialog(
-    protocolTemplates: List<HostConfigOption<Long>>,
+    protocolTemplates: List<site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse>,
     existing: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode?,
     saving: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (ProtocolDraft) -> Unit,
 ) {
-    var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
-    var templateId by remember(existing?.id) { mutableStateOf(existing?.protocolTemplateId ?: protocolTemplates.firstOrNull()?.value) }
-    var pollingIntervalMs by remember(existing?.id) { mutableStateOf(existing?.pollingIntervalMs?.toString() ?: "1000") }
-    var sortIndex by remember(existing?.id) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
+    var name by remember(existing) { mutableStateOf(existing?.name.orEmpty()) }
+    var templateId by remember(existing, protocolTemplates) {
+        mutableStateOf(existing?.protocolTemplateId ?: protocolTemplates.firstOrNull()?.id)
+    }
+    var pollingIntervalMs by remember(existing) { mutableStateOf(existing?.pollingIntervalMs?.toString() ?: "1000") }
+    var sortIndex by remember(existing) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
+    var host by remember(existing) { mutableStateOf(existing?.transportConfig?.host.orEmpty()) }
+    var tcpPort by remember(existing) { mutableStateOf(existing?.transportConfig?.tcpPort?.toString().orEmpty()) }
+    var portName by remember(existing) { mutableStateOf(existing?.transportConfig?.portName.orEmpty()) }
+    var baudRate by remember(existing) { mutableStateOf(existing?.transportConfig?.baudRate?.toString() ?: "9600") }
+    var dataBits by remember(existing) { mutableStateOf(existing?.transportConfig?.dataBits?.toString() ?: "8") }
+    var stopBits by remember(existing) { mutableStateOf(existing?.transportConfig?.stopBits?.toString() ?: "1") }
+    var parity by remember(existing) { mutableStateOf(existing?.transportConfig?.parity ?: Parity.NONE) }
+    var responseTimeoutMs by remember(existing) { mutableStateOf(existing?.transportConfig?.responseTimeoutMs?.toString() ?: "1000") }
+    val templateCode = protocolTemplates.firstOrNull { item -> item.id == templateId }?.code
 
     HostConfigDialog(
         title = if (existing == null) "新建协议" else "编辑协议",
@@ -1412,6 +1571,14 @@ private fun ProtocolEditorDialog(
                             protocolTemplateId = templateId,
                             pollingIntervalMs = pollingIntervalMs,
                             sortIndex = sortIndex,
+                            host = host,
+                            tcpPort = tcpPort,
+                            portName = portName,
+                            baudRate = baudRate,
+                            dataBits = dataBits,
+                            stopBits = stopBits,
+                            parity = parity,
+                            responseTimeoutMs = responseTimeoutMs,
                         ),
                     )
                 },
@@ -1422,12 +1589,48 @@ private fun ProtocolEditorDialog(
         HostConfigTextField("协议名称", name, { name = it })
         HostConfigSelectionField(
             label = "协议模板",
-            options = protocolTemplates,
+            options = protocolTemplates.map { item ->
+                HostConfigOption(
+                    value = item.id,
+                    label = item.name,
+                    caption = item.description,
+                )
+            },
             selectedValue = templateId,
             onSelected = { templateId = it },
         )
         HostConfigTextField("轮询时间(ms)", pollingIntervalMs, { pollingIntervalMs = it })
         HostConfigTextField("排序", sortIndex, { sortIndex = it })
+        HostConfigPanel(
+            title = "通信配置",
+            subtitle = "模块通信参数已经上提到协议层，模块表单只保留硬件语义。",
+        ) {
+            when (templateCode) {
+                "MODBUS_RTU_CLIENT" -> {
+                    HostConfigTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
+                    HostConfigTextField("波特率", baudRate, { baudRate = it })
+                    HostConfigTextField("数据位", dataBits, { dataBits = it })
+                    HostConfigTextField("停止位", stopBits, { stopBits = it })
+                    HostConfigSelectionField(
+                        label = "校验位",
+                        options = Parity.entries.map { option -> HostConfigOption(option, option.label()) },
+                        selectedValue = parity,
+                        onSelected = { selected -> parity = selected ?: Parity.NONE },
+                    )
+                    HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
+                }
+
+                "MODBUS_TCP_CLIENT" -> {
+                    HostConfigTextField("主机地址", host, { host = it }, placeholder = "例如 192.168.1.10")
+                    HostConfigTextField("TCP 端口", tcpPort, { tcpPort = it }, placeholder = "默认 502")
+                    HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
+                }
+
+                else -> {
+                    HostConfigStatusStrip("当前协议模板没有额外通信字段。")
+                }
+            }
+        }
     }
 }
 
@@ -1473,15 +1676,19 @@ private fun LinkProtocolDialog(
 
 @Composable
 private fun ModuleEditorDialog(
+    protocolName: String,
+    protocolTemplateName: String,
     templates: List<HostConfigOption<Long>>,
     existing: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode?,
     saving: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (ModuleDraft) -> Unit,
 ) {
-    var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
-    var moduleTemplateId by remember(existing?.id) { mutableStateOf(existing?.moduleTemplateId ?: templates.firstOrNull()?.value) }
-    var sortIndex by remember(existing?.id) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
+    var name by remember(existing) { mutableStateOf(existing?.name.orEmpty()) }
+    var moduleTemplateId by remember(existing, templates) {
+        mutableStateOf(existing?.moduleTemplateId ?: templates.firstOrNull()?.value)
+    }
+    var sortIndex by remember(existing) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
 
     HostConfigDialog(
         title = if (existing == null) "新建模块" else "编辑模块",
@@ -1504,8 +1711,15 @@ private fun ModuleEditorDialog(
         },
     ) {
         if (templates.isEmpty()) {
-            HostConfigStatusStrip("当前工程没有可用模块模板，请先关联协议。")
+            HostConfigStatusStrip("当前协议模板下没有可用模块模板。")
         } else {
+            HostConfigPanel(
+                title = "绑定协议",
+                subtitle = "模块创建后会挂到这个协议实例下。",
+            ) {
+                HostConfigKeyValueRow("协议名称", protocolName.orDash())
+                HostConfigKeyValueRow("协议模板", protocolTemplateName.orDash())
+            }
             HostConfigTextField("模块名称", name, { name = it })
             HostConfigSelectionField("模块模板", templates, moduleTemplateId, { moduleTemplateId = it })
             HostConfigTextField("排序", sortIndex, { sortIndex = it })
@@ -1520,6 +1734,61 @@ private fun ModuleEditorDialog(
 }
 
 @Composable
+private fun ModuleProtocolPickerDialog(
+    seed: ModuleProtocolPickerSeed,
+    saving: Boolean,
+    onDismissRequest: () -> Unit,
+    onSave: (Long) -> Unit,
+) {
+    var selectedProtocolId by remember(seed) {
+        mutableStateOf(seed.candidates.firstOrNull()?.protocolId)
+    }
+
+    HostConfigDialog(
+        title = "选择承载协议",
+        onDismissRequest = onDismissRequest,
+        actions = {
+            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
+            WorkbenchActionButton(
+                text = if (saving) "处理中" else "下一步",
+                onClick = {
+                    selectedProtocolId?.let(onSave)
+                },
+                enabled = !saving && selectedProtocolId != null,
+            )
+        },
+    ) {
+        HostConfigStatusStrip("工程 ${seed.projectName.ifBlank { "当前工程" }} 下有多个可承载协议，请先明确模块归属。")
+        HostConfigSelectionField(
+            label = "目标协议",
+            options = seed.candidates.map { candidate ->
+                HostConfigOption(
+                    value = candidate.protocolId,
+                    label = candidate.protocolName,
+                    caption = candidate.protocolTemplateName,
+                )
+            },
+            selectedValue = selectedProtocolId,
+            onSelected = { selectedProtocolId = it },
+        )
+        seed.candidates
+            .firstOrNull { candidate -> candidate.protocolId == selectedProtocolId }
+            ?.let { candidate ->
+                HostConfigPanel(
+                    title = "协议预览",
+                    subtitle = "模块模板只会展示这个协议模板下允许的模块。",
+                ) {
+                    HostConfigKeyValueRow("协议模板", candidate.protocolTemplateName)
+                    HostConfigKeyValueRow("模块模板数", candidate.availableTemplateCount.toString())
+                    candidate.transportSummary?.let { summary ->
+                        HostConfigKeyValueRow("通信摘要", summary)
+                    }
+                }
+            }
+    }
+}
+
+@Composable
 private fun DeviceEditorDialog(
     deviceTypes: List<HostConfigOption<Long>>,
     existing: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode?,
@@ -1527,20 +1796,22 @@ private fun DeviceEditorDialog(
     onDismissRequest: () -> Unit,
     onSave: (DeviceDraft) -> Unit,
 ) {
-    var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
-    var deviceTypeId by remember(existing?.id) { mutableStateOf(existing?.deviceTypeId ?: deviceTypes.firstOrNull()?.value) }
-    var stationNo by remember(existing?.id) { mutableStateOf(existing?.stationNo?.toString() ?: "1") }
-    var requestIntervalMs by remember(existing?.id) { mutableStateOf(existing?.requestIntervalMs?.toString().orEmpty()) }
-    var writeIntervalMs by remember(existing?.id) { mutableStateOf(existing?.writeIntervalMs?.toString().orEmpty()) }
-    var byteOrder2 by remember(existing?.id) { mutableStateOf(existing?.byteOrder2) }
-    var byteOrder4 by remember(existing?.id) { mutableStateOf(existing?.byteOrder4) }
-    var floatOrder by remember(existing?.id) { mutableStateOf(existing?.floatOrder) }
-    var batchAnalogStart by remember(existing?.id) { mutableStateOf(existing?.batchAnalogStart?.toString().orEmpty()) }
-    var batchAnalogLength by remember(existing?.id) { mutableStateOf(existing?.batchAnalogLength?.toString().orEmpty()) }
-    var batchDigitalStart by remember(existing?.id) { mutableStateOf(existing?.batchDigitalStart?.toString().orEmpty()) }
-    var batchDigitalLength by remember(existing?.id) { mutableStateOf(existing?.batchDigitalLength?.toString().orEmpty()) }
-    var disabled by remember(existing?.id) { mutableStateOf(existing?.disabled ?: false) }
-    var sortIndex by remember(existing?.id) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
+    var name by remember(existing) { mutableStateOf(existing?.name.orEmpty()) }
+    var deviceTypeId by remember(existing, deviceTypes) {
+        mutableStateOf(existing?.deviceTypeId ?: deviceTypes.firstOrNull()?.value)
+    }
+    var stationNo by remember(existing) { mutableStateOf(existing?.stationNo?.toString() ?: "1") }
+    var requestIntervalMs by remember(existing) { mutableStateOf(existing?.requestIntervalMs?.toString().orEmpty()) }
+    var writeIntervalMs by remember(existing) { mutableStateOf(existing?.writeIntervalMs?.toString().orEmpty()) }
+    var byteOrder2 by remember(existing) { mutableStateOf(existing?.byteOrder2) }
+    var byteOrder4 by remember(existing) { mutableStateOf(existing?.byteOrder4) }
+    var floatOrder by remember(existing) { mutableStateOf(existing?.floatOrder) }
+    var batchAnalogStart by remember(existing) { mutableStateOf(existing?.batchAnalogStart?.toString().orEmpty()) }
+    var batchAnalogLength by remember(existing) { mutableStateOf(existing?.batchAnalogLength?.toString().orEmpty()) }
+    var batchDigitalStart by remember(existing) { mutableStateOf(existing?.batchDigitalStart?.toString().orEmpty()) }
+    var batchDigitalLength by remember(existing) { mutableStateOf(existing?.batchDigitalLength?.toString().orEmpty()) }
+    var disabled by remember(existing) { mutableStateOf(existing?.disabled ?: false) }
+    var sortIndex by remember(existing) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
 
     HostConfigDialog(
         title = if (existing == null) "新建设备" else "编辑设备",
@@ -1617,24 +1888,28 @@ private fun TagEditorDialog(
     onDismissRequest: () -> Unit,
     onSave: (TagDraft) -> Unit,
 ) {
-    var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
-    var description by remember(existing?.id) { mutableStateOf(existing?.description.orEmpty()) }
-    var dataTypeId by remember(existing?.id) { mutableStateOf(existing?.dataTypeId ?: dataTypes.firstOrNull()?.value) }
-    var registerTypeId by remember(existing?.id) { mutableStateOf(existing?.registerTypeId ?: registerTypes.firstOrNull()?.value) }
-    var registerAddress by remember(existing?.id) { mutableStateOf(existing?.registerAddress?.toString() ?: "1") }
-    var enabled by remember(existing?.id) { mutableStateOf(existing?.enabled ?: true) }
-    var defaultValue by remember(existing?.id) { mutableStateOf(existing?.defaultValue.orEmpty()) }
-    var exceptionValue by remember(existing?.id) { mutableStateOf(existing?.exceptionValue.orEmpty()) }
-    var pointType by remember(existing?.id) { mutableStateOf(existing?.pointType) }
-    var debounceMs by remember(existing?.id) { mutableStateOf(existing?.debounceMs?.toString().orEmpty()) }
-    var sortIndex by remember(existing?.id) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
-    var scalingEnabled by remember(existing?.id) { mutableStateOf(existing?.scalingEnabled ?: false) }
-    var scalingOffset by remember(existing?.id) { mutableStateOf(existing?.scalingOffset.orEmpty()) }
-    var rawMin by remember(existing?.id) { mutableStateOf(existing?.rawMin.orEmpty()) }
-    var rawMax by remember(existing?.id) { mutableStateOf(existing?.rawMax.orEmpty()) }
-    var engMin by remember(existing?.id) { mutableStateOf(existing?.engMin.orEmpty()) }
-    var engMax by remember(existing?.id) { mutableStateOf(existing?.engMax.orEmpty()) }
-    var valueTexts by remember(existing?.id) {
+    var name by remember(existing) { mutableStateOf(existing?.name.orEmpty()) }
+    var description by remember(existing) { mutableStateOf(existing?.description.orEmpty()) }
+    var dataTypeId by remember(existing, dataTypes) {
+        mutableStateOf(existing?.dataTypeId ?: dataTypes.firstOrNull()?.value)
+    }
+    var registerTypeId by remember(existing, registerTypes) {
+        mutableStateOf(existing?.registerTypeId ?: registerTypes.firstOrNull()?.value)
+    }
+    var registerAddress by remember(existing) { mutableStateOf(existing?.registerAddress?.toString() ?: "1") }
+    var enabled by remember(existing) { mutableStateOf(existing?.enabled ?: true) }
+    var defaultValue by remember(existing) { mutableStateOf(existing?.defaultValue.orEmpty()) }
+    var exceptionValue by remember(existing) { mutableStateOf(existing?.exceptionValue.orEmpty()) }
+    var pointType by remember(existing) { mutableStateOf(existing?.pointType) }
+    var debounceMs by remember(existing) { mutableStateOf(existing?.debounceMs?.toString().orEmpty()) }
+    var sortIndex by remember(existing) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
+    var scalingEnabled by remember(existing) { mutableStateOf(existing?.scalingEnabled ?: false) }
+    var scalingOffset by remember(existing) { mutableStateOf(existing?.scalingOffset.orEmpty()) }
+    var rawMin by remember(existing) { mutableStateOf(existing?.rawMin.orEmpty()) }
+    var rawMax by remember(existing) { mutableStateOf(existing?.rawMax.orEmpty()) }
+    var engMin by remember(existing) { mutableStateOf(existing?.engMin.orEmpty()) }
+    var engMax by remember(existing) { mutableStateOf(existing?.engMax.orEmpty()) }
+    var valueTexts by remember(existing) {
         mutableStateOf(
             existing?.valueTexts?.map { item ->
                 TagValueTextDraft(
@@ -1804,12 +2079,12 @@ private fun UploadProjectDialog(
     onTriggerAction: (ProjectUploadRemoteAction, String) -> Unit,
 ) {
     val uploadStatus = state.uploadStatus
-    var ipAddress by remember(uploadStatus?.projectId) { mutableStateOf(uploadStatus?.ipAddress.orEmpty()) }
-    var projectPath by remember(uploadStatus?.projectId) { mutableStateOf(uploadStatus?.projectPath.orEmpty()) }
-    var selectedFileName by remember(uploadStatus?.projectId) { mutableStateOf(uploadStatus?.selectedFileName.orEmpty()) }
-    var includeDriverConfig by remember(uploadStatus?.projectId) { mutableStateOf(uploadStatus?.includeDriverConfig ?: true) }
-    var includeFirmwareUpgrade by remember(uploadStatus?.projectId) { mutableStateOf(uploadStatus?.includeFirmwareUpgrade ?: false) }
-    var fastMode by remember(uploadStatus?.projectId) { mutableStateOf(uploadStatus?.fastMode ?: false) }
+    var ipAddress by remember(uploadStatus) { mutableStateOf(uploadStatus?.ipAddress.orEmpty()) }
+    var projectPath by remember(uploadStatus) { mutableStateOf(uploadStatus?.projectPath.orEmpty()) }
+    var selectedFileName by remember(uploadStatus) { mutableStateOf(uploadStatus?.selectedFileName.orEmpty()) }
+    var includeDriverConfig by remember(uploadStatus) { mutableStateOf(uploadStatus?.includeDriverConfig ?: true) }
+    var includeFirmwareUpgrade by remember(uploadStatus) { mutableStateOf(uploadStatus?.includeFirmwareUpgrade ?: false) }
+    var fastMode by remember(uploadStatus) { mutableStateOf(uploadStatus?.fastMode ?: false) }
 
     HostConfigDialog(
         title = "上传工程",
@@ -1878,18 +2153,175 @@ private fun UploadProjectDialog(
     }
 }
 
-private fun resolveModuleTemplatesForSelection(
+@Composable
+private fun NodeActionSheet(
+    seed: NodeActionMenuSeed,
+    onDismissRequest: () -> Unit,
+    onAction: (NodeActionType) -> Unit,
+) {
+    CupertinoActionSheet(
+        visible = true,
+        onDismissRequest = onDismissRequest,
+        title = {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                CupertinoText(seed.title)
+                seed.subtitle.takeIf { subtitle -> subtitle.isNotBlank() }?.let { subtitle ->
+                    CupertinoText(
+                        text = subtitle,
+                        style = CupertinoTheme.typography.footnote,
+                        color = CupertinoTheme.colorScheme.secondaryLabel,
+                    )
+                }
+            }
+        },
+        buttons = {
+            seed.items.forEach { item ->
+                val buttonBody: @Composable () -> Unit = {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        CupertinoText(item.title)
+                        item.note?.takeIf { note -> note.isNotBlank() }?.let { note ->
+                            CupertinoText(
+                                text = note,
+                                style = CupertinoTheme.typography.footnote,
+                                color = CupertinoTheme.colorScheme.secondaryLabel,
+                            )
+                        }
+                    }
+                }
+                if (item.destructive) {
+                    destructive(
+                        onClick = {
+                            if (item.enabled) {
+                                onAction(item.type)
+                            }
+                        },
+                    ) {
+                        buttonBody()
+                    }
+                } else {
+                    default(
+                        onClick = {
+                            if (item.enabled) {
+                                onAction(item.type)
+                            }
+                        },
+                    ) {
+                        buttonBody()
+                    }
+                }
+            }
+            cancel(
+                onClick = onDismissRequest,
+            ) {
+                CupertinoText("取消")
+            }
+        },
+    )
+}
+
+@Composable
+private fun renderTransportConfigRows(
+    transportConfig: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig?,
+) {
+    if (transportConfig == null) {
+        HostConfigStatusStrip("当前没有通信参数。")
+        return
+    }
+    transportConfig.toDisplayRows().forEach { (label, value) ->
+        HostConfigKeyValueRow(label, value)
+    }
+}
+
+private fun site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig.toDisplayRows():
+    List<Pair<String, String>> {
+    return when (transportType) {
+        site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType.RTU -> listOf(
+            "传输类型" to transportType.label(),
+            "串口" to portName.orDash(),
+            "波特率" to (baudRate?.toString() ?: "-"),
+            "数据位" to (dataBits?.toString() ?: "-"),
+            "停止位" to (stopBits?.toString() ?: "-"),
+            "校验位" to (parity?.label() ?: "-"),
+            "响应超时(ms)" to (responseTimeoutMs?.toString() ?: "-"),
+        )
+
+        site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType.TCP -> listOf(
+            "传输类型" to transportType.label(),
+            "主机地址" to host.orDash(),
+            "TCP 端口" to (tcpPort?.toString() ?: "-"),
+            "响应超时(ms)" to (responseTimeoutMs?.toString() ?: "-"),
+        )
+    }
+}
+
+private fun site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig.toSummary(): String {
+    return when (transportType) {
+        site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType.RTU -> {
+            listOf(
+                portName.orDash(),
+                baudRate?.let { value -> "${value}bps" } ?: "-",
+                parity?.label() ?: "-",
+            ).joinToString(" / ")
+        }
+
+        site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType.TCP -> {
+            listOf(
+                host.orDash(),
+                tcpPort?.toString() ?: "-",
+            ).joinToString(":")
+        }
+    }
+}
+
+private fun resolveModuleTemplatesForProtocol(
     state: ProjectsScreenState,
+    protocolTemplateId: Long,
 ): List<ModuleTemplateOptionResponse> {
-    return state.moduleTemplates
+    return state.moduleTemplateCatalog[protocolTemplateId].orEmpty()
 }
 
 private fun resolveLinkableProtocols(
     state: ProjectsScreenState,
+    projectId: Long,
 ): List<site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCatalogItemResponse> {
-    val linkedIds = state.selectedProjectTree?.protocols?.map { protocol -> protocol.id }?.toSet().orEmpty()
+    val linkedIds = state.projectTrees
+        .firstOrNull { project -> project.id == projectId }
+        ?.protocols
+        ?.map { protocol -> protocol.id }
+        ?.toSet()
+        .orEmpty()
     return state.protocolCatalog.filter { protocol ->
         protocol.id !in linkedIds
+    }
+}
+
+private fun resolveModuleProtocolCandidates(
+    state: ProjectsScreenState,
+    projectId: Long,
+): List<ModuleProtocolCandidate> {
+    val projectTree = state.projectTrees.firstOrNull { project -> project.id == projectId } ?: return emptyList()
+    return projectTree.protocols.mapNotNull { protocol ->
+        val availableTemplates = resolveModuleTemplatesForProtocol(
+            state = state,
+            protocolTemplateId = protocol.protocolTemplateId,
+        )
+        if (availableTemplates.isEmpty()) {
+            return@mapNotNull null
+        }
+        ModuleProtocolCandidate(
+            protocolId = protocol.id,
+            protocolName = protocol.name,
+            protocolTemplateId = protocol.protocolTemplateId,
+            protocolTemplateName = protocol.protocolTemplateName,
+            availableTemplateCount = availableTemplates.size,
+            transportSummary = protocol.transportConfig?.toSummary(),
+        )
     }
 }
 
@@ -1899,12 +2331,29 @@ private fun resolveMoveOptions(
 ): List<HostConfigOption<String>> {
     return when (node.kind) {
         HostConfigNodeKind.PROJECT -> emptyList()
-        HostConfigNodeKind.PROTOCOL -> emptyList()
-        HostConfigNodeKind.MODULE -> state.projects.map { project ->
+        HostConfigNodeKind.PROTOCOL -> state.projects.map { project ->
             HostConfigOption(
                 value = "project:${project.id}",
                 label = project.name,
             )
+        }
+
+        HostConfigNodeKind.MODULE -> {
+            val currentProtocol = state.projectTrees.findModule(node.entityId)
+                ?.let { module -> state.projectTrees.findProtocol(module.protocolId) }
+            state.projectTrees.flatMap { project ->
+                project.protocols
+                    .filter { protocol ->
+                        currentProtocol == null || protocol.protocolTemplateId == currentProtocol.protocolTemplateId
+                    }
+                    .map { protocol ->
+                        HostConfigOption(
+                            value = "protocol:${project.id}:${protocol.id}",
+                            label = "${project.name} / ${protocol.name}",
+                            caption = protocol.protocolTemplateName,
+                        )
+                    }
+            }
         }
 
         HostConfigNodeKind.DEVICE -> state.projectTrees.flatMap { project ->
@@ -1933,39 +2382,195 @@ private fun resolveMoveOptions(
     }
 }
 
-private fun resolveChildCreateSpec(
+private fun resolveCurrentCreateSpec(
     state: ProjectsScreenState,
-): ChildCreateSpec {
-    val nodeKind = resolveSelectedNodeKind(state)
-    return when (nodeKind) {
-        HostConfigNodeKind.PROJECT -> ChildCreateSpec(
-            label = "新建模块",
-            target = CreateTarget.MODULE,
+): CurrentCreateSpec {
+    val selectedNode = state.selectedNode ?: return CurrentCreateSpec(
+        enabled = false,
+        hint = "请先在左侧选择一个节点。",
+    )
+    return when (selectedNode.kind) {
+        HostConfigNodeKind.PROJECT -> {
+            val candidates = resolveModuleProtocolCandidates(state, selectedNode.projectId)
+            CurrentCreateSpec(
+                node = selectedNode,
+                actionType = NodeActionType.CREATE_MODULE,
+                enabled = candidates.isNotEmpty(),
+                hint = if (candidates.isEmpty()) {
+                    "当前工程还没有可承载模块的协议，请先关联协议。"
+                } else {
+                    null
+                },
+            )
+        }
+
+        HostConfigNodeKind.PROTOCOL -> {
+            val protocol = state.projectTrees.findProtocol(selectedNode.entityId)
+            val hasTemplates = protocol != null &&
+                resolveModuleTemplatesForProtocol(state, protocol.protocolTemplateId).isNotEmpty()
+            CurrentCreateSpec(
+                node = selectedNode,
+                actionType = NodeActionType.CREATE_MODULE,
+                enabled = hasTemplates,
+                hint = if (hasTemplates) {
+                    null
+                } else {
+                    "当前协议模板下没有模块模板。"
+                },
+            )
+        }
+
+        HostConfigNodeKind.MODULE -> CurrentCreateSpec(
+            node = selectedNode,
+            actionType = NodeActionType.CREATE_DEVICE,
             enabled = true,
         )
-        HostConfigNodeKind.PROTOCOL -> ChildCreateSpec(
-            label = "新建模块",
-            target = CreateTarget.MODULE,
-            enabled = true,
-        )
-        HostConfigNodeKind.MODULE -> ChildCreateSpec(
-            label = "新建设备",
-            target = CreateTarget.DEVICE,
-            enabled = true,
-        )
+
         HostConfigNodeKind.DEVICE,
         HostConfigNodeKind.TAG,
-        -> ChildCreateSpec(
-            label = "新建标签",
-            target = CreateTarget.TAG,
+        -> CurrentCreateSpec(
+            node = selectedNode,
+            actionType = NodeActionType.CREATE_TAG,
             enabled = state.activeDeviceId != null,
-        )
-        null -> ChildCreateSpec(
-            label = "选择节点后新建",
-            target = null,
-            enabled = false,
+            hint = if (state.activeDeviceId == null) {
+                "当前还没有可用的设备上下文。"
+            } else {
+                null
+            },
         )
     }
+}
+
+private fun resolveNodeActionMenu(
+    state: ProjectsScreenState,
+    node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
+): NodeActionMenuSeed {
+    val items = when (node.kind) {
+        HostConfigNodeKind.PROJECT -> {
+            val moduleCandidates = resolveModuleProtocolCandidates(state, node.projectId)
+            val linkableProtocols = resolveLinkableProtocols(state, node.projectId)
+            listOf(
+                NodeActionItem(
+                    type = NodeActionType.CREATE_MODULE,
+                    title = "新建模块",
+                    enabled = moduleCandidates.isNotEmpty(),
+                    note = if (moduleCandidates.isEmpty()) "请先关联协议" else null,
+                ),
+                NodeActionItem(
+                    type = NodeActionType.CREATE_PROTOCOL,
+                    title = "新建协议",
+                ),
+                NodeActionItem(
+                    type = NodeActionType.LINK_PROTOCOL,
+                    title = "关联协议",
+                    enabled = linkableProtocols.isNotEmpty(),
+                    note = if (linkableProtocols.isEmpty()) "当前没有可关联的协议资产" else null,
+                ),
+                NodeActionItem(
+                    type = NodeActionType.EDIT,
+                    title = "编辑",
+                ),
+                NodeActionItem(
+                    type = NodeActionType.UPLOAD_PROJECT,
+                    title = "上传工程",
+                ),
+                NodeActionItem(
+                    type = NodeActionType.DELETE,
+                    title = "删除",
+                    destructive = true,
+                ),
+            )
+        }
+
+        HostConfigNodeKind.PROTOCOL -> {
+            val protocol = state.projectTrees.findProtocol(node.entityId)
+            val hasTemplates = protocol != null &&
+                resolveModuleTemplatesForProtocol(state, protocol.protocolTemplateId).isNotEmpty()
+            listOf(
+                NodeActionItem(
+                    type = NodeActionType.CREATE_MODULE,
+                    title = "新建模块",
+                    enabled = hasTemplates,
+                    note = if (hasTemplates) null else "当前协议模板下没有模块模板",
+                ),
+                NodeActionItem(
+                    type = NodeActionType.EDIT,
+                    title = "编辑",
+                ),
+                NodeActionItem(
+                    type = NodeActionType.MOVE,
+                    title = "变更上级",
+                ),
+                NodeActionItem(
+                    type = NodeActionType.DELETE,
+                    title = "删除",
+                    destructive = true,
+                ),
+            )
+        }
+
+        HostConfigNodeKind.MODULE -> listOf(
+            NodeActionItem(
+                type = NodeActionType.CREATE_DEVICE,
+                title = "新建设备",
+            ),
+            NodeActionItem(
+                type = NodeActionType.EDIT,
+                title = "编辑",
+            ),
+            NodeActionItem(
+                type = NodeActionType.MOVE,
+                title = "变更上级",
+            ),
+            NodeActionItem(
+                type = NodeActionType.DELETE,
+                title = "删除",
+                destructive = true,
+            ),
+        )
+
+        HostConfigNodeKind.DEVICE -> listOf(
+            NodeActionItem(
+                type = NodeActionType.CREATE_TAG,
+                title = "新建标签",
+            ),
+            NodeActionItem(
+                type = NodeActionType.EDIT,
+                title = "编辑",
+            ),
+            NodeActionItem(
+                type = NodeActionType.MOVE,
+                title = "变更上级",
+            ),
+            NodeActionItem(
+                type = NodeActionType.DELETE,
+                title = "删除",
+                destructive = true,
+            ),
+        )
+
+        HostConfigNodeKind.TAG -> listOf(
+            NodeActionItem(
+                type = NodeActionType.EDIT,
+                title = "编辑",
+            ),
+            NodeActionItem(
+                type = NodeActionType.MOVE,
+                title = "变更上级",
+            ),
+            NodeActionItem(
+                type = NodeActionType.DELETE,
+                title = "删除",
+                destructive = true,
+            ),
+        )
+    }
+    return NodeActionMenuSeed(
+        node = node,
+        title = "${node.kind.label()}操作",
+        subtitle = node.label,
+        items = items,
+    )
 }
 
 private fun resolveSelectedNodeKind(
@@ -1974,19 +2579,6 @@ private fun resolveSelectedNodeKind(
     return state.selectedNode?.kind
         ?: state.selectedProject?.let { HostConfigNodeKind.PROJECT }
 }
-
-private enum class CreateTarget {
-    PROJECT,
-    MODULE,
-    DEVICE,
-    TAG,
-}
-
-private data class ChildCreateSpec(
-    val label: String,
-    val target: CreateTarget?,
-    val enabled: Boolean,
-)
 
 private fun site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse?.allModules():
     List<site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode> {
@@ -2018,6 +2610,23 @@ private data class ModuleEditorSeed(
     val protocolId: Long? = null,
     val existing: site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode? = null,
     val availableTemplates: List<ModuleTemplateOptionResponse> = emptyList(),
+    val protocolName: String = "",
+    val protocolTemplateName: String = "",
+)
+
+private data class ModuleProtocolPickerSeed(
+    val projectId: Long,
+    val projectName: String,
+    val candidates: List<ModuleProtocolCandidate>,
+)
+
+private data class ModuleProtocolCandidate(
+    val protocolId: Long,
+    val protocolName: String,
+    val protocolTemplateId: Long,
+    val protocolTemplateName: String,
+    val availableTemplateCount: Int,
+    val transportSummary: String?,
 )
 
 private data class DeviceEditorSeed(
@@ -2040,6 +2649,40 @@ private data class UploadSeed(
     val projectId: Long,
 )
 
+private enum class NodeActionType {
+    CREATE_MODULE,
+    CREATE_PROTOCOL,
+    LINK_PROTOCOL,
+    CREATE_DEVICE,
+    CREATE_TAG,
+    EDIT,
+    MOVE,
+    DELETE,
+    UPLOAD_PROJECT,
+}
+
+private data class NodeActionMenuSeed(
+    val node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
+    val title: String,
+    val subtitle: String,
+    val items: List<NodeActionItem>,
+)
+
+private data class NodeActionItem(
+    val type: NodeActionType,
+    val title: String,
+    val enabled: Boolean = true,
+    val note: String? = null,
+    val destructive: Boolean = false,
+)
+
+private data class CurrentCreateSpec(
+    val node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode? = null,
+    val actionType: NodeActionType? = null,
+    val enabled: Boolean,
+    val hint: String? = null,
+)
+
 private data class ProjectDraft(
     val name: String,
     val description: String,
@@ -2052,6 +2695,14 @@ private data class ProtocolDraft(
     val protocolTemplateId: Long?,
     val pollingIntervalMs: String,
     val sortIndex: String,
+    val host: String,
+    val tcpPort: String,
+    val portName: String,
+    val baudRate: String,
+    val dataBits: String,
+    val stopBits: String,
+    val parity: Parity,
+    val responseTimeoutMs: String,
 )
 
 private data class ModuleDraft(
@@ -2111,6 +2762,47 @@ private data class UploadDraft(
     val selectedFileName: String,
     val fastMode: Boolean,
 )
+
+private fun ProtocolDraft.toTransportConfig(
+    templateCode: String,
+): site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig? {
+    return when (templateCode) {
+        "MODBUS_RTU_CLIENT" -> site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig(
+            transportType = site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType.RTU,
+            portName = portName.ifBlank { null },
+            baudRate = baudRate.toIntOrNull(),
+            dataBits = dataBits.toIntOrNull(),
+            stopBits = stopBits.toIntOrNull(),
+            parity = parity,
+            responseTimeoutMs = responseTimeoutMs.toIntOrNull(),
+        )
+
+        "MODBUS_TCP_CLIENT" -> site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig(
+            transportType = site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType.TCP,
+            host = host.ifBlank { null },
+            tcpPort = tcpPort.toIntOrNull(),
+            responseTimeoutMs = responseTimeoutMs.toIntOrNull(),
+        )
+
+        else -> null
+    }
+}
+
+private fun List<site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode>.allBranchIds(): Set<Any> {
+    return buildSet {
+        fun collect(nodes: List<site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode>) {
+            nodes.forEach { node ->
+                if (node.children.isEmpty()) {
+                    return@forEach
+                }
+                add(node.id)
+                collect(node.children)
+            }
+        }
+
+        collect(this@allBranchIds)
+    }
+}
 
 private fun HostConfigNodeKind.label(): String {
     return when (this) {

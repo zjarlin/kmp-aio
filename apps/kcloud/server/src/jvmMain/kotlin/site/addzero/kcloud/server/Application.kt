@@ -9,7 +9,7 @@ import io.ktor.server.routing.routing
 import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.di.initServerKoin
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.generated.springktor.registerGeneratedSpringRoutes as registerCodegenContextSpringRoutes
-import site.addzero.kcloud.plugins.hostconfig.routes.cloud.generated.springktor.registerGeneratedSpringRoutes as registerHostConfigSpringRoutes
+import site.addzero.kcloud.plugins.hostconfig.routes.catalog.generated.springktor.registerGeneratedSpringRoutes as registerHostConfigSpringRoutes
 import site.addzero.kcloud.plugins.mcuconsole.routes.generated.springktor.registerGeneratedSpringRoutes as registerMcuConsoleSpringRoutes
 import site.addzero.kcloud.runtime.KCloudHostRuntime
 import site.addzero.starter.AppStarter

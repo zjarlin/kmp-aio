@@ -11,32 +11,25 @@ class FlywayConfig : FlywayConfigSpi {
     override val order = 0
 
     override fun plan(): FlywayConfigPlan {
-        val datasources = listOf(
-            FlywayDatasourcePlan(
-                name = "sqlite",
-                enabled = true,
-                url = serverSqliteJdbcUrl(),
-                user = "",
-                password = "",
-                driver = "org.sqlite.JDBC",
-                flywayEnabled = false,
-                defaults = FlywayDefaults(),
-            ),
-            FlywayDatasourcePlan(
-                name = "postgres",
-                enabled = false,
-                url = "",
-                user = "",
-                password = "",
-                driver = "org.postgresql.Driver",
-                flywayEnabled = false,
-                defaults = FlywayDefaults(),
-            ),
-        )
+        val datasources =
+            listOf(
+                FlywayDatasourcePlan(
+                    name = "mysql",
+                    enabled = true,
+                    url = serverMysqlJdbcUrl(),
+                    user = KCLOUD_SERVER_MYSQL_USER,
+                    password = KCLOUD_SERVER_MYSQL_PASSWORD,
+                    driver = "com.mysql.cj.jdbc.Driver",
+                    flywayEnabled = true,
+                    defaults = FlywayDefaults(),
+                ),
+            )
         return FlywayConfigPlan(
-            enabled = false,
+            enabled = true,
             defaults = FlywayDefaults(
-                locations = listOf("classpath:db/migration"),
+                locations = listOf("classpath:db/migration/mysql"),
+                baselineOnMigrate = true,
+                baselineVersion = "0",
                 cleanDisabled = true,
                 validateOnMigrate = true,
             ),

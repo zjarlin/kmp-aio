@@ -2,6 +2,8 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
 }
 
+val libs = versionCatalogs.named("libs")
+
 kotlin {
     sourceSets {
         jvmMain.dependencies {
@@ -19,6 +21,7 @@ kotlin {
             api(project(":lib:ktor:starter:starter-flyway"))
             api(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             api(project(":lib:ktor:plugin:ktor-s3-plugin"))
+            implementation(libs.findLibrary("org-flywaydb-flyway-mysql").get())
         }
 //        jvmTest.dependencies {
 //            implementation(project(":apps:kcloud:plugins:mcu-console"))

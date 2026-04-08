@@ -13,7 +13,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-//val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
+val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
 //val addzeroLibJvmVersion: String by project
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui").extensions.getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>().sourceSets.getByName(
@@ -34,14 +34,17 @@ ksp {
 
 kotlin {
     sourceSets {
-        commonMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation(libs.findLibrary("compose-cupertino-workbench").get())
-            implementation(libs.findLibrary("scaffold-spi").get())
-            implementation(libs.findLibrary("site-addzero-route-core").get())
-            implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
-            implementation(libs.findLibrary("site-addzero-compose-native-component-text").get())
-            implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+        commonMain {
+            kotlin.srcDir(generatedApiSourceDir)
+            dependencies {
+                implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
+                implementation(libs.findLibrary("compose-cupertino-workbench").get())
+                implementation(libs.findLibrary("scaffold-spi").get())
+                implementation(libs.findLibrary("site-addzero-route-core").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-button").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-text").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+            }
         }
     }
 }
