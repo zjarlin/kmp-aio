@@ -16,11 +16,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DeviceHub
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoveDown
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.SettingsApplications
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -29,10 +26,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import io.github.robinpcrd.cupertino.CupertinoActionSheet
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
+import io.github.robinpcrd.cupertino.cancel
+import io.github.robinpcrd.cupertino.default
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
 import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
@@ -64,6 +63,7 @@ import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigOption
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigSelectionField
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigSectionTitle
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTextField
 import site.addzero.kcloud.plugins.hostconfig.common.icon
@@ -105,6 +105,141 @@ fun ProjectsScreen() {
     var tagEditor by remember { mutableStateOf<TagEditorSeed?>(null) }
     var moveSeed by remember { mutableStateOf<MoveNodeSeed?>(null) }
     var uploadSeed by remember { mutableStateOf<UploadSeed?>(null) }
+    var createActionSheetVisible by remember { mutableStateOf(false) }
+
+    val createActions = resolveCreateActions(state)
+
+    fun openCreateAction(action: CreateNodeAction) {
+        when (action.kind) {
+            CreateNodeKind.PROJECT -> {
+                projectEditor = ProjectEditorSeed()
+            }
+
+            CreateNodeKind.PROTOCOL -> {
+                val projectId = state.selectedProjectId ?: return
+                protocolEditor = ProtocolEditorSeed(projectId = projectId)
+            }
+
+            CreateNodeKind.LINK_PROTOCOL -> {
+                val projectId = state.selectedProjectId ?: return
+                linkProtocolSeed = LinkProtocolSeed(projectId = projectId)
+            }
+
+            CreateNodeKind.MODULE -> {
+                val projectId = state.selectedProjectId ?: return
+                moduleEditor = ModuleEditorSeed(
+                    projectId = projectId,
+                    protocolId = state.selectedProtocol?.id,
+                    availableTemplates = resolveModuleTemplatesForSelection(state),
+                )
+            }
+
+            CreateNodeKind.DEVICE -> {
+                val projectId = state.selectedProjectId ?: return
+                val module = state.selectedModule ?: return
+                deviceEditor = DeviceEditorSeed(
+                    projectId = projectId,
+                    moduleId = module.id,
+                )
+            }
+
+            CreateNodeKind.TAG -> {
+                val projectId = state.selectedProjectId ?: return
+                val deviceId = state.activeDeviceId ?: return
+                tagEditor = TagEditorSeed(
+                    projectId = projectId,
+                    deviceId = deviceId,
+                )
+            }
+        }
+    }
+
+    fun editCurrentSelection() {
+        when (state.selectedNode?.kind) {
+            HostConfigNodeKind.PROJECT, null -> {
+                state.selectedProject?.let { project ->
+                    projectEditor = ProjectEditorSeed(existingId = project.id)
+                }
+            }
+
+            HostConfigNodeKind.PROTOCOL -> {
+                protocolEditor = ProtocolEditorSeed(
+                    projectId = state.selectedProjectId ?: return,
+                    existing = state.selectedProtocol,
+                )
+            }
+
+            HostConfigNodeKind.MODULE -> {
+                moduleEditor = ModuleEditorSeed(
+                    projectId = state.selectedProjectId ?: return,
+                    protocolId = state.selectedModule?.protocolId,
+                    existing = state.selectedModule,
+                    availableTemplates = resolveModuleTemplatesForSelection(state),
+                )
+            }
+
+            HostConfigNodeKind.DEVICE -> {
+                val moduleId = state.selectedNode?.parentEntityId ?: return
+                deviceEditor = DeviceEditorSeed(
+                    projectId = state.selectedProjectId ?: return,
+                    moduleId = moduleId,
+                    existing = state.selectedDevice,
+                )
+            }
+
+            HostConfigNodeKind.TAG -> {
+                val deviceId = state.selectedNode?.parentEntityId ?: return
+                tagEditor = TagEditorSeed(
+                    projectId = state.selectedProjectId ?: return,
+                    deviceId = deviceId,
+                    existing = state.selectedTagDetail,
+                )
+            }
+        }
+    }
+
+    fun deleteCurrentSelection() {
+        when (state.selectedNode?.kind) {
+            HostConfigNodeKind.PROJECT, null -> {
+                state.selectedProject?.let { project ->
+                    viewModel.deleteProject(project.id)
+                }
+            }
+
+            HostConfigNodeKind.PROTOCOL -> {
+                state.selectedProjectId?.let { projectId ->
+                    state.selectedProtocol?.let { protocol ->
+                        viewModel.deleteProtocol(projectId, protocol.id)
+                    }
+                }
+            }
+
+            HostConfigNodeKind.MODULE -> {
+                state.selectedProjectId?.let { projectId ->
+                    state.selectedModule?.let { module ->
+                        viewModel.deleteModule(projectId, module.id)
+                    }
+                }
+            }
+
+            HostConfigNodeKind.DEVICE -> {
+                state.selectedProjectId?.let { projectId ->
+                    state.selectedDevice?.let { device ->
+                        viewModel.deleteDevice(projectId, device.id)
+                    }
+                }
+            }
+
+            HostConfigNodeKind.TAG -> {
+                state.selectedProjectId?.let { projectId ->
+                    val deviceId = state.selectedNode?.parentEntityId ?: return@let
+                    state.selectedTagDetail?.let { tag ->
+                        viewModel.deleteTag(projectId, deviceId, tag.id)
+                    }
+                }
+            }
+        }
+    }
 
     Row(
         modifier = Modifier.fillMaxSize(),
@@ -134,12 +269,13 @@ fun ProjectsScreen() {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     WorkbenchActionButton(
-                        text = "新建工程",
+                        text = "新建",
                         onClick = {
-                            projectEditor = ProjectEditorSeed()
                             viewModel.clearNotice()
+                            createActionSheetVisible = true
                         },
                         variant = WorkbenchButtonVariant.Default,
+                        enabled = createActions.isNotEmpty(),
                     )
                     WorkbenchActionButton(
                         text = if (state.loading) "加载中" else "刷新",
@@ -156,205 +292,66 @@ fun ProjectsScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            ProjectsToolbar(
-                state = state,
-                onCreateProtocol = {
-                    state.selectedProjectId?.let { projectId ->
-                        protocolEditor = ProtocolEditorSeed(
-                            projectId = projectId,
-                        )
-                    }
-                },
-                onLinkProtocol = {
-                    state.selectedProjectId?.let { projectId ->
-                        linkProtocolSeed = LinkProtocolSeed(projectId)
-                    }
-                },
-                onCreateModule = {
-                    state.selectedProjectId?.let { projectId ->
-                        val availableTemplates = resolveModuleTemplatesForSelection(state)
-                        moduleEditor = ModuleEditorSeed(
-                            projectId = projectId,
-                            protocolId = state.selectedProtocol?.id,
-                            availableTemplates = availableTemplates,
-                        )
-                    }
-                },
-                onCreateDevice = {
-                    val selectedModule = state.selectedModule ?: return@ProjectsToolbar
-                    deviceEditor = DeviceEditorSeed(
-                        projectId = state.selectedProjectId ?: return@ProjectsToolbar,
-                        moduleId = selectedModule.id,
-                    )
-                },
-                onCreateTag = {
-                    val deviceId = state.activeDeviceId ?: return@ProjectsToolbar
-                    tagEditor = TagEditorSeed(
-                        projectId = state.selectedProjectId ?: return@ProjectsToolbar,
-                        deviceId = deviceId,
-                    )
-                },
-                onEditCurrent = {
-                    when (state.selectedNode?.kind) {
-                        HostConfigNodeKind.PROJECT, null -> {
-                            state.selectedProject?.let { project ->
-                                projectEditor = ProjectEditorSeed(existingId = project.id)
-                            }
-                        }
-
-                        HostConfigNodeKind.PROTOCOL -> {
-                            protocolEditor = ProtocolEditorSeed(
-                                projectId = state.selectedProjectId ?: return@ProjectsToolbar,
-                                existing = state.selectedProtocol,
-                            )
-                        }
-
-                        HostConfigNodeKind.MODULE -> {
-                            moduleEditor = ModuleEditorSeed(
-                                projectId = state.selectedProjectId ?: return@ProjectsToolbar,
-                                protocolId = state.selectedModule?.protocolId,
-                                existing = state.selectedModule,
-                                availableTemplates = resolveModuleTemplatesForSelection(state),
-                            )
-                        }
-
-                        HostConfigNodeKind.DEVICE -> {
-                            val moduleId = state.selectedNode?.parentEntityId ?: return@ProjectsToolbar
-                            deviceEditor = DeviceEditorSeed(
-                                projectId = state.selectedProjectId ?: return@ProjectsToolbar,
-                                moduleId = moduleId,
-                                existing = state.selectedDevice,
-                            )
-                        }
-
-                        HostConfigNodeKind.TAG -> {
-                            val deviceId = state.selectedNode?.parentEntityId ?: return@ProjectsToolbar
-                            tagEditor = TagEditorSeed(
-                                projectId = state.selectedProjectId ?: return@ProjectsToolbar,
-                                deviceId = deviceId,
-                                existing = state.selectedTagDetail,
-                            )
-                        }
-                    }
-                },
-                onDeleteCurrent = {
-                    when (state.selectedNode?.kind) {
-                        HostConfigNodeKind.PROJECT, null -> {
-                            state.selectedProject?.let { project ->
-                                viewModel.deleteProject(project.id)
-                            }
-                        }
-
-                        HostConfigNodeKind.PROTOCOL -> {
-                            state.selectedProjectId?.let { projectId ->
-                                state.selectedProtocol?.let { protocol ->
-                                    viewModel.deleteProtocol(projectId, protocol.id)
-                                }
-                            }
-                        }
-
-                        HostConfigNodeKind.MODULE -> {
-                            state.selectedProjectId?.let { projectId ->
-                                state.selectedModule?.let { module ->
-                                    viewModel.deleteModule(projectId, module.id)
-                                }
-                            }
-                        }
-
-                        HostConfigNodeKind.DEVICE -> {
-                            state.selectedProjectId?.let { projectId ->
-                                state.selectedDevice?.let { device ->
-                                    viewModel.deleteDevice(projectId, device.id)
-                                }
-                            }
-                        }
-
-                        HostConfigNodeKind.TAG -> {
-                            state.selectedProjectId?.let { projectId ->
-                                val deviceId = state.selectedNode?.parentEntityId ?: return@let
-                                state.selectedTagDetail?.let { tag ->
-                                    viewModel.deleteTag(projectId, deviceId, tag.id)
-                                }
-                            }
-                        }
-                    }
-                },
-                onMoveCurrent = {
-                    state.selectedNode?.takeIf { node -> node.kind != HostConfigNodeKind.PROJECT }?.let { node ->
-                        moveSeed = MoveNodeSeed(node = node)
-                    }
-                },
-                onUploadProject = {
-                    state.selectedProjectId?.let { projectId ->
-                        uploadSeed = UploadSeed(projectId)
-                    }
-                },
-            )
-
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            Box(
+                modifier = Modifier
+                    .weight(0.48f)
+                    .fillMaxWidth(),
             ) {
                 Column(
                     modifier = Modifier
-                        .weight(0.48f)
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    ProjectDetailPanel(state)
-                    if (state.selectedProjectId != null) {
-                        ProjectUploadPanel(
-                            state = state,
-                            onRefresh = viewModel::updateUploadStatus,
-                            onOpen = {
-                                uploadSeed = UploadSeed(it)
-                            },
-                        )
-                    }
+                    CurrentNodePanel(
+                        state = state,
+                        onEditCurrent = ::editCurrentSelection,
+                        onMoveCurrent = {
+                            state.selectedNode
+                                ?.takeIf { node -> node.kind != HostConfigNodeKind.PROJECT }
+                                ?.let { node -> moveSeed = MoveNodeSeed(node) }
+                        },
+                        onDeleteCurrent = ::deleteCurrentSelection,
+                        onUploadProject = {
+                            state.selectedProjectId?.let { projectId ->
+                                uploadSeed = UploadSeed(projectId)
+                            }
+                        },
+                    )
                 }
+            }
 
+            Box(
+                modifier = Modifier
+                    .weight(0.52f)
+                    .fillMaxWidth(),
+            ) {
                 Column(
                     modifier = Modifier
-                        .weight(0.52f)
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    if (state.activeDeviceId != null) {
-                        TagListPanel(
-                            state = state,
-                            onPrev = viewModel::loadPreviousTagPage,
-                            onNext = viewModel::loadNextTagPage,
-                            onSelectTag = { tag ->
-                                val projectId = state.selectedProjectId ?: return@TagListPanel
-                                val deviceId = state.activeDeviceId ?: return@TagListPanel
-                                viewModel.selectNode(
-                                    ProjectsViewModel.buildTagNodeId(
-                                        projectId = projectId,
-                                        deviceId = deviceId,
-                                        tagId = tag.id,
-                                    ),
-                                )
-                            },
-                            onEditTag = {
-                                tagEditor = TagEditorSeed(
-                                    projectId = state.selectedProjectId ?: return@TagListPanel,
-                                    deviceId = state.activeDeviceId ?: return@TagListPanel,
-                                    existing = it,
-                                )
-                            },
-                            onDeleteTag = { tag ->
-                                val projectId = state.selectedProjectId ?: return@TagListPanel
-                                val deviceId = state.activeDeviceId ?: return@TagListPanel
-                                viewModel.deleteTag(projectId, deviceId, tag.id)
-                            },
-                        )
-                    } else {
-                        ProjectOverviewPanel(state)
-                    }
+                    NodeChildrenPanel(
+                        state = state,
+                        onSelectNode = viewModel::selectNode,
+                        onPrevTagPage = viewModel::loadPreviousTagPage,
+                        onNextTagPage = viewModel::loadNextTagPage,
+                    )
                 }
             }
         }
     }
+
+    CreateNodeActionSheet(
+        visible = createActionSheetVisible,
+        actions = createActions,
+        onDismissRequest = {
+            createActionSheetVisible = false
+        },
+        onActionSelected = { action ->
+            createActionSheetVisible = false
+            openCreateAction(action)
+        },
+    )
 
     projectEditor?.let { seed ->
         ProjectEditorDialog(
@@ -788,79 +785,158 @@ fun ProjectsScreen() {
 }
 
 @Composable
-private fun ProjectsToolbar(
-    state: ProjectsScreenState,
-    onCreateProtocol: () -> Unit,
-    onLinkProtocol: () -> Unit,
-    onCreateModule: () -> Unit,
-    onCreateDevice: () -> Unit,
-    onCreateTag: () -> Unit,
-    onEditCurrent: () -> Unit,
-    onDeleteCurrent: () -> Unit,
-    onMoveCurrent: () -> Unit,
-    onUploadProject: () -> Unit,
+private fun CreateNodeActionSheet(
+    visible: Boolean,
+    actions: List<CreateNodeAction>,
+    onDismissRequest: () -> Unit,
+    onActionSelected: (CreateNodeAction) -> Unit,
 ) {
-    HostConfigPanel(
-        title = "操作台",
-        subtitle = state.selectedNode?.label ?: state.selectedProject?.name ?: "请选择工程树节点",
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            WorkbenchActionButton("新建协议", onCreateProtocol, enabled = state.selectedProjectId != null)
-            WorkbenchActionButton("关联协议", onLinkProtocol, variant = WorkbenchButtonVariant.Outline, enabled = state.selectedProjectId != null)
-            WorkbenchActionButton("新建模块", onCreateModule, enabled = state.selectedProjectId != null)
-            WorkbenchActionButton("新建设备", onCreateDevice, enabled = state.selectedModule != null)
-            WorkbenchActionButton("新建点位", onCreateTag, enabled = state.activeDeviceId != null)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            WorkbenchActionButton("编辑当前", onEditCurrent, imageVector = Icons.Outlined.Edit)
-            WorkbenchActionButton("变更上级", onMoveCurrent, imageVector = Icons.Outlined.MoveDown, variant = WorkbenchButtonVariant.Outline, enabled = state.selectedNode?.kind != null && state.selectedNode?.kind != HostConfigNodeKind.PROJECT)
-            WorkbenchActionButton("删除当前", onDeleteCurrent, imageVector = Icons.Outlined.Delete, variant = WorkbenchButtonVariant.Destructive)
-            WorkbenchActionButton("上传工程", onUploadProject, imageVector = Icons.Outlined.Upload, variant = WorkbenchButtonVariant.Secondary, enabled = state.selectedProjectId != null)
-            WorkbenchActionButton("刷新状态", onUploadProject, imageVector = Icons.Outlined.Refresh, variant = WorkbenchButtonVariant.Outline, enabled = false)
-        }
-    }
+    CupertinoActionSheet(
+        visible = visible,
+        onDismissRequest = onDismissRequest,
+        title = {
+            CupertinoText("新建")
+        },
+        buttons = {
+            actions.forEach { action ->
+                default(
+                    onClick = {
+                        onActionSelected(action)
+                    },
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        CupertinoText(action.title)
+                        action.subtitle?.let { text ->
+                            CupertinoText(
+                                text = text,
+                                style = CupertinoTheme.typography.footnote,
+                                color = CupertinoTheme.colorScheme.secondaryLabel,
+                            )
+                        }
+                    }
+                }
+            }
+            cancel(
+                onClick = onDismissRequest,
+            ) {
+                CupertinoText("取消")
+            }
+        },
+    )
 }
 
 @Composable
-private fun ProjectDetailPanel(
+private fun CurrentNodePanel(
     state: ProjectsScreenState,
+    onEditCurrent: () -> Unit,
+    onMoveCurrent: () -> Unit,
+    onDeleteCurrent: () -> Unit,
+    onUploadProject: () -> Unit,
 ) {
-    val node = state.selectedNode
-    val title = node?.label ?: state.selectedProject?.name ?: "未选择节点"
-    val subtitle = when (node?.kind ?: HostConfigNodeKind.PROJECT) {
-        HostConfigNodeKind.PROJECT -> "工程详情"
-        HostConfigNodeKind.PROTOCOL -> "协议详情"
-        HostConfigNodeKind.MODULE -> "模块详情"
-        HostConfigNodeKind.DEVICE -> "设备详情"
-        HostConfigNodeKind.TAG -> "点位详情"
-    }
-
+    val nodeKind = resolveSelectedNodeKind(state)
     HostConfigPanel(
-        title = title,
-        subtitle = subtitle,
+        title = "当前节点信息",
+        subtitle = when (nodeKind) {
+            null -> "请选择左侧节点"
+            else -> "${nodeKind.label()}表单"
+        },
     ) {
-        when (node?.kind ?: HostConfigNodeKind.PROJECT) {
+        if (nodeKind == null) {
+            HostConfigStatusStrip("当前还没有可展示的工程节点，先点击左侧的新建。")
+            return@HostConfigPanel
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            WorkbenchActionButton(
+                text = "编辑当前",
+                onClick = onEditCurrent,
+                imageVector = Icons.Outlined.Edit,
+                enabled = state.selectedProjectId != null,
+            )
+            WorkbenchActionButton(
+                text = "变更上级",
+                onClick = onMoveCurrent,
+                imageVector = Icons.Outlined.MoveDown,
+                variant = WorkbenchButtonVariant.Outline,
+                enabled = state.selectedNode?.kind != null && state.selectedNode?.kind != HostConfigNodeKind.PROJECT,
+            )
+            WorkbenchActionButton(
+                text = "删除当前",
+                onClick = onDeleteCurrent,
+                imageVector = Icons.Outlined.Delete,
+                variant = WorkbenchButtonVariant.Destructive,
+                enabled = state.selectedProjectId != null,
+            )
+            WorkbenchActionButton(
+                text = "上传工程",
+                onClick = onUploadProject,
+                imageVector = Icons.Outlined.Upload,
+                variant = WorkbenchButtonVariant.Secondary,
+                enabled = nodeKind == HostConfigNodeKind.PROJECT && state.selectedProjectId != null,
+            )
+        }
+
+        HostConfigSectionTitle("基础信息")
+
+        when (nodeKind) {
             HostConfigNodeKind.PROJECT -> {
                 val project = state.selectedProject
                 val projectTree = state.selectedProjectTree
                 HostConfigKeyValueRow("工程名称", project?.name.orDash())
                 HostConfigKeyValueRow("描述", project?.description.orDash())
                 HostConfigKeyValueRow("备注", project?.remark.orDash())
+                HostConfigKeyValueRow("排序", project?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("协议数量", projectTree?.protocols?.size?.toString() ?: "0")
                 HostConfigKeyValueRow("根模块数量", projectTree?.modules?.size?.toString() ?: "0")
+                HostConfigKeyValueRow(
+                    "设备总数",
+                    projectTree?.let { tree ->
+                        (
+                            tree.modules.sumOf { module -> module.devices.size } +
+                                tree.protocols.sumOf { protocol -> protocol.modules.sumOf { module -> module.devices.size } }
+                            ).toString()
+                    } ?: "0",
+                )
+                HostConfigKeyValueRow(
+                    "点位总数",
+                    projectTree?.let { tree ->
+                        (
+                            tree.modules.sumOf { module -> module.devices.sumOf { device -> device.tags.size } } +
+                                tree.protocols.sumOf { protocol ->
+                                    protocol.modules.sumOf { module ->
+                                        module.devices.sumOf { device -> device.tags.size }
+                                    }
+                                }
+                            ).toString()
+                    } ?: "0",
+                )
+
+                HostConfigSectionTitle("上传状态")
+                HostConfigKeyValueRow("当前状态", state.uploadStatus?.statusText ?: "待开始")
+                HostConfigKeyValueRow("进度", state.uploadStatus?.progress?.let { "$it%" } ?: "0%")
+                HostConfigKeyValueRow("目标 IP", state.uploadStatus?.ipAddress.orDash())
+                HostConfigKeyValueRow("工程路径", state.uploadStatus?.projectPath.orDash())
+                HostConfigKeyValueRow("已选文件", state.uploadStatus?.selectedFileName.orDash())
+                HostConfigKeyValueRow("备份文件", state.uploadStatus?.backupFileName.orDash())
+                HostConfigKeyValueRow("备份大小", state.uploadStatus?.backupSizeBytes.toSizeLabel())
+                state.uploadStatus?.detailText?.takeIf { it.isNotBlank() }?.let { detail ->
+                    HostConfigStatusStrip(detail)
+                }
             }
 
             HostConfigNodeKind.PROTOCOL -> {
                 val protocol = state.selectedProtocol
                 HostConfigKeyValueRow("协议名称", protocol?.name.orDash())
                 HostConfigKeyValueRow("协议模板", protocol?.protocolTemplateName.orDash())
-                HostConfigKeyValueRow("轮询时间", protocol?.pollingIntervalMs?.toString() ?: "-")
+                HostConfigKeyValueRow("模板编码", protocol?.protocolTemplateCode.orDash())
+                HostConfigKeyValueRow("轮询间隔(ms)", protocol?.pollingIntervalMs?.toString() ?: "-")
+                HostConfigKeyValueRow("排序", protocol?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("模块数量", protocol?.modules?.size?.toString() ?: "0")
             }
 
@@ -868,9 +944,14 @@ private fun ProjectDetailPanel(
                 val module = state.selectedModule
                 HostConfigKeyValueRow("模块名称", module?.name.orDash())
                 HostConfigKeyValueRow("模块模板", module?.moduleTemplateName.orDash())
+                HostConfigKeyValueRow("模板编码", module?.moduleTemplateCode.orDash())
                 HostConfigKeyValueRow("串口", module?.portName.orDash())
                 HostConfigKeyValueRow("波特率", module?.baudRate?.toString() ?: "-")
-                HostConfigKeyValueRow("响应超时", module?.responseTimeoutMs?.toString() ?: "-")
+                HostConfigKeyValueRow("数据位", module?.dataBits?.toString() ?: "-")
+                HostConfigKeyValueRow("停止位", module?.stopBits?.toString() ?: "-")
+                HostConfigKeyValueRow("校验位", module?.parity?.label() ?: "-")
+                HostConfigKeyValueRow("响应超时(ms)", module?.responseTimeoutMs?.toString() ?: "-")
+                HostConfigKeyValueRow("排序", module?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("设备数量", module?.devices?.size?.toString() ?: "0")
             }
 
@@ -878,179 +959,259 @@ private fun ProjectDetailPanel(
                 val device = state.selectedDevice
                 HostConfigKeyValueRow("设备名称", device?.name.orDash())
                 HostConfigKeyValueRow("设备类型", device?.deviceTypeName.orDash())
+                HostConfigKeyValueRow("类型编码", device?.deviceTypeCode.orDash())
                 HostConfigKeyValueRow("站号", device?.stationNo?.toString() ?: "-")
-                HostConfigKeyValueRow("请求间隔", device?.requestIntervalMs?.toString() ?: "-")
-                HostConfigKeyValueRow("写值间隔", device?.writeIntervalMs?.toString() ?: "-")
+                HostConfigKeyValueRow("请求间隔(ms)", device?.requestIntervalMs?.toString() ?: "-")
+                HostConfigKeyValueRow("写值间隔(ms)", device?.writeIntervalMs?.toString() ?: "-")
+                HostConfigKeyValueRow("2 字节顺序", device?.byteOrder2?.label() ?: "-")
+                HostConfigKeyValueRow("4 字节顺序", device?.byteOrder4?.label() ?: "-")
+                HostConfigKeyValueRow("浮点顺序", device?.floatOrder?.label() ?: "-")
+                HostConfigKeyValueRow("模拟量批量", listOf(device?.batchAnalogStart, device?.batchAnalogLength).joinToString(" / ") { it?.toString() ?: "-" })
+                HostConfigKeyValueRow("数字量批量", listOf(device?.batchDigitalStart, device?.batchDigitalLength).joinToString(" / ") { it?.toString() ?: "-" })
+                HostConfigKeyValueRow("禁用", if (device?.disabled == true) "是" else "否")
+                HostConfigKeyValueRow("排序", device?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("点位数量", device?.tags?.size?.toString() ?: "0")
             }
 
             HostConfigNodeKind.TAG -> {
                 val tag = state.selectedTagDetail
-                HostConfigKeyValueRow("点位名称", tag?.name.orDash())
-                HostConfigKeyValueRow("数据类型", tag?.dataTypeName.orDash())
-                HostConfigKeyValueRow("寄存器类型", tag?.registerTypeName.orDash())
-                HostConfigKeyValueRow("寄存器地址", tag?.registerAddress?.toString() ?: "-")
-                HostConfigKeyValueRow("启用", if (tag?.enabled == true) "是" else "否")
-                HostConfigKeyValueRow("点类型", tag?.pointType?.label() ?: "-")
-                HostConfigKeyValueRow("值文本条目", tag?.valueTexts?.size?.toString() ?: "0")
+                if (tag == null) {
+                    HostConfigStatusStrip("当前点位详情尚未加载完成。")
+                    return@HostConfigPanel
+                }
+                HostConfigKeyValueRow("点位名称", tag.name)
+                HostConfigKeyValueRow("描述", tag.description.orDash())
+                HostConfigKeyValueRow("数据类型", tag.dataTypeName)
+                HostConfigKeyValueRow("寄存器类型", tag.registerTypeName)
+                HostConfigKeyValueRow("寄存器地址", tag.registerAddress.toString())
+                HostConfigKeyValueRow("启用", if (tag.enabled) "是" else "否")
+                HostConfigKeyValueRow("默认值", tag.defaultValue.orDash())
+                HostConfigKeyValueRow("异常值", tag.exceptionValue.orDash())
+                HostConfigKeyValueRow("点位类型", tag.pointType?.label() ?: "-")
+                HostConfigKeyValueRow("防抖(ms)", tag.debounceMs?.toString() ?: "-")
+                HostConfigKeyValueRow("排序", tag.sortIndex.toString())
+                HostConfigKeyValueRow("线性转换", if (tag.scalingEnabled) "已启用" else "未启用")
+                if (tag.scalingEnabled) {
+                    HostConfigKeyValueRow("偏移量", tag.scalingOffset.orDash())
+                    HostConfigKeyValueRow("原始范围", "${tag.rawMin.orDash()} ~ ${tag.rawMax.orDash()}")
+                    HostConfigKeyValueRow("工程范围", "${tag.engMin.orDash()} ~ ${tag.engMax.orDash()}")
+                }
+                HostConfigKeyValueRow("值文本条目", tag.valueTexts.size.toString())
             }
         }
     }
 }
 
 @Composable
-private fun ProjectOverviewPanel(
+private fun NodeChildrenPanel(
     state: ProjectsScreenState,
+    onSelectNode: (String) -> Unit,
+    onPrevTagPage: () -> Unit,
+    onNextTagPage: () -> Unit,
 ) {
+    val nodeKind = resolveSelectedNodeKind(state)
     HostConfigPanel(
-        title = "工程概览",
-        subtitle = "当前选中工程的协议、模块与设备概况。",
-    ) {
-        val projectTree = state.selectedProjectTree
-        if (projectTree == null) {
-            HostConfigStatusStrip("请先在左侧选择工程。")
-            return@HostConfigPanel
-        }
-        HostConfigKeyValueRow("工程名称", projectTree.name)
-        HostConfigKeyValueRow("协议数量", projectTree.protocols.size.toString())
-        HostConfigKeyValueRow("根模块数量", projectTree.modules.size.toString())
-        HostConfigKeyValueRow(
-            "设备总数",
-            (
-                projectTree.modules.sumOf { module -> module.devices.size } +
-                    projectTree.protocols.sumOf { protocol -> protocol.modules.sumOf { module -> module.devices.size } }
-                ).toString(),
-        )
-        HostConfigKeyValueRow(
-            "点位总数",
-            (
-                projectTree.modules.sumOf { module -> module.devices.sumOf { device -> device.tags.size } } +
-                    projectTree.protocols.sumOf { protocol ->
-                        protocol.modules.sumOf { module ->
-                            module.devices.sumOf { device -> device.tags.size }
-                        }
-                    }
-                ).toString(),
-        )
-    }
-}
-
-@Composable
-private fun ProjectUploadPanel(
-    state: ProjectsScreenState,
-    onRefresh: () -> Unit,
-    onOpen: (Long) -> Unit,
-) {
-    val uploadStatus = state.uploadStatus
-    HostConfigPanel(
-        title = "上传与备份",
-        subtitle = "保留旧宿主配置的上传工程、远程动作和备份状态。",
+        title = if (nodeKind == HostConfigNodeKind.TAG) "子项信息" else "下级节点",
+        subtitle = when (nodeKind) {
+            null -> "请选择左侧节点"
+            HostConfigNodeKind.PROJECT -> "当前工程直接挂载的协议和根模块。"
+            HostConfigNodeKind.PROTOCOL -> "当前协议下的模块。"
+            HostConfigNodeKind.MODULE -> "当前模块下的设备。"
+            HostConfigNodeKind.DEVICE -> "当前设备下的标签分页。"
+            HostConfigNodeKind.TAG -> "当前标签携带的值文本子项。"
+        },
         actions = {
-            WorkbenchActionButton(
-                text = "刷新",
-                onClick = onRefresh,
-                variant = WorkbenchButtonVariant.Outline,
-            )
-            state.selectedProjectId?.let { projectId ->
+            if (nodeKind == HostConfigNodeKind.DEVICE) {
                 WorkbenchActionButton(
-                    text = "打开操作",
-                    onClick = {
-                        onOpen(projectId)
-                    },
+                    text = "上一页",
+                    onClick = onPrevTagPage,
+                    variant = WorkbenchButtonVariant.Outline,
+                    enabled = state.tagOffset > 0,
+                )
+                WorkbenchActionButton(
+                    text = "下一页",
+                    onClick = onNextTagPage,
+                    variant = WorkbenchButtonVariant.Outline,
+                    enabled = state.tagOffset + state.tagSize < state.tagPage.t.toInt(),
                 )
             }
         },
     ) {
-        HostConfigKeyValueRow("当前状态", uploadStatus?.statusText ?: "待开始")
-        HostConfigKeyValueRow("进度", uploadStatus?.progress?.let { "$it%" } ?: "0%")
-        HostConfigKeyValueRow("目标 IP", uploadStatus?.ipAddress.orDash())
-        HostConfigKeyValueRow("工程路径", uploadStatus?.projectPath.orDash())
-        HostConfigKeyValueRow("已选文件", uploadStatus?.selectedFileName.orDash())
-        HostConfigKeyValueRow("备份文件", uploadStatus?.backupFileName.orDash())
-        HostConfigKeyValueRow("备份大小", uploadStatus?.backupSizeBytes.toSizeLabel())
-        HostConfigKeyValueRow("下载地址", uploadStatus?.backupDownloadUrl.orDash())
-        uploadStatus?.detailText?.takeIf { it.isNotBlank() }?.let { detail ->
-            HostConfigStatusStrip(detail)
+        when (nodeKind) {
+            null -> HostConfigStatusStrip("左侧树选择后，这里会显示当前节点的 children 信息。")
+
+            HostConfigNodeKind.PROJECT -> {
+                val projectTree = state.selectedProjectTree
+                if (projectTree == null) {
+                    HostConfigStatusStrip("当前工程树还没有加载完成。")
+                    return@HostConfigPanel
+                }
+                if (projectTree.protocols.isEmpty() && projectTree.modules.isEmpty()) {
+                    HostConfigStatusStrip("当前工程还没有下级节点。")
+                    return@HostConfigPanel
+                }
+                if (projectTree.protocols.isNotEmpty()) {
+                    HostConfigSectionTitle("协议")
+                    projectTree.protocols.forEach { protocol ->
+                        ChildNodeCard(
+                            title = protocol.name,
+                            subtitle = protocol.protocolTemplateName,
+                            onClick = {
+                                onSelectNode(
+                                    ProjectsViewModel.buildProtocolNodeId(projectTree.id, protocol.id),
+                                )
+                            },
+                        ) {
+                            HostConfigKeyValueRow("轮询间隔(ms)", protocol.pollingIntervalMs.toString())
+                            HostConfigKeyValueRow("模块数量", protocol.modules.size.toString())
+                            HostConfigKeyValueRow("排序", protocol.sortIndex.toString())
+                        }
+                    }
+                }
+                if (projectTree.modules.isNotEmpty()) {
+                    HostConfigSectionTitle("根模块")
+                    projectTree.modules.forEach { module ->
+                        ChildNodeCard(
+                            title = module.name,
+                            subtitle = module.moduleTemplateName,
+                            onClick = {
+                                onSelectNode(
+                                    ProjectsViewModel.buildModuleNodeId(projectTree.id, module.id),
+                                )
+                            },
+                        ) {
+                            HostConfigKeyValueRow("串口", module.portName.orDash())
+                            HostConfigKeyValueRow("设备数量", module.devices.size.toString())
+                            HostConfigKeyValueRow("排序", module.sortIndex.toString())
+                        }
+                    }
+                }
+            }
+
+            HostConfigNodeKind.PROTOCOL -> {
+                val projectId = state.selectedProjectId ?: return@HostConfigPanel
+                val protocol = state.selectedProtocol
+                if (protocol == null || protocol.modules.isEmpty()) {
+                    HostConfigStatusStrip("当前协议还没有下级模块。")
+                    return@HostConfigPanel
+                }
+                protocol.modules.forEach { module ->
+                    ChildNodeCard(
+                        title = module.name,
+                        subtitle = module.moduleTemplateName,
+                        onClick = {
+                            onSelectNode(
+                                ProjectsViewModel.buildModuleNodeId(projectId, module.id),
+                            )
+                        },
+                    ) {
+                        HostConfigKeyValueRow("串口", module.portName.orDash())
+                        HostConfigKeyValueRow("设备数量", module.devices.size.toString())
+                        HostConfigKeyValueRow("排序", module.sortIndex.toString())
+                    }
+                }
+            }
+
+            HostConfigNodeKind.MODULE -> {
+                val projectId = state.selectedProjectId ?: return@HostConfigPanel
+                val module = state.selectedModule
+                if (module == null || module.devices.isEmpty()) {
+                    HostConfigStatusStrip("当前模块还没有下级设备。")
+                    return@HostConfigPanel
+                }
+                module.devices.forEach { device ->
+                    ChildNodeCard(
+                        title = device.name,
+                        subtitle = device.deviceTypeName,
+                        onClick = {
+                            onSelectNode(
+                                ProjectsViewModel.buildDeviceNodeId(projectId, device.id),
+                            )
+                        },
+                    ) {
+                        HostConfigKeyValueRow("站号", device.stationNo.toString())
+                        HostConfigKeyValueRow("点位数量", device.tags.size.toString())
+                        HostConfigKeyValueRow("禁用", if (device.disabled) "是" else "否")
+                    }
+                }
+            }
+
+            HostConfigNodeKind.DEVICE -> {
+                val projectId = state.selectedProjectId ?: return@HostConfigPanel
+                val deviceId = state.activeDeviceId ?: return@HostConfigPanel
+                HostConfigKeyValueRow("分页状态", "偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条")
+                if (state.tagPage.d.isEmpty()) {
+                    HostConfigStatusStrip("当前设备还没有标签。")
+                    return@HostConfigPanel
+                }
+                state.tagPage.d.forEach { tag ->
+                    ChildNodeCard(
+                        title = tag.name,
+                        subtitle = "${tag.registerTypeName} / ${tag.registerAddress}",
+                        onClick = {
+                            onSelectNode(
+                                ProjectsViewModel.buildTagNodeId(
+                                    projectId = projectId,
+                                    deviceId = deviceId,
+                                    tagId = tag.id,
+                                ),
+                            )
+                        },
+                    ) {
+                        HostConfigKeyValueRow("数据类型", tag.dataTypeName)
+                        HostConfigKeyValueRow("启用", if (tag.enabled) "是" else "否")
+                        HostConfigKeyValueRow("值文本条目", tag.valueTexts.size.toString())
+                    }
+                }
+            }
+
+            HostConfigNodeKind.TAG -> {
+                val tag = state.selectedTagDetail
+                if (tag == null) {
+                    HostConfigStatusStrip("当前标签详情尚未加载完成。")
+                    return@HostConfigPanel
+                }
+                if (tag.valueTexts.isEmpty()) {
+                    HostConfigStatusStrip("当前标签没有值文本子项。")
+                    return@HostConfigPanel
+                }
+                tag.valueTexts.forEach { item ->
+                    ChildNodeCard(
+                        title = item.displayText,
+                        subtitle = "排序 ${item.sortIndex}",
+                    ) {
+                        HostConfigKeyValueRow("原始值", item.rawValue)
+                        HostConfigKeyValueRow("显示文本", item.displayText)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun TagListPanel(
-    state: ProjectsScreenState,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
-    onSelectTag: (site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse) -> Unit,
-    onEditTag: (site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse) -> Unit,
-    onDeleteTag: (site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse) -> Unit,
+private fun ChildNodeCard(
+    title: String,
+    subtitle: String? = null,
+    onClick: (() -> Unit)? = null,
+    content: @Composable (() -> Unit),
 ) {
-    HostConfigPanel(
-        title = "点位分页",
-        subtitle = "保持旧宿主配置的点位分页读取与编辑流。",
-        actions = {
-            WorkbenchActionButton(
-                text = "上一页",
-                onClick = onPrev,
-                variant = WorkbenchButtonVariant.Outline,
-                enabled = state.tagOffset > 0,
-            )
-            WorkbenchActionButton(
-                text = "下一页",
-                onClick = onNext,
-                variant = WorkbenchButtonVariant.Outline,
-                enabled = state.tagOffset + state.tagSize < state.tagPage.t.toInt(),
-            )
-        },
-    ) {
-        HostConfigKeyValueRow(
-            "分页状态",
-            "偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条",
-        )
-        if (state.tagPage.d.isEmpty()) {
-            HostConfigStatusStrip("当前设备下还没有点位。")
-        } else {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                state.tagPage.d.forEach { tag ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                onSelectTag(tag)
-                            },
-                    ) {
-                        HostConfigPanel(
-                            title = tag.name,
-                            subtitle = "${tag.registerTypeName} / ${tag.registerAddress}",
-                        ) {
-                            HostConfigKeyValueRow("数据类型", tag.dataTypeName)
-                            HostConfigKeyValueRow("启用", if (tag.enabled) "是" else "否")
-                            HostConfigKeyValueRow("值文本", tag.valueTexts.size.toString())
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                WorkbenchActionButton(
-                                    text = "编辑",
-                                    onClick = {
-                                        onEditTag(tag)
-                                    },
-                                    variant = WorkbenchButtonVariant.Outline,
-                                )
-                                WorkbenchActionButton(
-                                    text = "删除",
-                                    onClick = {
-                                        onDeleteTag(tag)
-                                    },
-                                    variant = WorkbenchButtonVariant.Destructive,
-                                )
-                            }
-                        }
-                    }
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .let { modifier ->
+                if (onClick == null) {
+                    modifier
+                } else {
+                    modifier.clickable(onClick = onClick)
                 }
-            }
+            },
+    ) {
+        HostConfigPanel(
+            title = title,
+            subtitle = subtitle,
+        ) {
+            content()
         }
     }
 }
@@ -1732,6 +1893,102 @@ private fun resolveMoveOptions(
         }
     }
 }
+
+private fun resolveCreateActions(
+    state: ProjectsScreenState,
+): List<CreateNodeAction> {
+    val nodeKind = resolveSelectedNodeKind(state)
+    return buildList {
+        add(
+            CreateNodeAction(
+                kind = CreateNodeKind.PROJECT,
+                title = "新建工程",
+                subtitle = "创建新的工程根节点",
+            ),
+        )
+        when (nodeKind) {
+            HostConfigNodeKind.PROJECT -> {
+                add(
+                    CreateNodeAction(
+                        kind = CreateNodeKind.PROTOCOL,
+                        title = "新建协议",
+                        subtitle = "在当前工程下新增协议",
+                    ),
+                )
+                add(
+                    CreateNodeAction(
+                        kind = CreateNodeKind.LINK_PROTOCOL,
+                        title = "关联协议",
+                        subtitle = "把已有协议挂到当前工程",
+                    ),
+                )
+                add(
+                    CreateNodeAction(
+                        kind = CreateNodeKind.MODULE,
+                        title = "新建模块",
+                        subtitle = "在当前工程根节点下新增模块",
+                    ),
+                )
+            }
+
+            HostConfigNodeKind.PROTOCOL -> {
+                add(
+                    CreateNodeAction(
+                        kind = CreateNodeKind.MODULE,
+                        title = "新建模块",
+                        subtitle = "在当前协议下新增模块",
+                    ),
+                )
+            }
+
+            HostConfigNodeKind.MODULE -> {
+                add(
+                    CreateNodeAction(
+                        kind = CreateNodeKind.DEVICE,
+                        title = "新建设备",
+                        subtitle = "在当前模块下新增设备",
+                    ),
+                )
+            }
+
+            HostConfigNodeKind.DEVICE,
+            HostConfigNodeKind.TAG,
+            -> {
+                add(
+                    CreateNodeAction(
+                        kind = CreateNodeKind.TAG,
+                        title = "新建标签",
+                        subtitle = "在当前设备下新增标签",
+                    ),
+                )
+            }
+
+            null -> Unit
+        }
+    }
+}
+
+private fun resolveSelectedNodeKind(
+    state: ProjectsScreenState,
+): HostConfigNodeKind? {
+    return state.selectedNode?.kind
+        ?: state.selectedProject?.let { HostConfigNodeKind.PROJECT }
+}
+
+private enum class CreateNodeKind {
+    PROJECT,
+    PROTOCOL,
+    LINK_PROTOCOL,
+    MODULE,
+    DEVICE,
+    TAG,
+}
+
+private data class CreateNodeAction(
+    val kind: CreateNodeKind,
+    val title: String,
+    val subtitle: String? = null,
+)
 
 private data class ProjectEditorSeed(
     val existingId: Long? = null,

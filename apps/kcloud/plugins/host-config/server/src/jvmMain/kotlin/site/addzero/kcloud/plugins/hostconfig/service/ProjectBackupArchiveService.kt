@@ -101,6 +101,10 @@ class ProjectBackupArchiveService(
             "SELECT * FROM host_config_project_modbus_server_config WHERE project_id = ? ORDER BY transport_type ASC, id ASC",
             projectId,
         )
+        val gatewayPinConfigs = jdbc.queryRows(
+            "SELECT * FROM host_config_project_gateway_pin_config WHERE project_id = ? ORDER BY id ASC",
+            projectId,
+        )
 
         val exportedAt = System.currentTimeMillis()
         val payload = linkedMapOf<String, Any?>(
@@ -118,12 +122,14 @@ class ProjectBackupArchiveService(
                 "tagValueTextCount" to tagValueTexts.size,
                 "mqttConfigCount" to mqttConfigs.size,
                 "modbusConfigCount" to modbusConfigs.size,
+                "gatewayPinConfigCount" to gatewayPinConfigs.size,
             ),
             "view" to linkedMapOf(
                 "project" to backupJson.encodeToJsonElement(ProjectResponse.serializer(), project),
                 "tree" to backupJson.encodeToJsonElement(ProjectTreeResponse.serializer(), tree),
                 "mqttConfig" to mqttConfigs.firstOrNull(),
                 "modbusConfigs" to modbusConfigs,
+                "gatewayPinConfig" to gatewayPinConfigs.firstOrNull(),
             ),
             "tables" to linkedMapOf(
                 "host_config_project" to listOfNotNull(
@@ -137,6 +143,7 @@ class ProjectBackupArchiveService(
                 "host_config_tag_value_text" to tagValueTexts,
                 "host_config_project_mqtt_config" to mqttConfigs,
                 "host_config_project_modbus_server_config" to modbusConfigs,
+                "host_config_project_gateway_pin_config" to gatewayPinConfigs,
             ),
             "dictionaries" to linkedMapOf(
                 "host_config_protocol_template" to jdbc.queryRows(

@@ -7,7 +7,9 @@ kotlin {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:shared"))
 //            implementation(project(":apps:kcloud:plugins:system:ai-chat:server"))
+            implementation(project(":apps:kcloud:plugins:codegen-context:server"))
             implementation(project(":apps:kcloud:plugins:host-config:server"))
+            implementation(project(":apps:kcloud:plugins:mcu-console:server"))
             api(project(":lib:ktor:starter:starter-spi"))
             api(project(":lib:ktor:starter:starter-koin"))
             api(project(":lib:ktor:starter:starter-serialization"))

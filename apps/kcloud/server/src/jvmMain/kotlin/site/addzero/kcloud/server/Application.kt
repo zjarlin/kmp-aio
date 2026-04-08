@@ -9,6 +9,7 @@ import io.ktor.server.routing.routing
 import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.di.initServerKoin
 import site.addzero.kcloud.plugins.hostconfig.routes.cloud.generated.springktor.registerGeneratedSpringRoutes
+import site.addzero.kcloud.plugins.mcuconsole.routes.registerMcuFlashRoutes
 import site.addzero.kcloud.runtime.KCloudHostRuntime
 import site.addzero.starter.AppStarter
 import site.addzero.starter.AppStarterTest
@@ -44,6 +45,7 @@ fun Application.module() {
     runStarters()
     routing {
         registerGeneratedSpringRoutes()
+        registerMcuFlashRoutes()
     }
 }
 

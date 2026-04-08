@@ -16,6 +16,8 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
@@ -33,6 +35,11 @@ class ProjectConfigService(
     private val projectBackupArchiveService: ProjectBackupArchiveService,
 ) {
     private val uploadOperationStates = ConcurrentHashMap<Long, ProjectUploadOperationResponse>()
+
+    companion object {
+        private const val DEFAULT_FAULT_INDICATOR_PIN = "PA8"
+        private const val DEFAULT_RUNNING_INDICATOR_PIN = "PA2"
+    }
 
     fun getMqttConfig(projectId: Long): ProjectMqttConfigResponse {
         ensureProjectExists(projectId)
@@ -124,6 +131,17 @@ class ProjectConfigService(
             )
     }
 
+    fun getGatewayPinConfig(projectId: Long): ProjectGatewayPinConfigResponse {
+        ensureProjectExists(projectId)
+        val config = loadGatewayPinConfig(projectId)
+        return config?.toResponse()
+            ?: ProjectGatewayPinConfigResponse(
+                id = null,
+                faultIndicatorPin = DEFAULT_FAULT_INDICATOR_PIN,
+                runningIndicatorPin = DEFAULT_RUNNING_INDICATOR_PIN,
+            )
+    }
+
     fun updateModbusServerConfig(
         projectId: Long,
         transportType: TransportType,
@@ -152,6 +170,28 @@ class ProjectConfigService(
         }.execute()
         return loadModbusConfig(projectId, transportType)?.toResponse()
             ?: throw NotFoundException("Modbus server config not found")
+    }
+
+    fun updateGatewayPinConfig(
+        projectId: Long,
+        request: ProjectGatewayPinConfigRequest,
+    ): ProjectGatewayPinConfigResponse {
+        ensureProjectExists(projectId)
+        val existing = loadGatewayPinConfig(projectId)
+        val now = now()
+        val entity = new(ProjectGatewayPinConfig::class).by {
+            existing?.let { id = it.id }
+            this.projectId = projectId
+            this.faultIndicatorPin = request.faultIndicatorPin.normalizePin(DEFAULT_FAULT_INDICATOR_PIN)
+            this.runningIndicatorPin = request.runningIndicatorPin.normalizePin(DEFAULT_RUNNING_INDICATOR_PIN)
+            this.createdAt = existing?.createdAt ?: now
+            this.updatedAt = now
+        }
+        sql.saveCommand(entity) {
+            setMode(if (existing == null) SaveMode.INSERT_ONLY else SaveMode.UPDATE_ONLY)
+        }.execute()
+        return loadGatewayPinConfig(projectId)?.toResponse()
+            ?: throw NotFoundException("Gateway pin config not found")
     }
 
     fun getProjectUploadStatus(projectId: Long): ProjectUploadOperationResponse {
@@ -273,6 +313,12 @@ class ProjectConfigService(
             select(table.fetch(Fetchers.modbusConfig))
         }.execute().firstOrNull()
 
+    private fun loadGatewayPinConfig(projectId: Long): ProjectGatewayPinConfig? =
+        sql.createQuery(ProjectGatewayPinConfig::class) {
+            where(table.project.id eq projectId)
+            select(table)
+        }.execute().firstOrNull()
+
     private fun ensureProjectExists(projectId: Long) {
         val exists = sql.exists(Project::class) {
             where(table.id eq projectId)
@@ -377,8 +423,21 @@ class ProjectConfigService(
             stationNo = stationNo,
         )
 
+    private fun ProjectGatewayPinConfig.toResponse(): ProjectGatewayPinConfigResponse =
+        ProjectGatewayPinConfigResponse(
+            id = id,
+            faultIndicatorPin = faultIndicatorPin,
+            runningIndicatorPin = runningIndicatorPin,
+        )
+
     private fun String?.cleanNullable(): String? =
         this?.trim()?.ifBlank { null }
+
+    private fun String.normalizePin(
+        defaultValue: String,
+    ): String {
+        return trim().ifBlank { defaultValue }
+    }
 
     private fun String?.toDecimalOrNull(): BigDecimal? =
         this.cleanNullable()?.toBigDecimalOrNull()

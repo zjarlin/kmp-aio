@@ -670,12 +670,24 @@ class ProjectsViewModel(
             HostConfigNodeKind.TAG -> selectedNode.parentEntityId
             else -> null
         }
+        val preferredTagId = selectedNode
+            ?.takeIf { node -> node.kind == HostConfigNodeKind.TAG }
+            ?.entityId
+        val tagOffset = preferredTagId
+            ?.let { tagId ->
+                nextState.activeDevice
+                    ?.tags
+                    ?.indexOfFirst { tag -> tag.id == tagId }
+                    ?.takeIf { index -> index >= 0 }
+                    ?.let { index -> (index / nextState.tagSize) * nextState.tagSize }
+            }
+            ?: 0
 
         if (activeDeviceId != null) {
             loadTags(
                 deviceId = activeDeviceId,
-                offset = 0,
-                preferredTagId = selectedNode?.takeIf { it.kind == HostConfigNodeKind.TAG }?.entityId,
+                offset = tagOffset,
+                preferredTagId = preferredTagId,
             )
         } else {
             screenState = screenState.copy(
@@ -705,7 +717,6 @@ class ProjectsViewModel(
             size = screenState.tagSize,
         )
         val selectedTagDetail = preferredTagId
-            ?.takeIf { tagId -> tagPage.d.any { tag -> tag.id == tagId } }
             ?.let { tagId -> tagApi.getTag(tagId) }
             ?: screenState.selectedNode
                 ?.takeIf { node -> node.kind == HostConfigNodeKind.TAG && tagPage.d.any { tag -> tag.id == node.entityId } }

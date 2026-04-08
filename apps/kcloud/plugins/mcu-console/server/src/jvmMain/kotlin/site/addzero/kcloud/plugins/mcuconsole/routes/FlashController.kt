@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.mcuconsole.routes
 
 import org.springframework.web.bind.annotation.GetMapping
+import org.koin.core.annotation.Single
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -23,6 +24,7 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
+@Single
 @RestController
 @RequestMapping("/api/mcu/flash")
 class FlashController {

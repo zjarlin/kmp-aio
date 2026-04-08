@@ -83,19 +83,22 @@ KCloud plugin UI modules that contribute routes must:
 
 Required route KSP args:
 
-- `sharedSourceDir`
 - `routeGenPkg`
 - `routeOwnerModule`
+- `routeAggregationRole`
 - `routeModuleKey`
 
 Repo-specific current convention:
 
 - `routeGenPkg` is `site.addzero.generated`
-- `routeOwnerModule` points to `apps:kcloud:ui` `commonMain` source dir, not `shared-compose` and not a legacy `composeApp`
+- plugin UI modules use `routeAggregationRole=contributor`
+- the shell owner module `apps:kcloud:ui` uses `routeAggregationRole=owner`
+- `routeOwnerModule` always points to `apps:kcloud:ui` `commonMain` source dir, not `shared-compose` and not a legacy `composeApp`
+- `sharedSourceDir` is legacy compatibility only and should not be used for new wiring
 
 Generated outputs:
 
-- `apps/kcloud/shared/src/commonMain/kotlin/site/addzero/generated/RouteKeys.kt`
+- `apps/kcloud/ui/src/commonMain/kotlin/site/addzero/generated/RouteKeys.kt`
 - `apps/kcloud/ui/src/commonMain/kotlin/site/addzero/generated/RouteTable.kt`
 
 The desktop shell must read route metadata from `RouteKeys.allMeta` and page content from `RouteTable`, instead of maintaining a second hand-written navigation tree.

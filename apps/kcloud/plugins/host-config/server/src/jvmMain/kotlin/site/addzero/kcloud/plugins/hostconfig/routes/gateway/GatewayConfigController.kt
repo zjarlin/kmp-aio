@@ -7,13 +7,15 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 import site.addzero.kcloud.plugins.hostconfig.service.ProjectConfigService
 
 /**
- * 宿主配置里的网关配置路由，负责 Modbus TCP/RTU 服务端参数。
+ * 宿主配置里的网关配置路由，负责 Modbus TCP/RTU 服务端参数和项目级下位机引脚配置。
  */
 @Single
 @RestController
@@ -37,4 +39,19 @@ class GatewayConfigController(
         @RequestBody request: ProjectModbusServerConfigRequest,
     ): ProjectModbusServerConfigResponse =
         projectConfigService.updateModbusServerConfig(projectId, transportType, request)
+
+    /** 读取项目级下位机引脚配置。 */
+    @GetMapping("/projects/{projectId}/gateway-pin-config")
+    fun getGatewayPinConfig(
+        @PathVariable projectId: Long,
+    ): ProjectGatewayPinConfigResponse =
+        projectConfigService.getGatewayPinConfig(projectId)
+
+    /** 保存项目级下位机引脚配置。 */
+    @PutMapping("/projects/{projectId}/gateway-pin-config")
+    fun updateGatewayPinConfig(
+        @PathVariable projectId: Long,
+        @RequestBody request: ProjectGatewayPinConfigRequest,
+    ): ProjectGatewayPinConfigResponse =
+        projectConfigService.updateGatewayPinConfig(projectId, request)
 }

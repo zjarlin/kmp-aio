@@ -216,6 +216,16 @@ CREATE TABLE IF NOT EXISTS host_config_project_modbus_server_config (
     FOREIGN KEY(project_id) REFERENCES host_config_project(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS host_config_project_gateway_pin_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL UNIQUE,
+    fault_indicator_pin TEXT NOT NULL DEFAULT 'PA8',
+    running_indicator_pin TEXT NOT NULL DEFAULT 'PA2',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY(project_id) REFERENCES host_config_project(id) ON DELETE CASCADE
+);
+
 INSERT OR IGNORE INTO host_config_protocol_template (
     id, code, name, description, sort_index, created_at, updated_at
 ) VALUES

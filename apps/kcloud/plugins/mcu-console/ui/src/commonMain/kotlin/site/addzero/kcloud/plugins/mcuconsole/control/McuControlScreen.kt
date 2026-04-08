@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.kcloud.plugins.mcuconsole.common.McuUnavailableScreen
+import site.addzero.component.text.TodoText
 
 @Route(
     value = "设备会话",
@@ -23,8 +23,8 @@ import site.addzero.kcloud.plugins.mcuconsole.common.McuUnavailableScreen
 )
 @Composable
 fun McuControlScreen() {
-    McuUnavailableScreen(
-        featureName = "MCU 控制台",
-        reason = "后台会话能力当前不完整，暂未开放",
+    TodoText(
+        title = "MCU 控制台",
+        description = "后台会话能力当前不完整，暂未开放",
     )
 }

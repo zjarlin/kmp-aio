@@ -67,6 +67,9 @@ data class ProjectsScreenState(
             ?.takeIf { it.kind == HostConfigNodeKind.DEVICE }
             ?.let { node -> projectTrees.findDevice(node.entityId) }
 
+    val activeDevice: DeviceTreeNode?
+        get() = activeDeviceId?.let { deviceId -> projectTrees.findDevice(deviceId) }
+
     val activeDeviceId: Long?
         get() {
             val node = selectedNode ?: return null

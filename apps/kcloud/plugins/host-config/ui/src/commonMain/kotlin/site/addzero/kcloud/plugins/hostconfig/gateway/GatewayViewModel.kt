@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.external.GatewayConfigApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.ProjectApi
@@ -87,6 +88,31 @@ class GatewayViewModel(
         }
     }
 
+    fun savePinConfig(
+        request: ProjectGatewayPinConfigRequest,
+    ) {
+        val projectId = screenState.selectedProjectId ?: return
+        viewModelScope.launch {
+            screenState = screenState.copy(
+                busy = true,
+                errorMessage = null,
+            )
+            runCatching {
+                val saved = gatewayConfigApi.updateGatewayPinConfig(projectId, request)
+                screenState = screenState.copy(
+                    busy = false,
+                    pinConfig = saved,
+                    noticeMessage = "下位机引脚配置已保存",
+                )
+            }.onFailure { throwable ->
+                screenState = screenState.copy(
+                    busy = false,
+                    errorMessage = throwable.message ?: "保存下位机引脚配置失败",
+                )
+            }
+        }
+    }
+
     private suspend fun loadPage(
         preferredProjectId: Long? = screenState.selectedProjectId,
     ) {
@@ -105,6 +131,7 @@ class GatewayViewModel(
             val selectedProjectId = preferredProjectId
                 ?.takeIf { candidate -> projects.any { project -> project.id == candidate } }
                 ?: projects.first().id
+            val pinConfig = gatewayConfigApi.getGatewayPinConfig(selectedProjectId)
             val tcpConfig = gatewayConfigApi.getModbusServerConfig(selectedProjectId, TransportType.TCP)
             val rtuConfig = gatewayConfigApi.getModbusServerConfig(selectedProjectId, TransportType.RTU)
             screenState = GatewayScreenState(
@@ -112,6 +139,7 @@ class GatewayViewModel(
                 projects = projects,
                 selectedProjectId = selectedProjectId,
                 selectedTransport = screenState.selectedTransport,
+                pinConfig = pinConfig,
                 tcpConfig = tcpConfig,
                 rtuConfig = rtuConfig,
                 noticeMessage = screenState.noticeMessage,

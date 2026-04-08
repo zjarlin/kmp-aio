@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.hostconfig.gateway
 
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
@@ -12,6 +13,7 @@ data class GatewayScreenState(
     val projects: List<ProjectResponse> = emptyList(),
     val selectedProjectId: Long? = null,
     val selectedTransport: TransportType = TransportType.TCP,
+    val pinConfig: ProjectGatewayPinConfigResponse = defaultGatewayPinConfig(),
     val tcpConfig: ProjectModbusServerConfigResponse = defaultGatewayConfig(TransportType.TCP),
     val rtuConfig: ProjectModbusServerConfigResponse = defaultGatewayConfig(TransportType.RTU),
 ) {
@@ -36,5 +38,13 @@ fun defaultGatewayConfig(
         stopBits = if (transportType == TransportType.RTU) 1 else null,
         parity = null,
         stationNo = if (transportType == TransportType.RTU) 1 else null,
+    )
+}
+
+fun defaultGatewayPinConfig(): ProjectGatewayPinConfigResponse {
+    return ProjectGatewayPinConfigResponse(
+        id = null,
+        faultIndicatorPin = "PA8",
+        runningIndicatorPin = "PA2",
     )
 }

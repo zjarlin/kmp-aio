@@ -22,7 +22,6 @@ import androidx.compose.material.icons.outlined.CloudQueue
 import androidx.compose.material.icons.outlined.DeviceHub
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.SettingsApplications
-import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.material.icons.outlined.Tag
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -146,14 +145,19 @@ fun String?.orDash(): String {
 fun Long?.toSizeLabel(): String {
     val size = this ?: return "-"
     if (size < 1024) {
-        return "${size} B"
+        return "$size B"
     }
     val kiloBytes = size / 1024.0
     if (kiloBytes < 1024) {
-        return "${"%.1f".format(kiloBytes)} KB"
+        return "${kiloBytes.toSingleDecimalLabel()} KB"
     }
     val megaBytes = kiloBytes / 1024.0
-    return "${"%.1f".format(megaBytes)} MB"
+    return "${megaBytes.toSingleDecimalLabel()} MB"
+}
+
+private fun Double.toSingleDecimalLabel(): String {
+    val rounded = kotlin.math.round(this * 10.0) / 10.0
+    return rounded.toString()
 }
 
 fun List<HostConfigTreeNode>.findNode(

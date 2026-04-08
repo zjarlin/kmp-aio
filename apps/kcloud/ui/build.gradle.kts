@@ -18,29 +18,54 @@ plugins {
     id("site.addzero.buildlogic.kmp.cmp-app")
 //    id("site.addzero.buildlogic.kmp.cmp-wasm")
     id("site.addzero.buildlogic.kmp.kmp-koin")
+    id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
     id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
 }
 
 val libs = versionCatalogs.named("libs")
 val desktopMainClass = "site.addzero.kcloud.MainKt"
+val routeOwnerModuleDir =
+    kotlin
+        .sourceSets
+        .getByName("commonMain")
+        .kotlin
+        .srcDirs
+        .first()
+        .absolutePath
+val routeContributorTaskPaths = listOf(
+    ":apps:kcloud:plugins:codegen-context:ui:kspCommonMainKotlinMetadata",
+    ":apps:kcloud:plugins:host-config:ui:kspCommonMainKotlinMetadata",
+    ":apps:kcloud:plugins:mcu-console:ui:kspCommonMainKotlinMetadata",
+)
+
+ksp {
+    arg("routeGenPkg", "site.addzero.generated")
+    arg("routeOwnerModule", routeOwnerModuleDir)
+    arg("routeAggregationRole", "owner")
+    arg("routeModuleKey", project.path)
+}
+
+dependencies {
+    kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
+}
 
 kotlin {
-    dependencies {
-        implementation(libs.findLibrary("site-addzero-route-core").get())
-
-        implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
-        implementation(project(":apps:kcloud:plugins:host-config:ui"))
-        implementation(libs.findLibrary("compose-cupertino-workbench").get())
-        implementation(libs.findLibrary("scaffold-spi").get())
-        implementation(project(":apps:kcloud:shared"))
-        implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
-        implementation(libs.findLibrary("site-addzero-network-starter").get())
-        implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
-        implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
-//        implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")
-    }
     sourceSets {
+        commonMain.dependencies {
+            implementation(libs.findLibrary("site-addzero-route-core").get())
+            implementation(project(":apps:kcloud:plugins:codegen-context:ui"))
+            implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
+            implementation(project(":apps:kcloud:plugins:host-config:ui"))
+            implementation(libs.findLibrary("compose-cupertino-workbench").get())
+            implementation(libs.findLibrary("scaffold-spi").get())
+            implementation(project(":apps:kcloud:shared"))
+            implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
+            implementation(libs.findLibrary("site-addzero-network-starter").get())
+            implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+            implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+//            implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")
+        }
         jvmMain.dependencies {
 
             implementation(project(":apps:kcloud:server"))
@@ -60,4 +85,14 @@ compose.desktop {
             packageName = "OKMY DICS"
         }
     }
+}
+
+tasks.matching { task ->
+    task.name in setOf(
+        "kspCommonMainKotlinMetadata",
+        "compileCommonMainKotlinMetadata",
+        "compileKotlinJvm",
+    )
+}.configureEach {
+    routeContributorTaskPaths.forEach(::dependsOn)
 }

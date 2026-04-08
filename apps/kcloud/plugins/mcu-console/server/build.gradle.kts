@@ -1,9 +1,5 @@
-import site.addzero.ksp.modbusrtu.gradle.ModbusRtuExtension
-
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
-    //rtu ksp生成
-    id("site.addzero.ksp.modbus-rtu") version "+"
 }
 
 val libs = versionCatalogs.named("libs")
@@ -25,6 +21,7 @@ val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui") .pro
 
 /** 当前server源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
+val generatedContractSourceDir = layout.projectDirectory.dir("generated/jvmMain/kotlin")
 
 //dependencies {
 //}
@@ -50,25 +47,18 @@ ksp {
     arg("mcpPackageName", "site.addzero.kcloud.plugins.mcuconsole.generated.mcp")
 }
 
-configure<ModbusRtuExtension> {
-    transports.set(listOf("rtu"))
-    codegenModes.set(listOf("server"))
-    contractPackages.set(
-        listOf(
-            "site.addzero.kcloud.plugins.mcuconsole.modbus.device",
-            "site.addzero.kcloud.plugins.mcuconsole.modbus.atomic",
-        ),
-    )
-}
-
 kotlin {
     sourceSets {
-        jvmMain.dependencies {
-            implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
-            implementation(libs.findLibrary("tool-stm32-bootloader").get())
-            implementation(libs.findLibrary("tool-serial").get())
-            implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
-            implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
+        jvmMain {
+            kotlin.srcDir(generatedContractSourceDir)
+            dependencies {
+                implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
+                implementation(libs.findLibrary("modbus-runtime").get())
+                implementation(libs.findLibrary("tool-stm32-bootloader").get())
+                implementation(libs.findLibrary("tool-serial").get())
+                implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+                implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
+            }
         }
     }
 }

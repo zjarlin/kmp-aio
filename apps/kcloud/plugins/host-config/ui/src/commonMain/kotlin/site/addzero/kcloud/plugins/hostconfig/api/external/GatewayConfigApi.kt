@@ -4,6 +4,8 @@ import de.jensklingenberg.ktorfit.http.*
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
 
 /**
  * 原始Controller: site.addzero.kcloud.plugins.hostconfig.routes.gateway.GatewayConfigController
@@ -43,5 +45,34 @@ interface GatewayConfigApi {
         @Path("transportType") transportType: site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType,
         @Body request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
     ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
+
+/**
+ * getGatewayPinConfig
+ * HTTP方法: GET
+ * 路径: /api/host-config/v1/projects/{projectId}/gateway-pin-config
+ * 参数:
+ *   - projectId: kotlin.Long (PathVariable)
+ * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
+ */
+    @GET("/api/host-config/v1/projects/{projectId}/gateway-pin-config")
+    suspend fun getGatewayPinConfig(
+        @Path("projectId") projectId: kotlin.Long
+    ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
+
+/**
+ * updateGatewayPinConfig
+ * HTTP方法: PUT
+ * 路径: /api/host-config/v1/projects/{projectId}/gateway-pin-config
+ * 参数:
+ *   - projectId: kotlin.Long (PathVariable)
+ *   - request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest (RequestBody)
+ * 返回类型: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
+ */
+    @PUT("/api/host-config/v1/projects/{projectId}/gateway-pin-config")
+    @Headers("Content-Type: application/json")
+    suspend fun updateGatewayPinConfig(
+        @Path("projectId") projectId: kotlin.Long,
+        @Body request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
+    ): site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
 
 }

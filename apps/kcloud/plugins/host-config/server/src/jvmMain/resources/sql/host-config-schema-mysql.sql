@@ -262,6 +262,20 @@ CREATE TABLE IF NOT EXISTS host_config_project_modbus_server_config (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS host_config_project_gateway_pin_config (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    project_id BIGINT NOT NULL,
+    fault_indicator_pin VARCHAR(64) NOT NULL DEFAULT 'PA8',
+    running_indicator_pin VARCHAR(64) NOT NULL DEFAULT 'PA2',
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_project_gateway_pin_config_project (project_id),
+    CONSTRAINT fk_host_config_project_gateway_pin_config_project
+        FOREIGN KEY (project_id) REFERENCES host_config_project(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO host_config_protocol_template (
     id, code, name, description, sort_index, created_at, updated_at
 ) VALUES

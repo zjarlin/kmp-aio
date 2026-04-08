@@ -80,6 +80,19 @@ data class ProjectModbusServerConfigResponse(
 )
 
 @Serializable
+data class ProjectGatewayPinConfigRequest(
+    val faultIndicatorPin: String = "PA8",
+    val runningIndicatorPin: String = "PA2",
+)
+
+@Serializable
+data class ProjectGatewayPinConfigResponse(
+    val id: Long?,
+    val faultIndicatorPin: String,
+    val runningIndicatorPin: String,
+)
+
+@Serializable
 data class ProjectUploadRequest(
     val ipAddress: String,
     val includeDriverConfig: Boolean = true,

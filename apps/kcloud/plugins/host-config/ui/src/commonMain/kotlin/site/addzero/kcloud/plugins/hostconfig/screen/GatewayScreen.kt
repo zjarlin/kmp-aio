@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SettingsApplications
-import androidx.compose.material.icons.outlined.SettingsEthernet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,6 +25,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
@@ -59,6 +59,7 @@ fun GatewayScreen() {
     val viewModel = koinViewModel<GatewayViewModel>()
     val state = viewModel.screenState
     var editorVisible by remember { mutableStateOf(false) }
+    var pinEditorVisible by remember { mutableStateOf(false) }
 
     Row(
         modifier = Modifier.fillMaxSize(),
@@ -144,6 +145,25 @@ fun GatewayScreen() {
                 HostConfigKeyValueRow("校验位", config.parity?.label() ?: "-")
                 HostConfigKeyValueRow("站号", config.stationNo?.toString() ?: "-")
             }
+
+            HostConfigPanel(
+                title = "下位机引脚",
+                subtitle = "项目级控制灯与运行指示灯引脚配置。",
+                actions = {
+                    WorkbenchActionButton(
+                        text = "编辑引脚",
+                        onClick = {
+                            pinEditorVisible = true
+                            viewModel.clearNotice()
+                        },
+                        enabled = state.selectedProjectId != null,
+                        variant = WorkbenchButtonVariant.Outline,
+                    )
+                },
+            ) {
+                HostConfigKeyValueRow("故障控制灯引脚", state.pinConfig.faultIndicatorPin)
+                HostConfigKeyValueRow("运行指示灯引脚", state.pinConfig.runningIndicatorPin)
+            }
         }
     }
 
@@ -158,6 +178,20 @@ fun GatewayScreen() {
             onSave = { request ->
                 viewModel.saveConfig(state.selectedTransport, request)
                 editorVisible = false
+            },
+        )
+    }
+
+    if (pinEditorVisible && state.selectedProjectId != null) {
+        GatewayPinConfigDialog(
+            initial = state.pinConfig,
+            saving = state.busy,
+            onDismissRequest = {
+                pinEditorVisible = false
+            },
+            onSave = { request ->
+                viewModel.savePinConfig(request)
+                pinEditorVisible = false
             },
         )
     }
@@ -241,5 +275,64 @@ private fun GatewayConfigDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun GatewayPinConfigDialog(
+    initial: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse,
+    saving: Boolean,
+    onDismissRequest: () -> Unit,
+    onSave: (ProjectGatewayPinConfigRequest) -> Unit,
+) {
+    var faultIndicatorPin by remember(initial.id, initial.faultIndicatorPin) {
+        mutableStateOf(initial.faultIndicatorPin)
+    }
+    var runningIndicatorPin by remember(initial.id, initial.runningIndicatorPin) {
+        mutableStateOf(initial.runningIndicatorPin)
+    }
+
+    HostConfigDialog(
+        title = "编辑下位机引脚",
+        onDismissRequest = onDismissRequest,
+        actions = {
+            WorkbenchActionButton(
+                text = "取消",
+                onClick = onDismissRequest,
+                variant = WorkbenchButtonVariant.Outline,
+            )
+            WorkbenchActionButton(
+                text = if (saving) "保存中" else "保存",
+                onClick = {
+                    onSave(
+                        ProjectGatewayPinConfigRequest(
+                            faultIndicatorPin = faultIndicatorPin,
+                            runningIndicatorPin = runningIndicatorPin,
+                        ),
+                    )
+                },
+                enabled = !saving,
+            )
+        },
+    ) {
+        HostConfigPanel(
+            title = "引脚建议值",
+            subtitle = "默认下位机定义：故障控制灯 PA8，运行指示灯 PA2。",
+        ) {
+            HostConfigKeyValueRow("故障控制灯", "PA8")
+            HostConfigKeyValueRow("运行指示灯", "PA2")
+        }
+        HostConfigTextField(
+            label = "故障控制灯引脚",
+            value = faultIndicatorPin,
+            onValueChange = { faultIndicatorPin = it },
+            placeholder = "例如 PA8",
+        )
+        HostConfigTextField(
+            label = "运行指示灯引脚",
+            value = runningIndicatorPin,
+            onValueChange = { runningIndicatorPin = it },
+            placeholder = "例如 PA2",
+        )
     }
 }
