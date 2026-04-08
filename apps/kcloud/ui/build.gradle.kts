@@ -45,6 +45,7 @@ kotlin {
 
             implementation(project(":apps:kcloud:server"))
             implementation(libs.findLibrary("io-ktor-ktor-server-core-jvm").get())
+            implementation("com.russhwolf:multiplatform-settings:1.1.1")
         }
     }
 }
