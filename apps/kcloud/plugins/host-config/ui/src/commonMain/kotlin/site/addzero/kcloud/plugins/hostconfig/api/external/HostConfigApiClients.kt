@@ -15,6 +15,11 @@ class CloudAccessApiClient(
 ) : CloudAccessApi by ktorfit.createCloudAccessApi()
 
 @Single
+class CatalogApiClient(
+    ktorfit: Ktorfit,
+) : CatalogApi by ktorfit.createCatalogApi()
+
+@Single
 class GatewayConfigApiClient(
     ktorfit: Ktorfit,
 ) : GatewayConfigApi by ktorfit.createGatewayConfigApi()

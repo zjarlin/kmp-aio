@@ -32,6 +32,7 @@ val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
 
 val generatedApiFiles =
     listOf(
+        "CatalogApi.kt",
         "CloudAccessApi.kt",
         "GatewayConfigApi.kt",
         "ProjectApi.kt",
@@ -69,6 +70,7 @@ kotlin {
             implementation(project(":apps:kcloud:plugins:host-config:shared"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
+            implementation("site.addzero:spec-iot:2026.03.13")
         }
     }
 }

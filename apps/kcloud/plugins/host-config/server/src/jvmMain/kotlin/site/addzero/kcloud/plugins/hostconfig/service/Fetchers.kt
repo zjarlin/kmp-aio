@@ -8,6 +8,7 @@ import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.LabelDefiniti
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.ProductDefinition
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.ProductDefinitionLabelLink
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.PropertyDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.by
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 import site.addzero.kcloud.plugins.hostconfig.model.entity.Device
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
@@ -46,9 +47,6 @@ object Fetchers {
                     devices {
                         allScalarFields()
                         deviceType {
-                            allScalarFields()
-                        }
-                        deviceDefinition {
                             allScalarFields()
                         }
                         tags {
@@ -100,9 +98,6 @@ object Fetchers {
             allScalarFields()
         }
         deviceType {
-            allScalarFields()
-        }
-        deviceDefinition {
             allScalarFields()
         }
     }

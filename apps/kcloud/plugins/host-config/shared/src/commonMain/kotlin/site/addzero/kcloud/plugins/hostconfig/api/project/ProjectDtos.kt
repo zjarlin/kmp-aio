@@ -98,9 +98,6 @@ data class DeviceTreeNode(
     val deviceTypeId: Long,
     val deviceTypeCode: String,
     val deviceTypeName: String,
-    val deviceDefinitionId: Long? = null,
-    val deviceDefinitionCode: String? = null,
-    val deviceDefinitionName: String? = null,
     val tags: List<TagTreeNode>,
 )
 
@@ -213,7 +210,6 @@ data class ModulePositionUpdateRequest(
 data class DeviceCreateRequest(
     val name: String,
     val deviceTypeId: Long,
-    val deviceDefinitionId: Long? = null,
     val stationNo: Int,
     val requestIntervalMs: Int? = null,
     val writeIntervalMs: Int? = null,
@@ -232,7 +228,6 @@ data class DeviceCreateRequest(
 data class DeviceUpdateRequest(
     val name: String,
     val deviceTypeId: Long,
-    val deviceDefinitionId: Long? = null,
     val stationNo: Int,
     val requestIntervalMs: Int? = null,
     val writeIntervalMs: Int? = null,
@@ -264,9 +259,6 @@ data class DeviceResponse(
     val disabled: Boolean,
     val sortIndex: Int,
     val deviceTypeId: Long,
-    val deviceDefinitionId: Long? = null,
-    val deviceDefinitionCode: String? = null,
-    val deviceDefinitionName: String? = null,
 )
 
 @Serializable

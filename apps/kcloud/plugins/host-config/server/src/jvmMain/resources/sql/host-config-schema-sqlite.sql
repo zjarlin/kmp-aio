@@ -61,6 +61,97 @@ CREATE TABLE IF NOT EXISTS host_config_data_type (
     updated_at INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS host_config_label_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    color_hex TEXT,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS host_config_product_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    description TEXT,
+    vendor TEXT,
+    category TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS host_config_device_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    device_type_id INTEGER,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    supports_telemetry INTEGER NOT NULL DEFAULT 1,
+    supports_control INTEGER NOT NULL DEFAULT 0,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(product_id, code),
+    FOREIGN KEY(product_id) REFERENCES host_config_product_definition(id) ON DELETE CASCADE,
+    FOREIGN KEY(device_type_id) REFERENCES host_config_device_type(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS host_config_property_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_definition_id INTEGER NOT NULL,
+    data_type_id INTEGER NOT NULL,
+    identifier TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    unit TEXT,
+    required INTEGER NOT NULL DEFAULT 0,
+    writable INTEGER NOT NULL DEFAULT 0,
+    telemetry INTEGER NOT NULL DEFAULT 1,
+    nullable INTEGER NOT NULL DEFAULT 1,
+    length INTEGER,
+    attributes_json TEXT,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(device_definition_id, identifier),
+    FOREIGN KEY(device_definition_id) REFERENCES host_config_device_definition(id) ON DELETE CASCADE,
+    FOREIGN KEY(data_type_id) REFERENCES host_config_data_type(id)
+);
+
+CREATE TABLE IF NOT EXISTS host_config_feature_definition (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    device_definition_id INTEGER NOT NULL,
+    identifier TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    input_schema TEXT,
+    output_schema TEXT,
+    asynchronous INTEGER NOT NULL DEFAULT 0,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(device_definition_id, identifier),
+    FOREIGN KEY(device_definition_id) REFERENCES host_config_device_definition(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS host_config_product_definition_label (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    label_id INTEGER NOT NULL,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(product_id, label_id),
+    FOREIGN KEY(product_id) REFERENCES host_config_product_definition(id) ON DELETE CASCADE,
+    FOREIGN KEY(label_id) REFERENCES host_config_label_definition(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS host_config_protocol_instance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     protocol_template_id INTEGER NOT NULL,
@@ -169,6 +260,18 @@ CREATE TABLE IF NOT EXISTS host_config_tag_value_text (
     updated_at INTEGER NOT NULL,
     FOREIGN KEY(tag_id) REFERENCES host_config_tag(id) ON DELETE CASCADE
 );
+
+CREATE INDEX IF NOT EXISTS idx_host_config_product_definition_sort
+    ON host_config_product_definition(sort_index, id);
+
+CREATE INDEX IF NOT EXISTS idx_host_config_device_definition_product_sort
+    ON host_config_device_definition(product_id, sort_index, id);
+
+CREATE INDEX IF NOT EXISTS idx_host_config_property_definition_device_sort
+    ON host_config_property_definition(device_definition_id, sort_index, id);
+
+CREATE INDEX IF NOT EXISTS idx_host_config_feature_definition_device_sort
+    ON host_config_feature_definition(device_definition_id, sort_index, id);
 
 CREATE TABLE IF NOT EXISTS host_config_project_mqtt_config (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

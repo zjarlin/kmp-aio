@@ -1,6 +1,5 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
-import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
@@ -88,7 +87,7 @@ class ProjectService(
         val name = request.name.trim()
         ensureProjectNameUnique(name, null)
         val now = now()
-        val entity = new(Project::class).by {
+        val entity = Project {
             this.name = name
             this.description = request.description.cleanNullable()
             this.remark = request.remark.cleanNullable()
@@ -107,7 +106,7 @@ class ProjectService(
         val name = request.name.trim()
         ensureProjectNameUnique(name, projectId)
         val now = now()
-        val entity = new(Project::class).by {
+        val entity = Project {
             id = projectId
             this.name = name
             this.description = request.description.cleanNullable()
@@ -143,7 +142,7 @@ class ProjectService(
         val name = request.name.trim()
         ensureProtocolNameUnique(name, null)
         val now = now()
-        val entity = new(ProtocolInstance::class).by {
+        val entity = ProtocolInstance {
             this.protocolTemplateId = request.protocolTemplateId
             this.name = name
             this.pollingIntervalMs = request.pollingIntervalMs
@@ -172,7 +171,7 @@ class ProjectService(
         ensureProtocolTemplateExists(request.protocolTemplateId)
         val name = request.name.trim()
         ensureProtocolNameUnique(name, protocolId)
-        val entity = new(ProtocolInstance::class).by {
+        val entity = ProtocolInstance {
             id = protocolId
             protocolTemplateId = request.protocolTemplateId
             this.name = name
@@ -207,7 +206,7 @@ class ProjectService(
         val name = request.name.trim()
         ensureModuleNameUnique(protocolId, name, null)
         val now = now()
-        val entity = new(ModuleInstance::class).by {
+        val entity = ModuleInstance {
             this.protocolId = protocolId
             this.moduleTemplateId = request.moduleTemplateId
             this.name = name
@@ -239,7 +238,7 @@ class ProjectService(
         ensureModuleTemplateExists(request.moduleTemplateId)
         val name = request.name.trim()
         ensureModuleNameUnique(current.protocol.id, name, moduleId)
-        val entity = new(ModuleInstance::class).by {
+        val entity = ModuleInstance {
             id = moduleId
             protocolId = current.protocol.id
             moduleTemplateId = request.moduleTemplateId
@@ -300,7 +299,7 @@ class ProjectService(
         val name = request.name.trim()
         ensureDeviceNameUnique(moduleId, name, null)
         val now = now()
-        val entity = new(Device::class).by {
+        val entity = Device {
             this.moduleId = moduleId
             this.deviceTypeId = request.deviceTypeId
             this.name = name
@@ -330,7 +329,7 @@ class ProjectService(
         ensureDeviceTypeExists(request.deviceTypeId)
         val name = request.name.trim()
         ensureDeviceNameUnique(current.module.id, name, deviceId)
-        val entity = new(Device::class).by {
+        val entity = Device {
             id = deviceId
             moduleId = current.module.id
             deviceTypeId = request.deviceTypeId
@@ -498,7 +497,7 @@ class ProjectService(
 
     private fun createProjectProtocolLink(projectId: Long, protocolId: Long, sortIndex: Int, createdAt: Long): ProjectProtocol {
         return sql.saveCommand(
-            new(ProjectProtocol::class).by {
+            ProjectProtocol {
                 this.projectId = projectId
                 this.protocolId = protocolId
                 this.sortIndex = sortIndex

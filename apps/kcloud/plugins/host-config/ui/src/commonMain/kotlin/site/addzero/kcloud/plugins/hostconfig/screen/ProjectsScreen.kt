@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -56,6 +57,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionR
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigBooleanField
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigDialog
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigModuleBoard
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigOption
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
@@ -66,6 +68,7 @@ import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTextField
 import site.addzero.kcloud.plugins.hostconfig.common.icon
 import site.addzero.kcloud.plugins.hostconfig.common.label
 import site.addzero.kcloud.plugins.hostconfig.common.orDash
+import site.addzero.kcloud.plugins.hostconfig.common.resolveModuleBoardModel
 import site.addzero.kcloud.plugins.hostconfig.common.toSizeLabel
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder4
@@ -297,6 +300,7 @@ fun ProjectsScreen() {
                 ) {
                     CurrentNodePanel(
                         state = state,
+                        onSelectNode = viewModel::selectNode,
                         onEditCurrent = ::editCurrentSelection,
                         onMoveCurrent = {
                             state.selectedNode
@@ -768,6 +772,7 @@ fun ProjectsScreen() {
 @Composable
 private fun CurrentNodePanel(
     state: ProjectsScreenState,
+    onSelectNode: (String) -> Unit,
     onEditCurrent: () -> Unit,
     onMoveCurrent: () -> Unit,
     onDeleteCurrent: () -> Unit,
@@ -819,13 +824,12 @@ private fun CurrentNodePanel(
             )
         }
 
-        HostConfigSectionTitle("基础信息")
-
         when (nodeKind) {
             HostConfigNodeKind.PROJECT -> {
                 val project = state.selectedProject
                 val projectTree = state.selectedProjectTree
                 val modules = projectTree?.allModules().orEmpty()
+                HostConfigSectionTitle("基础信息")
                 HostConfigKeyValueRow("工程名称", project?.name.orDash())
                 HostConfigKeyValueRow("描述", project?.description.orDash())
                 HostConfigKeyValueRow("备注", project?.remark.orDash())
@@ -849,6 +853,15 @@ private fun CurrentNodePanel(
                             ).toString()
                     } ?: "0",
                 )
+                if (modules.isNotEmpty()) {
+                    HostConfigSectionTitle("板卡总览")
+                    ProjectModuleRack(
+                        projectId = project?.id,
+                        modules = modules,
+                        moduleTemplates = state.moduleTemplates,
+                        onSelectNode = onSelectNode,
+                    )
+                }
 
                 HostConfigSectionTitle("上传状态")
                 HostConfigKeyValueRow("当前状态", state.uploadStatus?.statusText ?: "待开始")
@@ -865,6 +878,7 @@ private fun CurrentNodePanel(
 
             HostConfigNodeKind.PROTOCOL -> {
                 val protocol = state.selectedProtocol
+                HostConfigSectionTitle("基础信息")
                 HostConfigKeyValueRow("协议名称", protocol?.name.orDash())
                 HostConfigKeyValueRow("协议模板", protocol?.protocolTemplateName.orDash())
                 HostConfigKeyValueRow("模板编码", protocol?.protocolTemplateCode.orDash())
@@ -875,6 +889,16 @@ private fun CurrentNodePanel(
 
             HostConfigNodeKind.MODULE -> {
                 val module = state.selectedModule
+                module?.let { item ->
+                    HostConfigSectionTitle("板卡模型")
+                    HostConfigModuleBoard(
+                        model = resolveModuleBoardModel(
+                            module = item,
+                            moduleTemplates = state.moduleTemplates,
+                        ),
+                    )
+                }
+                HostConfigSectionTitle("基础信息")
                 HostConfigKeyValueRow("模块名称", module?.name.orDash())
                 HostConfigKeyValueRow("模块模板", module?.moduleTemplateName.orDash())
                 HostConfigKeyValueRow("模板编码", module?.moduleTemplateCode.orDash())
@@ -890,6 +914,7 @@ private fun CurrentNodePanel(
 
             HostConfigNodeKind.DEVICE -> {
                 val device = state.selectedDevice
+                HostConfigSectionTitle("基础信息")
                 HostConfigKeyValueRow("设备名称", device?.name.orDash())
                 HostConfigKeyValueRow("设备类型", device?.deviceTypeName.orDash())
                 HostConfigKeyValueRow("类型编码", device?.deviceTypeCode.orDash())
@@ -912,6 +937,7 @@ private fun CurrentNodePanel(
                     HostConfigStatusStrip("当前点位详情尚未加载完成。")
                     return@HostConfigPanel
                 }
+                HostConfigSectionTitle("基础信息")
                 HostConfigKeyValueRow("点位名称", tag.name)
                 HostConfigKeyValueRow("描述", tag.description.orDash())
                 HostConfigKeyValueRow("数据类型", tag.dataTypeName)
@@ -988,13 +1014,20 @@ private fun NodeChildrenPanel(
                 modules.forEach { module ->
                     ChildNodeCard(
                         title = module.name,
-                        subtitle = module.moduleTemplateName,
+                        subtitle = "${module.moduleTemplateName} · ${module.moduleTemplateCode}",
                         onClick = {
                             onSelectNode(
                                 ProjectsViewModel.buildModuleNodeId(projectTree.id, module.id),
                             )
                         },
                     ) {
+                        HostConfigModuleBoard(
+                            model = resolveModuleBoardModel(
+                                module = module,
+                                moduleTemplates = state.moduleTemplates,
+                            ),
+                            compact = true,
+                        )
                         HostConfigKeyValueRow("串口", module.portName.orDash())
                         HostConfigKeyValueRow("设备数量", module.devices.size.toString())
                         HostConfigKeyValueRow("排序", module.sortIndex.toString())
@@ -1106,6 +1139,49 @@ private fun ChildNodeCard(
             subtitle = subtitle,
         ) {
             content()
+        }
+    }
+}
+
+@Composable
+private fun ProjectModuleRack(
+    projectId: Long?,
+    modules: List<site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode>,
+    moduleTemplates: List<ModuleTemplateOptionResponse>,
+    onSelectNode: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        modules.forEach { module ->
+            Box(
+                modifier = Modifier
+                    .width(280.dp)
+                    .clickable(
+                        enabled = projectId != null,
+                        onClick = {
+                            projectId?.let { safeProjectId ->
+                                onSelectNode(
+                                    ProjectsViewModel.buildModuleNodeId(
+                                        projectId = safeProjectId,
+                                        moduleId = module.id,
+                                    ),
+                                )
+                            }
+                        },
+                    ),
+            ) {
+                HostConfigModuleBoard(
+                    model = resolveModuleBoardModel(
+                        module = module,
+                        moduleTemplates = moduleTemplates,
+                    ),
+                    compact = true,
+                )
+            }
         }
     }
 }

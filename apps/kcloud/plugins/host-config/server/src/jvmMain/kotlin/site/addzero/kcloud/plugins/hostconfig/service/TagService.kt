@@ -1,7 +1,6 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
 import java.math.BigDecimal
-import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
@@ -73,7 +72,7 @@ class TagService(
         ensureTagNameUnique(deviceId, name, null)
         ensureTagAddressUnique(deviceId, request.registerTypeId, request.registerAddress, null)
         val now = now()
-        val entity = new(Tag::class).by {
+        val entity = Tag {
             this.deviceId = deviceId
             this.dataTypeId = request.dataTypeId
             this.registerTypeId = request.registerTypeId
@@ -125,7 +124,7 @@ class TagService(
         val name = request.name.trim()
         ensureTagNameUnique(current.device.id, name, tagId)
         ensureTagAddressUnique(current.device.id, request.registerTypeId, request.registerAddress, tagId)
-        val entity = new(Tag::class).by {
+        val entity = Tag {
             id = tagId
             deviceId = current.device.id
             dataTypeId = request.dataTypeId
@@ -167,7 +166,7 @@ class TagService(
         val now = now()
         request.items.forEach { item ->
             sql.saveCommand(
-                new(TagValueText::class).by {
+                TagValueText {
                     this.tagId = tagId
                     this.rawValue = item.rawValue.trim()
                     this.displayText = item.displayText.trim()

@@ -75,6 +75,122 @@ CREATE TABLE IF NOT EXISTS host_config_data_type (
     UNIQUE KEY uk_host_config_data_type_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS host_config_label_definition (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    code VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    color_hex VARCHAR(32) NULL,
+    sort_index INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_label_definition_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS host_config_product_definition (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    code VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    vendor VARCHAR(255) NULL,
+    category VARCHAR(255) NULL,
+    enabled BIT NOT NULL DEFAULT b'1',
+    sort_index INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_product_definition_code (code),
+    KEY idx_host_config_product_definition_sort (sort_index, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS host_config_device_definition (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    product_id BIGINT NOT NULL,
+    device_type_id BIGINT NULL,
+    code VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    supports_telemetry BIT NOT NULL DEFAULT b'1',
+    supports_control BIT NOT NULL DEFAULT b'0',
+    sort_index INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_device_definition_product_code (product_id, code),
+    KEY idx_host_config_device_definition_product_sort (product_id, sort_index, id),
+    CONSTRAINT fk_host_config_device_definition_product
+        FOREIGN KEY (product_id) REFERENCES host_config_product_definition(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_host_config_device_definition_device_type
+        FOREIGN KEY (device_type_id) REFERENCES host_config_device_type(id)
+        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS host_config_property_definition (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    device_definition_id BIGINT NOT NULL,
+    data_type_id BIGINT NOT NULL,
+    identifier VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    unit VARCHAR(255) NULL,
+    required BIT NOT NULL DEFAULT b'0',
+    writable BIT NOT NULL DEFAULT b'0',
+    telemetry BIT NOT NULL DEFAULT b'1',
+    nullable BIT NOT NULL DEFAULT b'1',
+    length INT NULL,
+    attributes_json TEXT NULL,
+    sort_index INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_property_definition_device_identifier (device_definition_id, identifier),
+    KEY idx_host_config_property_definition_device_sort (device_definition_id, sort_index, id),
+    CONSTRAINT fk_host_config_property_definition_device
+        FOREIGN KEY (device_definition_id) REFERENCES host_config_device_definition(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_host_config_property_definition_data_type
+        FOREIGN KEY (data_type_id) REFERENCES host_config_data_type(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS host_config_feature_definition (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    device_definition_id BIGINT NOT NULL,
+    identifier VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NULL,
+    input_schema TEXT NULL,
+    output_schema TEXT NULL,
+    asynchronous BIT NOT NULL DEFAULT b'0',
+    sort_index INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_feature_definition_device_identifier (device_definition_id, identifier),
+    KEY idx_host_config_feature_definition_device_sort (device_definition_id, sort_index, id),
+    CONSTRAINT fk_host_config_feature_definition_device
+        FOREIGN KEY (device_definition_id) REFERENCES host_config_device_definition(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS host_config_product_definition_label (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    product_id BIGINT NOT NULL,
+    label_id BIGINT NOT NULL,
+    sort_index INT NOT NULL DEFAULT 0,
+    created_at BIGINT NOT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_host_config_product_definition_label_product_label (product_id, label_id),
+    CONSTRAINT fk_host_config_product_definition_label_product
+        FOREIGN KEY (product_id) REFERENCES host_config_product_definition(id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_host_config_product_definition_label_label
+        FOREIGN KEY (label_id) REFERENCES host_config_label_definition(id)
+        ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS host_config_protocol_instance (
     id BIGINT NOT NULL AUTO_INCREMENT,
     protocol_template_id BIGINT NOT NULL,

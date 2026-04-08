@@ -3,7 +3,6 @@ package site.addzero.kcloud.plugins.hostconfig.service
 import java.math.BigDecimal
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
-import org.babyfish.jimmer.kt.new
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
@@ -77,7 +76,7 @@ class ProjectConfigService(
         ensureProjectExists(projectId)
         val existing = loadMqttConfig(projectId)
         val now = now()
-        val entity = new(ProjectMqttConfig::class).by {
+        val entity = ProjectMqttConfig {
             existing?.let { id = it.id }
             this.projectId = projectId
             this.enabled = request.enabled
@@ -150,7 +149,7 @@ class ProjectConfigService(
         ensureProjectExists(projectId)
         val existing = loadModbusConfig(projectId, transportType)
         val now = now()
-        val entity = new(ProjectModbusServerConfig::class).by {
+        val entity = ProjectModbusServerConfig {
             existing?.let { id = it.id }
             this.projectId = projectId
             this.transportType = transportType
@@ -179,7 +178,7 @@ class ProjectConfigService(
         ensureProjectExists(projectId)
         val existing = loadGatewayPinConfig(projectId)
         val now = now()
-        val entity = new(ProjectGatewayPinConfig::class).by {
+        val entity = ProjectGatewayPinConfig {
             existing?.let { id = it.id }
             this.projectId = projectId
             this.faultIndicatorPin = request.faultIndicatorPin.normalizePin(DEFAULT_FAULT_INDICATOR_PIN)
