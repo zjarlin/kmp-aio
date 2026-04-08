@@ -47,6 +47,21 @@ CREATE TABLE IF NOT EXISTS codegen_context_field (
     FOREIGN KEY(schema_id) REFERENCES codegen_context_schema(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS codegen_context_modbus_contract (
+    context_id INTEGER NOT NULL,
+    context_code TEXT NOT NULL,
+    context_name TEXT NOT NULL,
+    enabled INTEGER NOT NULL,
+    consumer_target TEXT NOT NULL,
+    protocol_template_code TEXT NOT NULL,
+    transport TEXT NOT NULL,
+    selected INTEGER NOT NULL DEFAULT 0,
+    payload TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY(context_id, transport),
+    FOREIGN KEY(context_id) REFERENCES codegen_context_context(id) ON DELETE CASCADE
+);
+
 INSERT INTO codegen_context_context (
     code,
     name,

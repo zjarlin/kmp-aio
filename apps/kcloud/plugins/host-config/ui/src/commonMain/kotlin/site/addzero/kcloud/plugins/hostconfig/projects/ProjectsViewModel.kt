@@ -615,8 +615,8 @@ class ProjectsViewModel(
                 projectApi.getProjectTree(project.id)
             }
             val treeNodes = buildTreeNodes(projectTrees)
-            val moduleTemplates = loadModuleTemplates(
-                projectTree = projectTrees.firstOrNull { tree -> tree.id == selectedProjectId },
+            val moduleTemplateCatalog = loadModuleTemplateCatalog(
+                projectTrees = projectTrees,
             )
             val selectedNodeId = treeNodes.findNode(preferredNodeId)?.id ?: buildProjectNodeId(selectedProjectId)
 
@@ -630,7 +630,7 @@ class ProjectsViewModel(
                 treeNodes = treeNodes,
                 protocolCatalog = protocolCatalog,
                 protocolTemplates = protocolTemplates,
-                moduleTemplates = moduleTemplates,
+                moduleTemplateCatalog = moduleTemplateCatalog,
                 deviceTypes = deviceTypes,
                 registerTypes = registerTypes,
                 dataTypes = dataTypes,
@@ -729,18 +729,22 @@ class ProjectsViewModel(
         )
     }
 
-    private suspend fun loadModuleTemplates(
-        projectTree: ProjectTreeResponse?,
-    ): List<ModuleTemplateOptionResponse> {
-        if (projectTree == null) {
-            return emptyList()
-        }
-        val protocolTemplateIds = projectTree.protocols
+    private suspend fun loadModuleTemplateCatalog(
+        projectTrees: List<ProjectTreeResponse>,
+    ): Map<Long, List<ModuleTemplateOptionResponse>> {
+        val protocolTemplateIds = projectTrees.asSequence()
+            .flatMap { projectTree -> projectTree.protocols.asSequence() }
             .map { protocol -> protocol.protocolTemplateId }
             .distinct()
-        return protocolTemplateIds.flatMap { protocolTemplateId ->
-            templateApi.listModuleTemplates(protocolTemplateId)
-        }.distinctBy { template -> template.id }
+            .toList()
+        return protocolTemplateIds.associateWith { protocolTemplateId ->
+            emptyList<ModuleTemplateOptionResponse>()
+        }.toMutableMap().apply {
+            protocolTemplateIds.forEach { protocolTemplateId ->
+                this[protocolTemplateId] = templateApi.listModuleTemplates(protocolTemplateId)
+                    .distinctBy { template -> template.id }
+            }
+        }
     }
 
     private fun buildTreeNodes(
@@ -754,7 +758,7 @@ class ProjectsViewModel(
                 entityId = project.id,
                 label = project.name,
                 caption = project.description,
-                children = buildProjectModuleNodes(project),
+                children = buildProtocolNodes(project),
             )
         }
     }
@@ -779,15 +783,6 @@ class ProjectsViewModel(
         }
     }
 
-    private fun buildProjectModuleNodes(
-        project: ProjectTreeResponse,
-    ): List<HostConfigTreeNode> {
-        return buildModuleNodes(
-            projectId = project.id,
-            modules = project.modules + project.protocols.flatMap { protocol -> protocol.modules },
-        )
-    }
-
     private fun buildModuleNodes(
         projectId: Long,
         modules: List<ModuleTreeNode>,
@@ -798,7 +793,7 @@ class ProjectsViewModel(
                 kind = HostConfigNodeKind.MODULE,
                 projectId = projectId,
                 entityId = module.id,
-                parentEntityId = projectId,
+                parentEntityId = module.protocolId,
                 label = module.name,
                 caption = module.moduleTemplateName,
                 children = module.devices.map { device ->

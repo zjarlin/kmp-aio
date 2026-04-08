@@ -4,13 +4,9 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val generatedMetadataDir = layout.projectDirectory.dir("generated/modbus-metadata")
-val generatedMetadataDbFile = generatedMetadataDir.file("codegen-context.sqlite").asFile
-val generatedMetadataTransportMarkerFile = generatedMetadataDir.file("selected-transport.txt").asFile
-val useCodegenContextMetadata =
-    generatedMetadataDbFile.exists() &&
-        generatedMetadataTransportMarkerFile.exists() &&
-        generatedMetadataTransportMarkerFile.readText().trim().equals("rtu", ignoreCase = true)
+val kcloudMysqlJdbcUrl = "jdbc:mysql://192.168.31.133:3306/okmy_dics?createDatabaseIfNotExist=true"
+val kcloudMysqlUser = "root"
+val kcloudMysqlPassword = "test123456"
 
 /** Api生成目录 */
 val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:ui") .projectDir .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external") .absolutePath
@@ -62,34 +58,28 @@ modbusRtu {
             "site.addzero.kcloud.plugins.mcuconsole.modbus.device",
         ),
     )
-    metadataProviders.set(
-        if (useCodegenContextMetadata) {
-            listOf("database")
-        } else {
-            listOf("interfaces")
-        },
+    metadataProviders.set(listOf("database"))
+    databaseDriverClass.set("com.mysql.cj.jdbc.Driver")
+    databaseJdbcUrl.set(kcloudMysqlJdbcUrl)
+    databaseUsername.set(kcloudMysqlUser)
+    databasePassword.set(kcloudMysqlPassword)
+    databaseQuery.set(
+        """
+        SELECT payload
+        FROM codegen_context_modbus_contract
+        WHERE consumer_target = 'MCU_CONSOLE'
+          AND enabled = 1
+          AND selected = 1
+          AND transport = '${'$'}{transport}'
+        ORDER BY updated_at DESC
+        LIMIT 1
+        """.trimIndent(),
     )
-    if (useCodegenContextMetadata) {
-        databaseDriverClass.set("org.sqlite.JDBC")
-        databaseJdbcUrl.set("jdbc:sqlite:${generatedMetadataDbFile.absolutePath}")
-        databaseQuery.set(
-            """
-            SELECT payload
-            FROM codegen_context_modbus_contract
-            WHERE consumer_target = 'MCU_CONSOLE'
-              AND enabled = 1
-              AND selected = 1
-              AND transport = '${'$'}{transport}'
-            ORDER BY updated_at DESC
-            LIMIT 1
-            """.trimIndent(),
-        )
-        databaseJsonColumn.set("payload")
-    }
+    databaseJsonColumn.set("payload")
 }
 
 dependencies {
-    add("kspJvm", libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
+    add("kspJvm", libs.findLibrary("mysql-mysql-connector-java").get())
 }
 
 kotlin {

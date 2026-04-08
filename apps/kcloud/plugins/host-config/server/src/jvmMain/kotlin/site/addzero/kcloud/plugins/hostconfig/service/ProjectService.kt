@@ -26,6 +26,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCatalogItemResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolPositionUpdateRequest
+import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolUpdateRequest
@@ -33,6 +34,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.project.TagTreeNode
 import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
 import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
+import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Single
 class ProjectService(
@@ -138,14 +140,27 @@ class ProjectService(
 
     fun createProtocol(projectId: Long, request: ProtocolCreateRequest): ProtocolResponse {
         ensureProjectExists(projectId)
-        ensureProtocolTemplateExists(request.protocolTemplateId)
+        val protocolTemplate = loadProtocolTemplate(request.protocolTemplateId)
         val name = request.name.trim()
         ensureProtocolNameUnique(name, null)
         val now = now()
+        val transportConfig = normalizeProtocolTransportConfig(
+            protocolTemplateCode = protocolTemplate.code,
+            requestConfig = request.transportConfig,
+        )
         val entity = ProtocolInstance {
             this.protocolTemplateId = request.protocolTemplateId
             this.name = name
             this.pollingIntervalMs = request.pollingIntervalMs
+            this.transportType = transportConfig?.transportType
+            this.host = transportConfig?.host.cleanNullable()
+            this.tcpPort = transportConfig?.tcpPort
+            this.portName = transportConfig?.portName.cleanNullable()
+            this.baudRate = transportConfig?.baudRate
+            this.dataBits = transportConfig?.dataBits
+            this.stopBits = transportConfig?.stopBits
+            this.parity = transportConfig?.parity
+            this.responseTimeoutMs = transportConfig?.responseTimeoutMs
             this.createdAt = now
             this.updatedAt = now
         }
@@ -168,14 +183,27 @@ class ProjectService(
 
     fun updateProtocol(protocolId: Long, request: ProtocolUpdateRequest): ProtocolResponse {
         val link = loadProjectProtocol(request.projectId, protocolId)
-        ensureProtocolTemplateExists(request.protocolTemplateId)
+        val protocolTemplate = loadProtocolTemplate(request.protocolTemplateId)
         val name = request.name.trim()
         ensureProtocolNameUnique(name, protocolId)
+        val transportConfig = normalizeProtocolTransportConfig(
+            protocolTemplateCode = protocolTemplate.code,
+            requestConfig = request.transportConfig,
+        )
         val entity = ProtocolInstance {
             id = protocolId
             protocolTemplateId = request.protocolTemplateId
             this.name = name
             this.pollingIntervalMs = request.pollingIntervalMs
+            this.transportType = transportConfig?.transportType
+            this.host = transportConfig?.host.cleanNullable()
+            this.tcpPort = transportConfig?.tcpPort
+            this.portName = transportConfig?.portName.cleanNullable()
+            this.baudRate = transportConfig?.baudRate
+            this.dataBits = transportConfig?.dataBits
+            this.stopBits = transportConfig?.stopBits
+            this.parity = transportConfig?.parity
+            this.responseTimeoutMs = transportConfig?.responseTimeoutMs
             this.updatedAt = now()
         }
         sql.saveCommand(entity) {
@@ -201,8 +229,12 @@ class ProjectService(
     }
 
     fun createModule(protocolId: Long, request: ModuleCreateRequest): ModuleResponse {
-        ensureProtocolExists(protocolId)
-        ensureModuleTemplateExists(request.moduleTemplateId)
+        val protocol = loadProtocol(protocolId)
+        val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
+        ensureModuleTemplateMatchesProtocol(
+            protocolTemplateId = protocol.protocolTemplate.id,
+            moduleTemplate = moduleTemplate,
+        )
         val name = request.name.trim()
         ensureModuleNameUnique(protocolId, name, null)
         val now = now()
@@ -210,12 +242,6 @@ class ProjectService(
             this.protocolId = protocolId
             this.moduleTemplateId = request.moduleTemplateId
             this.name = name
-            this.portName = request.portName.cleanNullable()
-            this.baudRate = request.baudRate
-            this.dataBits = request.dataBits
-            this.stopBits = request.stopBits
-            this.parity = request.parity
-            this.responseTimeoutMs = request.responseTimeoutMs
             this.sortIndex = request.sortIndex
             this.createdAt = now
             this.updatedAt = now
@@ -235,7 +261,11 @@ class ProjectService(
 
     fun updateModule(moduleId: Long, request: ModuleUpdateRequest): ModuleResponse {
         val current = loadModule(moduleId)
-        ensureModuleTemplateExists(request.moduleTemplateId)
+        val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
+        ensureModuleTemplateMatchesProtocol(
+            protocolTemplateId = current.protocol.protocolTemplate.id,
+            moduleTemplate = moduleTemplate,
+        )
         val name = request.name.trim()
         ensureModuleNameUnique(current.protocol.id, name, moduleId)
         val entity = ModuleInstance {
@@ -243,12 +273,6 @@ class ProjectService(
             protocolId = current.protocol.id
             moduleTemplateId = request.moduleTemplateId
             this.name = name
-            this.portName = request.portName.cleanNullable()
-            this.baudRate = request.baudRate
-            this.dataBits = request.dataBits
-            this.stopBits = request.stopBits
-            this.parity = request.parity
-            this.responseTimeoutMs = request.responseTimeoutMs
             this.sortIndex = request.sortIndex
             this.updatedAt = now()
         }
@@ -263,7 +287,11 @@ class ProjectService(
         when {
             request.protocolId != null -> {
                 val targetProtocolId = request.protocolId!!
-                ensureProtocolExists(targetProtocolId)
+                val targetProtocol = loadProtocol(targetProtocolId)
+                ensureModuleTemplateMatchesProtocol(
+                    protocolTemplateId = targetProtocol.protocolTemplate.id,
+                    moduleTemplate = current.moduleTemplate,
+                )
                 ensureModuleNameUnique(targetProtocolId, current.name, moduleId)
                 moveModule(moduleId, current.protocol.id, targetProtocolId, request.sortIndex)
             }
@@ -487,6 +515,13 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Project not found")
     }
 
+    private fun loadProtocol(protocolId: Long): ProtocolInstance {
+        return sql.createQuery(ProtocolInstance::class) {
+            where(table.id eq protocolId)
+            select(table.fetch(Fetchers.protocolScalar))
+        }.execute().firstOrNull() ?: throw NotFoundException("Protocol not found")
+    }
+
     private fun loadProjectProtocol(projectId: Long, protocolId: Long): ProjectProtocol {
         return sql.createQuery(ProjectProtocol::class) {
             where(table.project.id eq projectId)
@@ -523,6 +558,13 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Module template not found")
     }
 
+    private fun loadProtocolTemplate(protocolTemplateId: Long): ProtocolTemplate {
+        return sql.createQuery(ProtocolTemplate::class) {
+            where(table.id eq protocolTemplateId)
+            select(table.fetch(Fetchers.protocolTemplate))
+        }.execute().firstOrNull() ?: throw NotFoundException("Protocol template not found")
+    }
+
     private fun loadDevice(deviceId: Long): Device {
         return sql.createQuery(Device::class) {
             where(table.id eq deviceId)
@@ -548,6 +590,7 @@ class ProjectService(
             pollingIntervalMs = protocol.pollingIntervalMs,
             sortIndex = sortIndex,
             protocolTemplateId = protocol.protocolTemplate.id,
+            transportConfig = protocol.toTransportConfig(),
         )
 
     private fun ModuleInstance.toResponse(): ModuleResponse =
@@ -555,12 +598,6 @@ class ProjectService(
             id = id,
             name = name,
             protocolId = protocol.id,
-            portName = portName,
-            baudRate = baudRate,
-            dataBits = dataBits,
-            stopBits = stopBits,
-            parity = parity,
-            responseTimeoutMs = responseTimeoutMs,
             sortIndex = sortIndex,
             moduleTemplateId = moduleTemplate.id,
         )
@@ -603,6 +640,7 @@ class ProjectService(
                         protocolTemplateId = protocol.protocolTemplate.id,
                         protocolTemplateCode = protocol.protocolTemplate.code,
                         protocolTemplateName = protocol.protocolTemplate.name,
+                        transportConfig = protocol.toTransportConfig(),
                         modules = protocol.modules
                             .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
                             .map { it.toTreeNode() },
@@ -622,12 +660,6 @@ class ProjectService(
             id = id,
             name = name,
             protocolId = protocol.id,
-            portName = portName,
-            baudRate = baudRate,
-            dataBits = dataBits,
-            stopBits = stopBits,
-            parity = parity,
-            responseTimeoutMs = responseTimeoutMs,
             sortIndex = sortIndex,
             moduleTemplateId = moduleTemplate.id,
             moduleTemplateCode = moduleTemplate.code,
@@ -666,6 +698,56 @@ class ProjectService(
                     )
                 },
         )
+
+    private fun ProtocolInstance.toTransportConfig(): ProtocolTransportConfig? {
+        val currentTransportType = transportType ?: return null
+        return ProtocolTransportConfig(
+            transportType = currentTransportType,
+            host = host,
+            tcpPort = tcpPort,
+            portName = portName,
+            baudRate = baudRate,
+            dataBits = dataBits,
+            stopBits = stopBits,
+            parity = parity,
+            responseTimeoutMs = responseTimeoutMs,
+        )
+    }
+
+    private fun normalizeProtocolTransportConfig(
+        protocolTemplateCode: String,
+        requestConfig: ProtocolTransportConfig?,
+    ): ProtocolTransportConfig? {
+        return when (protocolTemplateCode) {
+            "MODBUS_RTU_CLIENT" -> ProtocolTransportConfig(
+                transportType = TransportType.RTU,
+                portName = requestConfig?.portName.cleanNullable(),
+                baudRate = requestConfig?.baudRate,
+                dataBits = requestConfig?.dataBits,
+                stopBits = requestConfig?.stopBits,
+                parity = requestConfig?.parity,
+                responseTimeoutMs = requestConfig?.responseTimeoutMs,
+            )
+
+            "MODBUS_TCP_CLIENT" -> ProtocolTransportConfig(
+                transportType = TransportType.TCP,
+                host = requestConfig?.host.cleanNullable(),
+                tcpPort = requestConfig?.tcpPort,
+                responseTimeoutMs = requestConfig?.responseTimeoutMs,
+            )
+
+            else -> null
+        }
+    }
+
+    private fun ensureModuleTemplateMatchesProtocol(
+        protocolTemplateId: Long,
+        moduleTemplate: ModuleTemplate,
+    ) {
+        if (moduleTemplate.protocolTemplate.id != protocolTemplateId) {
+            throw ConflictException("Module template does not match target protocol template")
+        }
+    }
 
     private fun reorderProjects(projectId: Long, sortIndex: Int) {
         val orderedIds = reorderIds(queryIds("SELECT id FROM host_config_project ORDER BY sort_index ASC, id ASC"), projectId, sortIndex)

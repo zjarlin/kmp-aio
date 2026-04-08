@@ -3,6 +3,8 @@
 package site.addzero.kcloud.plugins.hostconfig.screen
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,12 +12,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.MoveDown
@@ -27,6 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
@@ -37,6 +45,7 @@ import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import site.addzero.cupertino.workbench.button.WorkbenchIconButton
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
@@ -77,6 +86,9 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.PointType
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
+import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
+import site.addzero.kcloud.plugins.hostconfig.projects.findModule
+import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 
 @Route(
     title = "工程配置",
@@ -462,12 +474,6 @@ fun ProjectsScreen() {
                 val request = ModuleCreateRequest(
                     name = draft.name,
                     moduleTemplateId = draft.moduleTemplateId ?: return@ModuleEditorDialog,
-                    portName = draft.portName.ifBlank { null },
-                    baudRate = draft.baudRate.toIntOrNull(),
-                    dataBits = draft.dataBits.toIntOrNull(),
-                    stopBits = draft.stopBits.toIntOrNull(),
-                    parity = draft.parity,
-                    responseTimeoutMs = draft.responseTimeoutMs.toIntOrNull(),
                     sortIndex = draft.sortIndex.toIntOrNull() ?: 0,
                 )
                 if (seed.existing == null) {
@@ -490,12 +496,6 @@ fun ProjectsScreen() {
                         request = ModuleUpdateRequest(
                             name = request.name,
                             moduleTemplateId = request.moduleTemplateId,
-                            portName = request.portName,
-                            baudRate = request.baudRate,
-                            dataBits = request.dataBits,
-                            stopBits = request.stopBits,
-                            parity = request.parity,
-                            responseTimeoutMs = request.responseTimeoutMs,
                             sortIndex = request.sortIndex,
                         ),
                     )
@@ -889,6 +889,8 @@ private fun CurrentNodePanel(
 
             HostConfigNodeKind.MODULE -> {
                 val module = state.selectedModule
+                val moduleProtocol = state.selectedModuleProtocol
+                val transportConfig = moduleProtocol?.transportConfig
                 module?.let { item ->
                     HostConfigSectionTitle("板卡模型")
                     HostConfigModuleBoard(
@@ -902,12 +904,13 @@ private fun CurrentNodePanel(
                 HostConfigKeyValueRow("模块名称", module?.name.orDash())
                 HostConfigKeyValueRow("模块模板", module?.moduleTemplateName.orDash())
                 HostConfigKeyValueRow("模板编码", module?.moduleTemplateCode.orDash())
-                HostConfigKeyValueRow("串口", module?.portName.orDash())
-                HostConfigKeyValueRow("波特率", module?.baudRate?.toString() ?: "-")
-                HostConfigKeyValueRow("数据位", module?.dataBits?.toString() ?: "-")
-                HostConfigKeyValueRow("停止位", module?.stopBits?.toString() ?: "-")
-                HostConfigKeyValueRow("校验位", module?.parity?.label() ?: "-")
-                HostConfigKeyValueRow("响应超时(ms)", module?.responseTimeoutMs?.toString() ?: "-")
+                HostConfigKeyValueRow("所属协议", moduleProtocol?.name.orDash())
+                HostConfigKeyValueRow("通信串口", transportConfig?.portName.orDash())
+                HostConfigKeyValueRow("波特率", transportConfig?.baudRate?.toString() ?: "-")
+                HostConfigKeyValueRow("数据位", transportConfig?.dataBits?.toString() ?: "-")
+                HostConfigKeyValueRow("停止位", transportConfig?.stopBits?.toString() ?: "-")
+                HostConfigKeyValueRow("校验位", transportConfig?.parity?.label() ?: "-")
+                HostConfigKeyValueRow("响应超时(ms)", transportConfig?.responseTimeoutMs?.toString() ?: "-")
                 HostConfigKeyValueRow("排序", module?.sortIndex?.toString() ?: "-")
                 HostConfigKeyValueRow("设备数量", module?.devices?.size?.toString() ?: "0")
             }
@@ -1012,6 +1015,9 @@ private fun NodeChildrenPanel(
                 }
                 HostConfigSectionTitle("模块")
                 modules.forEach { module ->
+                    val transportConfig = projectTree.protocols
+                        .firstOrNull { protocol -> protocol.id == module.protocolId }
+                        ?.transportConfig
                     ChildNodeCard(
                         title = module.name,
                         subtitle = "${module.moduleTemplateName} · ${module.moduleTemplateCode}",
@@ -1028,7 +1034,7 @@ private fun NodeChildrenPanel(
                             ),
                             compact = true,
                         )
-                        HostConfigKeyValueRow("串口", module.portName.orDash())
+                        HostConfigKeyValueRow("通信串口", transportConfig?.portName.orDash())
                         HostConfigKeyValueRow("设备数量", module.devices.size.toString())
                         HostConfigKeyValueRow("排序", module.sortIndex.toString())
                     }
@@ -1150,36 +1156,179 @@ private fun ProjectModuleRack(
     moduleTemplates: List<ModuleTemplateOptionResponse>,
     onSelectNode: (String) -> Unit,
 ) {
-    Row(
+    val rackShape = RoundedCornerShape(22.dp)
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+            .clip(rackShape)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        CupertinoTheme.colorScheme.tertiarySystemGroupedBackground,
+                        CupertinoTheme.colorScheme.secondarySystemGroupedBackground,
+                    ),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.35f),
+                shape = rackShape,
+            )
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        modules.forEach { module ->
-            Box(
-                modifier = Modifier
-                    .width(280.dp)
-                    .clickable(
-                        enabled = projectId != null,
-                        onClick = {
-                            projectId?.let { safeProjectId ->
-                                onSelectNode(
-                                    ProjectsViewModel.buildModuleNodeId(
-                                        projectId = safeProjectId,
-                                        moduleId = module.id,
-                                    ),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            CupertinoText(
+                text = "远程 I/O 背板",
+                style = CupertinoTheme.typography.headline,
+            )
+            CupertinoText(
+                text = "${modules.size} 个插槽",
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF313A46),
+                            Color(0xFF1F262F),
+                        ),
+                    ),
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(18.dp),
+                )
+                .padding(12.dp),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.10f),
+                                    Color.Black.copy(alpha = 0.22f),
+                                    Color.White.copy(alpha = 0.04f),
+                                ),
+                            ),
+                        ),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    modules.forEachIndexed { index, module ->
+                        Column(
+                            modifier = Modifier.width(292.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                CupertinoText(
+                                    text = "SLOT ${index + 1}",
+                                    style = CupertinoTheme.typography.caption1,
+                                    color = Color.White.copy(alpha = 0.76f),
+                                )
+                                CupertinoText(
+                                    text = "${module.devices.size} 台设备",
+                                    style = CupertinoTheme.typography.caption2,
+                                    color = Color.White.copy(alpha = 0.50f),
                                 )
                             }
-                        },
-                    ),
-            ) {
-                HostConfigModuleBoard(
-                    model = resolveModuleBoardModel(
-                        module = module,
-                        moduleTemplates = moduleTemplates,
-                    ),
-                    compact = true,
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.05f),
+                                                Color.Black.copy(alpha = 0.12f),
+                                            ),
+                                        ),
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = Color.White.copy(alpha = 0.08f),
+                                        shape = RoundedCornerShape(18.dp),
+                                    )
+                                    .padding(8.dp)
+                                    .clickable(
+                                        enabled = projectId != null,
+                                        onClick = {
+                                            projectId?.let { safeProjectId ->
+                                                onSelectNode(
+                                                    ProjectsViewModel.buildModuleNodeId(
+                                                        projectId = safeProjectId,
+                                                        moduleId = module.id,
+                                                    ),
+                                                )
+                                            }
+                                        },
+                                    ),
+                            ) {
+                                HostConfigModuleBoard(
+                                    model = resolveModuleBoardModel(
+                                        module = module,
+                                        moduleTemplates = moduleTemplates,
+                                    ),
+                                    compact = true,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(10.dp)
+                                    .clip(RoundedCornerShape(999.dp))
+                                    .background(
+                                        brush = Brush.horizontalGradient(
+                                            colors = listOf(
+                                                Color.Black.copy(alpha = 0.28f),
+                                                Color.White.copy(alpha = 0.06f),
+                                                Color.Black.copy(alpha = 0.18f),
+                                            ),
+                                        ),
+                                    ),
+                            )
+                        }
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(
+                            brush = Brush.horizontalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.28f),
+                                    Color.White.copy(alpha = 0.08f),
+                                    Color.Black.copy(alpha = 0.22f),
+                                ),
+                            ),
+                        ),
                 )
             }
         }
@@ -1332,12 +1481,6 @@ private fun ModuleEditorDialog(
 ) {
     var name by remember(existing?.id) { mutableStateOf(existing?.name.orEmpty()) }
     var moduleTemplateId by remember(existing?.id) { mutableStateOf(existing?.moduleTemplateId ?: templates.firstOrNull()?.value) }
-    var portName by remember(existing?.id) { mutableStateOf(existing?.portName.orEmpty()) }
-    var baudRate by remember(existing?.id) { mutableStateOf(existing?.baudRate?.toString() ?: "9600") }
-    var dataBits by remember(existing?.id) { mutableStateOf(existing?.dataBits?.toString() ?: "8") }
-    var stopBits by remember(existing?.id) { mutableStateOf(existing?.stopBits?.toString() ?: "1") }
-    var parity by remember(existing?.id) { mutableStateOf(existing?.parity ?: Parity.NONE) }
-    var responseTimeoutMs by remember(existing?.id) { mutableStateOf(existing?.responseTimeoutMs?.toString() ?: "10") }
     var sortIndex by remember(existing?.id) { mutableStateOf(existing?.sortIndex?.toString() ?: "0") }
 
     HostConfigDialog(
@@ -1352,12 +1495,6 @@ private fun ModuleEditorDialog(
                         ModuleDraft(
                             name = name,
                             moduleTemplateId = moduleTemplateId,
-                            portName = portName,
-                            baudRate = baudRate,
-                            dataBits = dataBits,
-                            stopBits = stopBits,
-                            parity = parity,
-                            responseTimeoutMs = responseTimeoutMs,
                             sortIndex = sortIndex,
                         ),
                     )
@@ -1371,31 +1508,12 @@ private fun ModuleEditorDialog(
         } else {
             HostConfigTextField("模块名称", name, { name = it })
             HostConfigSelectionField("模块模板", templates, moduleTemplateId, { moduleTemplateId = it })
-            HostConfigTextField("串口", portName, { portName = it })
-            HostConfigTextField("波特率", baudRate, { baudRate = it })
-            HostConfigTextField("数据位", dataBits, { dataBits = it })
-            HostConfigTextField("停止位", stopBits, { stopBits = it })
-            HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
             HostConfigTextField("排序", sortIndex, { sortIndex = it })
             HostConfigPanel(
-                title = "校验位",
-                subtitle = "点击切换当前模块串口校验位。",
+                title = "提示",
+                subtitle = "模块通信参数已提升到协议层，这里只维护模块模板和排序。",
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(Parity.NONE, Parity.ODD, Parity.EVEN).forEach { option ->
-                        WorkbenchActionButton(
-                            text = option.label(),
-                            onClick = {
-                                parity = option
-                            },
-                            variant = if (parity == option) {
-                                WorkbenchButtonVariant.Default
-                            } else {
-                                WorkbenchButtonVariant.Outline
-                            },
-                        )
-                    }
-                }
+                HostConfigStatusStrip("如果要改串口、波特率、校验位和超时，请编辑所属协议。")
             }
         }
     }
@@ -1939,12 +2057,6 @@ private data class ProtocolDraft(
 private data class ModuleDraft(
     val name: String,
     val moduleTemplateId: Long?,
-    val portName: String,
-    val baudRate: String,
-    val dataBits: String,
-    val stopBits: String,
-    val parity: Parity?,
-    val responseTimeoutMs: String,
     val sortIndex: String,
 )
 

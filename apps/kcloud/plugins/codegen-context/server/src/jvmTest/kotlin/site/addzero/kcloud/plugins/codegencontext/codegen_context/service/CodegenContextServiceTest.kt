@@ -1,7 +1,6 @@
 package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
 
 import java.nio.file.Path
-import java.sql.DriverManager
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
@@ -234,20 +233,14 @@ class CodegenContextServiceTest {
                     withRepoRoot(workspaceRoot) {
                         fixture.service.generateContracts(saved.id!!)
                     }
-                val metadataDbFile = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/modbus-metadata/codegen-context.sqlite")
-                val metadataTransportMarkerFile = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/modbus-metadata/selected-transport.txt")
 
                 assertEquals(saved.id, response.contextId)
-                assertEquals(4, response.generatedFiles.size)
-                assertContains(response.message, "Generated 4 contract artifacts")
+                assertEquals(3, response.generatedFiles.size)
+                assertContains(response.message, "Generated 3 contract artifacts")
                 assertTrue(response.generatedFiles.all { file -> file.startsWith(workspaceRoot.toString()) })
                 assertTrue(response.generatedFiles.all { file -> Path.of(file).exists() })
                 assertEquals("manual sentinel", manualContractFile.readText())
-                assertTrue(metadataDbFile.exists())
-                assertTrue(metadataTransportMarkerFile.exists())
-                assertEquals("rtu", metadataTransportMarkerFile.readText().trim())
-                Class.forName("org.sqlite.JDBC")
-                DriverManager.getConnection("jdbc:sqlite:$metadataDbFile").use { connection ->
+                fixture.dataSource.connection.use { connection ->
                     connection.prepareStatement(
                         """
                         SELECT selected, payload

@@ -5,6 +5,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder4
 import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
+import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Serializable
 data class ProjectCreateRequest(
@@ -50,6 +51,19 @@ data class ProjectTreeResponse(
 )
 
 @Serializable
+data class ProtocolTransportConfig(
+    val transportType: TransportType,
+    val host: String? = null,
+    val tcpPort: Int? = null,
+    val portName: String? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: Parity? = null,
+    val responseTimeoutMs: Int? = null,
+)
+
+@Serializable
 data class ProtocolTreeNode(
     val id: Long,
     val name: String,
@@ -58,6 +72,7 @@ data class ProtocolTreeNode(
     val protocolTemplateId: Long,
     val protocolTemplateCode: String,
     val protocolTemplateName: String,
+    val transportConfig: ProtocolTransportConfig? = null,
     val modules: List<ModuleTreeNode>,
 )
 
@@ -66,12 +81,6 @@ data class ModuleTreeNode(
     val id: Long,
     val name: String,
     val protocolId: Long,
-    val portName: String?,
-    val baudRate: Int?,
-    val dataBits: Int?,
-    val stopBits: Int?,
-    val parity: Parity?,
-    val responseTimeoutMs: Int?,
     val sortIndex: Int,
     val moduleTemplateId: Long,
     val moduleTemplateCode: String,
@@ -113,6 +122,7 @@ data class ProtocolCreateRequest(
     val name: String,
     val protocolTemplateId: Long,
     val pollingIntervalMs: Int,
+    val transportConfig: ProtocolTransportConfig? = null,
     val sortIndex: Int = 0,
 )
 
@@ -122,6 +132,7 @@ data class ProtocolUpdateRequest(
     val name: String,
     val protocolTemplateId: Long,
     val pollingIntervalMs: Int,
+    val transportConfig: ProtocolTransportConfig? = null,
     val sortIndex: Int = 0,
 )
 
@@ -132,6 +143,7 @@ data class ProtocolResponse(
     val pollingIntervalMs: Int,
     val sortIndex: Int,
     val protocolTemplateId: Long,
+    val transportConfig: ProtocolTransportConfig? = null,
 )
 
 @Serializable
@@ -161,12 +173,6 @@ data class ProtocolPositionUpdateRequest(
 data class ModuleCreateRequest(
     val name: String,
     val moduleTemplateId: Long,
-    val portName: String? = null,
-    val baudRate: Int? = null,
-    val dataBits: Int? = null,
-    val stopBits: Int? = null,
-    val parity: Parity? = null,
-    val responseTimeoutMs: Int? = null,
     val sortIndex: Int = 0,
 )
 
@@ -174,12 +180,6 @@ data class ModuleCreateRequest(
 data class ModuleUpdateRequest(
     val name: String,
     val moduleTemplateId: Long,
-    val portName: String? = null,
-    val baudRate: Int? = null,
-    val dataBits: Int? = null,
-    val stopBits: Int? = null,
-    val parity: Parity? = null,
-    val responseTimeoutMs: Int? = null,
     val sortIndex: Int = 0,
 )
 
@@ -188,12 +188,6 @@ data class ModuleResponse(
     val id: Long,
     val name: String,
     val protocolId: Long,
-    val portName: String?,
-    val baudRate: Int?,
-    val dataBits: Int?,
-    val stopBits: Int?,
-    val parity: Parity?,
-    val responseTimeoutMs: Int?,
     val sortIndex: Int,
     val moduleTemplateId: Long,
 )

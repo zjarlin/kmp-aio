@@ -56,6 +56,24 @@ CREATE TABLE IF NOT EXISTS codegen_context_field (
         ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS codegen_context_modbus_contract (
+    context_id BIGINT NOT NULL,
+    context_code VARCHAR(255) NOT NULL,
+    context_name VARCHAR(255) NOT NULL,
+    enabled TINYINT(1) NOT NULL,
+    consumer_target VARCHAR(64) NOT NULL,
+    protocol_template_code VARCHAR(255) NOT NULL,
+    transport VARCHAR(32) NOT NULL,
+    selected TINYINT(1) NOT NULL DEFAULT 0,
+    payload LONGTEXT NOT NULL,
+    updated_at DATETIME(3) NOT NULL,
+    PRIMARY KEY (context_id, transport),
+    CONSTRAINT fk_codegen_context_modbus_contract_context
+        FOREIGN KEY (context_id) REFERENCES codegen_context_context(id)
+        ON DELETE CASCADE,
+    KEY idx_codegen_context_modbus_contract_selected (consumer_target, transport, selected, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT INTO codegen_context_context (
     code,
     name,

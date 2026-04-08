@@ -8,43 +8,65 @@ import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 
+/**
+ * 属性定义实体。
+ *
+ * 用于描述设备的遥测、状态或可写属性，
+ * 同时为 spec-iot 视图提供底层源数据。
+ */
 @Entity
 @Table(name = "host_config_property_definition")
 interface PropertyDefinition {
 
+    /** 数据库主键。 */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long
 
+    /** 属性标识符，在所属设备定义内唯一。 */
     val identifier: String
 
+    /** 属性显示名称。 */
     val name: String
 
+    /** 属性说明。 */
     val description: String?
 
+    /** 工程单位，例如 ℃、V、kWh。 */
     val unit: String?
 
+    /** 是否必填。 */
     val required: Boolean
 
+    /** 是否允许写入。 */
     val writable: Boolean
 
+    /** 是否作为遥测属性对外暴露。 */
     val telemetry: Boolean
 
+    /** 是否允许空值。 */
     val nullable: Boolean
 
+    /** 值长度，常用于字符串或字节数组。 */
     val length: Int?
 
+    /** 扩展属性 JSON 字符串。 */
     val attributesJson: String?
 
+    /** 同级排序值，越小越靠前。 */
     val sortIndex: Int
 
+    /** 创建时间，使用 epoch millis。 */
     val createdAt: Long
 
+    /** 最近更新时间，使用 epoch millis。 */
     val updatedAt: Long
 
+    /** 所属设备定义。 */
     @ManyToOne
     val deviceDefinition: DeviceDefinition
 
+    /** 属性值数据类型。 */
     @ManyToOne
     val dataType: DataType
 }

@@ -40,9 +40,6 @@ internal data class ModuleBoardModel(
     val family: ModuleBoardFamily,
     val channelCount: Int,
     val deviceCount: Int,
-    val portName: String?,
-    val baudRate: Int?,
-    val responseTimeoutMs: Int?,
 )
 
 internal enum class ModuleBoardFamily(
@@ -94,12 +91,58 @@ private data class ModuleBoardPalette(
     val lightOff: Color,
     val stroke: Color,
     val chip: Color,
+    val steelTop: Color,
+    val steelBottom: Color,
 )
 
-private data class ChannelGroup(
-    val label: String,
-    val indicatorCount: Int,
+private data class ModuleBoardFrontSpec(
+    val busLabel: String,
+    val terminalLegend: String,
+    val interfaceMarks: List<String>,
+    val statusLights: List<StatusLightSpec>,
+    val fuseWindows: List<FuseWindowSpec>,
+    val calibrationMarks: List<String>,
+    val rangeSwitches: List<RangeSwitchSpec>,
+    val terminalRows: List<List<TerminalGroup>>,
+    val chipLabels: List<String>,
+    val screwMarks: List<String>,
+    val railClipLabel: String,
+    val nameplateTitle: String,
+    val nameplateSerial: String,
+    val ventSlotCount: Int,
 )
+
+private data class TerminalGroup(
+    val label: String,
+    val detail: String,
+    val indicatorCount: Int,
+    val terminals: List<String>,
+    val channelNumbers: List<String>,
+)
+
+private data class RangeSwitchSpec(
+    val code: String,
+    val mode: String,
+    val active: Boolean,
+)
+
+private data class StatusLightSpec(
+    val label: String,
+    val active: Boolean,
+    val tone: StatusLightTone,
+)
+
+private data class FuseWindowSpec(
+    val label: String,
+    val healthy: Boolean,
+)
+
+private enum class StatusLightTone {
+    Accent,
+    Warning,
+    Danger,
+    Neutral,
+}
 
 internal fun resolveModuleBoardModel(
     module: ModuleTreeNode,
@@ -116,9 +159,6 @@ internal fun resolveModuleBoardModel(
         family = family,
         channelCount = (template?.channelCount ?: family.defaultChannelCount).coerceAtLeast(1),
         deviceCount = module.devices.size,
-        portName = module.portName,
-        baudRate = module.baudRate,
-        responseTimeoutMs = module.responseTimeoutMs,
     )
 }
 
@@ -135,7 +175,6 @@ internal fun resolveModuleBoardFamily(
     }
 }
 
-@Suppress("LongMethod")
 @Composable
 internal fun HostConfigModuleBoard(
     model: ModuleBoardModel,
@@ -143,28 +182,16 @@ internal fun HostConfigModuleBoard(
     compact: Boolean = false,
 ) {
     val palette = model.family.palette()
-    val outerShape = RoundedCornerShape(if (compact) 20.dp else 26.dp)
-    val faceShape = RoundedCornerShape(if (compact) 18.dp else 22.dp)
-    val groupSize = when {
-        compact && model.channelCount >= 24 -> 4
-        compact && model.channelCount > 8 -> 2
-        else -> 1
-    }
-    val channels = buildChannelGroups(
-        channelCount = model.channelCount,
-        groupSize = groupSize,
-    )
-    val splitIndex = (channels.size + 1) / 2
-    val topRow = channels.take(splitIndex)
-    val bottomRow = channels.drop(splitIndex)
-    val chipLabels = model.family.chipLabels()
+    val spec = model.toFrontSpec(compact)
+    val outerShape = RoundedCornerShape(if (compact) 20.dp else 28.dp)
+    val faceShape = RoundedCornerShape(if (compact) 18.dp else 24.dp)
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(if (compact) 188.dp else 260.dp)
+            .height(if (compact) 220.dp else 344.dp)
             .shadow(
-                elevation = if (compact) 10.dp else 16.dp,
+                elevation = if (compact) 10.dp else 18.dp,
                 shape = outerShape,
                 clip = false,
             )
@@ -194,9 +221,9 @@ internal fun HostConfigModuleBoard(
                     .background(
                         brush = Brush.horizontalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.32f),
+                                Color.White.copy(alpha = 0.30f),
                                 Color.Transparent,
-                                palette.accentTop.copy(alpha = 0.28f),
+                                palette.accentTop.copy(alpha = 0.24f),
                             ),
                         ),
                     ),
@@ -211,10 +238,11 @@ internal fun HostConfigModuleBoard(
             ) {
                 ModuleBoardAccentRail(
                     model = model,
+                    spec = spec,
                     palette = palette,
                     compact = compact,
                     modifier = Modifier
-                        .width(if (compact) 58.dp else 76.dp)
+                        .width(if (compact) 60.dp else 80.dp)
                         .fillMaxHeight(),
                 )
 
@@ -241,53 +269,165 @@ internal fun HostConfigModuleBoard(
                         palette = palette,
                         compact = compact,
                     )
-                    ModuleBoardTerminalRail(
-                        palette = palette,
-                        segmentCount = topRow.size.coerceAtLeast(4),
-                        compact = compact,
-                    )
-                    ModuleBoardChannelRow(
-                        groups = topRow,
+                    ModuleBoardHardwareStrip(
+                        spec = spec,
                         palette = palette,
                         compact = compact,
                     )
-                    if (bottomRow.isNotEmpty()) {
-                        ModuleBoardChannelRow(
-                            groups = bottomRow,
+                    if (
+                        spec.statusLights.isNotEmpty() ||
+                        spec.fuseWindows.isNotEmpty() ||
+                        spec.calibrationMarks.isNotEmpty()
+                    ) {
+                        ModuleBoardServiceStrip(
+                            spec = spec,
+                            palette = palette,
+                            compact = compact,
+                        )
+                    }
+                    if (spec.rangeSwitches.isNotEmpty()) {
+                        ModuleBoardRangeSwitchStrip(
+                            switches = spec.rangeSwitches,
+                            palette = palette,
+                            compact = compact,
+                        )
+                    }
+                    spec.terminalRows.forEach { row ->
+                        ModuleBoardTerminalRow(
+                            groups = row,
                             palette = palette,
                             compact = compact,
                         )
                     }
                     ModuleBoardChipRow(
                         model = model,
-                        labels = chipLabels,
+                        labels = spec.chipLabels,
+                        palette = palette,
+                        compact = compact,
+                    )
+                    if (spec.ventSlotCount > 0) {
+                        ModuleBoardVentSlotRow(
+                            slotCount = spec.ventSlotCount,
+                            palette = palette,
+                            compact = compact,
+                        )
+                    }
+                    ModuleBoardScrewTerminalRow(
+                        marks = spec.screwMarks,
                         palette = palette,
                         compact = compact,
                     )
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (compact) 10.dp else 14.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                palette.shellBottom.copy(alpha = 0.9f),
-                                Color.Black.copy(alpha = 0.22f),
-                                palette.accentBottom.copy(alpha = 0.34f),
-                            ),
-                        ),
-                    ),
+            ModuleBoardBottomRail(
+                label = spec.railClipLabel,
+                palette = palette,
+                compact = compact,
             )
         }
     }
 }
 
 @Composable
+private fun ModuleBoardBottomRail(
+    label: String,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(if (compact) 24.dp else 30.dp)
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        palette.shellBottom.copy(alpha = 0.92f),
+                        Color.Black.copy(alpha = 0.22f),
+                        palette.accentBottom.copy(alpha = 0.34f),
+                    ),
+                ),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        ModuleBoardDinRailClip(
+            label = label,
+            palette = palette,
+            compact = compact,
+        )
+    }
+}
+
+@Composable
+private fun ModuleBoardDinRailClip(
+    label: String,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .clip(
+                RoundedCornerShape(
+                    topStart = 12.dp,
+                    topEnd = 12.dp,
+                    bottomStart = 8.dp,
+                    bottomEnd = 8.dp,
+                ),
+            )
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        palette.steelTop.copy(alpha = 0.92f),
+                        palette.steelBottom.copy(alpha = 0.92f),
+                    ),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.12f),
+                shape = RoundedCornerShape(
+                    topStart = 12.dp,
+                    topEnd = 12.dp,
+                    bottomStart = 8.dp,
+                    bottomEnd = 8.dp,
+                ),
+            )
+            .padding(horizontal = if (compact) 12.dp else 16.dp, vertical = if (compact) 4.dp else 5.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(2) {
+            Box(
+                modifier = Modifier
+                    .size(if (compact) 7.dp else 8.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.24f))
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.10f),
+                        shape = CircleShape,
+                    ),
+            )
+        }
+        CupertinoText(
+            text = label,
+            style = CupertinoTheme.typography.caption2,
+            color = Color.White.copy(alpha = 0.82f),
+        )
+        Box(
+            modifier = Modifier
+                .width(if (compact) 18.dp else 22.dp)
+                .height(if (compact) 6.dp else 7.dp)
+                .clip(RoundedCornerShape(999.dp))
+                .background(Color.Black.copy(alpha = 0.22f)),
+        )
+    }
+}
+
+@Composable
 private fun ModuleBoardAccentRail(
     model: ModuleBoardModel,
+    spec: ModuleBoardFrontSpec,
     palette: ModuleBoardPalette,
     compact: Boolean,
     modifier: Modifier = Modifier,
@@ -328,16 +468,16 @@ private fun ModuleBoardAccentRail(
                 overflow = TextOverflow.Ellipsis,
             )
             CupertinoText(
-                text = model.family.caption,
+                text = spec.busLabel,
                 style = CupertinoTheme.typography.caption2,
                 color = Color.White.copy(alpha = 0.78f),
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
         Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             ModuleBoardSmallMeta(
                 title = "CH",
@@ -346,6 +486,12 @@ private fun ModuleBoardAccentRail(
             ModuleBoardSmallMeta(
                 title = "DEV",
                 value = model.deviceCount.toString(),
+            )
+            ModuleBoardRailNameplate(
+                title = spec.nameplateTitle,
+                serial = spec.nameplateSerial,
+                palette = palette,
+                compact = compact,
             )
         }
     }
@@ -409,26 +555,29 @@ private fun ModuleBoardHeader(
 }
 
 @Composable
-private fun ModuleBoardTerminalRail(
+private fun ModuleBoardHardwareStrip(
+    spec: ModuleBoardFrontSpec,
     palette: ModuleBoardPalette,
-    segmentCount: Int,
     compact: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        repeat(segmentCount) {
+        ModuleBoardInfoTag(
+            text = spec.terminalLegend,
+            palette = palette,
+        )
+        spec.interfaceMarks.forEach { mark ->
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(if (compact) 12.dp else 16.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.24f),
-                                palette.shellBottom.copy(alpha = 0.92f),
+                                palette.steelTop.copy(alpha = 0.94f),
+                                palette.steelBottom.copy(alpha = 0.90f),
                             ),
                         ),
                     )
@@ -436,51 +585,416 @@ private fun ModuleBoardTerminalRail(
                         width = 1.dp,
                         color = Color.White.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(999.dp),
-                    ),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 5.dp),
+            ) {
+                CupertinoText(
+                    text = mark,
+                    style = CupertinoTheme.typography.caption2,
+                    color = Color.White.copy(alpha = 0.84f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardServiceStrip(
+    spec: ModuleBoardFrontSpec,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    val segmentCount = listOf(
+        spec.statusLights.isNotEmpty(),
+        spec.fuseWindows.isNotEmpty(),
+        spec.calibrationMarks.isNotEmpty(),
+    ).count { it }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        if (spec.statusLights.isNotEmpty()) {
+            ModuleBoardLampBus(
+                lights = spec.statusLights,
+                palette = palette,
+                compact = compact,
+                modifier = if (segmentCount > 1) {
+                    Modifier.weight(1f)
+                } else {
+                    Modifier.fillMaxWidth()
+                },
+            )
+        }
+        if (spec.fuseWindows.isNotEmpty()) {
+            ModuleBoardFuseStrip(
+                windows = spec.fuseWindows,
+                palette = palette,
+                compact = compact,
+                modifier = if (segmentCount > 1) {
+                    Modifier.weight(1f)
+                } else {
+                    Modifier.fillMaxWidth()
+                },
+            )
+        }
+        if (spec.calibrationMarks.isNotEmpty()) {
+            ModuleBoardCalibrationStrip(
+                marks = spec.calibrationMarks,
+                palette = palette,
+                compact = compact,
+                modifier = if (segmentCount > 1) {
+                    Modifier.weight(1f)
+                } else {
+                    Modifier.fillMaxWidth()
+                },
             )
         }
     }
 }
 
 @Composable
-private fun ModuleBoardChannelRow(
-    groups: List<ChannelGroup>,
+private fun ModuleBoardLampBus(
+    lights: List<StatusLightSpec>,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    ModuleBoardServicePanel(
+        title = "状态总线",
+        palette = palette,
+        compact = compact,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            lights.forEach { light ->
+                val glow = light.tone.resolveActiveColor(palette)
+                val off = light.tone.resolveInactiveColor(palette)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(if (compact) 11.dp else 13.dp)
+                            .clip(CircleShape)
+                            .background(if (light.active) glow else off)
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.14f),
+                                shape = CircleShape,
+                            ),
+                    )
+                    CupertinoText(
+                        text = light.label,
+                        style = CupertinoTheme.typography.caption2,
+                        color = Color.White.copy(alpha = 0.74f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardFuseStrip(
+    windows: List<FuseWindowSpec>,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    ModuleBoardServicePanel(
+        title = "保险窗口",
+        palette = palette,
+        compact = compact,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            windows.forEach { window ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(if (compact) 16.dp else 18.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(
+                                brush = Brush.verticalGradient(
+                                    colors = if (window.healthy) {
+                                        listOf(
+                                            Color(0xFFFFD781).copy(alpha = 0.94f),
+                                            Color(0xFFC67A18).copy(alpha = 0.92f),
+                                        )
+                                    } else {
+                                        listOf(
+                                            Color(0xFFFF9A8E).copy(alpha = 0.88f),
+                                            Color(0xFF7A2F2A).copy(alpha = 0.92f),
+                                        )
+                                    },
+                                ),
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(6.dp),
+                            ),
+                    )
+                    CupertinoText(
+                        text = window.label,
+                        style = CupertinoTheme.typography.caption2,
+                        color = Color.White.copy(alpha = 0.72f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardCalibrationStrip(
+    marks: List<String>,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    ModuleBoardServicePanel(
+        title = "校准区",
+        palette = palette,
+        compact = compact,
+        modifier = modifier,
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            marks.forEach { mark ->
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(if (compact) 18.dp else 20.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.22f))
+                            .border(
+                                width = 1.dp,
+                                color = palette.steelTop.copy(alpha = 0.72f),
+                                shape = CircleShape,
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(if (compact) 6.dp else 7.dp)
+                                .clip(CircleShape)
+                                .background(palette.steelBottom.copy(alpha = 0.96f)),
+                        )
+                    }
+                    CupertinoText(
+                        text = mark,
+                        style = CupertinoTheme.typography.caption2,
+                        color = Color.White.copy(alpha = 0.74f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardServicePanel(
+    title: String,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color.White.copy(alpha = 0.06f),
+                        palette.chip.copy(alpha = 0.94f),
+                    ),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(12.dp),
+            )
+            .padding(horizontal = if (compact) 7.dp else 8.dp, vertical = if (compact) 6.dp else 7.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        CupertinoText(
+            text = title,
+            style = CupertinoTheme.typography.caption2,
+            color = Color.White.copy(alpha = 0.50f),
+        )
+        content()
+    }
+}
+
+@Composable
+private fun ModuleBoardRangeSwitchStrip(
+    switches: List<RangeSwitchSpec>,
     palette: ModuleBoardPalette,
     compact: Boolean,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ModuleBoardInfoTag(
+            text = "量程拨码",
+            palette = palette,
+        )
+        switches.forEach { switch ->
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.08f),
+                                palette.chip.copy(alpha = 0.96f),
+                            ),
+                        ),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (switch.active) {
+                            palette.accentTop.copy(alpha = 0.36f)
+                        } else {
+                            Color.White.copy(alpha = 0.08f)
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 7.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CupertinoText(
+                        text = switch.code,
+                        style = CupertinoTheme.typography.caption2,
+                        color = Color.White.copy(alpha = 0.48f),
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(if (compact) 20.dp else 24.dp)
+                            .height(if (compact) 10.dp else 12.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Color.Black.copy(alpha = 0.30f))
+                            .padding(horizontal = 2.dp, vertical = 2.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .align(if (switch.active) Alignment.CenterEnd else Alignment.CenterStart)
+                                .size(if (compact) 6.dp else 8.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (switch.active) {
+                                        palette.accentTop
+                                    } else {
+                                        Color.White.copy(alpha = 0.28f)
+                                    },
+                                ),
+                        )
+                    }
+                }
+                CupertinoText(
+                    text = switch.mode,
+                    style = CupertinoTheme.typography.caption1,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White.copy(alpha = 0.86f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardTerminalRow(
+    groups: List<TerminalGroup>,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
     ) {
         groups.forEach { group ->
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(if (compact) 12.dp else 14.dp))
+                    .clip(RoundedCornerShape(if (compact) 14.dp else 16.dp))
                     .background(
-                        color = palette.chip.copy(alpha = 0.78f),
+                        brush = Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = 0.06f),
+                                palette.chip.copy(alpha = 0.92f),
+                            ),
+                        ),
                     )
                     .border(
                         width = 1.dp,
-                        color = Color.White.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(if (compact) 12.dp else 14.dp),
+                        color = Color.White.copy(alpha = 0.10f),
+                        shape = RoundedCornerShape(if (compact) 14.dp else 16.dp),
                     )
-                    .padding(horizontal = if (compact) 6.dp else 8.dp, vertical = if (compact) 7.dp else 9.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(horizontal = if (compact) 7.dp else 9.dp, vertical = if (compact) 8.dp else 10.dp),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
             ) {
                 CupertinoText(
                     text = group.label,
                     style = CupertinoTheme.typography.caption1,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = Color.White.copy(alpha = 0.88f),
+                    color = Color.White.copy(alpha = 0.92f),
+                )
+                CupertinoText(
+                    text = group.detail,
+                    style = CupertinoTheme.typography.caption2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White.copy(alpha = 0.56f),
                 )
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     repeat(group.indicatorCount) { index ->
-                        val alpha = 0.48f + (index * 0.12f).coerceAtMost(0.38f)
+                        val alpha = 0.46f + (index * 0.12f).coerceAtMost(0.40f)
                         Box(
                             modifier = Modifier
                                 .size(if (compact) 6.dp else 8.dp)
@@ -495,11 +1009,89 @@ private fun ModuleBoardChannelRow(
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     CupertinoText(
-                        text = "CH",
+                        text = "LED",
                         style = CupertinoTheme.typography.caption2,
-                        color = Color.White.copy(alpha = 0.45f),
+                        color = Color.White.copy(alpha = 0.40f),
                     )
                 }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    group.terminals.forEach { terminal ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .heightIn(min = if (compact) 20.dp else 24.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            palette.steelTop,
+                                            palette.steelBottom,
+                                        ),
+                                    ),
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = Color.White.copy(alpha = 0.10f),
+                                    shape = RoundedCornerShape(8.dp),
+                                )
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CupertinoText(
+                                text = terminal,
+                                style = CupertinoTheme.typography.caption2,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                color = Color.White.copy(alpha = 0.84f),
+                            )
+                        }
+                    }
+                }
+                ModuleBoardWireNumberRow(
+                    numbers = group.channelNumbers,
+                    palette = palette,
+                    compact = compact,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardWireNumberRow(
+    numbers: List<String>,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        numbers.forEach { number ->
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(
+                        color = palette.accentTop.copy(alpha = 0.12f),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = palette.accentTop.copy(alpha = 0.20f),
+                        shape = RoundedCornerShape(999.dp),
+                    )
+                    .padding(horizontal = 4.dp, vertical = if (compact) 3.dp else 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CupertinoText(
+                    text = number,
+                    style = CupertinoTheme.typography.caption2,
+                    color = Color.White.copy(alpha = 0.72f),
+                )
             }
         }
     }
@@ -521,12 +1113,12 @@ private fun ModuleBoardChipRow(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = if (compact) 26.dp else 30.dp)
+                    .heightIn(min = if (compact) 28.dp else 32.dp)
                     .clip(RoundedCornerShape(if (compact) 10.dp else 12.dp))
                     .background(
                         brush = Brush.verticalGradient(
                             colors = listOf(
-                                Color.White.copy(alpha = 0.08f),
+                                Color.White.copy(alpha = 0.10f),
                                 palette.chip,
                             ),
                         ),
@@ -550,32 +1142,147 @@ private fun ModuleBoardChipRow(
         }
 
         Column(
-            modifier = Modifier.widthIn(min = if (compact) 62.dp else 74.dp),
+            modifier = Modifier.widthIn(min = if (compact) 64.dp else 80.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            model.portName?.takeIf { it.isNotBlank() }?.let { portName ->
-                ModuleBoardInfoTag(
-                    text = portName,
-                    palette = palette,
-                )
-            }
-            model.baudRate?.let { baudRate ->
-                ModuleBoardInfoTag(
-                    text = "${baudRate}bps",
-                    palette = palette,
-                )
-            }
-            model.responseTimeoutMs?.let { timeout ->
-                ModuleBoardInfoTag(
-                    text = "${timeout}ms",
-                    palette = palette,
-                )
-            }
+            ModuleBoardInfoTag(
+                text = model.family.caption,
+                palette = palette,
+            )
             ModuleBoardInfoTag(
                 text = "${model.deviceCount} 台设备",
                 palette = palette,
             )
         }
+    }
+}
+
+@Composable
+private fun ModuleBoardVentSlotRow(
+    slotCount: Int,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CupertinoText(
+            text = "VENT",
+            style = CupertinoTheme.typography.caption2,
+            color = Color.White.copy(alpha = 0.44f),
+        )
+        repeat(slotCount) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(if (compact) 4.dp else 5.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color.Black.copy(alpha = 0.20f),
+                                Color.White.copy(alpha = 0.08f),
+                                Color.Black.copy(alpha = 0.22f),
+                            ),
+                        ),
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardScrewTerminalRow(
+    marks: List<String>,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        marks.forEach { mark ->
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                palette.steelTop.copy(alpha = 0.88f),
+                                palette.steelBottom.copy(alpha = 0.88f),
+                            ),
+                        ),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.10f),
+                        shape = RoundedCornerShape(999.dp),
+                    )
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(if (compact) 8.dp else 10.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.28f))
+                        .border(
+                            width = 1.dp,
+                            color = Color.White.copy(alpha = 0.12f),
+                            shape = CircleShape,
+                        ),
+                )
+                CupertinoText(
+                    text = mark,
+                    style = CupertinoTheme.typography.caption2,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White.copy(alpha = 0.82f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModuleBoardRailNameplate(
+    title: String,
+    serial: String,
+    palette: ModuleBoardPalette,
+    compact: Boolean,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color.Black.copy(alpha = 0.18f))
+            .border(
+                width = 1.dp,
+                color = Color.White.copy(alpha = 0.10f),
+                shape = RoundedCornerShape(10.dp),
+            )
+            .padding(horizontal = if (compact) 6.dp else 7.dp, vertical = if (compact) 5.dp else 6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        CupertinoText(
+            text = title,
+            style = CupertinoTheme.typography.caption2,
+            color = Color.White.copy(alpha = 0.64f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        CupertinoText(
+            text = serial,
+            style = CupertinoTheme.typography.caption2,
+            color = Color.White.copy(alpha = 0.84f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -619,27 +1326,222 @@ private fun ModuleBoardInfoTag(
         CupertinoText(
             text = text,
             style = CupertinoTheme.typography.caption2,
-            color = Color.White.copy(alpha = 0.8f),
+            color = Color.White.copy(alpha = 0.80f),
         )
     }
 }
 
-private fun buildChannelGroups(
-    channelCount: Int,
-    groupSize: Int,
-): List<ChannelGroup> {
-    val safeGroupSize = groupSize.coerceAtLeast(1)
-    return (1..channelCount).chunked(safeGroupSize).map { group ->
-        val label = if (group.size == 1) {
-            group.first().toTwoDigit()
-        } else {
-            "${group.first().toTwoDigit()}-${group.last().toTwoDigit()}"
-        }
-        ChannelGroup(
-            label = label,
-            indicatorCount = group.size.coerceAtMost(4),
+private fun ModuleBoardModel.toFrontSpec(
+    compact: Boolean,
+): ModuleBoardFrontSpec {
+    return when (family) {
+        ModuleBoardFamily.DI -> ModuleBoardFrontSpec(
+            busLabel = "24V 采集母线",
+            terminalLegend = "SINK INPUT",
+            interfaceMarks = listOf("光耦隔离", "滤波扫描", "阈值整形"),
+            statusLights = listOf(
+                StatusLightSpec("PWR", true, StatusLightTone.Accent),
+                StatusLightSpec("RUN", deviceCount > 0, StatusLightTone.Accent),
+                StatusLightSpec("FLT", false, StatusLightTone.Warning),
+                StatusLightSpec("COM", true, StatusLightTone.Neutral),
+            ),
+            fuseWindows = emptyList(),
+            calibrationMarks = emptyList(),
+            rangeSwitches = emptyList(),
+            terminalRows = splitGroupsIntoRows(
+                groups = buildTerminalGroups(
+                    channelCount = channelCount,
+                    desiredGroupCount = if (compact) 4 else 8,
+                    prefix = "X",
+                    detail = "DI 输入",
+                    terminals = listOf("SIG", "COM", "24V"),
+                ),
+                rowCount = 2,
+            ),
+            chipLabels = listOf("DI 扫描", "门限比较", "抗抖锁存"),
+            screwMarks = listOf("24V", "0V", "A+", "B-"),
+            railClipLabel = "DIN TS35",
+            nameplateTitle = "IEC 61131-2",
+            nameplateSerial = buildNameplateSerial(),
+            ventSlotCount = if (compact) 0 else 6,
+        )
+
+        ModuleBoardFamily.DO -> ModuleBoardFrontSpec(
+            busLabel = "24V 驱动母线",
+            terminalLegend = "SOURCE OUTPUT",
+            interfaceMarks = listOf("驱动阵列", "短路保护", "状态回读"),
+            statusLights = listOf(
+                StatusLightSpec("PWR", true, StatusLightTone.Accent),
+                StatusLightSpec("RUN", deviceCount > 0, StatusLightTone.Accent),
+                StatusLightSpec("OVR", false, StatusLightTone.Warning),
+                StatusLightSpec("ALM", false, StatusLightTone.Danger),
+            ),
+            fuseWindows = listOf(
+                FuseWindowSpec("F1", true),
+                FuseWindowSpec("F2", true),
+                FuseWindowSpec("F3", true),
+                FuseWindowSpec("F4", true),
+            ),
+            calibrationMarks = emptyList(),
+            rangeSwitches = emptyList(),
+            terminalRows = splitGroupsIntoRows(
+                groups = buildTerminalGroups(
+                    channelCount = channelCount,
+                    desiredGroupCount = if (compact) 4 else 8,
+                    prefix = "Y",
+                    detail = "DO 输出",
+                    terminals = listOf("OUT", "COM", "LOAD"),
+                ),
+                rowCount = 2,
+            ),
+            chipLabels = listOf("功率驱动", "保险监测", "互锁保护"),
+            screwMarks = listOf("24V", "0V", "SAFE", "FB"),
+            railClipLabel = "DIN TS35",
+            nameplateTitle = "IEC 61131-2",
+            nameplateSerial = buildNameplateSerial(),
+            ventSlotCount = if (compact) 0 else 7,
+        )
+
+        ModuleBoardFamily.AI -> ModuleBoardFrontSpec(
+            busLabel = "多量程采样总线",
+            terminalLegend = "ANALOG INPUT",
+            interfaceMarks = listOf("ADC", "量程切换", "数字滤波"),
+            statusLights = listOf(
+                StatusLightSpec("PWR", true, StatusLightTone.Accent),
+                StatusLightSpec("RUN", deviceCount > 0, StatusLightTone.Accent),
+                StatusLightSpec("CAL", true, StatusLightTone.Warning),
+                StatusLightSpec("ALM", false, StatusLightTone.Danger),
+            ),
+            fuseWindows = emptyList(),
+            calibrationMarks = listOf("ZERO", "SPAN", "CJC"),
+            rangeSwitches = listOf(
+                RangeSwitchSpec("SW1", "0-10V", true),
+                RangeSwitchSpec("SW2", "4-20mA", false),
+                RangeSwitchSpec("SW3", "PT100", false),
+            ),
+            terminalRows = splitGroupsIntoRows(
+                groups = buildTerminalGroups(
+                    channelCount = channelCount,
+                    desiredGroupCount = if (compact) 4 else 6,
+                    prefix = "AI",
+                    detail = "4-20mA / 0-10V",
+                    terminals = listOf("I+", "V+", "COM"),
+                ),
+                rowCount = 2,
+            ),
+            chipLabels = listOf("ADC 采样", "校准基准", "隔离放大"),
+            screwMarks = listOf("REF", "AG", "A+", "B-"),
+            railClipLabel = "DIN TS35",
+            nameplateTitle = "IEC 61326-1",
+            nameplateSerial = buildNameplateSerial(),
+            ventSlotCount = if (compact) 0 else 5,
+        )
+
+        ModuleBoardFamily.AO -> ModuleBoardFrontSpec(
+            busLabel = "闭环输出总线",
+            terminalLegend = "ANALOG OUTPUT",
+            interfaceMarks = listOf("DAC", "反馈校准", "安全回路"),
+            statusLights = listOf(
+                StatusLightSpec("PWR", true, StatusLightTone.Accent),
+                StatusLightSpec("RUN", deviceCount > 0, StatusLightTone.Accent),
+                StatusLightSpec("TRIM", true, StatusLightTone.Warning),
+                StatusLightSpec("ALM", false, StatusLightTone.Danger),
+            ),
+            fuseWindows = emptyList(),
+            calibrationMarks = listOf("ZERO", "SPAN", "LOOP"),
+            rangeSwitches = listOf(
+                RangeSwitchSpec("SW1", "0-10V", true),
+                RangeSwitchSpec("SW2", "4-20mA", false),
+                RangeSwitchSpec("TRM", "ZERO", true),
+            ),
+            terminalRows = splitGroupsIntoRows(
+                groups = buildTerminalGroups(
+                    channelCount = channelCount,
+                    desiredGroupCount = if (compact) 4 else 4,
+                    prefix = "AO",
+                    detail = "0-10V / 4-20mA",
+                    terminals = listOf("OUT", "RET", "COM"),
+                ),
+                rowCount = 2,
+            ),
+            chipLabels = listOf("DAC 输出", "闭环补偿", "量程校准"),
+            screwMarks = listOf("REF", "COM", "EN", "FB"),
+            railClipLabel = "DIN TS35",
+            nameplateTitle = "IEC 61326-1",
+            nameplateSerial = buildNameplateSerial(),
+            ventSlotCount = if (compact) 0 else 5,
+        )
+
+        ModuleBoardFamily.GENERIC -> ModuleBoardFrontSpec(
+            busLabel = "现场扩展背板",
+            terminalLegend = "GENERIC I/O",
+            interfaceMarks = listOf("总线接口", "状态监测", "扩展供电"),
+            statusLights = listOf(
+                StatusLightSpec("PWR", true, StatusLightTone.Accent),
+                StatusLightSpec("RUN", deviceCount > 0, StatusLightTone.Accent),
+                StatusLightSpec("BUS", true, StatusLightTone.Neutral),
+                StatusLightSpec("ALM", false, StatusLightTone.Danger),
+            ),
+            fuseWindows = emptyList(),
+            calibrationMarks = emptyList(),
+            rangeSwitches = emptyList(),
+            terminalRows = splitGroupsIntoRows(
+                groups = buildTerminalGroups(
+                    channelCount = channelCount,
+                    desiredGroupCount = if (compact) 4 else 6,
+                    prefix = "IO",
+                    detail = "可编排通道",
+                    terminals = listOf("SIG", "COM", "AUX"),
+                ),
+                rowCount = 2,
+            ),
+            chipLabels = listOf("通信控制", "状态采样", "扩展背板"),
+            screwMarks = listOf("24V", "0V", "A", "B"),
+            railClipLabel = "DIN TS35",
+            nameplateTitle = "REMOTE I/O",
+            nameplateSerial = buildNameplateSerial(),
+            ventSlotCount = if (compact) 0 else 6,
         )
     }
+}
+
+private fun buildTerminalGroups(
+    channelCount: Int,
+    desiredGroupCount: Int,
+    prefix: String,
+    detail: String,
+    terminals: List<String>,
+): List<TerminalGroup> {
+    val blockSize = ceilingDiv(
+        dividend = channelCount,
+        divisor = desiredGroupCount.coerceAtLeast(1),
+    ).coerceAtLeast(1)
+    return (1..channelCount).chunked(blockSize).map { group ->
+        val label = if (group.size == 1) {
+            "$prefix${group.first().toTwoDigit()}"
+        } else {
+            "$prefix${group.first().toTwoDigit()}-${group.last().toTwoDigit()}"
+        }
+        TerminalGroup(
+            label = label,
+            detail = detail,
+            indicatorCount = group.size.coerceAtMost(4),
+            terminals = terminals,
+            channelNumbers = group.map { number -> number.toTwoDigit() },
+        )
+    }
+}
+
+private fun splitGroupsIntoRows(
+    groups: List<TerminalGroup>,
+    rowCount: Int,
+): List<List<TerminalGroup>> {
+    val safeRowCount = rowCount.coerceAtLeast(1)
+    val groupsPerRow = ceilingDiv(
+        dividend = groups.size,
+        divisor = safeRowCount,
+    ).coerceAtLeast(1)
+    return groups.chunked(groupsPerRow)
 }
 
 private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
@@ -655,6 +1557,8 @@ private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
             lightOff = Color(0xFF30544A),
             stroke = Color(0xFF7AD5B3),
             chip = Color(0xFF13201D),
+            steelTop = Color(0xFF60716D),
+            steelBottom = Color(0xFF354340),
         )
 
         ModuleBoardFamily.DO -> ModuleBoardPalette(
@@ -668,6 +1572,8 @@ private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
             lightOff = Color(0xFF684B2B),
             stroke = Color(0xFFF0BB75),
             chip = Color(0xFF20170F),
+            steelTop = Color(0xFF7D6852),
+            steelBottom = Color(0xFF4B3A2B),
         )
 
         ModuleBoardFamily.AI -> ModuleBoardPalette(
@@ -681,6 +1587,8 @@ private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
             lightOff = Color(0xFF35536A),
             stroke = Color(0xFF7FCCF7),
             chip = Color(0xFF111B24),
+            steelTop = Color(0xFF60798D),
+            steelBottom = Color(0xFF34485A),
         )
 
         ModuleBoardFamily.AO -> ModuleBoardPalette(
@@ -694,6 +1602,8 @@ private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
             lightOff = Color(0xFF385E59),
             stroke = Color(0xFF78D9CA),
             chip = Color(0xFF101A19),
+            steelTop = Color(0xFF607B78),
+            steelBottom = Color(0xFF344A47),
         )
 
         ModuleBoardFamily.GENERIC -> ModuleBoardPalette(
@@ -707,18 +1617,52 @@ private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
             lightOff = Color(0xFF52616D),
             stroke = Color(0xFFB0C0CD),
             chip = Color(0xFF14191E),
+            steelTop = Color(0xFF74818B),
+            steelBottom = Color(0xFF46515A),
         )
     }
 }
 
-private fun ModuleBoardFamily.chipLabels(): List<String> {
+private fun StatusLightTone.resolveActiveColor(
+    palette: ModuleBoardPalette,
+): Color {
     return when (this) {
-        ModuleBoardFamily.DI -> listOf("光耦隔离", "通道扫描", "抗抖滤波")
-        ModuleBoardFamily.DO -> listOf("输出驱动", "短路保护", "状态反馈")
-        ModuleBoardFamily.AI -> listOf("ADC 采样", "量程校准", "数字滤波")
-        ModuleBoardFamily.AO -> listOf("DAC 输出", "闭环调节", "量程校准")
-        ModuleBoardFamily.GENERIC -> listOf("总线接口", "状态监测", "扩展背板")
+        StatusLightTone.Accent -> palette.lightOn
+        StatusLightTone.Warning -> Color(0xFFFFC965)
+        StatusLightTone.Danger -> Color(0xFFFF7E74)
+        StatusLightTone.Neutral -> Color(0xFFDDE7EF)
     }
+}
+
+private fun StatusLightTone.resolveInactiveColor(
+    palette: ModuleBoardPalette,
+): Color {
+    return when (this) {
+        StatusLightTone.Accent -> palette.lightOff
+        StatusLightTone.Warning -> Color(0xFF6F5632)
+        StatusLightTone.Danger -> Color(0xFF5C2A28)
+        StatusLightTone.Neutral -> Color.White.copy(alpha = 0.14f)
+    }
+}
+
+private fun ModuleBoardModel.buildNameplateSerial(): String {
+    val normalizedCode = templateCode
+        .uppercase()
+        .substringAfter("RIO_", templateCode.uppercase())
+        .replace('_', '-')
+        .take(12)
+        .ifBlank { family.code }
+    return "SN $normalizedCode-${channelCount.toTwoDigit()}${deviceCount.toTwoDigit()}"
+}
+
+private fun ceilingDiv(
+    dividend: Int,
+    divisor: Int,
+): Int {
+    if (dividend <= 0) {
+        return 0
+    }
+    return (dividend + divisor - 1) / divisor
 }
 
 private fun Int.toTwoDigit(): String {

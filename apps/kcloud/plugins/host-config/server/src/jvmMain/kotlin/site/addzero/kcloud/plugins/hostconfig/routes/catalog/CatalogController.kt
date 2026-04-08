@@ -127,7 +127,7 @@ class CatalogController(
     ): DeviceDefinitionTreeResponse =
         catalogService.updateDeviceDefinition(deviceDefinitionId, request)
 
-    /** 删除设备定义，并让实例侧的绑定字段回落为空。 */
+    /** 删除设备定义。 */
     @DeleteMapping("/devices/{deviceDefinitionId}")
     fun deleteDeviceDefinition(
         @PathVariable deviceDefinitionId: Long,

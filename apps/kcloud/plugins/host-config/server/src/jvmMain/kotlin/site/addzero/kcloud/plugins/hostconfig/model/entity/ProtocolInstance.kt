@@ -8,6 +8,8 @@ import org.babyfish.jimmer.sql.ManyToManyView
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
+import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Entity
 @Table(name = "host_config_protocol_instance")
@@ -20,6 +22,24 @@ interface ProtocolInstance {
     val name: String
 
     val pollingIntervalMs: Int
+
+    val transportType: TransportType?
+
+    val host: String?
+
+    val tcpPort: Int?
+
+    val portName: String?
+
+    val baudRate: Int?
+
+    val dataBits: Int?
+
+    val stopBits: Int?
+
+    val parity: Parity?
+
+    val responseTimeoutMs: Int?
 
     val createdAt: Long
 

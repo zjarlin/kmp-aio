@@ -34,7 +34,7 @@ internal class CodegenContextTestFixture : AutoCloseable {
             setConnectionManager(simpleConnectionManager(dataSource))
         }
     val jdbc = DataSourceJdbcExecutor(dataSource)
-    val generator = CodegenContextContractGenerator()
+    val generator = CodegenContextContractGenerator(dataSource)
     val service = CodegenContextService(sql, jdbc, generator)
     val templateService = CodegenTemplateService(sql)
 

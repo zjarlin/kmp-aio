@@ -42,10 +42,10 @@ kotlin {
             implementation(project(":apps:kcloud:plugins:host-config:server"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
-            implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
         jvmTest.dependencies {
             implementation(libs.findLibrary("org-jetbrains-kotlin-kotlin-test").get())
+            implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
     }
 }

@@ -7,7 +7,6 @@ import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 
 @Entity
 @Table(name = "host_config_module_instance")
@@ -18,18 +17,6 @@ interface ModuleInstance {
     val id: Long
 
     val name: String
-
-    val portName: String?
-
-    val baudRate: Int?
-
-    val dataBits: Int?
-
-    val stopBits: Int?
-
-    val parity: Parity?
-
-    val responseTimeoutMs: Int?
 
     val sortIndex: Int
 

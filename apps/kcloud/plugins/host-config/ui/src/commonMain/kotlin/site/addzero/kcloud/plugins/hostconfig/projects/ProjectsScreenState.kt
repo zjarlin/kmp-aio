@@ -31,7 +31,7 @@ data class ProjectsScreenState(
     val treeNodes: List<HostConfigTreeNode> = emptyList(),
     val protocolCatalog: List<ProtocolCatalogItemResponse> = emptyList(),
     val protocolTemplates: List<TemplateOptionResponse> = emptyList(),
-    val moduleTemplates: List<ModuleTemplateOptionResponse> = emptyList(),
+    val moduleTemplateCatalog: Map<Long, List<ModuleTemplateOptionResponse>> = emptyMap(),
     val deviceTypes: List<TemplateOptionResponse> = emptyList(),
     val registerTypes: List<TemplateOptionResponse> = emptyList(),
     val dataTypes: List<TemplateOptionResponse> = emptyList(),
@@ -43,6 +43,9 @@ data class ProjectsScreenState(
     val selectedTagDetail: TagResponse? = null,
     val uploadStatus: ProjectUploadOperationResponse? = null,
 ) {
+    val moduleTemplates: List<ModuleTemplateOptionResponse>
+        get() = moduleTemplateCatalog.values.flatten().distinctBy { template -> template.id }
+
     val selectedNode: HostConfigTreeNode?
         get() = treeNodes.findNode(selectedNodeId)
 
@@ -61,6 +64,11 @@ data class ProjectsScreenState(
         get() = selectedNode
             ?.takeIf { it.kind == HostConfigNodeKind.MODULE }
             ?.let { node -> projectTrees.findModule(node.entityId) }
+
+    val selectedModuleProtocol: ProtocolTreeNode?
+        get() = selectedModule?.let { module ->
+            projectTrees.findProtocol(module.protocolId)
+        }
 
     val selectedDevice: DeviceTreeNode?
         get() = selectedNode
@@ -81,7 +89,7 @@ data class ProjectsScreenState(
         }
 }
 
-private fun List<ProjectTreeResponse>.findProtocol(
+internal fun List<ProjectTreeResponse>.findProtocol(
     protocolId: Long,
 ): ProtocolTreeNode? {
     return asSequence()
@@ -89,7 +97,7 @@ private fun List<ProjectTreeResponse>.findProtocol(
         .firstOrNull { protocol -> protocol.id == protocolId }
 }
 
-private fun List<ProjectTreeResponse>.findModule(
+internal fun List<ProjectTreeResponse>.findModule(
     moduleId: Long,
 ): ModuleTreeNode? {
     fun search(modules: List<ModuleTreeNode>): ModuleTreeNode? {
@@ -108,7 +116,7 @@ private fun List<ProjectTreeResponse>.findModule(
     }.firstOrNull()
 }
 
-private fun List<ProjectTreeResponse>.findDevice(
+internal fun List<ProjectTreeResponse>.findDevice(
     deviceId: Long,
 ): DeviceTreeNode? {
     fun search(modules: List<ModuleTreeNode>): DeviceTreeNode? {
