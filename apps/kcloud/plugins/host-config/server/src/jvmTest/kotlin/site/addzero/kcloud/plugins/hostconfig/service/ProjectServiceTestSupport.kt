@@ -1,14 +1,14 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
+import java.io.File
 import java.sql.DriverManager
 import javax.sql.DataSource
 import kotlin.random.Random
-import org.babyfish.jimmer.sql.dialect.MySqlDialect
+import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.ConnectionManager.simpleConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
-import org.flywaydb.core.Flyway
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectCreateRequest
@@ -21,12 +21,16 @@ import site.addzero.util.db.SqlExecutor
  * 表示项目服务testfixture。
  */
 internal class ProjectServiceTestFixture : AutoCloseable {
-    private val databaseName = "host_config_test_${System.currentTimeMillis()}_${Random.nextInt(1000, 9999)}"
+    private val databaseFile =
+        File(
+            System.getProperty("java.io.tmpdir"),
+            "host_config_test_${System.currentTimeMillis()}_${Random.nextInt(1000, 9999)}.sqlite",
+        )
 
-    val dataSource: DataSource = mysqlDataSource(databaseName)
+    val dataSource: DataSource = sqliteDataSource(databaseFile)
     val sql: KSqlClient =
         newKSqlClient {
-            setDialect(MySqlDialect())
+            setDialect(SQLiteDialect())
             setDatabaseNamingStrategy(LOWER_CASE)
             setConnectionManager(simpleConnectionManager(dataSource))
         }
@@ -100,113 +104,50 @@ internal class ProjectServiceTestFixture : AutoCloseable {
      * 处理关闭。
      */
     override fun close() {
-        dropDatabase(databaseName)
+        databaseFile.delete()
     }
 
     /**
      * 处理migrate结构。
      */
     private fun migrateSchema() {
-        Flyway.configure()
-            .dataSource(databaseJdbcUrl(databaseName), MYSQL_USER, MYSQL_PASSWORD)
-            .locations("classpath:db/migration/mysql")
-            .baselineOnMigrate(true)
-            .baselineVersion("0")
-            .cleanDisabled(true)
-            .validateOnMigrate(true)
-            .load()
-            .migrate()
+        ensureHostConfigSqliteSchema(dataSource)
     }
 }
 
 /**
- * 处理mysql数据来源。
+ * 处理sqlite数据来源。
  *
- * @param databaseName 数据库名称。
+ * @param databaseFile 数据库文件。
  */
-private fun mysqlDataSource(databaseName: String): DataSource {
-    Class.forName("com.mysql.cj.jdbc.Driver")
-    val jdbcUrl = databaseJdbcUrl(databaseName)
+private fun sqliteDataSource(databaseFile: File): DataSource {
+    databaseFile.parentFile?.mkdirs()
+    if (databaseFile.exists()) {
+        databaseFile.delete()
+    }
+    val jdbcUrl = "jdbc:sqlite:${databaseFile.absolutePath}"
+    Class.forName("org.sqlite.JDBC")
     return object : DataSource {
-        /**
-         * 获取connection。
-         */
-        override fun getConnection() =
-            DriverManager.getConnection(jdbcUrl, MYSQL_USER, MYSQL_PASSWORD)
+        override fun getConnection() = DriverManager.getConnection(jdbcUrl)
 
-        /**
-         * 获取connection。
-         *
-         * @param username 用户名。
-         * @param password 密码。
-         */
         override fun getConnection(
             username: String?,
             password: String?,
-        ) = DriverManager.getConnection(jdbcUrl, username ?: MYSQL_USER, password ?: MYSQL_PASSWORD)
+        ) = getConnection()
 
-        /**
-         * 获取logwriter。
-         */
         override fun getLogWriter() = null
 
-        /**
-         * 处理setlogwriter。
-         *
-         * @param out 输出流。
-         */
         override fun setLogWriter(out: java.io.PrintWriter?) = Unit
 
-        /**
-         * 处理setlogin超时。
-         *
-         * @param seconds 秒数。
-         */
         override fun setLoginTimeout(seconds: Int) = Unit
 
-        /**
-         * 获取login超时。
-         */
         override fun getLoginTimeout() = 0
 
-        /**
-         * 获取parentlogger。
-         */
-        override fun getParentLogger() = java.util.logging.Logger.getLogger("com.mysql")
+        override fun getParentLogger() = java.util.logging.Logger.getLogger("org.sqlite")
 
         @Suppress("UNCHECKED_CAST")
         override fun <T : Any?> unwrap(iface: Class<T>) = this as T
 
-        /**
-         * 处理iswrapperfor。
-         *
-         * @param iface 接口类型。
-         */
         override fun isWrapperFor(iface: Class<*>): Boolean = iface.isInstance(this)
     }
 }
-
-/**
- * 处理databaseJDBC地址。
- *
- * @param databaseName 数据库名称。
- */
-private fun databaseJdbcUrl(databaseName: String): String {
-    return "jdbc:mysql://192.168.31.133:3306/$databaseName?createDatabaseIfNotExist=true"
-}
-
-/**
- * 处理dropdatabase。
- *
- * @param databaseName 数据库名称。
- */
-private fun dropDatabase(databaseName: String) {
-    DriverManager.getConnection("jdbc:mysql://192.168.31.133:3306/mysql", MYSQL_USER, MYSQL_PASSWORD).use { connection ->
-        connection.createStatement().use { statement ->
-            statement.executeUpdate("DROP DATABASE IF EXISTS `$databaseName`")
-        }
-    }
-}
-
-private const val MYSQL_USER = "root"
-private const val MYSQL_PASSWORD = "test123456"

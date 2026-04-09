@@ -8,6 +8,8 @@ plugins {
 }
 
 val codegenContextApiProject = project(":apps:kcloud:plugins:codegen-context:api")
+val mcuConsoleServerProject = project(":apps:kcloud:plugins:mcu-console:server")
+val mcuConsoleSharedProject = project(":apps:kcloud:plugins:mcu-console:shared")
 val generatedApiRootDir = codegenContextApiProject.layout.buildDirectory.dir("generated/source/controller2api/commonMain/kotlin")
 val generatedApiPackageRootDir =
     generatedApiRootDir.map { root ->
@@ -23,12 +25,12 @@ val sharedSourceDir = layout.projectDirectory.dir("../shared/src/commonMain/kotl
 val sharedComposeSourceDir = codegenContextApiProject.layout.projectDirectory.dir("src/commonMain/kotlin")
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
 val mcuConsoleServerGeneratedContractDir =
-    rootProject.layout.projectDirectory.dir(
-        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin",
+    mcuConsoleServerProject.layout.buildDirectory.dir(
+        "generated/source/codegen-context/jvmMain/kotlin",
     )
 val mcuConsoleSharedGeneratedContractDir =
-    rootProject.layout.projectDirectory.dir(
-        "apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin",
+    mcuConsoleSharedProject.layout.buildDirectory.dir(
+        "generated/source/codegen-context/commonMain/kotlin",
     )
 val mcuConsoleMetadataOutputDir =
     rootProject.layout.projectDirectory.dir(
@@ -36,24 +38,12 @@ val mcuConsoleMetadataOutputDir =
     )
 val codegenContextServerJvmJar = tasks.named<Jar>("jvmJar")
 val codegenContextServerJvmRuntimeClasspath = configurations.named("jvmRuntimeClasspath")
-val defaultCodegenContextSqliteFile = layout.buildDirectory.file("generated/codegen-context-metadata.sqlite").get().asFile
+val defaultCodegenContextSqliteFile =
+    layout.projectDirectory.file("src/jvmMain/resources/snapshots/codegen-context-metadata.sqlite").asFile
 val codegenContextSqliteFile =
     providers.gradleProperty("codegenContextSqliteFile").orNull?.let(::File) ?: defaultCodegenContextSqliteFile
-val useCodegenContextSqlite =
-    providers.gradleProperty("codegenContextDb").orNull?.equals("sqlite", ignoreCase = true) == true ||
-        codegenContextSqliteFile.exists()
-val kcloudMysqlJdbcUrl = "jdbc:mysql://192.168.31.133:3306/okmy_dics?createDatabaseIfNotExist=true"
-val kcloudMysqlUser = "root"
-val kcloudMysqlPassword = "test123456"
-val codegenMetadataDriverClass = if (useCodegenContextSqlite) "org.sqlite.JDBC" else "com.mysql.cj.jdbc.Driver"
-val codegenMetadataJdbcUrl =
-    if (useCodegenContextSqlite) {
-        "jdbc:sqlite:${codegenContextSqliteFile.absolutePath}"
-    } else {
-        kcloudMysqlJdbcUrl
-    }
-val codegenMetadataUser = if (useCodegenContextSqlite) null else kcloudMysqlUser
-val codegenMetadataPassword = if (useCodegenContextSqlite) null else kcloudMysqlPassword
+val codegenMetadataDriverClass = "org.sqlite.JDBC"
+val codegenMetadataJdbcUrl = "jdbc:sqlite:${codegenContextSqliteFile.absolutePath}"
 val modbusMetadataQuery =
     """
     SELECT payload
@@ -84,7 +74,7 @@ val libs = versionCatalogs.named("libs")
 val modbusCodegenVersion = libs.findVersion("modbus-runtime").get().requiredVersion
 
 kotlin {
-    dependencies{
+    dependencies {
         implementation(project(":lib:kmp-exception"))
     }
     sourceSets {
@@ -92,23 +82,21 @@ kotlin {
             implementation(project(":apps:kcloud:plugins:codegen-context:shared"))
             implementation(project(":apps:kcloud:plugins:host-config:server"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+            implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
-            implementation(libs.findLibrary("site-addzero-tool-jvmstr").get())
+            implementation(libs.findLibrary("site-addzero-tool-sql-executor").get())
+            implementation(libs.findLibrary("site-addzero-tool-str").get())
             implementation("site.addzero:modbus-codegen-model:$modbusCodegenVersion")
             implementation("site.addzero:modbus-codegen-core:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-core:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-kotlin-gateway:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-c-contract:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-markdown:$modbusCodegenVersion")
-            implementation(libs.findLibrary("mysql-mysql-connector-java").get())
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
         jvmTest.dependencies {
             implementation(libs.findLibrary("org-jetbrains-kotlin-kotlin-test").get())
-            implementation(libs.findLibrary("mysql-mysql-connector-java").get())
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
-            implementation(libs.findLibrary("org-flywaydb-flyway-core").get())
-            implementation(libs.findLibrary("org-flywaydb-flyway-mysql").get())
         }
     }
 }
@@ -117,16 +105,30 @@ val cleanCodegenContextGeneratedApis by tasks.registering(Delete::class) {
     delete(generatedApiRootDir.get().asFile)
 }
 
+val refreshCodegenContextSqliteSnapshot by tasks.registering(JavaExec::class) {
+    group = "code generation"
+    description = "重新生成提交到仓库的 codegen-context sqlite metadata snapshot。"
+    dependsOn(codegenContextServerJvmJar)
+    outputs.file(defaultCodegenContextSqliteFile)
+    classpath(
+        files(codegenContextServerJvmJar.flatMap { jar -> jar.archiveFile }),
+        codegenContextServerJvmRuntimeClasspath,
+    )
+    mainClass.set("site.addzero.kcloud.plugins.codegencontext.codegen_context.service.CodegenMetadataSnapshotCliKt")
+    workingDir(rootProject.projectDir)
+    args("--output", defaultCodegenContextSqliteFile.absolutePath)
+}
+
 val generateMcuConsoleContracts by tasks.registering(JavaExec::class) {
     group = "code generation"
     description = "从 codegen-context 已选快照生成 MCU Console 合同源码。"
     dependsOn(codegenContextServerJvmJar)
     inputs.property("driverClass", codegenMetadataDriverClass)
     inputs.property("jdbcUrl", codegenMetadataJdbcUrl)
-    inputs.property("jdbcUser", codegenMetadataUser ?: "")
     inputs.property("query", modbusMetadataQuery)
     inputs.property("jsonColumn", "payload")
     inputs.property("transport", "rtu,tcp,mqtt")
+    inputs.file(codegenContextSqliteFile)
     outputs.dir(mcuConsoleServerGeneratedContractDir)
     outputs.dir(mcuConsoleSharedGeneratedContractDir)
     outputs.dir(mcuConsoleMetadataOutputDir)
@@ -151,25 +153,19 @@ val generateMcuConsoleContracts by tasks.registering(JavaExec::class) {
             "rtu,tcp,mqtt",
             "--skip-missing-transports",
             "true",
-        "--workspace-root",
-        rootProject.projectDir.absolutePath,
-        "--server-output-root",
-        mcuConsoleServerGeneratedContractDir.asFile.absolutePath,
-        "--shared-output-root",
-        mcuConsoleSharedGeneratedContractDir.asFile.absolutePath,
-        "--gateway-output-root",
-        mcuConsoleServerGeneratedContractDir.asFile.absolutePath,
+            "--workspace-root",
+            rootProject.projectDir.absolutePath,
+            "--server-output-root",
+            mcuConsoleServerGeneratedContractDir.get().asFile.absolutePath,
+            "--shared-output-root",
+            mcuConsoleSharedGeneratedContractDir.get().asFile.absolutePath,
+            "--gateway-output-root",
+            mcuConsoleServerGeneratedContractDir.get().asFile.absolutePath,
             "--c-output-root",
             mcuConsoleMetadataOutputDir.dir("c").asFile.absolutePath,
             "--markdown-output-root",
             mcuConsoleMetadataOutputDir.dir("markdown").asFile.absolutePath,
         )
-    codegenMetadataUser?.let {
-        cliArgs += listOf("--username", it)
-    }
-    codegenMetadataPassword?.let {
-        cliArgs += listOf("--password", it)
-    }
     args(
         cliArgs,
     )

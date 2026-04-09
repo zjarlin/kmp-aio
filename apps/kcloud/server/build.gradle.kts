@@ -21,7 +21,6 @@ kotlin {
             api(project(":lib:ktor:starter:starter-flyway"))
             api(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             api(project(":lib:ktor:plugin:ktor-s3-plugin"))
-            implementation(libs.findLibrary("org-flywaydb-flyway-mysql").get())
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
 //        jvmTest.dependencies {

@@ -33,25 +33,31 @@ internal fun PropertyPoolPanel(
     viewModel: CodegenContextViewModel,
 ) {
     CupertinoPanel(
-        title = "属性池",
-        subtitle = "先把字段中文描述批量导进来，再为每个属性绑定 transport/context。方法通过穿梭框复用这些属性。",
+        title = "物模型",
+        subtitle = "把寄存器、线圈、状态位等能力先抽象成可复用物模型字段，再被不同设备功能引用。",
         actions = {
             WorkbenchActionButton(
                 text = "剪贴板导入",
                 onClick = viewModel::importPropertiesFromClipboard,
                 variant = WorkbenchButtonVariant.Outline,
             )
-            WorkbenchActionButton(text = "新增属性", onClick = viewModel::addProperty)
+            WorkbenchActionButton(text = "新增字段", onClick = viewModel::addProperty)
         },
     ) {
-        CupertinoStatusStrip("支持多行导入。每一行一个字段中文描述；属性名和默认类型都留给服务端在保存时统一补齐。")
+        CupertinoStatusStrip("支持多行导入。每一行一个中文字段描述；属性名和默认类型都可以先留空，保存时统一补齐。")
         if (editor.properties.isEmpty()) {
-            CupertinoStatusStrip("当前还没有属性。先从剪贴板导入一批中文字段描述会更高效。")
+            CupertinoStatusStrip("当前还没有物模型字段。先从剪贴板导入一批中文字段描述会更高效。")
             return@CupertinoPanel
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             editor.properties.forEachIndexed { propertyIndex, property ->
-                PropertyEditorCard(propertyIndex, property, editor.propertyDefinitions(), viewModel)
+                PropertyEditorCard(
+                    propertyIndex = propertyIndex,
+                    property = property,
+                    usageCount = editor.methods.count { method -> property.editorKey in method.selectedPropertyKeys },
+                    definitions = editor.propertyDefinitions(),
+                    viewModel = viewModel,
+                )
             }
         }
     }
@@ -61,28 +67,30 @@ internal fun PropertyPoolPanel(
 private fun PropertyEditorCard(
     propertyIndex: Int,
     property: CodegenPropertyEditorState,
+    usageCount: Int,
     definitions: List<CodegenContextDefinitionDto>,
     viewModel: CodegenContextViewModel,
 ) {
     CupertinoPanel(
-        title = property.name.ifBlank { property.propertyName.ifBlank { "未命名属性" } },
+        title = property.name.ifBlank { property.propertyName.ifBlank { "未命名物模型字段" } },
         subtitle = property.signaturePreview(),
         actions = {
             WorkbenchActionButton(
-                text = "删除属性",
+                text = "删除字段",
                 onClick = { viewModel.removeProperty(propertyIndex) },
                 variant = WorkbenchButtonVariant.Destructive,
             )
         },
     ) {
+        CupertinoStatusStrip("当前被 $usageCount 个设备功能引用。")
         CupertinoStatusStrip(property.modbusSummary())
         CupertinoFormGrid {
             item {
                 CupertinoTextField(
-                    label = "字段中文描述",
+                    label = "字段描述",
                     value = property.name,
                     onValueChange = { viewModel.updatePropertyName(propertyIndex, it) },
-                    placeholder = "例如 Modbus 从机地址",
+                    placeholder = "例如 设备地址",
                     description = "直接输入字段含义即可；属性名留空时由服务端自动生成。",
                 )
             }
@@ -129,7 +137,7 @@ private fun PropertyEditorCard(
             }
         }
         BindingEditorSection(
-            title = "字段上下文",
+            title = "物模型字段上下文",
             definitions = definitions,
             bindings = property.bindings,
             onValueChange = { definitionCode, paramCode, value ->
@@ -145,8 +153,8 @@ internal fun MethodWorkbenchPanel(
     viewModel: CodegenContextViewModel,
 ) {
     CupertinoPanel(
-        title = "方法工作台",
-        subtitle = "方法像定义 Kotlin 接口一样维护：中文说明、可选 methodName、绑定属性、再补协议 context。请求/响应实体名称统一由服务端派生。",
+        title = "设备功能",
+        subtitle = "功能像定义 Kotlin 接口方法一样维护：填中文语义、补充方法名、绑定物模型字段，再配置协议上下文。",
         actions = {
             WorkbenchActionButton(
                 text = "剪贴板导入",
@@ -154,15 +162,15 @@ internal fun MethodWorkbenchPanel(
                 variant = WorkbenchButtonVariant.Outline,
             )
             WorkbenchActionButton(
-                text = "新增方法",
+                text = "新增功能",
                 onClick = viewModel::addMethod,
                 imageVector = Icons.Outlined.Code,
             )
         },
     ) {
-        CupertinoStatusStrip("支持多行导入。每一行一个中文方法描述；methodName 留空时由服务端统一生成。")
+        CupertinoStatusStrip("支持多行导入。每一行一个中文功能描述；methodName 留空时由服务端统一生成。")
         if (editor.methods.isEmpty()) {
-            CupertinoStatusStrip("当前还没有方法。建议先复制一批中文方法描述直接导入。")
+            CupertinoStatusStrip("当前还没有设备功能。建议先复制一批中文功能描述直接导入。")
             return@CupertinoPanel
         }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -185,18 +193,19 @@ private fun MethodEditorCard(
         subtitle = method.signaturePreview(),
         actions = {
             WorkbenchActionButton(
-                text = "删除方法",
+                text = "删除功能",
                 onClick = { viewModel.removeMethod(methodIndex) },
                 variant = WorkbenchButtonVariant.Destructive,
             )
         },
     ) {
+        CupertinoStatusStrip("请求实体：${method.requestModelPreview()} · 响应实体：${method.responseModelPreview()}")
         CupertinoStatusStrip(method.modbusSummary())
-        CupertinoStatusStrip("请求/响应实体名由服务端在保存时统一派生，当前界面只维护方法语义和绑定关系。")
+        CupertinoStatusStrip("当前界面只维护功能语义和绑定关系，真正的合法类型名由服务端在保存时统一校正。")
         CupertinoFormGrid {
             item {
                 CupertinoTextField(
-                    label = "方法中文描述",
+                    label = "功能描述",
                     value = method.name,
                     onValueChange = { viewModel.updateMethodName(methodIndex, it) },
                     placeholder = "例如 读取 Flash 持久化配置",
@@ -214,7 +223,7 @@ private fun MethodEditorCard(
             }
             fullWidth {
                 CupertinoTextField(
-                    label = "方法备注",
+                    label = "功能备注",
                     value = method.description,
                     onValueChange = { value -> viewModel.updateMethod(methodIndex) { it.copy(description = value) } },
                     singleLine = false,
@@ -227,7 +236,7 @@ private fun MethodEditorCard(
             onToggle = { viewModel.toggleMethodPropertySelection(methodIndex, it) },
         )
         BindingEditorSection(
-            title = "方法上下文",
+            title = "设备功能上下文",
             definitions = editor.methodDefinitions(),
             bindings = method.bindings,
             onValueChange = { definitionCode, paramCode, value ->
@@ -247,16 +256,16 @@ private fun PropertyTransferSection(
     val selectedProperties = properties.filter { it.editorKey in selectedKeys }
     val availableProperties = properties.filterNot { it.editorKey in selectedKeys }
     CupertinoPanel(
-        title = "方法绑定属性",
-        subtitle = "左侧是未绑定属性，右侧是当前方法的请求/响应实体字段。通过穿梭框方式复用属性池。",
+        title = "功能关联字段",
+        subtitle = "左侧是未绑定的物模型字段，右侧是当前设备功能使用的字段集合。通过穿梭框复用物模型。",
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PropertyBucket(
-                title = "可选属性",
-                subtitle = "点击“加入”绑定到当前方法",
+                title = "可选字段",
+                subtitle = "点击“加入”绑定到当前设备功能",
                 properties = availableProperties,
                 actionText = "加入",
                 onAction = { onToggle(it.editorKey) },
@@ -264,8 +273,8 @@ private fun PropertyTransferSection(
             )
             Box(modifier = Modifier.width(8.dp).fillMaxHeight())
             PropertyBucket(
-                title = "已绑定属性",
-                subtitle = "这些属性会进入该方法关联的请求或响应实体，实体名在保存后由服务端派生。",
+                title = "已绑定字段",
+                subtitle = "这些字段会进入该功能关联的请求或响应模型，模型名按约定自动生成。",
                 properties = selectedProperties,
                 actionText = "移除",
                 onAction = { onToggle(it.editorKey) },
@@ -286,7 +295,7 @@ private fun PropertyBucket(
 ) {
     CupertinoPanel(title = title, subtitle = subtitle, modifier = modifier) {
         if (properties.isEmpty()) {
-            CupertinoStatusStrip("暂无属性。")
+            CupertinoStatusStrip("暂无字段。")
             return@CupertinoPanel
         }
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

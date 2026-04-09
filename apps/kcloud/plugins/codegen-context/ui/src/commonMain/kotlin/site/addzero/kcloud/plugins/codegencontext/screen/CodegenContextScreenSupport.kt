@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.codegencontext.screen
 
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextParamDefinitionDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.ProtocolTemplateOptionDto
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextEditorState
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenMethodEditorState
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenPropertyEditorState
 
@@ -15,6 +16,14 @@ internal const val FIELD_REGISTER_OFFSET_PARAM = "registerOffset"
 internal const val FIELD_BIT_OFFSET_PARAM = "bitOffset"
 internal const val FIELD_LENGTH_PARAM = "length"
 
+internal enum class CodegenWorkbenchTab(
+    val title: String,
+) {
+    THING_MODEL("物模型"),
+    DEVICE_FUNCTION("设备功能"),
+    CONTEXT("上下文与生成"),
+}
+
 /**
  * 处理代码生成方法editor状态。
  */
@@ -26,9 +35,9 @@ internal fun CodegenMethodEditorState.effectiveMethodName(): String =
  */
 internal fun CodegenMethodEditorState.signaturePreview(): String =
     if (methodName.isBlank()) {
-        "方法名留空时由服务端自动生成，请求/响应实体名也在保存后统一派生。"
+        "功能方法名留空时由服务端自动生成，请求/响应实体名也在保存后统一派生。"
     } else {
-        "当前方法名：$methodName，请求/响应实体名在保存后由服务端统一派生。"
+        "当前功能方法名：$methodName，请求/响应实体名在保存后由服务端统一派生。"
     }
 
 /**
@@ -48,6 +57,46 @@ internal fun CodegenPropertyEditorState.effectivePropertyName(): String =
     propertyName.ifBlank { "保存后自动生成" }
 
 /**
+ * 处理代码生成上下文editor状态。
+ */
+internal fun CodegenContextEditorState.readMethodCount(): Int =
+    methods.count { method -> method.modbusDirection() != "WRITE" }
+
+/**
+ * 处理代码生成上下文editor状态。
+ */
+internal fun CodegenContextEditorState.writeMethodCount(): Int =
+    methods.count { method -> method.modbusDirection() == "WRITE" }
+
+/**
+ * 处理代码生成上下文editor状态。
+ */
+internal fun CodegenContextEditorState.propertyInUseCount(): Int =
+    properties.count { property -> methods.any { method -> property.editorKey in method.selectedPropertyKeys } }
+
+/**
+ * 处理代码生成上下文editor状态。
+ */
+internal fun CodegenContextEditorState.configuredPropertyCount(): Int =
+    properties.count { property ->
+        property.bindings.any { binding ->
+            binding.values.any { value -> value.value.isNotBlank() }
+        }
+    }
+
+/**
+ * 处理代码生成方法editor状态。
+ */
+internal fun CodegenMethodEditorState.requestModelPreview(): String =
+    methodName.toGeneratedTypePreview("Request")
+
+/**
+ * 处理代码生成方法editor状态。
+ */
+internal fun CodegenMethodEditorState.responseModelPreview(): String =
+    methodName.toGeneratedTypePreview("Response")
+
+/**
  * 处理代码生成方法editor状态。
  */
 internal fun CodegenMethodEditorState.modbusSummary(): String {
@@ -55,7 +104,7 @@ internal fun CodegenMethodEditorState.modbusSummary(): String {
     val functionCode = bindingSummaryValue(MODBUS_OPERATION_DEFINITION_CODE, METHOD_FUNCTION_CODE_PARAM).orEmpty()
     val baseAddress = bindingSummaryValue(MODBUS_OPERATION_DEFINITION_CODE, METHOD_BASE_ADDRESS_PARAM).orEmpty()
     return if (direction.isBlank() && functionCode.isBlank() && baseAddress.isBlank()) {
-        "当前方法还没有绑定任何 Modbus 操作上下文。"
+        "当前设备功能还没有绑定任何 Modbus 操作上下文。"
     } else {
         "协议上下文：direction=${direction.ifBlank { "-" }} · functionCode=${functionCode.ifBlank { "-" }} · baseAddress=${baseAddress.ifBlank { "-" }}"
     }
@@ -75,6 +124,12 @@ internal fun CodegenPropertyEditorState.modbusSummary(): String {
         "协议上下文：transportType=${transportType.ifBlank { "-" }} · registerOffset=${registerOffset.ifBlank { "-" }} · bitOffset=${bitOffset.ifBlank { "-" }} · length=${length.ifBlank { "-" }}"
     }
 }
+
+/**
+ * 处理代码生成方法editor状态。
+ */
+internal fun CodegenMethodEditorState.modbusDirection(): String? =
+    bindingSummaryValue(MODBUS_OPERATION_DEFINITION_CODE, METHOD_DIRECTION_PARAM)
 
 /**
  * 处理代码生成方法editor状态。
@@ -149,4 +204,42 @@ internal fun bindingFieldDescription(
             append("必填。")
         }
     }.ifBlank { null }
+}
+
+/**
+ * 处理string。
+ *
+ * @param suffix 后缀。
+ */
+private fun String.toGeneratedTypePreview(
+    suffix: String,
+): String {
+    val normalized = trim()
+    if (normalized.isBlank()) {
+        return "保存后自动生成"
+    }
+    val className =
+        if (normalized.any { it == '_' || it == '-' || it.isWhitespace() }) {
+            normalized
+                .split(Regex("[_\\-\\s]+"))
+                .filter(String::isNotBlank)
+                .joinToString(separator = "") { token ->
+                    token.replaceFirstChar { char ->
+                        if (char.isLowerCase()) {
+                            char.titlecase()
+                        } else {
+                            char.toString()
+                        }
+                    }
+                }
+        } else {
+            normalized.replaceFirstChar { char ->
+                if (char.isLowerCase()) {
+                    char.titlecase()
+                } else {
+                    char.toString()
+                }
+            }
+        }
+    return className + suffix
 }

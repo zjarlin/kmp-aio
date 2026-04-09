@@ -6,7 +6,7 @@ import kotlin.test.assertFailsWith
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModulePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolPositionUpdateRequest
-import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
+import site.addzero.kmp.exp.ConflictException
 
 /**
  * 验证项目服务相关场景。

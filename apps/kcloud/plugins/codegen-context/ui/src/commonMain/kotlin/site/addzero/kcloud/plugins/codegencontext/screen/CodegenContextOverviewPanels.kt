@@ -1,9 +1,17 @@
 package site.addzero.kcloud.plugins.codegencontext.screen
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.robinpcrd.cupertino.CupertinoSegmentedControl
+import io.github.robinpcrd.cupertino.CupertinoSegmentedControlTab
+import io.github.robinpcrd.cupertino.CupertinoText
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
@@ -11,6 +19,7 @@ import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.field.CupertinoSelectionField
 import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.cupertino.workbench.components.form.CupertinoFormGrid
+import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefinitionDto
@@ -58,8 +67,8 @@ internal fun ContextSummaryPanel(
     generating: Boolean,
 ) {
     CupertinoPanel(
-        title = state.name.ifBlank { "未命名代码生成上下文" },
-        subtitle = "界面维护的是 class / method / property / context 关系，生成器再按协议上下文落到具体 Kotlin / C 产物。",
+        title = state.name.ifBlank { "未命名设备元数据上下文" },
+        subtitle = "这里维护设备功能、物模型和协议上下文，再由后台生成 Kotlin、C 和协议文档产物。",
         actions = {
             WorkbenchActionButton(
                 text = if (saving) "保存中" else "保存",
@@ -89,8 +98,8 @@ internal fun ContextSummaryPanel(
                     label = "上下文名称",
                     value = state.name,
                     onValueChange = { value -> viewModel.updateContext { it.copy(name = value) } },
-                    placeholder = "例如 Flash 持久化配置",
-                    description = "列表里展示的名字，也会进入生成日志。",
+                    placeholder = "例如 控制器 Flash 配置",
+                    description = "用于标识当前设备协议场景，也会进入生成日志。",
                 )
             }
             item {
@@ -117,7 +126,7 @@ internal fun ContextSummaryPanel(
                     value = state.description,
                     onValueChange = { value -> viewModel.updateContext { it.copy(description = value) } },
                     singleLine = false,
-                    description = "建议写清设备型号、场景边界、生成目标和协议约束。",
+                    description = "建议写清设备型号、适用协议、功能边界和生成目标。",
                 )
             }
             fullWidth {
@@ -130,10 +139,144 @@ internal fun ContextSummaryPanel(
                 )
             }
         }
-        CupertinoStatusStrip("方法实体约定：每个方法都会约定为 <MethodName>Request / <MethodName>Response。")
-        CupertinoStatusStrip("当前属性池 ${state.properties.size} 个，方法 ${state.methods.size} 个。属性与方法关系通过穿梭框维护。")
+        CupertinoStatusStrip("功能实体约定：每个设备功能都按 <MethodName>Request / <MethodName>Response 生成请求与响应模型。")
+        CupertinoStatusStrip("当前物模型字段 ${state.properties.size} 个，设备功能 ${state.methods.size} 个，字段与功能通过穿梭框复用。")
         selectedProtocolTemplate?.protocolContextHint()?.let { CupertinoStatusStrip(it) }
         state.externalCOutputRoot.takeIf { it.isNotBlank() }?.let { CupertinoStatusStrip(it.externalOutputHint()) }
+    }
+}
+
+@Composable
+internal fun MetadataOverviewStrip(
+    editor: CodegenContextEditorState,
+    selectedProtocolTemplate: ProtocolTemplateOptionDto?,
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        if (maxWidth >= 1180.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                MetadataMetricPanel(
+                    title = "设备摘要",
+                    subtitle = "当前元数据上下文的协议和输出范围。",
+                    modifier = Modifier.weight(1f),
+                ) {
+                    CupertinoKeyValueRow("协议模板", selectedProtocolTemplate?.name ?: "未选择")
+                    CupertinoKeyValueRow("消费目标", editor.consumerTarget.name)
+                    CupertinoKeyValueRow("启用状态", if (editor.enabled) "启用" else "停用")
+                    CupertinoKeyValueRow("外部 C 工程", editor.externalCOutputRoot.ifBlank { "-" })
+                }
+                MetadataMetricPanel(
+                    title = "物模型",
+                    subtitle = "寄存器、线圈、状态位等字段统一收敛到物模型池。",
+                    modifier = Modifier.weight(1f),
+                ) {
+                    CupertinoKeyValueRow("字段总数", editor.properties.size.toString())
+                    CupertinoKeyValueRow("已配置上下文", editor.configuredPropertyCount().toString())
+                    CupertinoKeyValueRow("已被功能引用", editor.propertyInUseCount().toString())
+                    CupertinoStatusStrip("一个字段可被多个设备功能复用，避免重复录入。")
+                }
+                MetadataMetricPanel(
+                    title = "设备功能",
+                    subtitle = "功能像定义接口一样维护，再绑定物模型字段和协议上下文。",
+                    modifier = Modifier.weight(1f),
+                ) {
+                    CupertinoKeyValueRow("功能总数", editor.methods.size.toString())
+                    CupertinoKeyValueRow("读取功能", editor.readMethodCount().toString())
+                    CupertinoKeyValueRow("写入功能", editor.writeMethodCount().toString())
+                    CupertinoStatusStrip("功能说明支持剪贴板批量导入，保存后自动补齐命名。")
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                MetadataMetricPanel(
+                    title = "设备摘要",
+                    subtitle = "当前元数据上下文的协议和输出范围。",
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    CupertinoKeyValueRow("协议模板", selectedProtocolTemplate?.name ?: "未选择")
+                    CupertinoKeyValueRow("消费目标", editor.consumerTarget.name)
+                    CupertinoKeyValueRow("启用状态", if (editor.enabled) "启用" else "停用")
+                    CupertinoKeyValueRow("外部 C 工程", editor.externalCOutputRoot.ifBlank { "-" })
+                }
+                MetadataMetricPanel(
+                    title = "物模型",
+                    subtitle = "寄存器、线圈、状态位等字段统一收敛到物模型池。",
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    CupertinoKeyValueRow("字段总数", editor.properties.size.toString())
+                    CupertinoKeyValueRow("已配置上下文", editor.configuredPropertyCount().toString())
+                    CupertinoKeyValueRow("已被功能引用", editor.propertyInUseCount().toString())
+                    CupertinoStatusStrip("一个字段可被多个设备功能复用，避免重复录入。")
+                }
+                MetadataMetricPanel(
+                    title = "设备功能",
+                    subtitle = "功能像定义接口一样维护，再绑定物模型字段和协议上下文。",
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    CupertinoKeyValueRow("功能总数", editor.methods.size.toString())
+                    CupertinoKeyValueRow("读取功能", editor.readMethodCount().toString())
+                    CupertinoKeyValueRow("写入功能", editor.writeMethodCount().toString())
+                    CupertinoStatusStrip("功能说明支持剪贴板批量导入，保存后自动补齐命名。")
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun WorkbenchTabSwitcher(
+    selectedTab: CodegenWorkbenchTab,
+    editor: CodegenContextEditorState,
+    onSelected: (CodegenWorkbenchTab) -> Unit,
+) {
+    CupertinoPanel(
+        title = "编辑工作台",
+        subtitle = "按设备管理习惯分成物模型、设备功能、上下文与生成配置三个区域。",
+    ) {
+        CupertinoSegmentedControl(
+            selectedTabIndex = CodegenWorkbenchTab.entries.indexOf(selectedTab),
+            modifier = Modifier.padding(vertical = 4.dp),
+        ) {
+            CodegenWorkbenchTab.entries.forEach { tab ->
+                CupertinoSegmentedControlTab(
+                    onClick = { onSelected(tab) },
+                    isSelected = tab == selectedTab,
+                ) {
+                    CupertinoText(
+                        when (tab) {
+                            CodegenWorkbenchTab.THING_MODEL -> "${tab.title} ${editor.properties.size}"
+                            CodegenWorkbenchTab.DEVICE_FUNCTION -> "${tab.title} ${editor.methods.size}"
+                            CodegenWorkbenchTab.CONTEXT -> "${tab.title} ${editor.availableContextDefinitions.size}"
+                        },
+                    )
+                }
+            }
+        }
+        CupertinoStatusStrip(
+            when (selectedTab) {
+                CodegenWorkbenchTab.THING_MODEL -> "物模型里维护所有可复用字段，再把字段分配给不同设备功能。"
+                CodegenWorkbenchTab.DEVICE_FUNCTION -> "设备功能像 Kotlin 接口方法一样定义，只填中文语义和绑定关系。"
+                CodegenWorkbenchTab.CONTEXT -> "这里集中维护协议上下文定义和代码生成目录、RTU/TCP/MQTT 默认参数。"
+            },
+        )
+    }
+}
+
+@Composable
+private fun MetadataMetricPanel(
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    CupertinoPanel(
+        title = title,
+        subtitle = subtitle,
+        modifier = modifier,
+    ) {
+        content()
     }
 }
 
@@ -151,8 +294,8 @@ internal fun GenerationSettingsPanel(
     viewModel: CodegenContextViewModel,
 ) {
     CupertinoPanel(
-        title = "外部代码生成",
-        subtitle = "这里配置生成器额外需要的目录和 transport 默认参数，给 Kotlin/C/文档生成共用。",
+        title = "生成器参数",
+        subtitle = "这里配置生成器目录和 RTU/TCP/MQTT 默认参数，点击生成时一并带上。",
     ) {
         selectedProtocolTemplate?.let { template ->
             CupertinoStatusStrip("当前主协议模板：${template.name}（${template.code}）")
@@ -236,7 +379,7 @@ internal fun ContextDefinitionsPanel(
 ) {
     CupertinoPanel(
         title = "上下文定义",
-        subtitle = "这里展示当前协议模板可用的 context definition，方法和字段编辑器都会按这里的参数动态渲染。",
+        subtitle = "这里展示当前协议模板可用的上下文定义。可以把它理解为“注解定义”，方法和物模型字段都会按这里的参数渲染。",
     ) {
         if (selectedProtocolTemplate == null) {
             CupertinoStatusStrip("先选择协议模板，才能加载对应的上下文定义。")

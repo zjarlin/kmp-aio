@@ -4,7 +4,7 @@
 
 - 按 `datasources.*` 配置创建 `DataSource`
 - 为对应数据源创建默认 `KSqlClient`
-- 暴露可复用的 `JdbcExecutor`，给业务侧补 Jimmer 不擅长表达的手写 SQL
+- 暴露可复用的 `SqlExecutor`，给业务侧补 Jimmer 不擅长表达的手写 SQL
 
 当前内置支持的 JDBC 类型有：
 
@@ -62,13 +62,13 @@ installKoin {
 业务表结构统一建议交给 Flyway：
 
 - 建表、改表、补索引、历史 DDL 迁移放到 `db/migration/**`
-- 运行时不要通过 `JdbcExecutor` 或 `JimmerSqlScriptSupport` 手工执行 DDL
-- `JdbcExecutor` 只用于 Jimmer 不擅长表达的查询、批量更新、历史数据修正这类手写 SQL
+- 运行时不要通过 `SqlExecutor` 或 `JimmerSqlScriptSupport` 手工执行 DDL
+- `SqlExecutor` 只用于 Jimmer 不擅长表达的查询、批量更新、历史数据修正这类手写 SQL
 - 如果某个迁移必须写原生 SQL，也应放进 Flyway migration，而不是塞回应用启动流程
 
 辅助类：
 
-- `site.addzero.kcloud.jimmer.jdbc.JdbcExecutor`
+- `site.addzero.util.db.SqlExecutor`
 - `site.addzero.kcloud.jimmer.support.JimmerSqlScriptSupport`
 
 其中 `JimmerSqlScriptSupport` 只适合执行已经明确受控的 SQL 片段，不应用来承担 schema 自动初始化。
@@ -86,7 +86,7 @@ apps/my-plugin/server/src/jvmMain/resources/db/migration/mysql/V2026_04_08_101__
 
 当前仓库里的落地方式：
 
-- 库模块只保留 `JimmerKoinModule`、数据源 SPI、`JdbcExecutor` 和 SQL helper
+- 库模块只保留 `JimmerKoinModule`、数据源 SPI、`SqlExecutor` 和 SQL helper
 - `apps/kcloud/server` 提供 MySQL 数据源与 Flyway 配置
 - `apps/kcloud/plugins/**/server/src/jvmMain/resources/db/migration/mysql/` 持有各插件自己的 schema 与演进脚本
 

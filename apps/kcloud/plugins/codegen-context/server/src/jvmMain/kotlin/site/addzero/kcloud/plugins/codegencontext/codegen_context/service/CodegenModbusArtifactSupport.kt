@@ -107,11 +107,11 @@ internal fun CodegenContextDetailDto.resolveGenerationSettings(): ResolvedGenera
     val serverOutputRoot =
         settings.serverOutputRoot
             ?.toAbsoluteNormalizedPath()
-            ?: workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin").normalize()
+            ?: workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/source/codegen-context/jvmMain/kotlin").normalize()
     val sharedOutputRoot =
         settings.sharedOutputRoot
             ?.toAbsoluteNormalizedPath()
-            ?: workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin").normalize()
+            ?: workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/build/generated/source/codegen-context/commonMain/kotlin").normalize()
     val gatewayOutputRoot =
         settings.gatewayOutputRoot
             ?.toAbsoluteNormalizedPath()

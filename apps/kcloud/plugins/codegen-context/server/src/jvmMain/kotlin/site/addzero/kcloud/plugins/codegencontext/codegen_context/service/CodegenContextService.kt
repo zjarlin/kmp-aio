@@ -11,7 +11,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
 import kotlinx.serialization.json.Json
-import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
+import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.plugins.codegencontext.api.context.*
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.model.entity.*
 import site.addzero.kmp.exp.BusinessValidationException
@@ -23,9 +23,9 @@ import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenConsumerTar
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenNodeKind
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.service.Fetchers
-import site.addzero.util.jvmstr.toGeneratedMethodName
-import site.addzero.util.jvmstr.toGeneratedPropertyName
-import site.addzero.util.jvmstr.toGeneratedTypeName
+import site.addzero.util.str.toGeneratedMethodName
+import site.addzero.util.str.toGeneratedPropertyName
+import site.addzero.util.str.toGeneratedTypeName
 
 @Single
 /**
@@ -37,7 +37,7 @@ import site.addzero.util.jvmstr.toGeneratedTypeName
  */
 class CodegenContextService(
     private val sql: KSqlClient,
-    private val jdbc: JdbcExecutor,
+    private val jdbc: SqlExecutor,
     private val contractGenerator: CodegenContextContractGenerator,
 ) {
     private companion object {

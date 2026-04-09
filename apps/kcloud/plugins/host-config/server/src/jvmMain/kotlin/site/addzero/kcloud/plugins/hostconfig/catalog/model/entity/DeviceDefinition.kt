@@ -1,12 +1,10 @@
 package site.addzero.kcloud.plugins.hostconfig.catalog.model.entity
 
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
 
 /**
@@ -17,12 +15,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
  */
 @Entity
 @Table(name = "host_config_device_definition")
-interface DeviceDefinition {
-
-    /** 数据库主键。 */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long
+interface DeviceDefinition : EpochBaseEntity {
 
     /** 设备业务编码，在所属产品内唯一。 */
     val code: String
@@ -41,16 +34,6 @@ interface DeviceDefinition {
 
     /** 同级排序值，越小越靠前。 */
     val sortIndex: Int
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     /** 所属产品定义。 */
     @ManyToOne

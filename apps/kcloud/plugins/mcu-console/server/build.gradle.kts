@@ -9,8 +9,8 @@ val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:serv
 val generateMcuConsoleContractsEnabled =
     providers
         .gradleProperty("generateMcuConsoleContracts")
-        .map { it.equals("true", ignoreCase = true) }
-        .orElse(false)
+        .map { !it.equals("false", ignoreCase = true) }
+        .orElse(true)
         .get()
 val mcuConsoleApiProject = project(":apps:kcloud:plugins:mcu-console:api")
 
@@ -50,7 +50,7 @@ val sharedComposeSourceDir = mcuConsoleApiProject.projectDir.resolve("src/common
 
 /** 当前 server 源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
-val generatedContractSourceDir = layout.projectDirectory.dir("generated/jvmMain/kotlin")
+val generatedContractSourceDir = layout.buildDirectory.dir("generated/source/codegen-context/jvmMain/kotlin")
 
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external.generated")
@@ -86,6 +86,7 @@ kotlin {
                 implementation(libs.findLibrary("tool-stm32-bootloader").get())
                 implementation(libs.findLibrary("tool-serial").get())
                 implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
+                implementation(project(":lib:ktor:starter:starter-spi"))
                 implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
             }
         }

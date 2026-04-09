@@ -232,7 +232,14 @@ class CodegenContextServiceTest {
                                 }
                             },
                     ),
-                )
+                ).replaceModelClass(
+                    className = "BoardSnapshot",
+                ) { model ->
+                    model.copy(
+                        name = "读取板卡快照响应实体",
+                        className = "",
+                    )
+                }
 
             val saved = fixture.service.saveContext(request)
             val savedServiceClass = saved.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }

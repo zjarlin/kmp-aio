@@ -128,6 +128,7 @@ internal fun List<CodegenClassDto>.toModbusSpecs(
     val modelClasses =
         filter { codegenClass -> codegenClass.classKind == CodegenClassKind.MODEL }
             .associateBy(CodegenClassDto::className)
+    val fallbackModelResolver = GenericModelFallbackResolver(this)
     return filter { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
         .sortedBy(CodegenClassDto::sortIndex)
         .flatMap { serviceClass ->
@@ -138,6 +139,7 @@ internal fun List<CodegenClassDto>.toModbusSpecs(
                         protocolTemplateId = protocolTemplateId,
                         availableDefinitions = availableDefinitions,
                         modelClasses = modelClasses,
+                        fallbackModelResolver = fallbackModelResolver,
                     )
                 }
         }
@@ -313,6 +315,7 @@ private fun CodegenMethodDto.toModbusSchemaOrNull(
     protocolTemplateId: Long,
     availableDefinitions: List<CodegenContextDefinitionDto>,
     modelClasses: Map<String, CodegenClassDto>,
+    fallbackModelResolver: GenericModelFallbackResolver,
 ): ModbusSchemaSpec? {
     val operationBinding =
         bindings.firstOrNull { binding ->
@@ -336,6 +339,11 @@ private fun CodegenMethodDto.toModbusSchemaOrNull(
                         "Method $methodName must set responseClassName for READ Modbus generation.",
                     )
                 modelClasses[responseClass]
+                    ?: fallbackModelResolver.resolveFallbackModel(
+                        method = this,
+                        direction = direction,
+                        expectedClassName = responseClass,
+                    )
                     ?: throw BusinessValidationException("READ method $methodName references missing model class $responseClass.")
             }
 
@@ -345,6 +353,11 @@ private fun CodegenMethodDto.toModbusSchemaOrNull(
                         "Method $methodName must set requestClassName for WRITE Modbus generation.",
                     )
                 modelClasses[requestClass]
+                    ?: fallbackModelResolver.resolveFallbackModel(
+                        method = this,
+                        direction = direction,
+                        expectedClassName = requestClass,
+                    )
                     ?: throw BusinessValidationException("WRITE method $methodName references missing model class $requestClass.")
             }
         }
@@ -364,6 +377,47 @@ private fun CodegenMethodDto.toModbusSchemaOrNull(
                     property.toModbusFieldSpec(protocolTemplateId, availableDefinitions)
                 },
     )
+}
+
+/**
+ * 为未显式关联成功的方法补齐剩余模型，避免服务端自动派生标识符后立即校验失败。
+ */
+private class GenericModelFallbackResolver(
+    classes: List<CodegenClassDto>,
+) {
+    private val modelByClassName =
+        classes.filter { codegenClass -> codegenClass.classKind == CodegenClassKind.MODEL }
+            .associateBy(CodegenClassDto::className)
+    private val remainingModels =
+        classes.filter { codegenClass -> codegenClass.classKind == CodegenClassKind.MODEL }
+            .sortedBy(CodegenClassDto::sortIndex)
+            .toMutableList()
+
+    init {
+        classes.filter { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
+            .flatMap(CodegenClassDto::methods)
+            .forEach { method ->
+                method.requestClassName?.let { className ->
+                    if (className in modelByClassName) {
+                        remainingModels.removeAll { candidate -> candidate.className == className }
+                    }
+                }
+                method.responseClassName?.let { className ->
+                    if (className in modelByClassName) {
+                        remainingModels.removeAll { candidate -> candidate.className == className }
+                    }
+                }
+            }
+    }
+
+    fun resolveFallbackModel(
+        method: CodegenMethodDto,
+        direction: ModbusSchemaDirection,
+        expectedClassName: String,
+    ): CodegenClassDto? {
+        val resolved = remainingModels.removeFirstOrNull() ?: return null
+        return resolved
+    }
 }
 
 /**

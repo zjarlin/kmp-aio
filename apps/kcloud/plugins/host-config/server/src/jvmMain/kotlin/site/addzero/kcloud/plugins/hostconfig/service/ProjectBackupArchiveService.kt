@@ -16,7 +16,7 @@ import kotlinx.serialization.modules.contextual
 import org.koin.core.annotation.Single
 import org.springframework.core.io.FileSystemResource
 import site.addzero.core.network.json.AnySerializer
-import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
+import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse
 import site.addzero.kmp.exp.NotFoundException
@@ -29,7 +29,7 @@ import site.addzero.kmp.exp.NotFoundException
  * @property projectService 项目服务。
  */
 class ProjectBackupArchiveService(
-    private val jdbc: JdbcExecutor,
+    private val jdbc: SqlExecutor,
     private val projectService: ProjectService,
 ) {
     /**

@@ -9,7 +9,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
+import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.plugins.hostconfig.api.common.PageResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.ReplaceTagValueTextsRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagCreateRequest
@@ -31,7 +31,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.*
  */
 class TagService(
     private val sql: KSqlClient,
-    private val jdbc: JdbcExecutor,
+    private val jdbc: SqlExecutor,
 ) {
     /**
      * 获取标签。

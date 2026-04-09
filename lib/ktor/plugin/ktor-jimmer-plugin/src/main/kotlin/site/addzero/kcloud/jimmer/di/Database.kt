@@ -17,6 +17,7 @@ import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteInstantScalarProvider
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteLocalDateTimeScalarProvider
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
@@ -61,6 +62,13 @@ class JimmerKoinModule {
                     scalarProviders = scalarProviders,
                 )
             }
+    }
+
+    @Single
+    fun sqlExecutor(
+        dataSource: DataSource,
+    ): SqlExecutor {
+        return SqlExecutor(dataSource)
     }
 }
 
@@ -148,7 +156,20 @@ internal fun createHikariDataSource(
             addDataSourceProperty(key, value)
         }
     }
-    return HikariDataSource(config)
+    return runCatching { HikariDataSource(config) }
+        .getOrElse { throwable ->
+            throw IllegalStateException(
+                buildString {
+                    append("数据库连接初始化失败: url=")
+                    append(jdbcUrl)
+                    append(", user=")
+                    append(username ?: "<empty>")
+                    append(", driver=")
+                    append(driverClassName)
+                },
+                throwable,
+            )
+        }
 }
 
 /**

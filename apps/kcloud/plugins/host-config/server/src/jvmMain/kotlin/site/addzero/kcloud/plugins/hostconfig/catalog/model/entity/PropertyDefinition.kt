@@ -1,11 +1,9 @@
 package site.addzero.kcloud.plugins.hostconfig.catalog.model.entity
 
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 
 /**
@@ -16,12 +14,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
  */
 @Entity
 @Table(name = "host_config_property_definition")
-interface PropertyDefinition {
-
-    /** 数据库主键。 */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long
+interface PropertyDefinition : EpochBaseEntity {
 
     /** 属性标识符，在所属设备定义内唯一。 */
     val identifier: String
@@ -55,16 +48,6 @@ interface PropertyDefinition {
 
     /** 同级排序值，越小越靠前。 */
     val sortIndex: Int
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     /** 所属设备定义。 */
     @ManyToOne

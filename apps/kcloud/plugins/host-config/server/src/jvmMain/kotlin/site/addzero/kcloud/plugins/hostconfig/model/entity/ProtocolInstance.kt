@@ -1,13 +1,11 @@
 package site.addzero.kcloud.plugins.hostconfig.model.entity
 
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToManyView
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
@@ -16,14 +14,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 /**
  * 定义协议instance实体。
  */
-interface ProtocolInstance {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    /**
-     * 主键 ID。
-     */
-    val id: Long
+interface ProtocolInstance : EpochBaseEntity {
 
     /**
      * 名称。
@@ -79,16 +70,6 @@ interface ProtocolInstance {
      * 响应超时时间（毫秒）。
      */
     val responseTimeoutMs: Int?
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     @ManyToOne
     /**

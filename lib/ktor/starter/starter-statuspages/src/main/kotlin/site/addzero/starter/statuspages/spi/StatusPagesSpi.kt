@@ -8,7 +8,7 @@ import io.ktor.server.plugins.statuspages.StatusPagesConfig
  * hard-coding plugin-specific exceptions into the shared starter.
  */
 interface StatusPagesSpi {
-    val order: Int
+    val order
         get() = 0
 
     fun StatusPagesConfig.configure(application: Application)

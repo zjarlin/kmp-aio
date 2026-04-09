@@ -1,12 +1,10 @@
 package site.addzero.kcloud.plugins.hostconfig.model.entity
 
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder4
 import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
@@ -16,14 +14,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
 /**
  * 定义设备实体。
  */
-interface Device {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    /**
-     * 主键 ID。
-     */
-    val id: Long
+interface Device : EpochBaseEntity {
 
     /**
      * 名称。
@@ -89,16 +80,6 @@ interface Device {
      * 排序序号。
      */
     val sortIndex: Int
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     @ManyToOne
     /**

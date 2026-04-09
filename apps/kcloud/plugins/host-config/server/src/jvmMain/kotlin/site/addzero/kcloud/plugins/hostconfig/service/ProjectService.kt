@@ -8,7 +8,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
+import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -47,7 +47,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
  */
 class ProjectService(
     private val sql: KSqlClient,
-    private val jdbc: JdbcExecutor,
+    private val jdbc: SqlExecutor,
 ) {
 
     private companion object {

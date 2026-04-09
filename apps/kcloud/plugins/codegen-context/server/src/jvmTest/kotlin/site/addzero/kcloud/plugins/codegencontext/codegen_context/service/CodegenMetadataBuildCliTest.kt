@@ -42,13 +42,9 @@ class CodegenMetadataBuildCliTest {
                 main(
                     arrayOf(
                         "--driver-class",
-                        "com.mysql.cj.jdbc.Driver",
+                        "org.sqlite.JDBC",
                         "--jdbc-url",
                         fixture.dataSource.connection.use { connection -> connection.metaData.url },
-                        "--username",
-                        "root",
-                        "--password",
-                        "test123456",
                         "--query",
                         """
                         SELECT payload
@@ -131,6 +127,99 @@ class CodegenMetadataBuildCliTest {
             } finally {
                 deleteWorkspace(workspaceRoot)
             }
+        }
+    }
+
+    @Test
+    /**
+     * 处理shouldgenerate合同fromcommittedsqlite快照。
+     */
+    fun shouldGenerateContractsFromCommittedSqliteSnapshot() {
+        val workspaceRoot = createGeneratorWorkspace()
+
+        try {
+            val snapshotFile =
+                Path.of(
+                    checkNotNull(javaClass.getResource("/snapshots/codegen-context-metadata.sqlite")) {
+                        "Missing committed sqlite snapshot resource."
+                    }.toURI(),
+                )
+            val serverOutputRoot =
+                workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/source/codegen-context/jvmMain/kotlin")
+            val sharedOutputRoot =
+                workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/build/generated/source/codegen-context/commonMain/kotlin")
+            val metadataRoot = workspaceRoot.resolve("t/Docs/generated/modbus-metadata")
+
+            main(
+                arrayOf(
+                    "--driver-class",
+                    "org.sqlite.JDBC",
+                    "--jdbc-url",
+                    "jdbc:sqlite:${snapshotFile.toAbsolutePath().normalize()}",
+                    "--query",
+                    """
+                    SELECT payload
+                    FROM codegen_context_modbus_contract
+                    WHERE consumer_target = 'MCU_CONSOLE'
+                      AND enabled = 1
+                      AND selected = 1
+                      AND transport = '${'$'}{transport}'
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """.trimIndent(),
+                    "--json-column",
+                    "payload",
+                    "--transport",
+                    "rtu,tcp,mqtt",
+                    "--skip-missing-transports",
+                    "true",
+                    "--workspace-root",
+                    workspaceRoot.toString(),
+                    "--server-output-root",
+                    "apps/kcloud/plugins/mcu-console/server/build/generated/source/codegen-context/jvmMain/kotlin",
+                    "--shared-output-root",
+                    "apps/kcloud/plugins/mcu-console/shared/build/generated/source/codegen-context/commonMain/kotlin",
+                    "--gateway-output-root",
+                    "apps/kcloud/plugins/mcu-console/server/build/generated/source/codegen-context/jvmMain/kotlin",
+                    "--c-output-root",
+                    metadataRoot.resolve("c").toString(),
+                    "--markdown-output-root",
+                    metadataRoot.resolve("markdown").toString(),
+                ),
+            )
+
+            assertTrue(
+                serverOutputRoot
+                    .resolve("site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt")
+                    .exists(),
+            )
+            assertTrue(
+                serverOutputRoot
+                    .resolve("site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceWriteApi.kt")
+                    .exists(),
+            )
+            assertTrue(
+                sharedOutputRoot
+                    .resolve("site/addzero/kcloud/plugins/mcuconsole/modbus/device/FlashConfigRegisters.kt")
+                    .exists(),
+            )
+            assertTrue(
+                serverOutputRoot
+                    .resolve("site/addzero/esp32_host_computer/generated/modbus/rtu/GeneratedModbusRtu.kt")
+                    .exists(),
+            )
+            assertTrue(
+                serverOutputRoot
+                    .resolve("site/addzero/esp32_host_computer/generated/modbus/tcp/GeneratedModbusTcp.kt")
+                    .exists(),
+            )
+            assertTrue(
+                serverOutputRoot
+                    .resolve("site/addzero/esp32_host_computer/generated/modbus/mqtt/GeneratedModbusMqtt.kt")
+                    .exists(),
+            )
+        } finally {
+            deleteWorkspace(workspaceRoot)
         }
     }
 }

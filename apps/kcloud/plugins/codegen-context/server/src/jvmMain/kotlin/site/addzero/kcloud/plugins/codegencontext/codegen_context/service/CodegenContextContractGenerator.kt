@@ -709,19 +709,19 @@ private fun String.appendUpsertClause(
     connection: Connection,
 ): String =
     when {
-        connection.isMySql() ->
+        connection.isSqlite() ->
             this +
                 """
 
-                ON DUPLICATE KEY UPDATE
-                    context_code = VALUES(context_code),
-                    context_name = VALUES(context_name),
-                    enabled = VALUES(enabled),
-                    consumer_target = VALUES(consumer_target),
-                    protocol_template_code = VALUES(protocol_template_code),
-                    selected = VALUES(selected),
-                    payload = VALUES(payload),
-                    updated_at = VALUES(updated_at)
+                ON CONFLICT(context_id, transport) DO UPDATE SET
+                    context_code = excluded.context_code,
+                    context_name = excluded.context_name,
+                    enabled = excluded.enabled,
+                    consumer_target = excluded.consumer_target,
+                    protocol_template_code = excluded.protocol_template_code,
+                    selected = excluded.selected,
+                    payload = excluded.payload,
+                    updated_at = excluded.updated_at
                 """.trimIndent()
 
         else -> error("Unsupported metadata snapshot database: ${connection.metaData.databaseProductName}")
@@ -739,15 +739,12 @@ private fun PreparedStatement.setUpdatedAt(
     connection: Connection,
     instant: Instant,
 ) {
-    check(connection.isMySql()) {
-        "Unsupported metadata snapshot database: ${connection.metaData.databaseProductName}"
+    when {
+        connection.isSqlite() -> setLong(index, instant.toEpochMilli())
+        else -> error("Unsupported metadata snapshot database: ${connection.metaData.databaseProductName}")
     }
-    setTimestamp(index, java.sql.Timestamp.from(instant))
 }
 
-/**
- * 处理connection。
- */
-private fun Connection.isMySql(): Boolean =
-    metaData.databaseProductName.contains("mysql", ignoreCase = true) ||
-        metaData.url.contains(":mysql:", ignoreCase = true)
+private fun Connection.isSqlite(): Boolean =
+    metaData.databaseProductName.contains("sqlite", ignoreCase = true) ||
+        metaData.url.contains(":sqlite:", ignoreCase = true)

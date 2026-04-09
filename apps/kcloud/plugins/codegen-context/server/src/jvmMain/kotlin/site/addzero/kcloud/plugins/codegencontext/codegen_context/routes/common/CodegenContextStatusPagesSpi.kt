@@ -14,7 +14,7 @@ import site.addzero.starter.statuspages.spi.StatusPagesSpi
  * 注册代码生成上下文状态页异常处理。
  */
 class CodegenContextStatusPagesSpi : StatusPagesSpi {
-    override val order: Int = 110
+    override val order = 110
 
     /**
      * 处理状态页配置。

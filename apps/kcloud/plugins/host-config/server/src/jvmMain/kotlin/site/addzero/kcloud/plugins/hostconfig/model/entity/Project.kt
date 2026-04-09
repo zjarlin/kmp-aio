@@ -1,28 +1,19 @@
 package site.addzero.kcloud.plugins.hostconfig.model.entity
 
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.ManyToManyView
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.OneToOne
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 
 @Entity
 @Table(name = "host_config_project")
 /**
  * 定义项目实体。
  */
-interface Project {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    /**
-     * 主键 ID。
-     */
-    val id: Long
+interface Project : EpochBaseEntity {
 
     @Key
     /**
@@ -44,16 +35,6 @@ interface Project {
      * 排序序号。
      */
     val sortIndex: Int
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     @OneToMany(mappedBy = "project")
     /**

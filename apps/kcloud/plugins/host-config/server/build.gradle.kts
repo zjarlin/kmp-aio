@@ -61,9 +61,7 @@ kotlin {
             implementation("site.addzero:spec-iot:2026.03.13")
         }
         jvmTest.dependencies {
-            implementation(libs.findLibrary("mysql-mysql-connector-java").get())
-            implementation(libs.findLibrary("org-flywaydb-flyway-core").get())
-            implementation(libs.findLibrary("org-flywaydb-flyway-mysql").get())
+            implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
     }
 }

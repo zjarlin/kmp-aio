@@ -8,14 +8,14 @@ plugins {
 val libs = versionCatalogs.named("libs")
 
 val generatedKspSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
-val generatedContractSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
+val generatedContractSourceDir = layout.buildDirectory.dir("generated/source/codegen-context/commonMain/kotlin")
 val addzeroLibJvmVersion: String by project
 val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:server:generateMcuConsoleContracts"
 val generateMcuConsoleContractsEnabled =
     providers
         .gradleProperty("generateMcuConsoleContracts")
-        .map { it.equals("true", ignoreCase = true) }
-        .orElse(false)
+        .map { !it.equals("false", ignoreCase = true) }
+        .orElse(true)
         .get()
 
 kotlin {

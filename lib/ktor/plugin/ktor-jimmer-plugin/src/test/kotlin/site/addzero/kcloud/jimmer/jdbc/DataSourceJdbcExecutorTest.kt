@@ -1,11 +1,11 @@
-package site.addzero.kcloud.jimmer.jdbc
+package site.addzero.kcloud.jimmer.di
 
 import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
-import site.addzero.kcloud.jimmer.di.toDatasource
 
 class DataSourceJdbcExecutorTest {
     @Test
@@ -79,7 +79,7 @@ class DataSourceJdbcExecutorTest {
 
     private fun createExecutor(
         databasePath: String,
-    ): DataSourceJdbcExecutor {
+    ): SqlExecutor {
         val dataSource = DatasourceProperties(
             name = "sqlite-test",
             url = "jdbc:sqlite:$databasePath",
@@ -87,6 +87,6 @@ class DataSourceJdbcExecutorTest {
             user = "",
             password = "",
         ).toDatasource()
-        return DataSourceJdbcExecutor(dataSource)
+        return SqlExecutor(dataSource)
     }
 }

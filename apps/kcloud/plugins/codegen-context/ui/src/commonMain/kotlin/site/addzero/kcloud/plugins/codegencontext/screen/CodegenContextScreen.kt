@@ -14,6 +14,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DataObject
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -29,7 +33,7 @@ import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
 
 @Route(
-    title = "功能定义",
+    title = "元数据管理",
     routePath = "codegen-context/contexts",
     icon = "Code",
     order = 40.0,
@@ -47,6 +51,7 @@ fun CodegenContextScreen() {
     val viewModel = koinViewModel<CodegenContextViewModel>()
     val state = viewModel.screenState
     val selectedProtocolTemplate = state.protocolTemplates.firstOrNull { it.id == state.editor.protocolTemplateId }
+    var selectedTab by remember { mutableStateOf(CodegenWorkbenchTab.THING_MODEL) }
 
     Row(modifier = Modifier.fillMaxSize()) {
         WorkbenchTreeSidebar(
@@ -54,7 +59,7 @@ fun CodegenContextScreen() {
             selectedId = state.selectedContextId,
             onNodeClick = { viewModel.selectContext(it.id) },
             modifier = Modifier.fillMaxHeight().weight(0.28f),
-            searchPlaceholder = "搜索上下文",
+            searchPlaceholder = "搜索元数据上下文",
             getId = { it.id },
             getLabel = { it.name },
             getChildren = { emptyList() },
@@ -96,17 +101,30 @@ fun CodegenContextScreen() {
                 saving = state.saving,
                 generating = state.generating,
             )
-            GenerationSettingsPanel(
-                state = state.editor.generationSettings,
-                selectedProtocolTemplate = selectedProtocolTemplate,
-                viewModel = viewModel,
-            )
-            ContextDefinitionsPanel(
-                definitions = state.editor.availableContextDefinitions,
+            MetadataOverviewStrip(
+                editor = state.editor,
                 selectedProtocolTemplate = selectedProtocolTemplate,
             )
-            PropertyPoolPanel(editor = state.editor, viewModel = viewModel)
-            MethodWorkbenchPanel(editor = state.editor, viewModel = viewModel)
+            WorkbenchTabSwitcher(
+                selectedTab = selectedTab,
+                editor = state.editor,
+                onSelected = { selectedTab = it },
+            )
+            when (selectedTab) {
+                CodegenWorkbenchTab.THING_MODEL -> PropertyPoolPanel(editor = state.editor, viewModel = viewModel)
+                CodegenWorkbenchTab.DEVICE_FUNCTION -> MethodWorkbenchPanel(editor = state.editor, viewModel = viewModel)
+                CodegenWorkbenchTab.CONTEXT -> {
+                    ContextDefinitionsPanel(
+                        definitions = state.editor.availableContextDefinitions,
+                        selectedProtocolTemplate = selectedProtocolTemplate,
+                    )
+                    GenerationSettingsPanel(
+                        state = state.editor.generationSettings,
+                        selectedProtocolTemplate = selectedProtocolTemplate,
+                        viewModel = viewModel,
+                    )
+                }
+            }
         }
     }
 }

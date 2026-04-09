@@ -3,25 +3,16 @@ package site.addzero.kcloud.plugins.hostconfig.model.entity
 import java.math.BigDecimal
 import org.babyfish.jimmer.sql.Column
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.OneToOne
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 
 @Entity
 @Table(name = "host_config_project_mqtt_config")
 /**
  * 表示项目MQTT配置。
  */
-interface ProjectMqttConfig {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    /**
-     * 主键 ID。
-     */
-    val id: Long
+interface ProjectMqttConfig : EpochBaseEntity {
 
     /**
      * 是否启用。
@@ -123,16 +114,6 @@ interface ProjectMqttConfig {
      * 云接入控制disabled。
      */
     val cloudControlDisabled: Boolean
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     @OneToOne
     /**

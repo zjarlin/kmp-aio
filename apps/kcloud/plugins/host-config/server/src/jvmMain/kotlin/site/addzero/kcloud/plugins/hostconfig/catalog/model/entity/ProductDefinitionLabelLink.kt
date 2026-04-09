@@ -1,11 +1,9 @@
 package site.addzero.kcloud.plugins.hostconfig.catalog.model.entity
 
 import org.babyfish.jimmer.sql.Entity
-import org.babyfish.jimmer.sql.GeneratedValue
-import org.babyfish.jimmer.sql.GenerationType
-import org.babyfish.jimmer.sql.Id
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
+import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
 
 /**
  * 产品定义与标签定义的关联实体。
@@ -15,25 +13,10 @@ import org.babyfish.jimmer.sql.Table
  */
 @Entity
 @Table(name = "host_config_product_definition_label")
-interface ProductDefinitionLabelLink {
-
-    /** 数据库主键。 */
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long
+interface ProductDefinitionLabelLink : EpochBaseEntity {
 
     /** 同一产品下标签展示顺序。 */
     val sortIndex: Int
-
-    /**
-     * 创建时间戳。
-     */
-    val createdAt: Long
-
-    /**
-     * 更新时间戳。
-     */
-    val updatedAt: Long
 
     /** 关联的产品定义。 */
     @ManyToOne
