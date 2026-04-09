@@ -2,14 +2,12 @@ package site.addzero.kcloud.plugins.hostconfig.api.external
 
 import de.jensklingenberg.ktorfit.Ktorfit
 import org.koin.core.annotation.Single
-import site.addzero.kcloud.plugins.hostconfig.api.external.generated.CatalogApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.CloudAccessApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.GatewayConfigApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectUploadApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TagApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TemplateApi
-import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createCatalogApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createCloudAccessApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createGatewayConfigApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createProjectApi
@@ -24,11 +22,6 @@ import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createTempl
  * 所以这里回退到 root scan 可见的 `@Single` 叶子定义。
  * generated 接口本体仍然留在 build/generated 目录，不进入源码树。
  */
-@Single
-class CatalogApiClient(
-    ktorfit: Ktorfit,
-) : CatalogApi by ktorfit.createCatalogApi()
-
 @Single
 class CloudAccessApiClient(
     ktorfit: Ktorfit,

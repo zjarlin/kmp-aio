@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.gradle.api.tasks.Delete
 
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
@@ -17,9 +18,8 @@ val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")
         .layout
-        .buildDirectory
-        .dir("generated/source/route/commonMain/kotlin")
-        .get()
+        .projectDirectory
+        .dir("src/commonMain/kotlin")
         .asFile
         .absolutePath
 
@@ -52,6 +52,11 @@ kotlin {
                 implementation(libs.findLibrary("io-github-robinpcrd-cupertino-icons-extended").get())
             }
         }
+        jvmMain {
+            dependencies {
+                implementation(libs.findLibrary("com-belerweb-pinyin4j").get())
+            }
+        }
     }
 }
 
@@ -63,4 +68,15 @@ tasks.matching { task ->
     )
 }.configureEach {
     dependsOn(generateCodegenContextUiApisTaskPath)
+}
+
+val cleanLegacyRouteSnapshot by tasks.registering(Delete::class) {
+    delete(routeSharedSourceDir.file("site/addzero/generated/RouteKeys.kt"))
+    delete(routeSharedSourceDir.file("site/addzero/generated/RouteTable.kt"))
+}
+
+tasks.configureEach {
+    if (name == "kspCommonMainKotlinMetadata") {
+        finalizedBy(cleanLegacyRouteSnapshot)
+    }
 }

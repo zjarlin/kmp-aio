@@ -71,6 +71,8 @@ import site.addzero.kcloud.plugins.hostconfig.api.tag.TagValueTextInput
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigBooleanField
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigDialog
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigFormGrid
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigFormSection
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigModuleBoard
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
@@ -1054,6 +1056,7 @@ private fun CurrentNodePanel(
                     resolveModuleBoardModel(
                         module = item,
                         moduleTemplates = state.moduleTemplates,
+                        runtime = state.moduleBoardRuntime,
                     )
                 }
                 HostConfigNodeSummary(
@@ -1073,10 +1076,12 @@ private fun CurrentNodePanel(
                 boardModel?.let { board ->
                     HostConfigDenseSection(
                         title = "模块视图",
-                        subtitle = "用规整模块卡片展示当前板卡的接口、状态与端子布局。",
+                        subtitle = "只渲染当前在线板卡实际返回的寄存器字段，没有返回的数据不会展示。",
                     ) {
                         HostConfigModuleBoard(
                             model = board,
+                            loading = state.moduleBoardLoading,
+                            errorMessage = state.moduleBoardErrorMessage,
                         )
                     }
                 }
@@ -1822,18 +1827,36 @@ private fun ProjectEditorDialog(
             )
         },
     ) {
-        HostConfigTextField("工程名称", name, { name = it })
-        HostConfigTextField("工程描述", description, { description = it }, singleLine = false)
-        HostConfigTextField("备注", remark, { remark = it }, singleLine = false)
-        HostConfigTextField("排序", sortIndex, { sortIndex = it })
+        HostConfigFormSection(
+            title = "基础信息",
+            subtitle = "工程名称、排序和说明文案默认首屏可见。",
+        ) {
+            item {
+                HostConfigTextField("工程名称", name, { name = it })
+            }
+            item {
+                HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            }
+            fullWidth {
+                HostConfigTextField("工程描述", description, { description = it }, singleLine = false)
+            }
+            fullWidth {
+                HostConfigTextField("备注", remark, { remark = it }, singleLine = false)
+            }
+        }
         existing?.let {
-            WorkbenchActionButton(
-                text = "仅更新排序",
-                onClick = {
-                    onUpdateSort(sortIndex.toIntOrNull() ?: 0)
-                },
-                variant = WorkbenchButtonVariant.Secondary,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                WorkbenchActionButton(
+                    text = "仅更新排序",
+                    onClick = {
+                        onUpdateSort(sortIndex.toIntOrNull() ?: 0)
+                    },
+                    variant = WorkbenchButtonVariant.Secondary,
+                )
+            }
         }
     }
 }
@@ -1891,48 +1914,81 @@ private fun ProtocolEditorDialog(
             )
         },
     ) {
-        HostConfigTextField("协议名称", name, { name = it })
-        HostConfigSelectionField(
-            label = "协议模板",
-            options = protocolTemplates.map { item ->
-                HostConfigOption(
-                    value = item.id,
-                    label = item.name,
-                    caption = item.description,
+        HostConfigFormSection(
+            title = "协议基本信息",
+            subtitle = "先定义协议实例名称、模板与轮询节奏。",
+        ) {
+            item {
+                HostConfigTextField("协议名称", name, { name = it })
+            }
+            item {
+                HostConfigSelectionField(
+                    label = "协议模板",
+                    options = protocolTemplates.map { item ->
+                        HostConfigOption(
+                            value = item.id,
+                            label = item.name,
+                            caption = item.description,
+                        )
+                    },
+                    selectedValue = templateId,
+                    onSelected = { templateId = it },
                 )
-            },
-            selectedValue = templateId,
-            onSelected = { templateId = it },
-        )
-        HostConfigTextField("轮询时间(ms)", pollingIntervalMs, { pollingIntervalMs = it })
-        HostConfigTextField("排序", sortIndex, { sortIndex = it })
-        HostConfigPanel(
+            }
+            item {
+                HostConfigTextField("轮询时间(ms)", pollingIntervalMs, { pollingIntervalMs = it })
+            }
+            item {
+                HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            }
+        }
+        HostConfigFormSection(
             title = "通信配置",
-            subtitle = "模块通信参数已经上提到协议层，模块表单只保留硬件语义。",
+            subtitle = "模块通信参数已经上提到协议层，这里只保留协议级连接参数。",
         ) {
             when (templateCode) {
                 "MODBUS_RTU_CLIENT" -> {
-                    HostConfigTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
-                    HostConfigTextField("波特率", baudRate, { baudRate = it })
-                    HostConfigTextField("数据位", dataBits, { dataBits = it })
-                    HostConfigTextField("停止位", stopBits, { stopBits = it })
-                    HostConfigSelectionField(
-                        label = "校验位",
-                        options = Parity.entries.map { option -> HostConfigOption(option, option.label()) },
-                        selectedValue = parity,
-                        onSelected = { selected -> parity = selected ?: Parity.NONE },
-                    )
-                    HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
+                    item {
+                        HostConfigTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
+                    }
+                    item {
+                        HostConfigTextField("波特率", baudRate, { baudRate = it })
+                    }
+                    item {
+                        HostConfigTextField("数据位", dataBits, { dataBits = it })
+                    }
+                    item {
+                        HostConfigTextField("停止位", stopBits, { stopBits = it })
+                    }
+                    item {
+                        HostConfigSelectionField(
+                            label = "校验位",
+                            options = Parity.entries.map { option -> HostConfigOption(option, option.label()) },
+                            selectedValue = parity,
+                            onSelected = { selected -> parity = selected ?: Parity.NONE },
+                        )
+                    }
+                    item {
+                        HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
+                    }
                 }
 
                 "MODBUS_TCP_CLIENT" -> {
-                    HostConfigTextField("主机地址", host, { host = it }, placeholder = "例如 192.168.1.10")
-                    HostConfigTextField("TCP 端口", tcpPort, { tcpPort = it }, placeholder = "默认 502")
-                    HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
+                    item {
+                        HostConfigTextField("主机地址", host, { host = it }, placeholder = "例如 192.168.1.10")
+                    }
+                    item {
+                        HostConfigTextField("TCP 端口", tcpPort, { tcpPort = it }, placeholder = "默认 502")
+                    }
+                    item {
+                        HostConfigTextField("响应超时(ms)", responseTimeoutMs, { responseTimeoutMs = it })
+                    }
                 }
 
                 else -> {
-                    HostConfigStatusStrip("当前协议模板没有额外通信字段。")
+                    fullWidth {
+                        HostConfigStatusStrip("当前协议模板没有额外通信字段。")
+                    }
                 }
             }
         }
@@ -1968,13 +2024,22 @@ private fun LinkProtocolDialog(
         if (options.isEmpty()) {
             HostConfigStatusStrip("当前没有可关联的协议资产。")
         } else {
-            HostConfigSelectionField(
-                label = "可关联协议",
-                options = options,
-                selectedValue = selectedId,
-                onSelected = { selectedId = it },
-            )
-            HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            HostConfigFormSection(
+                title = "关联设置",
+                subtitle = "选择现有协议并决定在当前工程里的排序。",
+            ) {
+                item {
+                    HostConfigSelectionField(
+                        label = "可关联协议",
+                        options = options,
+                        selectedValue = selectedId,
+                        onSelected = { selectedId = it },
+                    )
+                }
+                item {
+                    HostConfigTextField("排序", sortIndex, { sortIndex = it })
+                }
+            }
         }
     }
 }
@@ -2025,9 +2090,20 @@ private fun ModuleEditorDialog(
                 HostConfigKeyValueRow("协议名称", protocolName.orDash())
                 HostConfigKeyValueRow("协议模板", protocolTemplateName.orDash())
             }
-            HostConfigTextField("模块名称", name, { name = it })
-            HostConfigSelectionField("模块模板", templates, moduleTemplateId, { moduleTemplateId = it })
-            HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            HostConfigFormSection(
+                title = "模块信息",
+                subtitle = "模块表单只维护硬件语义、模板归属和排序。",
+            ) {
+                item {
+                    HostConfigTextField("模块名称", name, { name = it })
+                }
+                item {
+                    HostConfigSelectionField("模块模板", templates, moduleTemplateId, { moduleTemplateId = it })
+                }
+                item {
+                    HostConfigTextField("排序", sortIndex, { sortIndex = it })
+                }
+            }
             HostConfigPanel(
                 title = "提示",
                 subtitle = "模块通信参数已提升到协议层，这里只维护模块模板和排序。",
@@ -2064,18 +2140,25 @@ private fun ModuleProtocolPickerDialog(
         },
     ) {
         HostConfigStatusStrip("工程 ${seed.projectName.ifBlank { "当前工程" }} 下有多个可承载协议，请先明确模块归属。")
-        HostConfigSelectionField(
-            label = "目标协议",
-            options = seed.candidates.map { candidate ->
-                HostConfigOption(
-                    value = candidate.protocolId,
-                    label = candidate.protocolName,
-                    caption = candidate.protocolTemplateName,
+        HostConfigFormSection(
+            title = "承载协议",
+            subtitle = "先选协议，再决定允许的模块模板集合。",
+        ) {
+            item {
+                HostConfigSelectionField(
+                    label = "目标协议",
+                    options = seed.candidates.map { candidate ->
+                        HostConfigOption(
+                            value = candidate.protocolId,
+                            label = candidate.protocolName,
+                            caption = candidate.protocolTemplateName,
+                        )
+                    },
+                    selectedValue = selectedProtocolId,
+                    onSelected = { selectedProtocolId = it },
                 )
-            },
-            selectedValue = selectedProtocolId,
-            onSelected = { selectedProtocolId = it },
-        )
+            }
+        }
         seed.candidates
             .firstOrNull { candidate -> candidate.protocolId == selectedProtocolId }
             ?.let { candidate ->
@@ -2149,38 +2232,81 @@ private fun DeviceEditorDialog(
             )
         },
     ) {
-        HostConfigTextField("设备名称", name, { name = it })
-        HostConfigSelectionField("设备类型", deviceTypes, deviceTypeId, { deviceTypeId = it })
-        HostConfigTextField("站号", stationNo, { stationNo = it })
-        HostConfigTextField("请求间隔(ms)", requestIntervalMs, { requestIntervalMs = it })
-        HostConfigTextField("写值间隔(ms)", writeIntervalMs, { writeIntervalMs = it })
-        HostConfigSelectionField(
-            label = "2 字节顺序",
-            options = ByteOrder2.entries.map { option -> HostConfigOption(option, option.label()) },
-            selectedValue = byteOrder2,
-            onSelected = { byteOrder2 = it },
-            allowClear = true,
-        )
-        HostConfigSelectionField(
-            label = "4 字节顺序",
-            options = ByteOrder4.entries.map { option -> HostConfigOption(option, option.label()) },
-            selectedValue = byteOrder4,
-            onSelected = { byteOrder4 = it },
-            allowClear = true,
-        )
-        HostConfigSelectionField(
-            label = "浮点顺序",
-            options = FloatOrder.entries.map { option -> HostConfigOption(option, option.label()) },
-            selectedValue = floatOrder,
-            onSelected = { floatOrder = it },
-            allowClear = true,
-        )
-        HostConfigTextField("模拟量起点", batchAnalogStart, { batchAnalogStart = it })
-        HostConfigTextField("模拟量长度", batchAnalogLength, { batchAnalogLength = it })
-        HostConfigTextField("数字量起点", batchDigitalStart, { batchDigitalStart = it })
-        HostConfigTextField("数字量长度", batchDigitalLength, { batchDigitalLength = it })
-        HostConfigBooleanField("禁用设备", disabled, { disabled = it })
-        HostConfigTextField("排序", sortIndex, { sortIndex = it })
+        HostConfigFormSection(
+            title = "基础信息",
+            subtitle = "设备标识、轮询节奏与启停状态默认放在首屏。",
+        ) {
+            item {
+                HostConfigTextField("设备名称", name, { name = it })
+            }
+            item {
+                HostConfigSelectionField("设备类型", deviceTypes, deviceTypeId, { deviceTypeId = it })
+            }
+            item {
+                HostConfigTextField("站号", stationNo, { stationNo = it })
+            }
+            item {
+                HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            }
+            item {
+                HostConfigTextField("请求间隔(ms)", requestIntervalMs, { requestIntervalMs = it })
+            }
+            item {
+                HostConfigTextField("写值间隔(ms)", writeIntervalMs, { writeIntervalMs = it })
+            }
+            item {
+                HostConfigBooleanField("禁用设备", disabled, { disabled = it })
+            }
+        }
+        HostConfigFormSection(
+            title = "字节序",
+            subtitle = "不同设备协议常会在这里出现字节序差异。",
+        ) {
+            item {
+                HostConfigSelectionField(
+                    label = "2 字节顺序",
+                    options = ByteOrder2.entries.map { option -> HostConfigOption(option, option.label()) },
+                    selectedValue = byteOrder2,
+                    onSelected = { byteOrder2 = it },
+                    allowClear = true,
+                )
+            }
+            item {
+                HostConfigSelectionField(
+                    label = "4 字节顺序",
+                    options = ByteOrder4.entries.map { option -> HostConfigOption(option, option.label()) },
+                    selectedValue = byteOrder4,
+                    onSelected = { byteOrder4 = it },
+                    allowClear = true,
+                )
+            }
+            item {
+                HostConfigSelectionField(
+                    label = "浮点顺序",
+                    options = FloatOrder.entries.map { option -> HostConfigOption(option, option.label()) },
+                    selectedValue = floatOrder,
+                    onSelected = { floatOrder = it },
+                    allowClear = true,
+                )
+            }
+        }
+        HostConfigFormSection(
+            title = "批量读取",
+            subtitle = "把模拟量和数字量的起点与长度并排配置，便于核对。",
+        ) {
+            item {
+                HostConfigTextField("模拟量起点", batchAnalogStart, { batchAnalogStart = it })
+            }
+            item {
+                HostConfigTextField("模拟量长度", batchAnalogLength, { batchAnalogLength = it })
+            }
+            item {
+                HostConfigTextField("数字量起点", batchDigitalStart, { batchDigitalStart = it })
+            }
+            item {
+                HostConfigTextField("数字量长度", batchDigitalLength, { batchDigitalLength = it })
+            }
+        }
     }
 }
 
@@ -2264,30 +2390,79 @@ private fun TagEditorDialog(
             )
         },
     ) {
-        HostConfigTextField("点位名称", name, { name = it })
-        HostConfigTextField("描述", description, { description = it })
-        HostConfigSelectionField("数据类型", dataTypes, dataTypeId, { dataTypeId = it })
-        HostConfigSelectionField("寄存器类型", registerTypes, registerTypeId, { registerTypeId = it })
-        HostConfigTextField("寄存器地址", registerAddress, { registerAddress = it })
-        HostConfigBooleanField("启用点位", enabled, { enabled = it })
-        HostConfigTextField("默认值", defaultValue, { defaultValue = it })
-        HostConfigTextField("异常值", exceptionValue, { exceptionValue = it })
-        HostConfigSelectionField(
-            label = "点位类型",
-            options = PointType.entries.map { option -> HostConfigOption(option, option.label()) },
-            selectedValue = pointType,
-            onSelected = { pointType = it },
-            allowClear = true,
-        )
-        HostConfigTextField("防抖时间", debounceMs, { debounceMs = it })
-        HostConfigTextField("排序", sortIndex, { sortIndex = it })
-        HostConfigBooleanField("启用线性转换", scalingEnabled, { scalingEnabled = it })
+        HostConfigFormSection(
+            title = "基础信息",
+            subtitle = "点位命名、说明和启用状态优先集中展示。",
+        ) {
+            item {
+                HostConfigTextField("点位名称", name, { name = it })
+            }
+            item {
+                HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            }
+            fullWidth {
+                HostConfigTextField("描述", description, { description = it }, singleLine = false)
+            }
+            item {
+                HostConfigBooleanField("启用点位", enabled, { enabled = it })
+            }
+            item {
+                HostConfigBooleanField("启用线性转换", scalingEnabled, { scalingEnabled = it })
+            }
+        }
+        HostConfigFormSection(
+            title = "寄存器与数据语义",
+            subtitle = "把数据类型、寄存器类型和地址放在同一区域，录入时更容易对照。",
+        ) {
+            item {
+                HostConfigSelectionField("数据类型", dataTypes, dataTypeId, { dataTypeId = it })
+            }
+            item {
+                HostConfigSelectionField("寄存器类型", registerTypes, registerTypeId, { registerTypeId = it })
+            }
+            item {
+                HostConfigTextField("寄存器地址", registerAddress, { registerAddress = it })
+            }
+            item {
+                HostConfigSelectionField(
+                    label = "点位类型",
+                    options = PointType.entries.map { option -> HostConfigOption(option, option.label()) },
+                    selectedValue = pointType,
+                    onSelected = { pointType = it },
+                    allowClear = true,
+                )
+            }
+            item {
+                HostConfigTextField("防抖时间", debounceMs, { debounceMs = it })
+            }
+            item {
+                HostConfigTextField("默认值", defaultValue, { defaultValue = it })
+            }
+            item {
+                HostConfigTextField("异常值", exceptionValue, { exceptionValue = it })
+            }
+        }
         if (scalingEnabled) {
-            HostConfigTextField("偏移量", scalingOffset, { scalingOffset = it })
-            HostConfigTextField("原始最小值", rawMin, { rawMin = it })
-            HostConfigTextField("原始最大值", rawMax, { rawMax = it })
-            HostConfigTextField("工程最小值", engMin, { engMin = it })
-            HostConfigTextField("工程最大值", engMax, { engMax = it })
+            HostConfigFormSection(
+                title = "线性转换",
+                subtitle = "原始值与工程值成对放置，方便快速比对。",
+            ) {
+                item {
+                    HostConfigTextField("偏移量", scalingOffset, { scalingOffset = it })
+                }
+                item {
+                    HostConfigTextField("原始最小值", rawMin, { rawMin = it })
+                }
+                item {
+                    HostConfigTextField("原始最大值", rawMax, { rawMax = it })
+                }
+                item {
+                    HostConfigTextField("工程最小值", engMin, { engMin = it })
+                }
+                item {
+                    HostConfigTextField("工程最大值", engMax, { engMax = it })
+                }
+            }
         }
 
         HostConfigPanel(
@@ -2298,33 +2473,46 @@ private fun TagEditorDialog(
                 HostConfigPanel(
                     title = "映射 ${index + 1}",
                 ) {
-                    HostConfigTextField(
-                        label = "原始值",
-                        value = item.rawValue,
-                        onValueChange = { text ->
-                            valueTexts = valueTexts.toMutableList().apply {
-                                this[index] = this[index].copy(rawValue = text)
+                    HostConfigFormGrid {
+                        item {
+                            HostConfigTextField(
+                                label = "原始值",
+                                value = item.rawValue,
+                                onValueChange = { text ->
+                                    valueTexts = valueTexts.toMutableList().apply {
+                                        this[index] = this[index].copy(rawValue = text)
+                                    }
+                                },
+                            )
+                        }
+                        item {
+                            HostConfigTextField(
+                                label = "显示文本",
+                                value = item.displayText,
+                                onValueChange = { text ->
+                                    valueTexts = valueTexts.toMutableList().apply {
+                                        this[index] = this[index].copy(displayText = text)
+                                    }
+                                },
+                            )
+                        }
+                        fullWidth {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                WorkbenchActionButton(
+                                    text = "删除映射",
+                                    onClick = {
+                                        valueTexts = valueTexts.toMutableList().apply {
+                                            removeAt(index)
+                                        }
+                                    },
+                                    variant = WorkbenchButtonVariant.Destructive,
+                                )
                             }
-                        },
-                    )
-                    HostConfigTextField(
-                        label = "显示文本",
-                        value = item.displayText,
-                        onValueChange = { text ->
-                            valueTexts = valueTexts.toMutableList().apply {
-                                this[index] = this[index].copy(displayText = text)
-                            }
-                        },
-                    )
-                    WorkbenchActionButton(
-                        text = "删除映射",
-                        onClick = {
-                            valueTexts = valueTexts.toMutableList().apply {
-                                removeAt(index)
-                            }
-                        },
-                        variant = WorkbenchButtonVariant.Destructive,
-                    )
+                        }
+                    }
                 }
             }
             WorkbenchActionButton(
@@ -2365,13 +2553,22 @@ private fun MoveNodeDialog(
             )
         },
     ) {
-        HostConfigSelectionField(
-            label = "目标上级",
-            options = options,
-            selectedValue = targetKey,
-            onSelected = { targetKey = it },
-        )
-        HostConfigTextField("排序", sortIndex, { sortIndex = it })
+        HostConfigFormSection(
+            title = "迁移设置",
+            subtitle = "先选目标上级，再确定在新父节点下的排序。",
+        ) {
+            item {
+                HostConfigSelectionField(
+                    label = "目标上级",
+                    options = options,
+                    selectedValue = targetKey,
+                    onSelected = { targetKey = it },
+                )
+            }
+            item {
+                HostConfigTextField("排序", sortIndex, { sortIndex = it })
+            }
+        }
     }
 }
 
@@ -2424,34 +2621,51 @@ private fun UploadProjectDialog(
             HostConfigKeyValueRow("备份文件", uploadStatus?.backupFileName.orDash())
             HostConfigKeyValueRow("下载地址", uploadStatus?.backupDownloadUrl.orDash())
         }
-        HostConfigTextField("IP 地址", ipAddress, { ipAddress = it }, placeholder = "请输入目标设备 IP")
-        HostConfigTextField("工程路径", projectPath, { projectPath = it })
-        HostConfigTextField("已选文件名", selectedFileName, { selectedFileName = it })
-        HostConfigBooleanField("上传驱动配置", includeDriverConfig, { includeDriverConfig = it })
-        HostConfigBooleanField("上传固件升级", includeFirmwareUpgrade, { includeFirmwareUpgrade = it })
-        HostConfigBooleanField("极速模式", fastMode, { fastMode = it })
+        HostConfigFormSection(
+            title = "上传参数",
+            subtitle = "把地址、路径和布尔开关压缩在首屏，减少来回滚动。",
+        ) {
+            item {
+                HostConfigTextField("IP 地址", ipAddress, { ipAddress = it }, placeholder = "请输入目标设备 IP")
+            }
+            item {
+                HostConfigTextField("已选文件名", selectedFileName, { selectedFileName = it })
+            }
+            fullWidth {
+                HostConfigTextField("工程路径", projectPath, { projectPath = it })
+            }
+            item {
+                HostConfigBooleanField("上传驱动配置", includeDriverConfig, { includeDriverConfig = it })
+            }
+            item {
+                HostConfigBooleanField("上传固件升级", includeFirmwareUpgrade, { includeFirmwareUpgrade = it })
+            }
+            item {
+                HostConfigBooleanField("极速模式", fastMode, { fastMode = it })
+            }
+        }
         HostConfigPanel(
             title = "远程动作",
             subtitle = "备份、还原、删除与远程重启会保留最近一次动作状态。",
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            HostConfigFormGrid {
                 listOf(
                     ProjectUploadRemoteAction.BACKUP to "备份配置工程",
                     ProjectUploadRemoteAction.RESTORE to "还原配置工程",
                     ProjectUploadRemoteAction.DELETE to "删除配置工程",
                     ProjectUploadRemoteAction.RESTART to "远程重启",
                 ).forEach { (action, label) ->
-                    WorkbenchActionButton(
-                        text = label,
-                        onClick = {
-                            onTriggerAction(action, ipAddress)
-                        },
-                        variant = WorkbenchButtonVariant.Outline,
-                        enabled = ipAddress.isNotBlank() && !saving,
-                    )
+                    item {
+                        WorkbenchActionButton(
+                            text = label,
+                            onClick = {
+                                onTriggerAction(action, ipAddress)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            variant = WorkbenchButtonVariant.Outline,
+                            enabled = ipAddress.isNotBlank() && !saving,
+                        )
+                    }
                 }
             }
         }

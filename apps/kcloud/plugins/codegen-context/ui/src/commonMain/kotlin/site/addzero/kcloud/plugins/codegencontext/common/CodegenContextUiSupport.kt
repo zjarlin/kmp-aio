@@ -7,10 +7,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -21,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoActionSheet
 import io.github.robinpcrd.cupertino.CupertinoBorderedTextField
@@ -40,6 +43,33 @@ data class CodegenOption<T>(
     val label: String,
     val caption: String? = null,
 )
+
+enum class CodegenFormSpan {
+    HALF,
+    FULL,
+}
+
+internal data class CodegenFormItem(
+    val span: CodegenFormSpan,
+    val content: @Composable () -> Unit,
+)
+
+class CodegenFormGridScope internal constructor() {
+    internal val items = mutableListOf<CodegenFormItem>()
+
+    fun item(
+        span: CodegenFormSpan = CodegenFormSpan.HALF,
+        content: @Composable () -> Unit,
+    ) {
+        items += CodegenFormItem(span = span, content = content)
+    }
+
+    fun fullWidth(
+        content: @Composable () -> Unit,
+    ) {
+        item(span = CodegenFormSpan.FULL, content = content)
+    }
+}
 
 @Composable
 fun CodegenPanel(
@@ -111,6 +141,99 @@ fun CodegenStatusStrip(
             text = text,
             style = CupertinoTheme.typography.footnote,
         )
+    }
+}
+
+@Composable
+fun CodegenFormGrid(
+    modifier: Modifier = Modifier,
+    twoColumnMinWidth: Dp = 720.dp,
+    horizontalGap: Dp = 12.dp,
+    verticalGap: Dp = 12.dp,
+    content: CodegenFormGridScope.() -> Unit,
+) {
+    val items = CodegenFormGridScope().apply(content).items.toList()
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        val singleColumn = maxWidth < twoColumnMinWidth
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(verticalGap),
+        ) {
+            if (singleColumn) {
+                items.forEach { item ->
+                    item.content()
+                }
+            } else {
+                var pendingHalf: CodegenFormItem? = null
+                items.forEach { item ->
+                    when (item.span) {
+                        CodegenFormSpan.FULL -> {
+                            pendingHalf?.let { left ->
+                                CodegenFormHalfRow(
+                                    left = left,
+                                    right = null,
+                                    horizontalGap = horizontalGap,
+                                )
+                                pendingHalf = null
+                            }
+                            item.content()
+                        }
+
+                        CodegenFormSpan.HALF -> {
+                            val left = pendingHalf
+                            if (left == null) {
+                                pendingHalf = item
+                            } else {
+                                CodegenFormHalfRow(
+                                    left = left,
+                                    right = item,
+                                    horizontalGap = horizontalGap,
+                                )
+                                pendingHalf = null
+                            }
+                        }
+                    }
+                }
+                pendingHalf?.let { left ->
+                    CodegenFormHalfRow(
+                        left = left,
+                        right = null,
+                        horizontalGap = horizontalGap,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CodegenFormHalfRow(
+    left: CodegenFormItem,
+    right: CodegenFormItem?,
+    horizontalGap: Dp,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(horizontalGap),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier = Modifier.weight(1f),
+        ) {
+            left.content()
+        }
+        if (right == null) {
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            Box(
+                modifier = Modifier.weight(1f),
+            ) {
+                right.content()
+            }
+        }
     }
 }
 

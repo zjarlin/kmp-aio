@@ -31,6 +31,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigReques
 import site.addzero.kcloud.plugins.hostconfig.cloud.CloudViewModel
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigBooleanField
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigDialog
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigFormSection
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigStatusStrip
@@ -216,25 +217,80 @@ private fun CloudConfigDialog(
             )
         },
     ) {
-        HostConfigBooleanField("启用 MQTT", enabled, { enabled = it })
-        HostConfigBooleanField("断点续传", breakpointResume, { breakpointResume = it })
-        HostConfigBooleanField("启用认证", authEnabled, { authEnabled = it })
-        HostConfigBooleanField("启用 TLS", tlsEnabled, { tlsEnabled = it })
-        HostConfigBooleanField("值变化上报", valueChangeRatioEnabled, { valueChangeRatioEnabled = it })
-        HostConfigBooleanField("禁用云端控制", cloudControlDisabled, { cloudControlDisabled = it })
-        HostConfigTextField("网关名称", gatewayName, { gatewayName = it })
-        HostConfigTextField("云平台厂家", vendor, { vendor = it })
-        HostConfigTextField("IP 地址", host, { host = it }, placeholder = "例如 10.0.0.15")
-        HostConfigTextField("端口号", port, { port = it })
-        HostConfigTextField("主题", topic, { topic = it })
-        HostConfigTextField("网关 ID", gatewayId, { gatewayId = it })
-        HostConfigTextField("用户名", username, { username = it })
-        HostConfigTextField("密码", passwordEncrypted, { passwordEncrypted = it })
-        HostConfigTextField("证书引用", certFileRef, { certFileRef = it })
-        HostConfigTextField("Client ID", clientId, { clientId = it })
-        HostConfigTextField("保活时间", keepAliveSec, { keepAliveSec = it })
-        HostConfigTextField("QoS", qos, { qos = it })
-        HostConfigTextField("上报周期", reportPeriodSec, { reportPeriodSec = it })
-        HostConfigTextField("变化精度", precision, { precision = it })
+        HostConfigFormSection(
+            title = "开关策略",
+            subtitle = "高频布尔项集中放在首屏，方便快速核对。",
+        ) {
+            item {
+                HostConfigBooleanField("启用 MQTT", enabled, { enabled = it })
+            }
+            item {
+                HostConfigBooleanField("断点续传", breakpointResume, { breakpointResume = it })
+            }
+            item {
+                HostConfigBooleanField("启用认证", authEnabled, { authEnabled = it })
+            }
+            item {
+                HostConfigBooleanField("启用 TLS", tlsEnabled, { tlsEnabled = it })
+            }
+            item {
+                HostConfigBooleanField("值变化上报", valueChangeRatioEnabled, { valueChangeRatioEnabled = it })
+            }
+            item {
+                HostConfigBooleanField("禁用云端控制", cloudControlDisabled, { cloudControlDisabled = it })
+            }
+        }
+        HostConfigFormSection(
+            title = "连接参数",
+            subtitle = "地址、主题和网关标识默认双栏并排。",
+        ) {
+            item {
+                HostConfigTextField("网关名称", gatewayName, { gatewayName = it })
+            }
+            item {
+                HostConfigTextField("云平台厂家", vendor, { vendor = it })
+            }
+            item {
+                HostConfigTextField("IP 地址", host, { host = it }, placeholder = "例如 10.0.0.15")
+            }
+            item {
+                HostConfigTextField("端口号", port, { port = it })
+            }
+            item {
+                HostConfigTextField("主题", topic, { topic = it })
+            }
+            item {
+                HostConfigTextField("网关 ID", gatewayId, { gatewayId = it })
+            }
+            item {
+                HostConfigTextField("Client ID", clientId, { clientId = it })
+            }
+            item {
+                HostConfigTextField("QoS", qos, { qos = it })
+            }
+            item {
+                HostConfigTextField("保活时间", keepAliveSec, { keepAliveSec = it })
+            }
+            item {
+                HostConfigTextField("上报周期", reportPeriodSec, { reportPeriodSec = it })
+            }
+            item {
+                HostConfigTextField("变化精度", precision, { precision = it })
+            }
+        }
+        HostConfigFormSection(
+            title = "认证与证书",
+            subtitle = "认证和 TLS 相关字段单独成组，避免和连接参数混在一起。",
+        ) {
+            item {
+                HostConfigTextField("用户名", username, { username = it })
+            }
+            item {
+                HostConfigTextField("密码", passwordEncrypted, { passwordEncrypted = it })
+            }
+            item {
+                HostConfigTextField("证书引用", certFileRef, { certFileRef = it })
+            }
+        }
     }
 }

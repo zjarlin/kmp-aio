@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.gradle.api.tasks.Delete
 
 plugins {
     id("site.addzero.buildlogic.kmp.cmp-lib")
@@ -13,14 +14,13 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val generatedApiSourceDir = layout.buildDirectory.dir("generated/source/controller2api/commonMain/kotlin")
 val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")
         .layout
-        .buildDirectory
-        .dir("generated/source/route/commonMain/kotlin")
-        .get()
+        .projectDirectory
+        .dir("src/commonMain/kotlin")
         .asFile
         .absolutePath
 
@@ -45,6 +45,8 @@ kotlin {
             dependencies {
                 implementation(project(":apps:kcloud:shared"))
                 implementation(project(":apps:kcloud:plugins:host-config:shared"))
+                implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
+                implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
                 implementation(libs.findLibrary("compose-cupertino-workbench").get())
                 implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
                 implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
@@ -66,4 +68,15 @@ tasks.matching { task ->
     )
 }.configureEach {
     dependsOn(generateHostConfigUiApisTaskPath)
+}
+
+val cleanLegacyRouteSnapshot by tasks.registering(Delete::class) {
+    delete(routeSharedSourceDir.file("site/addzero/generated/RouteKeys.kt"))
+    delete(routeSharedSourceDir.file("site/addzero/generated/RouteTable.kt"))
+}
+
+tasks.configureEach {
+    if (name == "kspCommonMainKotlinMetadata") {
+        finalizedBy(cleanLegacyRouteSnapshot)
+    }
 }

@@ -9,6 +9,8 @@ import kotlin.io.path.exists
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
 import site.addzero.device.protocol.modbus.codegen.model.ModbusDocModel
 import site.addzero.device.protocol.modbus.codegen.model.ModbusFieldModel
 import site.addzero.device.protocol.modbus.codegen.model.ModbusMqttTransportDefaults
@@ -43,6 +45,76 @@ import site.addzero.device.protocol.modbus.ksp.core.ModbusValueKind as KspValueK
 import site.addzero.device.protocol.modbus.ksp.core.ModbusWorkflowKind as KspWorkflowKind
 import site.addzero.device.protocol.modbus.ksp.core.ModbusWorkflowModel as KspWorkflowModel
 
+private const val MCU_DEVICE_PACKAGE = "site.addzero.kcloud.plugins.mcuconsole.modbus.device"
+
+internal data class ResolvedGenerationSettings(
+    val workspaceRoot: Path,
+    val serverOutputRoot: Path,
+    val sharedOutputRoot: Path,
+    val serverPackageDir: Path,
+    val sharedPackageDir: Path,
+    val gatewayOutputRoot: Path,
+    val apiClientOutputRoot: Path?,
+    val apiClientPackageName: String?,
+    val springRouteOutputRoot: Path?,
+    val cOutputRoot: Path?,
+    val markdownOutputRoot: Path?,
+    val transportDefaults: KspTransportDefaults,
+)
+
+internal fun locateWorkspaceRoot(): Path {
+    val overrideRoot = System.getProperty("codegen.context.repoRoot")?.takeIf(String::isNotBlank)
+    var current =
+        Path.of(overrideRoot ?: System.getProperty("user.dir"))
+            .toAbsolutePath()
+            .normalize()
+    while (true) {
+        if (current.resolve("settings.gradle.kts").exists() &&
+            current.resolve("apps/kcloud/plugins/mcu-console").exists()
+        ) {
+            return current
+        }
+        current = current.parent ?: break
+    }
+    error("Unable to locate the kmp-aio workspace root.")
+}
+
+internal fun CodegenContextDetailDto.resolveGenerationSettings(): ResolvedGenerationSettings {
+    val workspaceRoot = locateWorkspaceRoot()
+    val settings = generationSettings
+    val serverOutputRoot =
+        settings.serverOutputRoot
+            ?.toAbsoluteNormalizedPath()
+            ?: workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin").normalize()
+    val sharedOutputRoot =
+        settings.sharedOutputRoot
+            ?.toAbsoluteNormalizedPath()
+            ?: workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin").normalize()
+    val gatewayOutputRoot =
+        settings.gatewayOutputRoot
+            ?.toAbsoluteNormalizedPath()
+            ?: serverOutputRoot
+    val legacyExternalRoot = externalCOutputRoot?.toAbsoluteNormalizedPath()
+    val cOutputRoot = settings.cOutputRoot?.toAbsoluteNormalizedPath() ?: legacyExternalRoot?.resolve("c")?.normalize()
+    val markdownOutputRoot =
+        settings.markdownOutputRoot?.toAbsoluteNormalizedPath()
+            ?: legacyExternalRoot?.resolve("markdown")?.normalize()
+    return ResolvedGenerationSettings(
+        workspaceRoot = workspaceRoot,
+        serverOutputRoot = serverOutputRoot,
+        sharedOutputRoot = sharedOutputRoot,
+        serverPackageDir = resolveWithinRoot(serverOutputRoot, MCU_DEVICE_PACKAGE.replace('.', '/')),
+        sharedPackageDir = resolveWithinRoot(sharedOutputRoot, MCU_DEVICE_PACKAGE.replace('.', '/')),
+        gatewayOutputRoot = gatewayOutputRoot,
+        apiClientOutputRoot = settings.apiClientOutputRoot?.toAbsoluteNormalizedPath(),
+        apiClientPackageName = settings.apiClientPackageName,
+        springRouteOutputRoot = settings.springRouteOutputRoot?.toAbsoluteNormalizedPath(),
+        cOutputRoot = cOutputRoot,
+        markdownOutputRoot = markdownOutputRoot,
+        transportDefaults = settings.toKspTransportDefaults(),
+    )
+}
+
 internal fun defaultKspTransportDefaults(): KspTransportDefaults =
     ModbusTransportDefaults(
         rtu =
@@ -63,6 +135,39 @@ internal fun defaultKspTransportDefaults(): KspTransportDefaults =
                 unitId = 1,
                 timeoutMs = 1_000,
                 retries = 2,
+            ),
+        mqtt =
+            ModbusMqttTransportDefaults(
+                brokerUrl = "tcp://127.0.0.1:1883",
+                clientId = "modbus-mqtt-client",
+                requestTopic = "modbus/request",
+                responseTopic = "modbus/response",
+                qos = 1,
+                timeoutMs = 1_000,
+                retries = 2,
+            ),
+    ).toKspTransportDefaults()
+
+internal fun CodegenGenerationSettingsDto.toKspTransportDefaults(): KspTransportDefaults =
+    ModbusTransportDefaults(
+        rtu =
+            ModbusRtuTransportDefaults(
+                portPath = rtuDefaults.portPath,
+                unitId = rtuDefaults.unitId,
+                baudRate = rtuDefaults.baudRate,
+                dataBits = rtuDefaults.dataBits,
+                stopBits = rtuDefaults.stopBits,
+                parity = rtuDefaults.parity,
+                timeoutMs = rtuDefaults.timeoutMs,
+                retries = rtuDefaults.retries,
+            ),
+        tcp =
+            ModbusTcpTransportDefaults(
+                host = tcpDefaults.host,
+                port = tcpDefaults.port,
+                unitId = tcpDefaults.unitId,
+                timeoutMs = tcpDefaults.timeoutMs,
+                retries = tcpDefaults.retries,
             ),
         mqtt =
             ModbusMqttTransportDefaults(
@@ -142,6 +247,9 @@ internal fun resolveWithinRoot(
     }
     return target
 }
+
+private fun String.toAbsoluteNormalizedPath(): Path =
+    Path.of(this).toAbsolutePath().normalize()
 
 internal fun ModbusTransportKind.toArtifactKspTransportKind(): KspTransportKind =
     when (this) {

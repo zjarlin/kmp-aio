@@ -9,7 +9,7 @@ val libs = versionCatalogs.named("libs")
 val hostConfigUiProjectDir = layout.projectDirectory.dir("../ui")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
 val generatedApiRootDir =
-    hostConfigUiProjectDir.dir("build/generated/ksp/commonMain/kotlin")
+    hostConfigUiProjectDir.dir("build/generated/source/controller2api/commonMain/kotlin")
 
 /** API 生成目录。 */
 val generatedApiOutputDir =

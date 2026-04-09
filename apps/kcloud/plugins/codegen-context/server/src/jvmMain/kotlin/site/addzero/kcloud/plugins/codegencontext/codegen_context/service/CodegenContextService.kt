@@ -12,9 +12,12 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextSummaryDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenRtuGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenTcpGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.GenerateContractsResponseDto
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.model.entity.*
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.BusinessValidationException
@@ -36,6 +39,7 @@ class CodegenContextService(
     private companion object {
         val IDENTIFIER_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*")
         val CODE_PATTERN = Regex("[A-Za-z][A-Za-z0-9_]*")
+        val PACKAGE_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*")
         val SQLITE_DATE_TIME_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val SUPPORTED_PROTOCOL_TEMPLATE_CODES = setOf(
@@ -66,6 +70,7 @@ class CodegenContextService(
         validate(normalized)
         val protocolTemplate = loadProtocolTemplate(normalized.protocolTemplateId)
         ensureSupportedTemplate(protocolTemplate)
+        val generationSettings = normalized.generationSettings
         val contextId =
             jdbc.withTransaction { connection ->
                 val existingId = normalized.id
@@ -84,9 +89,30 @@ class CodegenContextService(
                                 consumer_target,
                                 protocol_template_id,
                                 external_c_output_root,
+                                server_output_root,
+                                shared_output_root,
+                                gateway_output_root,
+                                api_client_output_root,
+                                api_client_package_name,
+                                spring_route_output_root,
+                                c_output_root,
+                                markdown_output_root,
+                                rtu_port_path,
+                                rtu_unit_id,
+                                rtu_baud_rate,
+                                rtu_data_bits,
+                                rtu_stop_bits,
+                                rtu_parity,
+                                rtu_timeout_ms,
+                                rtu_retries,
+                                tcp_host,
+                                tcp_port,
+                                tcp_unit_id,
+                                tcp_timeout_ms,
+                                tcp_retries,
                                 create_time,
                                 update_time
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """.trimIndent(),
                             normalized.code,
                             normalized.name,
@@ -95,6 +121,27 @@ class CodegenContextService(
                             CodegenConsumerTarget.MCU_CONSOLE.name,
                             normalized.protocolTemplateId,
                             normalized.externalCOutputRoot,
+                            generationSettings.serverOutputRoot,
+                            generationSettings.sharedOutputRoot,
+                            generationSettings.gatewayOutputRoot,
+                            generationSettings.apiClientOutputRoot,
+                            generationSettings.apiClientPackageName,
+                            generationSettings.springRouteOutputRoot,
+                            generationSettings.cOutputRoot,
+                            generationSettings.markdownOutputRoot,
+                            generationSettings.rtuDefaults.portPath,
+                            generationSettings.rtuDefaults.unitId,
+                            generationSettings.rtuDefaults.baudRate,
+                            generationSettings.rtuDefaults.dataBits,
+                            generationSettings.rtuDefaults.stopBits,
+                            generationSettings.rtuDefaults.parity,
+                            generationSettings.rtuDefaults.timeoutMs,
+                            generationSettings.rtuDefaults.retries,
+                            generationSettings.tcpDefaults.host,
+                            generationSettings.tcpDefaults.port,
+                            generationSettings.tcpDefaults.unitId,
+                            generationSettings.tcpDefaults.timeoutMs,
+                            generationSettings.tcpDefaults.retries,
                             now,
                             now,
                         )
@@ -112,6 +159,27 @@ class CodegenContextService(
                                 consumer_target = ?,
                                 protocol_template_id = ?,
                                 external_c_output_root = ?,
+                                server_output_root = ?,
+                                shared_output_root = ?,
+                                gateway_output_root = ?,
+                                api_client_output_root = ?,
+                                api_client_package_name = ?,
+                                spring_route_output_root = ?,
+                                c_output_root = ?,
+                                markdown_output_root = ?,
+                                rtu_port_path = ?,
+                                rtu_unit_id = ?,
+                                rtu_baud_rate = ?,
+                                rtu_data_bits = ?,
+                                rtu_stop_bits = ?,
+                                rtu_parity = ?,
+                                rtu_timeout_ms = ?,
+                                rtu_retries = ?,
+                                tcp_host = ?,
+                                tcp_port = ?,
+                                tcp_unit_id = ?,
+                                tcp_timeout_ms = ?,
+                                tcp_retries = ?,
                                 update_time = ?
                             WHERE id = ?
                             """.trimIndent(),
@@ -122,6 +190,27 @@ class CodegenContextService(
                             CodegenConsumerTarget.MCU_CONSOLE.name,
                             normalized.protocolTemplateId,
                             normalized.externalCOutputRoot,
+                            generationSettings.serverOutputRoot,
+                            generationSettings.sharedOutputRoot,
+                            generationSettings.gatewayOutputRoot,
+                            generationSettings.apiClientOutputRoot,
+                            generationSettings.apiClientPackageName,
+                            generationSettings.springRouteOutputRoot,
+                            generationSettings.cOutputRoot,
+                            generationSettings.markdownOutputRoot,
+                            generationSettings.rtuDefaults.portPath,
+                            generationSettings.rtuDefaults.unitId,
+                            generationSettings.rtuDefaults.baudRate,
+                            generationSettings.rtuDefaults.dataBits,
+                            generationSettings.rtuDefaults.stopBits,
+                            generationSettings.rtuDefaults.parity,
+                            generationSettings.rtuDefaults.timeoutMs,
+                            generationSettings.rtuDefaults.retries,
+                            generationSettings.tcpDefaults.host,
+                            generationSettings.tcpDefaults.port,
+                            generationSettings.tcpDefaults.unitId,
+                            generationSettings.tcpDefaults.timeoutMs,
+                            generationSettings.tcpDefaults.retries,
                             now,
                             existingId,
                         )
@@ -338,6 +427,7 @@ class CodegenContextService(
             throw BusinessValidationException("Only MCU_CONSOLE is supported in V1.")
         }
         request.externalCOutputRoot?.let(::validateExternalCOutputRoot)
+        validateGenerationSettings(request.generationSettings)
         val duplicateMethods =
             request.schemas.groupBy { it.methodName }.filterValues { schemas -> schemas.size > 1 }.keys
         if (duplicateMethods.isNotEmpty()) {
@@ -359,6 +449,99 @@ class CodegenContextService(
             }
         if (!path.isAbsolute) {
             throw BusinessValidationException("externalCOutputRoot must be an absolute path on the current machine.")
+        }
+    }
+
+    private fun validateGenerationSettings(
+        settings: CodegenGenerationSettingsDto,
+    ) {
+        listOf(
+            "serverOutputRoot" to settings.serverOutputRoot,
+            "sharedOutputRoot" to settings.sharedOutputRoot,
+            "gatewayOutputRoot" to settings.gatewayOutputRoot,
+            "apiClientOutputRoot" to settings.apiClientOutputRoot,
+            "springRouteOutputRoot" to settings.springRouteOutputRoot,
+            "cOutputRoot" to settings.cOutputRoot,
+            "markdownOutputRoot" to settings.markdownOutputRoot,
+        ).forEach { (label, value) ->
+            value?.let { validateAbsolutePath(label, it) }
+        }
+        settings.apiClientPackageName?.let { packageName ->
+            if (!PACKAGE_PATTERN.matches(packageName)) {
+                throw BusinessValidationException("apiClientPackageName '$packageName' is not a valid Kotlin package name.")
+            }
+        }
+        if (settings.apiClientOutputRoot != null && settings.apiClientPackageName == null) {
+            throw BusinessValidationException("apiClientPackageName is required when apiClientOutputRoot is configured.")
+        }
+        if (settings.apiClientPackageName != null && settings.apiClientOutputRoot == null) {
+            throw BusinessValidationException("apiClientOutputRoot is required when apiClientPackageName is configured.")
+        }
+        validateRtuDefaults(settings.rtuDefaults)
+        validateTcpDefaults(settings.tcpDefaults)
+    }
+
+    private fun validateAbsolutePath(
+        fieldName: String,
+        rawPath: String,
+    ) {
+        val path =
+            try {
+                Path.of(rawPath)
+            } catch (_: InvalidPathException) {
+                throw BusinessValidationException("$fieldName is not a valid filesystem path.")
+            }
+        if (!path.isAbsolute) {
+            throw BusinessValidationException("$fieldName must be an absolute path on the current machine.")
+        }
+    }
+
+    private fun validateRtuDefaults(
+        defaults: CodegenRtuGenerationDefaultsDto,
+    ) {
+        if (defaults.portPath.isBlank()) {
+            throw BusinessValidationException("rtuDefaults.portPath cannot be blank.")
+        }
+        if (defaults.unitId < 1 || defaults.unitId > 255) {
+            throw BusinessValidationException("rtuDefaults.unitId must be between 1 and 255.")
+        }
+        if (defaults.baudRate < 1) {
+            throw BusinessValidationException("rtuDefaults.baudRate must be positive.")
+        }
+        if (defaults.dataBits !in setOf(5, 6, 7, 8)) {
+            throw BusinessValidationException("rtuDefaults.dataBits must be one of 5, 6, 7, 8.")
+        }
+        if (defaults.stopBits !in setOf(1, 2)) {
+            throw BusinessValidationException("rtuDefaults.stopBits must be 1 or 2.")
+        }
+        if (defaults.parity.isBlank()) {
+            throw BusinessValidationException("rtuDefaults.parity cannot be blank.")
+        }
+        if (defaults.timeoutMs < 1) {
+            throw BusinessValidationException("rtuDefaults.timeoutMs must be positive.")
+        }
+        if (defaults.retries < 0) {
+            throw BusinessValidationException("rtuDefaults.retries must be >= 0.")
+        }
+    }
+
+    private fun validateTcpDefaults(
+        defaults: CodegenTcpGenerationDefaultsDto,
+    ) {
+        if (defaults.host.isBlank()) {
+            throw BusinessValidationException("tcpDefaults.host cannot be blank.")
+        }
+        if (defaults.port !in 1..65535) {
+            throw BusinessValidationException("tcpDefaults.port must be between 1 and 65535.")
+        }
+        if (defaults.unitId < 1 || defaults.unitId > 255) {
+            throw BusinessValidationException("tcpDefaults.unitId must be between 1 and 255.")
+        }
+        if (defaults.timeoutMs < 1) {
+            throw BusinessValidationException("tcpDefaults.timeoutMs must be positive.")
+        }
+        if (defaults.retries < 0) {
+            throw BusinessValidationException("tcpDefaults.retries must be >= 0.")
         }
     }
 
@@ -600,6 +783,36 @@ class CodegenContextService(
             protocolTemplateCode = protocolTemplate.code,
             protocolTemplateName = protocolTemplate.name,
             externalCOutputRoot = externalCOutputRoot,
+            generationSettings =
+                CodegenGenerationSettingsDto(
+                    serverOutputRoot = serverOutputRoot,
+                    sharedOutputRoot = sharedOutputRoot,
+                    gatewayOutputRoot = gatewayOutputRoot,
+                    apiClientOutputRoot = apiClientOutputRoot,
+                    apiClientPackageName = apiClientPackageName,
+                    springRouteOutputRoot = springRouteOutputRoot,
+                    cOutputRoot = cOutputRoot ?: externalCOutputRoot?.let { "$it/c" },
+                    markdownOutputRoot = markdownOutputRoot ?: externalCOutputRoot?.let { "$it/markdown" },
+                    rtuDefaults =
+                        CodegenRtuGenerationDefaultsDto(
+                            portPath = rtuPortPath,
+                            unitId = rtuUnitId,
+                            baudRate = rtuBaudRate,
+                            dataBits = rtuDataBits,
+                            stopBits = rtuStopBits,
+                            parity = rtuParity,
+                            timeoutMs = rtuTimeoutMs,
+                            retries = rtuRetries,
+                        ),
+                    tcpDefaults =
+                        CodegenTcpGenerationDefaultsDto(
+                            host = tcpHost,
+                            port = tcpPort,
+                            unitId = tcpUnitId,
+                            timeoutMs = tcpTimeoutMs,
+                            retries = tcpRetries,
+                        ),
+                ),
             schemas =
                 schemas.sortedWith(compareBy(CodegenSchema::sortIndex, CodegenSchema::id)).map { schema ->
                     CodegenSchemaDto(
@@ -641,6 +854,7 @@ class CodegenContextService(
             enabled = enabled,
             consumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
             externalCOutputRoot = externalCOutputRoot.cleanNullable(),
+            generationSettings = generationSettings.normalized(),
             schemas =
                 schemas.map { schema ->
                     schema.copy(
@@ -665,6 +879,28 @@ class CodegenContextService(
 
     private fun String?.cleanNullable(): String? {
         return this?.trim()?.takeIf(String::isNotBlank)
+    }
+
+    private fun CodegenGenerationSettingsDto.normalized(): CodegenGenerationSettingsDto {
+        return copy(
+            serverOutputRoot = serverOutputRoot.cleanNullable(),
+            sharedOutputRoot = sharedOutputRoot.cleanNullable(),
+            gatewayOutputRoot = gatewayOutputRoot.cleanNullable(),
+            apiClientOutputRoot = apiClientOutputRoot.cleanNullable(),
+            apiClientPackageName = apiClientPackageName.cleanNullable(),
+            springRouteOutputRoot = springRouteOutputRoot.cleanNullable(),
+            cOutputRoot = cOutputRoot.cleanNullable(),
+            markdownOutputRoot = markdownOutputRoot.cleanNullable(),
+            rtuDefaults =
+                rtuDefaults.copy(
+                    portPath = rtuDefaults.portPath.trim(),
+                    parity = rtuDefaults.parity.trim(),
+                ),
+            tcpDefaults =
+                tcpDefaults.copy(
+                    host = tcpDefaults.host.trim(),
+                ),
+        )
     }
 
     private fun nowSqlValue(): String {

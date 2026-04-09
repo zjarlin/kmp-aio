@@ -93,8 +93,9 @@ Repo-specific current convention:
 - `routeGenPkg` is `site.addzero.generated`
 - plugin UI modules use `routeAggregationRole=contributor`
 - the shell owner module `apps:kcloud:ui` uses `routeAggregationRole=owner`
-- `routeOwnerModule` always points to the owner output source dir `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin`
-- `sharedSourceDir` currently remains pointed at each module `src/commonMain/kotlin` for published processor compatibility, but final aggregated outputs must not be written back there
+- `routeOwnerModule` currently still points to the owner module `apps:kcloud:ui` `commonMain` source dir for published processor compatibility
+- the repo then syncs owner-generated route sources into `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin` and compiles from that generated source dir
+- `sharedSourceDir` currently remains pointed at each module `src/commonMain/kotlin`, but generated route files must not be committed there
 
 Generated outputs:
 

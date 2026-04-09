@@ -13,6 +13,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionR
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
+import site.addzero.kcloud.plugins.hostconfig.common.ModuleBoardRuntimeSnapshot
 import site.addzero.kcloud.plugins.hostconfig.common.findNode
 
 private val EmptyTagPage = PageResponse<TagResponse>(
@@ -42,6 +43,9 @@ data class ProjectsScreenState(
     val tagPage: PageResponse<TagResponse> = EmptyTagPage,
     val selectedTagDetail: TagResponse? = null,
     val uploadStatus: ProjectUploadOperationResponse? = null,
+    val moduleBoardRuntime: ModuleBoardRuntimeSnapshot? = null,
+    val moduleBoardLoading: Boolean = false,
+    val moduleBoardErrorMessage: String? = null,
 ) {
     val moduleTemplates: List<ModuleTemplateOptionResponse>
         get() = moduleTemplateCatalog.values.flatten().distinctBy { template -> template.id }

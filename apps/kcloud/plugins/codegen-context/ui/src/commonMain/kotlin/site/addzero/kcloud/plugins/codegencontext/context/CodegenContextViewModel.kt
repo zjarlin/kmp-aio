@@ -9,7 +9,10 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenRtuGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenTcpGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.api.external.CodegenContextApi
 import site.addzero.kcloud.plugins.codegencontext.api.external.CodegenTemplateApi
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenConsumerTarget
@@ -53,7 +56,7 @@ class CodegenContextViewModel(
             }.onFailure { throwable ->
                 screenState = screenState.copy(
                     loading = false,
-                    errorMessage = throwable.message ?: "Failed to load codegen contexts.",
+                    errorMessage = throwable.message ?: "加载代码生成上下文失败。",
                 )
             }
         }
@@ -74,7 +77,7 @@ class CodegenContextViewModel(
                 )
             }.onFailure { throwable ->
                 screenState = screenState.copy(
-                    errorMessage = throwable.message ?: "Failed to load context detail.",
+                    errorMessage = throwable.message ?: "加载上下文详情失败。",
                 )
             }
         }
@@ -83,7 +86,7 @@ class CodegenContextViewModel(
     fun newContext() {
         screenState = screenState.copy(
             selectedContextId = null,
-            statusMessage = "New context draft created.",
+            statusMessage = "已创建新的上下文草稿。",
             errorMessage = null,
             generatedFiles = emptyList(),
             editor = CodegenContextEditorState.empty().copy(
@@ -101,12 +104,12 @@ class CodegenContextViewModel(
                     saving = false,
                     selectedContextId = saved.id,
                     editor = saved.toEditor(),
-                    statusMessage = "Context saved.",
+                    statusMessage = "上下文已保存。",
                 )
             }.onFailure { throwable ->
                 screenState = screenState.copy(
                     saving = false,
-                    errorMessage = throwable.message ?: "Failed to save context.",
+                    errorMessage = throwable.message ?: "保存上下文失败。",
                 )
             }
         }
@@ -130,12 +133,12 @@ class CodegenContextViewModel(
                     contexts = contexts,
                     selectedContextId = nextSelectedId,
                     editor = nextEditor,
-                    statusMessage = "Context deleted.",
+                    statusMessage = "上下文已删除。",
                 )
             }.onFailure { throwable ->
                 screenState = screenState.copy(
                     deleting = false,
-                    errorMessage = throwable.message ?: "Failed to delete context.",
+                    errorMessage = throwable.message ?: "删除上下文失败。",
                 )
             }
         }
@@ -157,7 +160,7 @@ class CodegenContextViewModel(
             }.onFailure { throwable ->
                 screenState = screenState.copy(
                     generating = false,
-                    errorMessage = throwable.message ?: "Failed to generate contracts.",
+                    errorMessage = throwable.message ?: "生成契约失败。",
                 )
             }
         }
@@ -169,14 +172,29 @@ class CodegenContextViewModel(
         screenState = screenState.copy(editor = transform(screenState.editor))
     }
 
-    fun addSchema() {
+    fun updateGenerationSettings(
+        transform: (CodegenGenerationSettingsEditorState) -> CodegenGenerationSettingsEditorState,
+    ) {
         updateContext { editor ->
+            editor.copy(generationSettings = transform(editor.generationSettings))
+        }
+    }
+
+    fun addSchema() {
+        addSchema(CodegenSchemaDirection.READ)
+    }
+
+    fun addSchema(
+        direction: CodegenSchemaDirection,
+    ) {
+        updateContext { editor ->
+            val sortIndex = editor.schemas.size.toString()
             editor.copy(
                 schemas =
                     editor.schemas + CodegenSchemaEditorState(
-                        sortIndexText = editor.schemas.size.toString(),
-                        direction = CodegenSchemaDirection.READ,
-                        functionCode = CodegenFunctionCode.READ_COILS,
+                        sortIndexText = sortIndex,
+                        direction = direction,
+                        functionCode = direction.allowedFunctionCodes().first(),
                     ),
             )
         }
@@ -208,6 +226,81 @@ class CodegenContextViewModel(
         }
     }
 
+    fun updateSchemaName(
+        schemaIndex: Int,
+        value: String,
+    ) {
+        updateSchema(schemaIndex) { current ->
+            val currentAutoMethodName = current.name.toGeneratedMethodName()
+            val nextMethodName =
+                if (current.methodName.isBlank() || current.methodName == currentAutoMethodName) {
+                    value.toGeneratedMethodName()
+                } else {
+                    current.methodName
+                }
+            val currentAutoModelName = current.derivedModelName()
+            val nextModelName =
+                if (current.direction == CodegenSchemaDirection.READ &&
+                    (current.modelName.isBlank() || current.modelName == currentAutoModelName)
+                ) {
+                    value.toGeneratedTypeName(defaultName = "GeneratedModel")
+                } else {
+                    current.modelName
+                }
+            current.copy(
+                name = value,
+                methodName = nextMethodName,
+                modelName = nextModelName,
+            )
+        }
+    }
+
+    fun updateSchemaMethodName(
+        schemaIndex: Int,
+        value: String,
+    ) {
+        updateSchema(schemaIndex) { current ->
+            val currentAutoModelName = current.derivedModelName()
+            val nextModelName =
+                if (current.direction == CodegenSchemaDirection.READ &&
+                    (current.modelName.isBlank() || current.modelName == currentAutoModelName)
+                ) {
+                    value.toGeneratedTypeName(defaultName = "GeneratedModel")
+                } else {
+                    current.modelName
+                }
+            current.copy(
+                methodName = value,
+                modelName = nextModelName,
+            )
+        }
+    }
+
+    fun updateSchemaDirection(
+        schemaIndex: Int,
+        direction: CodegenSchemaDirection,
+    ) {
+        updateSchema(schemaIndex) { current ->
+            val nextFunctionCode =
+                if (current.functionCode in direction.allowedFunctionCodes()) {
+                    current.functionCode
+                } else {
+                    direction.allowedFunctionCodes().first()
+                }
+            val nextModelName =
+                if (direction == CodegenSchemaDirection.READ && current.modelName.isBlank()) {
+                    current.derivedModelName()
+                } else {
+                    current.modelName
+                }
+            current.copy(
+                direction = direction,
+                functionCode = nextFunctionCode,
+                modelName = nextModelName,
+            )
+        }
+    }
+
     fun addField(
         schemaIndex: Int,
     ) {
@@ -217,6 +310,26 @@ class CodegenContextViewModel(
                     schema.fields + CodegenFieldEditorState(
                         sortIndexText = schema.fields.size.toString(),
                     ),
+            )
+        }
+    }
+
+    fun updateFieldName(
+        schemaIndex: Int,
+        fieldIndex: Int,
+        value: String,
+    ) {
+        updateField(schemaIndex, fieldIndex) { current ->
+            val currentAutoPropertyName = current.name.toGeneratedPropertyName()
+            val nextPropertyName =
+                if (current.propertyName.isBlank() || current.propertyName == currentAutoPropertyName) {
+                    value.toGeneratedPropertyName()
+                } else {
+                    current.propertyName
+                }
+            current.copy(
+                name = value,
+                propertyName = nextPropertyName,
             )
         }
     }
@@ -272,6 +385,36 @@ private fun CodegenContextDetailDto.toEditor(): CodegenContextEditorState {
         consumerTarget = consumerTarget,
         protocolTemplateId = protocolTemplateId,
         externalCOutputRoot = externalCOutputRoot.orEmpty(),
+        generationSettings =
+            CodegenGenerationSettingsEditorState(
+                serverOutputRoot = generationSettings.serverOutputRoot.orEmpty(),
+                sharedOutputRoot = generationSettings.sharedOutputRoot.orEmpty(),
+                gatewayOutputRoot = generationSettings.gatewayOutputRoot.orEmpty(),
+                apiClientOutputRoot = generationSettings.apiClientOutputRoot.orEmpty(),
+                apiClientPackageName = generationSettings.apiClientPackageName.orEmpty(),
+                springRouteOutputRoot = generationSettings.springRouteOutputRoot.orEmpty(),
+                cOutputRoot = generationSettings.cOutputRoot.orEmpty(),
+                markdownOutputRoot = generationSettings.markdownOutputRoot.orEmpty(),
+                rtuDefaults =
+                    CodegenRtuGenerationDefaultsEditorState(
+                        portPath = generationSettings.rtuDefaults.portPath,
+                        unitIdText = generationSettings.rtuDefaults.unitId.toString(),
+                        baudRateText = generationSettings.rtuDefaults.baudRate.toString(),
+                        dataBitsText = generationSettings.rtuDefaults.dataBits.toString(),
+                        stopBitsText = generationSettings.rtuDefaults.stopBits.toString(),
+                        parity = generationSettings.rtuDefaults.parity,
+                        timeoutMsText = generationSettings.rtuDefaults.timeoutMs.toString(),
+                        retriesText = generationSettings.rtuDefaults.retries.toString(),
+                    ),
+                tcpDefaults =
+                    CodegenTcpGenerationDefaultsEditorState(
+                        host = generationSettings.tcpDefaults.host,
+                        portText = generationSettings.tcpDefaults.port.toString(),
+                        unitIdText = generationSettings.tcpDefaults.unitId.toString(),
+                        timeoutMsText = generationSettings.tcpDefaults.timeoutMs.toString(),
+                        retriesText = generationSettings.tcpDefaults.retries.toString(),
+                    ),
+            ),
         schemas =
             schemas.map { schema ->
                 CodegenSchemaEditorState(
@@ -315,6 +458,36 @@ private fun CodegenContextEditorState.toDto(): CodegenContextDetailDto {
         consumerTarget = consumerTarget,
         protocolTemplateId = protocolTemplateId ?: 0L,
         externalCOutputRoot = externalCOutputRoot.takeIf { it.isNotBlank() },
+        generationSettings =
+            CodegenGenerationSettingsDto(
+                serverOutputRoot = generationSettings.serverOutputRoot.takeIf { it.isNotBlank() },
+                sharedOutputRoot = generationSettings.sharedOutputRoot.takeIf { it.isNotBlank() },
+                gatewayOutputRoot = generationSettings.gatewayOutputRoot.takeIf { it.isNotBlank() },
+                apiClientOutputRoot = generationSettings.apiClientOutputRoot.takeIf { it.isNotBlank() },
+                apiClientPackageName = generationSettings.apiClientPackageName.takeIf { it.isNotBlank() },
+                springRouteOutputRoot = generationSettings.springRouteOutputRoot.takeIf { it.isNotBlank() },
+                cOutputRoot = generationSettings.cOutputRoot.takeIf { it.isNotBlank() },
+                markdownOutputRoot = generationSettings.markdownOutputRoot.takeIf { it.isNotBlank() },
+                rtuDefaults =
+                    CodegenRtuGenerationDefaultsDto(
+                        portPath = generationSettings.rtuDefaults.portPath,
+                        unitId = generationSettings.rtuDefaults.unitIdText.toIntOrNull() ?: 1,
+                        baudRate = generationSettings.rtuDefaults.baudRateText.toIntOrNull() ?: 9600,
+                        dataBits = generationSettings.rtuDefaults.dataBitsText.toIntOrNull() ?: 8,
+                        stopBits = generationSettings.rtuDefaults.stopBitsText.toIntOrNull() ?: 1,
+                        parity = generationSettings.rtuDefaults.parity,
+                        timeoutMs = generationSettings.rtuDefaults.timeoutMsText.toLongOrNull() ?: 1_000,
+                        retries = generationSettings.rtuDefaults.retriesText.toIntOrNull() ?: 2,
+                    ),
+                tcpDefaults =
+                    CodegenTcpGenerationDefaultsDto(
+                        host = generationSettings.tcpDefaults.host,
+                        port = generationSettings.tcpDefaults.portText.toIntOrNull() ?: 502,
+                        unitId = generationSettings.tcpDefaults.unitIdText.toIntOrNull() ?: 1,
+                        timeoutMs = generationSettings.tcpDefaults.timeoutMsText.toLongOrNull() ?: 1_000,
+                        retries = generationSettings.tcpDefaults.retriesText.toIntOrNull() ?: 2,
+                    ),
+            ),
         schemas =
             schemas.map { schema ->
                 CodegenSchemaDto(
@@ -325,8 +498,15 @@ private fun CodegenContextEditorState.toDto(): CodegenContextDetailDto {
                     direction = schema.direction,
                     functionCode = schema.functionCode,
                     baseAddress = schema.baseAddressText.toIntOrNull() ?: 0,
-                    methodName = schema.methodName,
-                    modelName = schema.modelName.takeIf { it.isNotBlank() },
+                    methodName = schema.methodName.takeIf { it.isNotBlank() } ?: schema.name.toGeneratedMethodName(),
+                    modelName =
+                        when (schema.direction) {
+                            CodegenSchemaDirection.READ ->
+                                (schema.modelName.takeIf { it.isNotBlank() }
+                                    ?: schema.derivedModelName())
+
+                            CodegenSchemaDirection.WRITE -> schema.modelName.takeIf { it.isNotBlank() }
+                        },
                     fields =
                         schema.fields.map { field ->
                             CodegenFieldDto(
@@ -334,7 +514,7 @@ private fun CodegenContextEditorState.toDto(): CodegenContextDetailDto {
                                 name = field.name,
                                 description = field.description.takeIf { it.isNotBlank() },
                                 sortIndex = field.sortIndexText.toIntOrNull() ?: 0,
-                                propertyName = field.propertyName,
+                                propertyName = field.propertyName.takeIf { it.isNotBlank() } ?: field.name.toGeneratedPropertyName(),
                                 transportType = field.transportType,
                                 registerOffset = field.registerOffsetText.toIntOrNull() ?: 0,
                                 bitOffset = field.bitOffsetText.toIntOrNull() ?: 0,
@@ -346,4 +526,29 @@ private fun CodegenContextEditorState.toDto(): CodegenContextDetailDto {
                 )
             },
     )
+}
+
+private fun CodegenSchemaDirection.allowedFunctionCodes(): List<CodegenFunctionCode> {
+    return when (this) {
+        CodegenSchemaDirection.READ ->
+            listOf(
+                CodegenFunctionCode.READ_COILS,
+                CodegenFunctionCode.READ_DISCRETE_INPUTS,
+                CodegenFunctionCode.READ_INPUT_REGISTERS,
+                CodegenFunctionCode.READ_HOLDING_REGISTERS,
+            )
+
+        CodegenSchemaDirection.WRITE ->
+            listOf(
+                CodegenFunctionCode.WRITE_SINGLE_COIL,
+                CodegenFunctionCode.WRITE_MULTIPLE_COILS,
+                CodegenFunctionCode.WRITE_SINGLE_REGISTER,
+                CodegenFunctionCode.WRITE_MULTIPLE_REGISTERS,
+            )
+    }
+}
+
+private fun CodegenSchemaEditorState.derivedModelName(): String {
+    val source = methodName.takeIf { it.isNotBlank() } ?: name
+    return source.toGeneratedTypeName(defaultName = "GeneratedModel")
 }

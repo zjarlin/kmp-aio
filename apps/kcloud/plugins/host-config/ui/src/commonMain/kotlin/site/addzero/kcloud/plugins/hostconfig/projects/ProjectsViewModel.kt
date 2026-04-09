@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
@@ -36,7 +38,9 @@ import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TagApi
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TemplateApi
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
+import site.addzero.kcloud.plugins.hostconfig.common.ModuleBoardRuntimeSnapshot
 import site.addzero.kcloud.plugins.hostconfig.common.findNode
+import site.addzero.kcloud.plugins.mcuconsole.api.external.DeviceInfoApi
 
 @KoinViewModel
 class ProjectsViewModel(
@@ -44,6 +48,7 @@ class ProjectsViewModel(
     private val tagApi: TagApi,
     private val templateApi: TemplateApi,
     private val projectUploadApi: ProjectUploadApi,
+    private val deviceInfoApi: DeviceInfoApi,
 ) : ViewModel() {
     var screenState by mutableStateOf(ProjectsScreenState())
         private set
@@ -701,6 +706,12 @@ class ProjectsViewModel(
             )
         }
 
+        if (selectedNode?.kind == HostConfigNodeKind.MODULE) {
+            loadModuleBoardRuntime(selectedNode.entityId)
+        } else {
+            clearModuleBoardRuntime()
+        }
+
         screenState = screenState.copy(
             uploadStatus = projectUploadApi.getProjectUploadStatus(uploadStatusProjectId),
         )
@@ -745,6 +756,99 @@ class ProjectsViewModel(
                     .distinctBy { template -> template.id }
             }
         }
+    }
+
+    private fun clearModuleBoardRuntime() {
+        screenState = screenState.copy(
+            moduleBoardRuntime = null,
+            moduleBoardLoading = false,
+            moduleBoardErrorMessage = null,
+        )
+    }
+
+    private suspend fun loadModuleBoardRuntime(
+        moduleId: Long,
+    ) {
+        screenState = screenState.copy(
+            moduleBoardRuntime = null,
+            moduleBoardLoading = true,
+            moduleBoardErrorMessage = null,
+        )
+
+        val loadResult = coroutineScope {
+            val deviceInfoDeferred = async {
+                readRuntimePart("设备信息") {
+                    deviceInfoApi.getDeviceInfo()
+                }
+            }
+            val powerLightsDeferred = async {
+                readRuntimePart("24 路电源灯") {
+                    deviceInfoApi.get24PowerLights()
+                }
+            }
+            val flashConfigDeferred = async {
+                readRuntimePart("Flash 配置") {
+                    deviceInfoApi.getFlashConfig()
+                }
+            }
+
+            val deviceInfoPart = deviceInfoDeferred.await()
+            val powerLightsPart = powerLightsDeferred.await()
+            val flashConfigPart = flashConfigDeferred.await()
+
+            val snapshot = ModuleBoardRuntimeSnapshot(
+                deviceInfo = deviceInfoPart.value,
+                powerLights = powerLightsPart.value,
+                flashConfig = flashConfigPart.value,
+            )
+            val failedLabels = listOfNotNull(
+                deviceInfoPart.failedLabel,
+                powerLightsPart.failedLabel,
+                flashConfigPart.failedLabel,
+            )
+
+            ModuleBoardRuntimeLoadResult(
+                snapshot = snapshot.takeIf { it.hasAnyData },
+                errorMessage = failedLabels
+                    .takeIf { it.isNotEmpty() }
+                    ?.joinToString(
+                        prefix = "以下在线数据未能读取：",
+                        separator = "、",
+                    ),
+            )
+        }
+
+        if (screenState.selectedModule?.id != moduleId) {
+            return
+        }
+
+        screenState = screenState.copy(
+            moduleBoardRuntime = loadResult.snapshot,
+            moduleBoardLoading = false,
+            moduleBoardErrorMessage = loadResult.errorMessage,
+        )
+    }
+
+    private suspend fun <T> readRuntimePart(
+        label: String,
+        block: suspend () -> T,
+    ): RuntimePartResult<T> {
+        return runCatching {
+            block()
+        }.fold(
+            onSuccess = { value ->
+                RuntimePartResult(
+                    value = value,
+                    failedLabel = null,
+                )
+            },
+            onFailure = {
+                RuntimePartResult(
+                    value = null,
+                    failedLabel = label,
+                )
+            },
+        )
     }
 
     private fun buildTreeNodes(
@@ -837,6 +941,16 @@ class ProjectsViewModel(
             "tag/$projectId/$deviceId/$tagId"
     }
 }
+
+private data class ModuleBoardRuntimeLoadResult(
+    val snapshot: ModuleBoardRuntimeSnapshot?,
+    val errorMessage: String?,
+)
+
+private data class RuntimePartResult<T>(
+    val value: T?,
+    val failedLabel: String?,
+)
 
 private fun HostConfigTreeNode.findChild(
     nodeId: String,

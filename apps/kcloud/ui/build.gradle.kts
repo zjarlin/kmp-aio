@@ -4,7 +4,8 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.tasks.JavaExec
-import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.Copy
+import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputFile
@@ -27,7 +28,9 @@ val libs = versionCatalogs.named("libs")
 val desktopMainClass = "site.addzero.kcloud.MainKt"
 val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val routeGeneratedSourceDir = layout.buildDirectory.dir("generated/source/route/commonMain/kotlin")
-val routeOwnerModuleDir = routeGeneratedSourceDir.get().asFile.absolutePath
+val routeOwnerModuleDir = routeSharedSourceDir.asFile.absolutePath
+val routeGeneratedPackageDir = routeGeneratedSourceDir.get().asFile.resolve("site/addzero/generated")
+val routeLegacyGeneratedDir = routeSharedSourceDir.asFile.resolve("site/addzero/generated")
 val routeContributorTaskPaths = listOf(
     ":apps:kcloud:plugins:codegen-context:ui:kspCommonMainKotlinMetadata",
     ":apps:kcloud:plugins:host-config:ui:kspCommonMainKotlinMetadata",
@@ -86,6 +89,25 @@ compose.desktop {
     }
 }
 
+val syncRouteGeneratedSources =
+    tasks.register<Copy>("syncRouteGeneratedSources") {
+        dependsOn("kspCommonMainKotlinMetadata")
+        from(routeLegacyGeneratedDir) {
+            include("RouteKeys.kt")
+            include("RouteTable.kt")
+        }
+        into(routeGeneratedPackageDir)
+    }
+
+val cleanLegacyRouteSnapshot by tasks.registering(Delete::class) {
+    delete(routeLegacyGeneratedDir.resolve("RouteKeys.kt"))
+    delete(routeLegacyGeneratedDir.resolve("RouteTable.kt"))
+}
+
+syncRouteGeneratedSources.configure {
+    finalizedBy(cleanLegacyRouteSnapshot)
+}
+
 tasks.matching { task ->
     task.name in setOf(
         "kspCommonMainKotlinMetadata",
@@ -94,4 +116,14 @@ tasks.matching { task ->
     )
 }.configureEach {
     routeContributorTaskPaths.forEach(::dependsOn)
+}
+
+tasks.matching { task ->
+    task.name in setOf(
+        "kspKotlinJvm",
+        "compileCommonMainKotlinMetadata",
+        "compileKotlinJvm",
+    )
+}.configureEach {
+    dependsOn(syncRouteGeneratedSources)
 }

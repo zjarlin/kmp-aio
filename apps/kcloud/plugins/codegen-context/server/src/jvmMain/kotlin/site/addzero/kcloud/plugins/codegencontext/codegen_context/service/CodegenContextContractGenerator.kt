@@ -9,8 +9,6 @@ import java.time.Instant
 import javax.sql.DataSource
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
-import kotlin.io.path.exists
-import kotlin.io.path.isDirectory
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import org.koin.core.annotation.Single
@@ -31,6 +29,7 @@ import site.addzero.device.protocol.modbus.codegen.model.ModbusServiceModel
 import site.addzero.device.protocol.modbus.codegen.model.ModbusTransportKind
 import site.addzero.device.protocol.modbus.codegen.model.ModbusValueKind
 import site.addzero.device.protocol.modbus.ksp.core.ModbusArtifactRenderer
+import site.addzero.device.protocol.modbus.ksp.core.ModbusServerRouteMode
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
@@ -54,47 +53,44 @@ class CodegenContextContractGenerator(
             throw BusinessValidationException("Only MCU_CONSOLE is supported in V1.")
         }
         val contextId = context.id ?: throw BusinessValidationException("Context id is required for generation.")
-        val roots = locateGeneratedRoots()
-        val rendered = render(context, roots.workspaceRoot)
-        val kotlinFiles = writeRenderedFiles(rendered, roots)
+        val settings = context.resolveGenerationSettings()
+        val rendered = render(context, settings.workspaceRoot)
+        val generatedFiles = (writeRenderedFiles(rendered, settings) + writeTransportArtifacts(rendered, settings)).sorted()
         upsertMetadataSnapshot(context, rendered)
-        val externalFiles = writeExternalArtifacts(rendered, context.externalCOutputRoot)
-        val generatedFiles = kotlinFiles + externalFiles
-        val externalMessage =
-            if (externalFiles.isEmpty()) {
-                " External C output skipped."
-            } else {
-                " External C/Markdown artifacts: ${externalFiles.size}."
-            }
         return GenerateContractsResponseDto(
             contextId = contextId,
             generatedFiles = generatedFiles,
-            message = "Generated ${generatedFiles.size} contract artifacts for ${context.code}.$externalMessage",
+            message = "Generated ${generatedFiles.size} artifacts for ${context.code}.",
         )
     }
 
     internal fun render(
         context: CodegenContextDetailDto,
-        workspaceRoot: Path,
+        _workspaceRoot: Path,
     ): RenderedContracts {
         val services = context.toModbusServices()
-        val dtoCustomizations = buildDtoCustomizations(context, workspaceRoot)
         val artifacts =
             ModbusKotlinContractGenerator.render(
                 ModbusKotlinContractGenerationRequest(
                     services = services,
                     fileHeader = GENERATED_MARKER,
-                    dtoCustomizations = dtoCustomizations,
+                    dtoCustomizations = buildDtoCustomizations(context),
                 ),
             )
-        val artifactsByFile = artifacts.associateBy { artifact -> artifact.fileName }
+        val artifactsByFile = artifacts.associateBy(GeneratedArtifact::fileName)
         val registerDtos =
             artifacts
                 .filter { artifact -> artifact.fileName.endsWith("Registers") }
-                .associate { artifact -> "${artifact.fileName}.kt" to artifact.content.normalizeGeneratedKotlin() }
+                .associate { artifact ->
+                    "${artifact.fileName}.kt" to artifact.content.normalizeGeneratedKotlin()
+                }
         return RenderedContracts(
-            deviceApi = requireArtifact(artifactsByFile, "DeviceApi"),
-            deviceWriteApi = requireArtifact(artifactsByFile, "DeviceWriteApi"),
+            deviceApi =
+                artifactsByFile["DeviceApi"]?.content?.normalizeGeneratedKotlin()
+                    ?: renderEmptyInterface("DeviceApi"),
+            deviceWriteApi =
+                artifactsByFile["DeviceWriteApi"]?.content?.normalizeGeneratedKotlin()
+                    ?: renderEmptyInterface("DeviceWriteApi"),
             registerDtos = registerDtos,
             metadataPayload = ModbusMetadataJsonCodec.encodeServices(services),
             services = services,
@@ -102,131 +98,131 @@ class CodegenContextContractGenerator(
         )
     }
 
-    private fun requireArtifact(
-        artifactsByFile: Map<String, GeneratedArtifact>,
-        fileName: String,
-    ): String {
-        return artifactsByFile[fileName]
-            ?.content
-            ?.normalizeGeneratedKotlin()
-            ?: throw BusinessValidationException("Missing generated Kotlin artifact: $fileName")
-    }
-
     private fun buildDtoCustomizations(
         context: CodegenContextDetailDto,
-        workspaceRoot: Path,
     ): Map<String, ModbusDtoCustomization> {
         return context.schemas
             .filter { schema -> schema.direction.name == "READ" && !schema.modelName.isNullOrBlank() }
             .associate { schema ->
                 val modelName = requireNotNull(schema.modelName)
-                val dtoQualifiedName = "$MCU_DEVICE_PACKAGE.${modelName}Registers"
-                dtoQualifiedName to
+                "$MCU_DEVICE_PACKAGE.${modelName}Registers" to
                     ModbusDtoCustomization(
                         summary = schema.description.cleanDocSummary() ?: schema.name,
                         propertyDocs =
                             schema.fields.associate { field ->
-                                field.propertyName to
-                                    (
-                                        field.description.cleanDocSummary()
-                                            ?: field.name
-                                        )
+                                field.propertyName to (field.description.cleanDocSummary() ?: field.name)
                             },
                     )
             }
     }
 
-    private fun locateGeneratedRoots(): GeneratedRoots {
-        val workspaceRoot = locateWorkspaceRoot()
-        val serverRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin")
-        val sharedRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin")
-        val serverPackageDir = resolveWithinRoot(serverRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
-        val sharedPackageDir = resolveWithinRoot(sharedRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
-        return GeneratedRoots(
-            workspaceRoot = workspaceRoot,
-            serverPackageDir = serverPackageDir,
-            sharedPackageDir = sharedPackageDir,
-        )
-    }
-
-    private fun locateWorkspaceRoot(): Path {
-        val overrideRoot = System.getProperty("codegen.context.repoRoot")?.takeIf(String::isNotBlank)
-        var current =
-            Path.of(overrideRoot ?: System.getProperty("user.dir"))
-                .toAbsolutePath()
-                .normalize()
-        while (true) {
-            if (current.resolve("settings.gradle.kts").exists() &&
-                current.resolve("apps/kcloud/plugins/mcu-console").isDirectory()
-            ) {
-                return current
-            }
-            current = current.parent ?: break
-        }
-        throw BusinessValidationException("Unable to locate the kmp-aio workspace root.")
-    }
-
     private fun writeRenderedFiles(
         rendered: RenderedContracts,
-        roots: GeneratedRoots,
+        settings: ResolvedGenerationSettings,
     ): List<String> {
-        roots.serverPackageDir.createDirectories()
-        roots.sharedPackageDir.createDirectories()
-        writeFile(roots.serverPackageDir.resolve("DeviceApi.kt"), rendered.deviceApi)
-        writeFile(roots.serverPackageDir.resolve("DeviceWriteApi.kt"), rendered.deviceWriteApi)
-        roots.sharedPackageDir.listDirectoryEntries("*.kt").forEach { existing ->
+        settings.serverPackageDir.createDirectories()
+        settings.sharedPackageDir.createDirectories()
+        writeFile(settings.serverPackageDir.resolve("DeviceApi.kt"), rendered.deviceApi)
+        writeFile(settings.serverPackageDir.resolve("DeviceWriteApi.kt"), rendered.deviceWriteApi)
+        settings.sharedPackageDir.listDirectoryEntries("*.kt").forEach { existing ->
             if (existing.name.endsWith("Registers.kt")) {
                 existing.deleteIfExists()
             }
         }
         rendered.registerDtos.forEach { (fileName, content) ->
-            writeFile(roots.sharedPackageDir.resolve(fileName), content)
+            writeFile(settings.sharedPackageDir.resolve(fileName), content)
         }
         return buildList {
-            add(roots.serverPackageDir.resolve("DeviceApi.kt").toAbsolutePath().normalize().toString())
-            add(roots.serverPackageDir.resolve("DeviceWriteApi.kt").toAbsolutePath().normalize().toString())
+            add(settings.serverPackageDir.resolve("DeviceApi.kt").toAbsolutePath().normalize().toString())
+            add(settings.serverPackageDir.resolve("DeviceWriteApi.kt").toAbsolutePath().normalize().toString())
             rendered.registerDtos.keys.sorted().forEach { fileName ->
-                add(roots.sharedPackageDir.resolve(fileName).toAbsolutePath().normalize().toString())
+                add(settings.sharedPackageDir.resolve(fileName).toAbsolutePath().normalize().toString())
             }
         }
     }
 
-    private fun writeExternalArtifacts(
+    private fun writeTransportArtifacts(
         rendered: RenderedContracts,
-        externalCOutputRoot: String?,
+        settings: ResolvedGenerationSettings,
     ): List<String> {
-        val rawOutputRoot = externalCOutputRoot?.trim()?.takeIf(String::isNotBlank) ?: return emptyList()
-        val outputRoot = Path.of(rawOutputRoot).toAbsolutePath().normalize()
-        if (outputRoot.exists() && !outputRoot.isDirectory()) {
-            throw BusinessValidationException("Configured externalCOutputRoot is not a directory: $outputRoot")
+        val services = rendered.services.toKspServiceModels()
+        val transport = rendered.transport.toArtifactKspTransportKind()
+        val generatedFiles = mutableListOf<String>()
+        cleanupGeneratedPackageDir(settings.gatewayOutputRoot, transport.generatedPackage.replace('.', '/'))
+        val serverRouteMode =
+            if (settings.springRouteOutputRoot == null) {
+                ModbusServerRouteMode.DIRECT_KTOR
+            } else {
+                ModbusServerRouteMode.SPRING_SOURCE
+            }
+        generatedFiles +=
+            writeKspArtifactsWithPaths(
+                settings.gatewayOutputRoot,
+                ModbusArtifactRenderer.renderServerArtifacts(
+                    transport = transport,
+                    services = services,
+                    transportDefaults = settings.transportDefaults,
+                    serverRouteMode = serverRouteMode,
+                ),
+            )
+
+        settings.springRouteOutputRoot?.let { outputRoot ->
+            cleanupGeneratedPackageDir(outputRoot, transport.generatedPackage.replace('.', '/'))
+            generatedFiles +=
+                writeKspArtifactsWithPaths(
+                    outputRoot,
+                    ModbusArtifactRenderer.renderSpringRouteSourceArtifacts(transport, services),
+                )
         }
-        val cOutputRoot = resolveWithinRoot(outputRoot, "c")
-        val markdownOutputRoot = resolveWithinRoot(outputRoot, "markdown")
-        val kspServices = rendered.services.toKspServiceModels()
-        val kspTransport = rendered.transport.toArtifactKspTransportKind()
-        val transportDefaults = defaultKspTransportDefaults()
-        cleanupGeneratedPackageDir(cOutputRoot, "generated/modbus/${rendered.transport.transportId}")
-        cleanupGeneratedMarkdownArtifacts(markdownOutputRoot, rendered.transport)
-        val cArtifacts =
-            buildList {
-                kspServices.forEach { service ->
-                    addAll(ModbusArtifactRenderer.renderServiceContractArtifacts(service, transportDefaults))
+
+        if (settings.apiClientOutputRoot != null && settings.apiClientPackageName != null) {
+            cleanupGeneratedPackageDir(settings.apiClientOutputRoot, settings.apiClientPackageName.replace('.', '/'))
+            generatedFiles +=
+                writeKspArtifactsWithPaths(
+                    settings.apiClientOutputRoot,
+                    ModbusArtifactRenderer.renderKtorfitClientArtifacts(
+                        transport = transport,
+                        services = services,
+                        packageName = settings.apiClientPackageName,
+                    ),
+                )
+        }
+
+        settings.cOutputRoot?.let { outputRoot ->
+            cleanupGeneratedPackageDir(outputRoot, "generated/modbus/${rendered.transport.transportId}")
+            val cArtifacts =
+                buildList {
+                    services.forEach { service ->
+                        addAll(ModbusArtifactRenderer.renderServiceContractArtifacts(service, settings.transportDefaults))
+                        addAll(
+                            ModbusArtifactRenderer
+                                .renderMarkdownArtifacts(service, settings.transportDefaults)
+                                .filter { artifact -> artifact.extensionName == "c" },
+                        )
+                    }
                     addAll(
-                        ModbusArtifactRenderer
-                            .renderMarkdownArtifacts(service, transportDefaults)
-                            .filter { artifact -> artifact.extensionName == "c" },
+                        ModbusArtifactRenderer.renderTransportContractArtifacts(
+                            transport = transport,
+                            services = services,
+                            transportDefaults = settings.transportDefaults,
+                        ),
                     )
                 }
-                addAll(ModbusArtifactRenderer.renderTransportContractArtifacts(kspTransport, kspServices, transportDefaults))
-            }
-        val markdownArtifacts =
-            kspServices.flatMap { service ->
-                ModbusArtifactRenderer
-                    .renderMarkdownArtifacts(service, transportDefaults)
-                    .filter { artifact -> artifact.extensionName == "md" }
-            }
-        return (writeKspArtifactsWithPaths(cOutputRoot, cArtifacts) + writeKspArtifactsWithPaths(markdownOutputRoot, markdownArtifacts))
-            .sorted()
+            generatedFiles += writeKspArtifactsWithPaths(outputRoot, cArtifacts)
+        }
+
+        settings.markdownOutputRoot?.let { outputRoot ->
+            cleanupGeneratedMarkdownArtifacts(outputRoot, rendered.transport)
+            val markdownArtifacts =
+                services.flatMap { service ->
+                    ModbusArtifactRenderer
+                        .renderMarkdownArtifacts(service, settings.transportDefaults)
+                        .filter { artifact -> artifact.extensionName == "md" }
+                }
+            generatedFiles += writeKspArtifactsWithPaths(outputRoot, markdownArtifacts)
+        }
+
+        return generatedFiles.sorted()
     }
 
     private fun upsertMetadataSnapshot(
@@ -286,6 +282,16 @@ class CodegenContextContractGenerator(
         }
     }
 
+    private fun renderEmptyInterface(
+        interfaceSimpleName: String,
+    ): String =
+        """
+        // $GENERATED_MARKER
+        package $MCU_DEVICE_PACKAGE
+
+        interface $interfaceSimpleName
+        """.trimIndent().normalizeGeneratedKotlin()
+
     private fun writeFile(
         target: Path,
         content: String,
@@ -308,17 +314,6 @@ internal data class RenderedContracts(
     val metadataPayload: String,
     val services: List<ModbusServiceModel>,
     val transport: ModbusTransportKind,
-)
-
-internal data class GeneratedRoots(
-    val workspaceRoot: Path,
-    val serverPackageDir: Path,
-    val sharedPackageDir: Path,
-)
-
-internal data class ApiModelDoc(
-    val classSummary: String?,
-    val propertyDocs: Map<String, String>,
 )
 
 private fun CodegenContextDetailDto.toModbusServices(): List<ModbusServiceModel> {
@@ -388,7 +383,7 @@ private fun CodegenSchemaDto.toReadOperation(
                 simpleName = "${resolvedModelName}Registers",
                 kind = ModbusReturnKind.DTO,
                 docSummary = description.cleanDocSummary() ?: name,
-                properties = fields.sortedBy(CodegenFieldDto::sortIndex).map { field -> field.toPropertyModel() },
+                properties = fields.sortedBy(CodegenFieldDto::sortIndex).map(CodegenFieldDto::toPropertyModel),
             ),
         doc = ModbusDocModel(summary = description.cleanDocSummary() ?: name),
     )
@@ -396,8 +391,8 @@ private fun CodegenSchemaDto.toReadOperation(
 
 private fun CodegenSchemaDto.toWriteOperation(
     transport: ModbusTransportKind,
-): ModbusOperationModel {
-    return ModbusOperationModel(
+): ModbusOperationModel =
+    ModbusOperationModel(
         methodName = methodName,
         operationId = "",
         functionCodeName = functionCode.name,
@@ -405,10 +400,7 @@ private fun CodegenSchemaDto.toWriteOperation(
         quantity = -1,
         requestClassName = buildRequestClassName("DeviceWriteApi", transport, methodName),
         requestQualifiedName = buildRequestQualifiedName("DeviceWriteApi", transport, methodName),
-        parameters =
-            fields
-                .sortedBy(CodegenFieldDto::sortIndex)
-                .mapIndexed { index, field -> field.toParameterModel(index) },
+        parameters = fields.sortedBy(CodegenFieldDto::sortIndex).mapIndexed { index, field -> field.toParameterModel(index) },
         returnType =
             ModbusReturnTypeModel(
                 qualifiedName = "site.addzero.device.protocol.modbus.model.ModbusCommandResult",
@@ -417,7 +409,6 @@ private fun CodegenSchemaDto.toWriteOperation(
             ),
         doc = ModbusDocModel(summary = description.cleanDocSummary() ?: name),
     )
-}
 
 private fun CodegenFieldDto.toPropertyModel(): ModbusPropertyModel =
     ModbusPropertyModel(
@@ -532,7 +523,7 @@ private fun String.appendUpsertClause(
         connection.isMySql() ->
             this +
                 """
-                
+
                 ON DUPLICATE KEY UPDATE
                     context_code = VALUES(context_code),
                     context_name = VALUES(context_name),
@@ -561,74 +552,3 @@ private fun PreparedStatement.setUpdatedAt(
 private fun Connection.isMySql(): Boolean =
     metaData.databaseProductName.contains("mysql", ignoreCase = true) ||
         metaData.url.contains(":mysql:", ignoreCase = true)
-
-internal fun loadApiModelDoc(
-    apiModelPath: Path,
-    modelName: String,
-): ApiModelDoc? {
-    if (!apiModelPath.exists()) {
-        return null
-    }
-    val lines = Files.readAllLines(apiModelPath)
-    var pendingDoc: String? = null
-    var collectingDoc = false
-    val docLines = mutableListOf<String>()
-    var classSummary: String? = null
-    val propertyDocs = linkedMapOf<String, String>()
-
-    lines.forEach { rawLine ->
-        val line = rawLine.trim()
-        if (collectingDoc) {
-            docLines += line
-            if (line.contains("*/")) {
-                pendingDoc = docLines.extractKDocSummary()
-                docLines.clear()
-                collectingDoc = false
-            }
-            return@forEach
-        }
-        if (line.startsWith("/**")) {
-            docLines.clear()
-            docLines += line
-            if (line.contains("*/")) {
-                pendingDoc = docLines.extractKDocSummary()
-                docLines.clear()
-            } else {
-                collectingDoc = true
-            }
-            return@forEach
-        }
-        if (pendingDoc != null && line.startsWith("data class $modelName(")) {
-            classSummary = pendingDoc
-            pendingDoc = null
-            return@forEach
-        }
-        val propertyName =
-            Regex("""(?:val|var)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:""").find(line)?.groupValues?.getOrNull(1)
-        if (pendingDoc != null && propertyName != null) {
-            propertyDocs[propertyName] = pendingDoc.orEmpty()
-            pendingDoc = null
-            return@forEach
-        }
-        if (line.isNotBlank() && !line.startsWith("@")) {
-            pendingDoc = null
-        }
-    }
-
-    if (classSummary == null && propertyDocs.isEmpty()) {
-        return null
-    }
-    return ApiModelDoc(
-        classSummary = classSummary,
-        propertyDocs = propertyDocs,
-    )
-}
-
-internal fun List<String>.extractKDocSummary(): String? =
-    map { line ->
-        line
-            .removePrefix("/**")
-            .removeSuffix("*/")
-            .removePrefix("*")
-            .trim()
-    }.firstOrNull(String::isNotBlank)

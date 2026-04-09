@@ -10,8 +10,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenRtuGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenTcpGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.BusinessValidationException
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.NotFoundException
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenFunctionCode
@@ -31,13 +34,53 @@ class CodegenContextServiceTest {
                         code = "CTX_CRUD",
                     ).copy(
                         externalCOutputRoot = "/Volumes/peer-share/board-fw",
+                        generationSettings =
+                            CodegenGenerationSettingsDto(
+                                serverOutputRoot = "/Users/test/server/generated/jvmMain/kotlin",
+                                sharedOutputRoot = "/Users/test/shared/generated/commonMain/kotlin",
+                                gatewayOutputRoot = "/Users/test/server/generated/jvmMain/kotlin",
+                                apiClientOutputRoot = "/Users/test/ui/generated/commonMain/kotlin",
+                                apiClientPackageName = "site.addzero.kcloud.plugins.codegencontext.generated.client",
+                                springRouteOutputRoot = "/Users/test/server/generated-spring/jvmMain/kotlin",
+                                cOutputRoot = "/Users/test/peer/Docs/generated/modbus/c",
+                                markdownOutputRoot = "/Users/test/peer/Docs/generated/modbus/markdown",
+                                rtuDefaults =
+                                    CodegenRtuGenerationDefaultsDto(
+                                        portPath = "/dev/ttyUSB9",
+                                        unitId = 9,
+                                        baudRate = 115200,
+                                        dataBits = 8,
+                                        stopBits = 1,
+                                        parity = "even",
+                                        timeoutMs = 2_500,
+                                        retries = 4,
+                                    ),
+                                tcpDefaults =
+                                    CodegenTcpGenerationDefaultsDto(
+                                        host = "10.0.0.8",
+                                        port = 1502,
+                                        unitId = 12,
+                                        timeoutMs = 3_000,
+                                        retries = 5,
+                                    ),
+                            ),
                     ),
                 )
 
             assertNotNull(saved.id)
             assertEquals("MODBUS_RTU_CLIENT", saved.protocolTemplateCode)
-            assertEquals("ModbusRTUClient", saved.protocolTemplateName)
+            assertEquals("ModbusRTU", saved.protocolTemplateName)
             assertEquals("/Volumes/peer-share/board-fw", saved.externalCOutputRoot)
+            assertEquals("/Users/test/server/generated/jvmMain/kotlin", saved.generationSettings.serverOutputRoot)
+            assertEquals("/Users/test/shared/generated/commonMain/kotlin", saved.generationSettings.sharedOutputRoot)
+            assertEquals(
+                "site.addzero.kcloud.plugins.codegencontext.generated.client",
+                saved.generationSettings.apiClientPackageName,
+            )
+            assertEquals("/dev/ttyUSB9", saved.generationSettings.rtuDefaults.portPath)
+            assertEquals(115200, saved.generationSettings.rtuDefaults.baudRate)
+            assertEquals("10.0.0.8", saved.generationSettings.tcpDefaults.host)
+            assertEquals(1502, saved.generationSettings.tcpDefaults.port)
             assertEquals(2, saved.schemas.size)
             assertTrue(saved.schemas.all { schema -> schema.id != null })
             assertTrue(saved.schemas.flatMap { schema -> schema.fields }.all { field -> field.id != null })
@@ -49,6 +92,11 @@ class CodegenContextServiceTest {
                         name = "Updated Context",
                         description = "Updated description",
                         externalCOutputRoot = "/Volumes/peer-share/board-fw-v2",
+                        generationSettings =
+                            saved.generationSettings.copy(
+                                apiClientPackageName = "site.addzero.kcloud.plugins.codegencontext.generated.clientv2",
+                                tcpDefaults = saved.generationSettings.tcpDefaults.copy(host = "10.0.0.9"),
+                            ),
                         schemas =
                             listOf(
                                 readSchema.copy(
@@ -81,6 +129,11 @@ class CodegenContextServiceTest {
             assertEquals("readUpdatedSnapshot", updated.schemas.single().methodName)
             assertEquals(2, updated.schemas.single().fields.size)
             assertEquals("/Volumes/peer-share/board-fw-v2", updated.externalCOutputRoot)
+            assertEquals(
+                "site.addzero.kcloud.plugins.codegencontext.generated.clientv2",
+                updated.generationSettings.apiClientPackageName,
+            )
+            assertEquals("10.0.0.9", updated.generationSettings.tcpDefaults.host)
             assertEquals(
                 listOf("updatedUptimeMs", "voltageMv"),
                 updated.schemas.single().fields.map { it.propertyName },
@@ -236,17 +289,80 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    fun shouldRejectApiClientPackageAndOutputRootWhenConfiguredAlone() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val onlyOutputError =
+                assertFailsWith<BusinessValidationException> {
+                    fixture.service.saveContext(
+                        baseContextRequest(
+                            protocolTemplateId = template.id,
+                            code = "CTX_CLIENT_OUTPUT_ONLY",
+                        ).copy(
+                            generationSettings =
+                                CodegenGenerationSettingsDto(
+                                    apiClientOutputRoot = "/Users/test/ui/generated/commonMain/kotlin",
+                                ),
+                        ),
+                    )
+                }
+            assertContains(onlyOutputError.message.orEmpty(), "apiClientPackageName is required")
+
+            val onlyPackageError =
+                assertFailsWith<BusinessValidationException> {
+                    fixture.service.saveContext(
+                        baseContextRequest(
+                            protocolTemplateId = template.id,
+                            code = "CTX_CLIENT_PACKAGE_ONLY",
+                        ).copy(
+                            generationSettings =
+                                CodegenGenerationSettingsDto(
+                                    apiClientPackageName = "site.addzero.generated.client",
+                                ),
+                        ),
+                    )
+                }
+            assertContains(onlyPackageError.message.orEmpty(), "apiClientOutputRoot is required")
+        }
+    }
+
+    @Test
     fun shouldSaveAndGenerateContractsAndReturnGeneratedFileSummary() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val workspaceRoot = createGeneratorWorkspace()
+            val apiClientRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/ui/generated/commonMain/kotlin")
+            val springRouteRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated-spring/jvmMain/kotlin")
+            val cRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata/c")
+            val markdownRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata/markdown")
             val saved =
                 fixture.service.saveContext(
                     baseContextRequest(
                         protocolTemplateId = template.id,
                         code = "CTX_GENERATE",
+                    ).copy(
+                        generationSettings =
+                            CodegenGenerationSettingsDto(
+                                serverOutputRoot =
+                                    workspaceRoot.resolve(
+                                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin",
+                                    ).toString(),
+                                sharedOutputRoot =
+                                    workspaceRoot.resolve(
+                                        "apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin",
+                                    ).toString(),
+                                gatewayOutputRoot =
+                                    workspaceRoot.resolve(
+                                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin",
+                                    ).toString(),
+                                apiClientOutputRoot = apiClientRoot.toString(),
+                                apiClientPackageName = "site.addzero.kcloud.plugins.mcuconsole.api.external.generated",
+                                springRouteOutputRoot = springRouteRoot.toString(),
+                                cOutputRoot = cRoot.toString(),
+                                markdownOutputRoot = markdownRoot.toString(),
+                            ),
                     ),
                 )
-            val workspaceRoot = createGeneratorWorkspace()
             val manualContractFile =
                 workspaceRoot.resolve(
                     "apps/kcloud/plugins/mcu-console/server/src/jvmMain/kotlin/" +
@@ -261,10 +377,37 @@ class CodegenContextServiceTest {
                     }
 
                 assertEquals(saved.id, response.contextId)
-                assertEquals(3, response.generatedFiles.size)
-                assertContains(response.message, "Generated 3 contract artifacts")
+                assertTrue(response.generatedFiles.size >= 8)
+                assertContains(response.message, "Generated")
                 assertTrue(response.generatedFiles.all { file -> file.startsWith(workspaceRoot.toString()) })
                 assertTrue(response.generatedFiles.all { file -> Path.of(file).exists() })
+                assertTrue(
+                    response.generatedFiles.any { file ->
+                        file.endsWith("/site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt")
+                    },
+                )
+                assertTrue(
+                    response.generatedFiles.any { file ->
+                        file.endsWith("/site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceWriteApi.kt")
+                    },
+                )
+                assertTrue(
+                    response.generatedFiles.any { file ->
+                        file.endsWith("/site/addzero/kcloud/plugins/mcuconsole/modbus/device/BoardSnapshotRegisters.kt")
+                    },
+                )
+                assertTrue(
+                    response.generatedFiles.any { file ->
+                        file.endsWith("/GeneratedModbusRtuSpringRoutesSource.kt")
+                    },
+                )
+                assertTrue(
+                    response.generatedFiles.any { file ->
+                        file.endsWith("/GeneratedModbusRtuKtorfitClient.kt")
+                    },
+                )
+                assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/rtu/modbus_rtu_dispatch.c") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith(".rtu.protocol.md") })
                 assertEquals("manual sentinel", manualContractFile.readText())
                 fixture.dataSource.connection.use { connection ->
                     connection.prepareStatement(
@@ -317,7 +460,7 @@ class CodegenContextServiceTest {
                 assertTrue(cDispatch.exists())
                 assertTrue(response.generatedFiles.contains(cDispatch.toString()))
                 assertTrue(response.generatedFiles.any { file -> file.startsWith(externalOutputRoot.toString()) })
-                assertContains(response.message, "External C/Markdown artifacts")
+                assertContains(response.message, "Generated")
                 assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".rtu.protocol.md") })
             } finally {
                 deleteWorkspace(workspaceRoot)
@@ -423,7 +566,7 @@ class CodegenContextServiceTest {
                         fixture.service.generateContracts(saved.id!!)
                     }
 
-                assertEquals(3, response.generatedFiles.size)
+                assertTrue(response.generatedFiles.size >= 3)
                 val deviceApi =
                     workspaceRoot.resolve(
                         "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin/" +

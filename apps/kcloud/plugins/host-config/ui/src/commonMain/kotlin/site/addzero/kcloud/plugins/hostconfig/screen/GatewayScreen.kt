@@ -33,6 +33,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConf
 import site.addzero.kcloud.plugins.hostconfig.gateway.GatewayViewModel
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigBooleanField
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigDialog
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigFormSection
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigStatusStrip
@@ -243,15 +244,44 @@ private fun GatewayConfigDialog(
             )
         },
     ) {
-        HostConfigBooleanField("启用服务端", enabled, { enabled = it })
+        HostConfigFormSection(
+            title = "服务开关",
+            subtitle = "先确定是否启用，再录入 TCP 或 RTU 参数。",
+        ) {
+            item {
+                HostConfigBooleanField("启用服务端", enabled, { enabled = it })
+            }
+        }
         if (transportType == TransportType.TCP) {
-            HostConfigTextField("TCP 端口", tcpPort, { tcpPort = it })
+            HostConfigFormSection(
+                title = "TCP 配置",
+                subtitle = "TCP 模式下只保留端口号这一项核心参数。",
+            ) {
+                item {
+                    HostConfigTextField("TCP 端口", tcpPort, { tcpPort = it })
+                }
+            }
         } else {
-            HostConfigTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
-            HostConfigTextField("波特率", baudRate, { baudRate = it })
-            HostConfigTextField("数据位", dataBits, { dataBits = it })
-            HostConfigTextField("停止位", stopBits, { stopBits = it })
-            HostConfigTextField("站号", stationNo, { stationNo = it })
+            HostConfigFormSection(
+                title = "RTU 配置",
+                subtitle = "串口参数默认双栏并排，减少来回滚动。",
+            ) {
+                item {
+                    HostConfigTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
+                }
+                item {
+                    HostConfigTextField("波特率", baudRate, { baudRate = it })
+                }
+                item {
+                    HostConfigTextField("数据位", dataBits, { dataBits = it })
+                }
+                item {
+                    HostConfigTextField("停止位", stopBits, { stopBits = it })
+                }
+                item {
+                    HostConfigTextField("站号", stationNo, { stationNo = it })
+                }
+            }
             HostConfigPanel(
                 title = "校验位",
                 subtitle = "点击切换当前 RTU 校验位。",
@@ -322,17 +352,26 @@ private fun GatewayPinConfigDialog(
             HostConfigKeyValueRow("故障控制灯", "PA8")
             HostConfigKeyValueRow("运行指示灯", "PA2")
         }
-        HostConfigTextField(
-            label = "故障控制灯引脚",
-            value = faultIndicatorPin,
-            onValueChange = { faultIndicatorPin = it },
-            placeholder = "例如 PA8",
-        )
-        HostConfigTextField(
-            label = "运行指示灯引脚",
-            value = runningIndicatorPin,
-            onValueChange = { runningIndicatorPin = it },
-            placeholder = "例如 PA2",
-        )
+        HostConfigFormSection(
+            title = "引脚配置",
+            subtitle = "把建议值和编辑字段分开，修改时更不容易看花。",
+        ) {
+            item {
+                HostConfigTextField(
+                    label = "故障控制灯引脚",
+                    value = faultIndicatorPin,
+                    onValueChange = { faultIndicatorPin = it },
+                    placeholder = "例如 PA8",
+                )
+            }
+            item {
+                HostConfigTextField(
+                    label = "运行指示灯引脚",
+                    value = runningIndicatorPin,
+                    onValueChange = { runningIndicatorPin = it },
+                    placeholder = "例如 PA2",
+                )
+            }
+        }
     }
 }

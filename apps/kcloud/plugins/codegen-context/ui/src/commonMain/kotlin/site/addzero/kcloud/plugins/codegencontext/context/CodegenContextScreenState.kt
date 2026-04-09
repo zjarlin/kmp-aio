@@ -33,12 +33,45 @@ data class CodegenContextEditorState(
     val consumerTarget: CodegenConsumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
     val protocolTemplateId: Long? = null,
     val externalCOutputRoot: String = "",
+    val generationSettings: CodegenGenerationSettingsEditorState = CodegenGenerationSettingsEditorState(),
     val schemas: List<CodegenSchemaEditorState> = emptyList(),
 ) {
     companion object {
         fun empty(): CodegenContextEditorState = CodegenContextEditorState()
     }
 }
+
+data class CodegenGenerationSettingsEditorState(
+    val serverOutputRoot: String = "",
+    val sharedOutputRoot: String = "",
+    val gatewayOutputRoot: String = "",
+    val apiClientOutputRoot: String = "",
+    val apiClientPackageName: String = "",
+    val springRouteOutputRoot: String = "",
+    val cOutputRoot: String = "",
+    val markdownOutputRoot: String = "",
+    val rtuDefaults: CodegenRtuGenerationDefaultsEditorState = CodegenRtuGenerationDefaultsEditorState(),
+    val tcpDefaults: CodegenTcpGenerationDefaultsEditorState = CodegenTcpGenerationDefaultsEditorState(),
+)
+
+data class CodegenRtuGenerationDefaultsEditorState(
+    val portPath: String = "/dev/ttyUSB0",
+    val unitIdText: String = "1",
+    val baudRateText: String = "9600",
+    val dataBitsText: String = "8",
+    val stopBitsText: String = "1",
+    val parity: String = "none",
+    val timeoutMsText: String = "1000",
+    val retriesText: String = "2",
+)
+
+data class CodegenTcpGenerationDefaultsEditorState(
+    val host: String = "127.0.0.1",
+    val portText: String = "502",
+    val unitIdText: String = "1",
+    val timeoutMsText: String = "1000",
+    val retriesText: String = "2",
+)
 
 data class CodegenSchemaEditorState(
     val id: Long? = null,

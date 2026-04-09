@@ -29,6 +29,41 @@ data class CodegenContextSummaryDto(
 )
 
 @Serializable
+data class CodegenRtuGenerationDefaultsDto(
+    val portPath: String = "/dev/ttyUSB0",
+    val unitId: Int = 1,
+    val baudRate: Int = 9600,
+    val dataBits: Int = 8,
+    val stopBits: Int = 1,
+    val parity: String = "none",
+    val timeoutMs: Long = 1_000,
+    val retries: Int = 2,
+)
+
+@Serializable
+data class CodegenTcpGenerationDefaultsDto(
+    val host: String = "127.0.0.1",
+    val port: Int = 502,
+    val unitId: Int = 1,
+    val timeoutMs: Long = 1_000,
+    val retries: Int = 2,
+)
+
+@Serializable
+data class CodegenGenerationSettingsDto(
+    val serverOutputRoot: String? = null,
+    val sharedOutputRoot: String? = null,
+    val gatewayOutputRoot: String? = null,
+    val apiClientOutputRoot: String? = null,
+    val apiClientPackageName: String? = null,
+    val springRouteOutputRoot: String? = null,
+    val cOutputRoot: String? = null,
+    val markdownOutputRoot: String? = null,
+    val rtuDefaults: CodegenRtuGenerationDefaultsDto = CodegenRtuGenerationDefaultsDto(),
+    val tcpDefaults: CodegenTcpGenerationDefaultsDto = CodegenTcpGenerationDefaultsDto(),
+)
+
+@Serializable
 data class CodegenFieldDto(
     val id: Long? = null,
     val name: String,
@@ -69,6 +104,7 @@ data class CodegenContextDetailDto(
     val protocolTemplateCode: String? = null,
     val protocolTemplateName: String? = null,
     val externalCOutputRoot: String? = null,
+    val generationSettings: CodegenGenerationSettingsDto = CodegenGenerationSettingsDto(),
     val schemas: List<CodegenSchemaDto> = emptyList(),
 )
 

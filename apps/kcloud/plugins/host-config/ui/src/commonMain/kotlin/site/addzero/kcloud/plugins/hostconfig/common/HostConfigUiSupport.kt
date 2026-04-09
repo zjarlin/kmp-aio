@@ -7,10 +7,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -80,6 +82,33 @@ data class HostConfigOption<T>(
     val label: String,
     val caption: String? = null,
 )
+
+enum class HostConfigFormSpan {
+    HALF,
+    FULL,
+}
+
+internal data class HostConfigFormItem(
+    val span: HostConfigFormSpan,
+    val content: @Composable () -> Unit,
+)
+
+class HostConfigFormGridScope internal constructor() {
+    internal val items = mutableListOf<HostConfigFormItem>()
+
+    fun item(
+        span: HostConfigFormSpan = HostConfigFormSpan.HALF,
+        content: @Composable () -> Unit,
+    ) {
+        items += HostConfigFormItem(span = span, content = content)
+    }
+
+    fun fullWidth(
+        content: @Composable () -> Unit,
+    ) {
+        item(span = HostConfigFormSpan.FULL, content = content)
+    }
+}
 
 fun HostConfigNodeKind.icon(): ImageVector {
     return when (this) {
@@ -267,6 +296,142 @@ fun HostConfigSectionTitle(
 }
 
 @Composable
+fun HostConfigFormGrid(
+    modifier: Modifier = Modifier,
+    twoColumnMinWidth: Dp = 720.dp,
+    horizontalGap: Dp = 12.dp,
+    verticalGap: Dp = 12.dp,
+    content: HostConfigFormGridScope.() -> Unit,
+) {
+    val items = HostConfigFormGridScope().apply(content).items.toList()
+
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        val singleColumn = maxWidth < twoColumnMinWidth
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(verticalGap),
+        ) {
+            if (singleColumn) {
+                items.forEach { item ->
+                    item.content()
+                }
+            } else {
+                var pendingHalf: HostConfigFormItem? = null
+                items.forEach { item ->
+                    when (item.span) {
+                        HostConfigFormSpan.FULL -> {
+                            pendingHalf?.let { left ->
+                                HostConfigFormHalfRow(
+                                    left = left,
+                                    right = null,
+                                    horizontalGap = horizontalGap,
+                                )
+                                pendingHalf = null
+                            }
+                            item.content()
+                        }
+
+                        HostConfigFormSpan.HALF -> {
+                            val left = pendingHalf
+                            if (left == null) {
+                                pendingHalf = item
+                            } else {
+                                HostConfigFormHalfRow(
+                                    left = left,
+                                    right = item,
+                                    horizontalGap = horizontalGap,
+                                )
+                                pendingHalf = null
+                            }
+                        }
+                    }
+                }
+                pendingHalf?.let { left ->
+                    HostConfigFormHalfRow(
+                        left = left,
+                        right = null,
+                        horizontalGap = horizontalGap,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostConfigFormHalfRow(
+    left: HostConfigFormItem,
+    right: HostConfigFormItem?,
+    horizontalGap: Dp,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(horizontalGap),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier = Modifier.weight(1f),
+        ) {
+            left.content()
+        }
+        if (right == null) {
+            Spacer(modifier = Modifier.weight(1f))
+        } else {
+            Box(
+                modifier = Modifier.weight(1f),
+            ) {
+                right.content()
+            }
+        }
+    }
+}
+
+@Composable
+fun HostConfigFormSection(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    content: HostConfigFormGridScope.() -> Unit,
+) {
+    CupertinoSurface(
+        modifier = modifier
+            .fillMaxWidth()
+            .border(
+                border = BorderStroke(1.dp, CupertinoTheme.colorScheme.separator.copy(alpha = 0.22f)),
+                shape = CupertinoTheme.shapes.large,
+            ),
+        color = CupertinoTheme.colorScheme.tertiarySystemGroupedBackground,
+        shape = CupertinoTheme.shapes.large,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                CupertinoText(
+                    text = title,
+                    style = CupertinoTheme.typography.headline,
+                )
+                subtitle?.takeIf(String::isNotBlank)?.let { text ->
+                    CupertinoText(
+                        text = text,
+                        style = CupertinoTheme.typography.footnote,
+                        color = CupertinoTheme.colorScheme.secondaryLabel,
+                    )
+                }
+            }
+            HostConfigFormGrid(content = content)
+        }
+    }
+}
+
+@Composable
 fun HostConfigStatusStrip(
     text: String,
     modifier: Modifier = Modifier,
@@ -343,6 +508,7 @@ fun HostConfigTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = true,
+    description: String? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -368,6 +534,13 @@ fun HostConfigTextField(
                 }
             },
         )
+        description?.takeIf(String::isNotBlank)?.let { text ->
+            CupertinoText(
+                text = text,
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
     }
 }
 
@@ -424,9 +597,11 @@ fun <T> HostConfigSelectionField(
     modifier: Modifier = Modifier,
     placeholder: String = "请选择",
     allowClear: Boolean = false,
+    description: String? = null,
 ) {
     var sheetVisible by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.value == selectedValue }?.label.orEmpty()
+    val selectedOption = options.firstOrNull { it.value == selectedValue }
+    val selectedLabel = selectedOption?.label.orEmpty()
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -456,6 +631,20 @@ fun <T> HostConfigSelectionField(
                 )
             },
         )
+        selectedOption?.caption?.takeIf(String::isNotBlank)?.let { text ->
+            CupertinoText(
+                text = text,
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
+        description?.takeIf(String::isNotBlank)?.let { text ->
+            CupertinoText(
+                text = text,
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
     }
 
     CupertinoActionSheet(

@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.gradle.api.tasks.Delete
 
 plugins {
     id("site.addzero.buildlogic.other.repositories-conventions")
@@ -20,9 +21,8 @@ val generateMcuConsoleUiApisTaskPath = ":apps:kcloud:plugins:mcu-console:server:
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")
         .layout
-        .buildDirectory
-        .dir("generated/source/route/commonMain/kotlin")
-        .get()
+        .projectDirectory
+        .dir("src/commonMain/kotlin")
         .asFile
         .absolutePath
 dependencies{
@@ -64,4 +64,15 @@ tasks.matching { task ->
     )
 }.configureEach {
     dependsOn(generateMcuConsoleUiApisTaskPath)
+}
+
+val cleanLegacyRouteSnapshot by tasks.registering(Delete::class) {
+    delete(routeSharedSourceDir.file("site/addzero/generated/RouteKeys.kt"))
+    delete(routeSharedSourceDir.file("site/addzero/generated/RouteTable.kt"))
+}
+
+tasks.configureEach {
+    if (name == "kspCommonMainKotlinMetadata") {
+        finalizedBy(cleanLegacyRouteSnapshot)
+    }
 }

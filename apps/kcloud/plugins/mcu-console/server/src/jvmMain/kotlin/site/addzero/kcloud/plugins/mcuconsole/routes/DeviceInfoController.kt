@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceApi
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLightsRegisters
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfoRegisters
+import site.addzero.kcloud.plugins.mcuconsole.modbus.device.FlashConfigRegisters
 
 /**
  * MCU 设备基础信息路由，同时作为客户端 API 生成源。
@@ -23,5 +24,10 @@ class DeviceInfoController(
     @GetMapping("/get24PowerLights")
     suspend fun get24PowerLights(): Device24PowerLightsRegisters {
         return deviceApi.get24PowerLights()
+    }
+
+    @GetMapping("/getFlashConfig")
+    suspend fun getFlashConfig(): FlashConfigRegisters {
+        return deviceApi.getFlashConfig()
     }
 }
