@@ -2,7 +2,7 @@
  * 请勿手动修改此文件。
  *
  * 参考模板：DeviceWriteApi / Modbus TCP
- * 更新日期：2026-04-08
+ * 更新日期：2026-04-09
  *
  * 用途：
  * - 当 device_write_bridge_impl.c 已经存在时，KSP 不会覆盖那个正式实现文件。

@@ -27,12 +27,14 @@ kotlin {
 }
 
 tasks.configureEach {
-    when (name) {
-        "compileKotlinJvm",
-        "jvmSourcesJar",
-        "jvmJar",
-        -> {
-            dependsOn(generateMcuConsoleContractsTask)
-        }
+    if (
+        name in setOf(
+            "compileCommonMainKotlinMetadata",
+            "compileKotlinJvm",
+            "jvmSourcesJar",
+            "jvmJar",
+        )
+    ) {
+        dependsOn(generateMcuConsoleContractsTask)
     }
 }

@@ -14,6 +14,7 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val generateMcuConsoleUiApisTaskPath = ":apps:kcloud:plugins:mcu-console:server:kspKotlinJvm"
 //val addzeroLibJvmVersion: String by project
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui").extensions.getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>().sourceSets.getByName(
@@ -47,4 +48,14 @@ kotlin {
             }
         }
     }
+}
+
+tasks.matching { task ->
+    task.name in setOf(
+        "kspCommonMainKotlinMetadata",
+        "compileCommonMainKotlinMetadata",
+        "compileKotlinJvm",
+    )
+}.configureEach {
+    dependsOn(generateMcuConsoleUiApisTaskPath)
 }

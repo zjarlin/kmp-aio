@@ -1,19 +1,22 @@
+import org.gradle.api.tasks.Delete
+
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
 }
 
 val libs = versionCatalogs.named("libs")
 val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:server:generateMcuConsoleContracts"
+val mcuConsoleUiProject = project(":apps:kcloud:plugins:mcu-console:ui")
 
 /** Api生成目录 */
-val generatedApiOutputDir =
-    project(":apps:kcloud:plugins:mcu-console:ui")
+val generatedApiOutputDirFile =
+    mcuConsoleUiProject
         .layout
         .buildDirectory
         .dir("generated/ksp/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external")
         .get()
         .asFile
-        .absolutePath
+val generatedApiOutputDir = generatedApiOutputDirFile.absolutePath
 
 /** 同构体生成包 */
 val generatedIsoPackage = "site.addzero.kcloud.plugins.mcuconsole"
@@ -32,11 +35,17 @@ val generatedIsoOutputDir =
 val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared").projectDir.resolve("src/commonMain/kotlin").absolutePath
 
 /** 共享前端目录 */
-val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui").projectDir.resolve("src/commonMain/kotlin").absolutePath
+val sharedComposeSourceDir = mcuConsoleUiProject.projectDir.resolve("src/commonMain/kotlin").absolutePath
 
 /** 当前 server 源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
 val generatedContractSourceDir = layout.projectDirectory.dir("generated/jvmMain/kotlin")
+val generatedApiFiles =
+    listOf(
+        "DeviceInfoApi.kt",
+        "FlashApi.kt",
+        "SerialPortApi.kt",
+    ).map(generatedApiOutputDirFile::resolve)
 
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external")
@@ -84,4 +93,15 @@ tasks.configureEach {
             dependsOn(generateMcuConsoleContractsTask)
         }
     }
+}
+
+val cleanMcuConsoleGeneratedApis by tasks.registering(Delete::class) {
+    delete(generatedApiOutputDirFile)
+}
+
+tasks.matching { task ->
+    task.name == "kspKotlinJvm"
+}.configureEach {
+    outputs.files(generatedApiFiles)
+    dependsOn(cleanMcuConsoleGeneratedApis)
 }
