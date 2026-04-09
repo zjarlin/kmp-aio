@@ -204,7 +204,7 @@ private fun ProjectsSidebarActionGrid(
                 enabled = !busy,
             )
             WorkbenchActionButton(
-                text = "下载工程",
+                text = "导出 SQLite",
                 onClick = onExportProjectSqlite,
                 modifier = Modifier.weight(1f),
                 variant = WorkbenchButtonVariant.Outline,
@@ -216,7 +216,7 @@ private fun ProjectsSidebarActionGrid(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             WorkbenchActionButton(
-                text = "导入工程",
+                text = "导入 SQLite",
                 onClick = onImportProjectSqlite,
                 imageVector = Icons.Outlined.Upload,
                 modifier = Modifier.weight(1f),

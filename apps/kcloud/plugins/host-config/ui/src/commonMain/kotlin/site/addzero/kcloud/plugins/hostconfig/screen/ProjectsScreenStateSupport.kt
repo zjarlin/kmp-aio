@@ -19,7 +19,10 @@ import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagValueTextInput
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTemplateMetadataResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldKey
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.buildTransportConfig
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
@@ -542,41 +545,22 @@ internal fun buildProjectProtocolInstanceName(
  * 处理模板选项响应。
  */
 internal fun TemplateOptionResponse.defaultTransportConfig(): ProtocolTransportConfig? {
-    return when (code) {
-        "MODBUS_RTU_CLIENT" -> ProtocolTransportConfig(
-            transportType = TransportType.RTU,
-            portName = null,
-            baudRate = 9600,
-            dataBits = 8,
-            stopBits = 1,
-            parity = Parity.NONE,
-            responseTimeoutMs = 1000,
-        )
-
-        "MODBUS_TCP_CLIENT" -> ProtocolTransportConfig(
-            transportType = TransportType.TCP,
-            host = null,
-            tcpPort = 502,
-            responseTimeoutMs = 1000,
-        )
-
-        else -> null
-    }
+    return metadata?.defaultTransportConfig()
 }
 
 /**
  * 处理协议draft。
  *
- * @param templateCode 模板编码。
+ * @param template 协议模板。
  */
 internal fun ProtocolDraft.toProtocolCreateRequest(
-    templateCode: String,
+    template: TemplateOptionResponse,
 ): ProtocolCreateRequest {
     return ProtocolCreateRequest(
         name = name,
         protocolTemplateId = requireNotNull(protocolTemplateId),
         pollingIntervalMs = pollingIntervalMs.toIntOrNull() ?: 1000,
-        transportConfig = toTransportConfig(templateCode),
+        transportConfig = toTransportConfig(template.metadata),
         sortIndex = sortIndex.toIntOrNull() ?: 0,
     )
 }
@@ -586,17 +570,19 @@ internal fun ProtocolDraft.toProtocolCreateRequest(
  *
  * @param projectId 项目 ID。
  * @param existing existing。
+ * @param template 协议模板。
  */
 internal fun ProtocolDraft.toProtocolUpdateRequest(
     projectId: Long,
     existing: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode,
+    template: TemplateOptionResponse?,
 ): ProtocolUpdateRequest {
     return ProtocolUpdateRequest(
         projectId = projectId,
         name = existing.name,
         protocolTemplateId = existing.protocolTemplateId,
         pollingIntervalMs = pollingIntervalMs.toIntOrNull() ?: 1000,
-        transportConfig = toTransportConfig(existing.protocolTemplateCode),
+        transportConfig = toTransportConfig(template?.metadata),
         sortIndex = sortIndex.toIntOrNull() ?: 0,
     )
 }
@@ -898,30 +884,58 @@ internal fun ProjectDraft.toProjectUpdateRequest(): ProjectUpdateRequest {
 /**
  * 处理协议draft。
  *
- * @param templateCode 模板编码。
+ * @param metadata 协议模板元数据。
  */
 internal fun ProtocolDraft.toTransportConfig(
-    templateCode: String,
+    metadata: ProtocolTemplateMetadataResponse?,
 ): ProtocolTransportConfig? {
-    return when (templateCode) {
-        "MODBUS_RTU_CLIENT" -> ProtocolTransportConfig(
-            transportType = TransportType.RTU,
-            portName = portName.ifBlank { null },
-            baudRate = baudRate.toIntOrNull(),
-            dataBits = dataBits.toIntOrNull(),
-            stopBits = stopBits.toIntOrNull(),
-            parity = parity,
-            responseTimeoutMs = responseTimeoutMs.toIntOrNull(),
-        )
+    return metadata?.buildTransportConfig { key ->
+        transportFieldValue(key)
+    }
+}
 
-        "MODBUS_TCP_CLIENT" -> ProtocolTransportConfig(
-            transportType = TransportType.TCP,
-            host = host.ifBlank { null },
-            tcpPort = tcpPort.toIntOrNull(),
-            responseTimeoutMs = responseTimeoutMs.toIntOrNull(),
-        )
+/**
+ * 读取协议draft里的传输字段值。
+ *
+ * @param key 字段键。
+ */
+internal fun ProtocolDraft.transportFieldValue(
+    key: ProtocolTransportFieldKey,
+): String {
+    return when (key) {
+        ProtocolTransportFieldKey.HOST -> host
+        ProtocolTransportFieldKey.TCP_PORT -> tcpPort
+        ProtocolTransportFieldKey.PORT_NAME -> portName
+        ProtocolTransportFieldKey.BAUD_RATE -> baudRate
+        ProtocolTransportFieldKey.DATA_BITS -> dataBits
+        ProtocolTransportFieldKey.STOP_BITS -> stopBits
+        ProtocolTransportFieldKey.PARITY -> parity.name
+        ProtocolTransportFieldKey.RESPONSE_TIMEOUT_MS -> responseTimeoutMs
+    }
+}
 
-        else -> null
+/**
+ * 更新协议draft里的传输字段值。
+ *
+ * @param key 字段键。
+ * @param value 字段值。
+ */
+internal fun ProtocolDraft.withTransportFieldValue(
+    key: ProtocolTransportFieldKey,
+    value: String,
+): ProtocolDraft {
+    return when (key) {
+        ProtocolTransportFieldKey.HOST -> copy(host = value)
+        ProtocolTransportFieldKey.TCP_PORT -> copy(tcpPort = value)
+        ProtocolTransportFieldKey.PORT_NAME -> copy(portName = value)
+        ProtocolTransportFieldKey.BAUD_RATE -> copy(baudRate = value)
+        ProtocolTransportFieldKey.DATA_BITS -> copy(dataBits = value)
+        ProtocolTransportFieldKey.STOP_BITS -> copy(stopBits = value)
+        ProtocolTransportFieldKey.PARITY -> {
+            copy(parity = Parity.entries.firstOrNull { option -> option.name == value } ?: Parity.NONE)
+        }
+
+        ProtocolTransportFieldKey.RESPONSE_TIMEOUT_MS -> copy(responseTimeoutMs = value)
     }
 }
 

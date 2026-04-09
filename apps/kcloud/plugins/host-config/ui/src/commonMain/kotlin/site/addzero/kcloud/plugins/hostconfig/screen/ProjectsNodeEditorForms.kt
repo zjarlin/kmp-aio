@@ -13,11 +13,15 @@ import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.field.CupertinoSelectionField
 import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.cupertino.workbench.components.form.CupertinoFormGrid
+import site.addzero.cupertino.workbench.components.form.CupertinoFormGridScope
 import site.addzero.cupertino.workbench.components.form.CupertinoFormSection
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldKey
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldMetadataResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldWidget
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder4
 import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
@@ -98,7 +102,8 @@ internal fun ProtocolEditorForm(
     draft: ProtocolDraft,
     onDraftChange: (ProtocolDraft) -> Unit,
 ) {
-    val templateCode = protocolTemplates.firstOrNull { item -> item.id == draft.protocolTemplateId }?.code
+    val template = protocolTemplates.firstOrNull { item -> item.id == draft.protocolTemplateId }
+    val transportForm = template?.metadata?.transportForm
 
     if (existing == null) {
         CupertinoFormSection(
@@ -148,43 +153,108 @@ internal fun ProtocolEditorForm(
     }
 
     CupertinoFormSection(
-        title = "通信配置",
-        subtitle = "模块通信参数已经上提到协议层，这里只保留协议级连接参数。",
+        title = transportForm?.title ?: "通信配置",
+        subtitle = transportForm?.subtitle ?: "模块通信参数已经上提到协议层，这里只保留协议级连接参数。",
     ) {
-        when (templateCode) {
-            "MODBUS_RTU_CLIENT" -> {
-                item { CupertinoTextField("串口", draft.portName, { onDraftChange(draft.copy(portName = it)) }, placeholder = "例如 COM3") }
-                item { CupertinoTextField("波特率", draft.baudRate, { onDraftChange(draft.copy(baudRate = it)) }) }
-                item { CupertinoTextField("数据位", draft.dataBits, { onDraftChange(draft.copy(dataBits = it)) }) }
-                item { CupertinoTextField("停止位", draft.stopBits, { onDraftChange(draft.copy(stopBits = it)) }) }
-                item {
-                    CupertinoSelectionField(
-                        label = "校验位",
-                        options = Parity.entries.map { option -> CupertinoOption(option, option.label()) },
-                        selectedValue = draft.parity,
-                        onSelected = { onDraftChange(draft.copy(parity = it ?: Parity.NONE)) },
-                    )
-                }
-                item {
-                    CupertinoTextField("响应超时(ms)", draft.responseTimeoutMs, { onDraftChange(draft.copy(responseTimeoutMs = it)) })
-                }
+        val fields = transportForm?.fields.orEmpty()
+        if (fields.isEmpty()) {
+            fullWidth {
+                CupertinoStatusStrip("当前协议模板没有额外通信字段。")
             }
-
-            "MODBUS_TCP_CLIENT" -> {
-                item { CupertinoTextField("主机地址", draft.host, { onDraftChange(draft.copy(host = it)) }, placeholder = "例如 192.168.1.10") }
-                item { CupertinoTextField("TCP 端口", draft.tcpPort, { onDraftChange(draft.copy(tcpPort = it)) }, placeholder = "默认 502") }
-                item {
-                    CupertinoTextField("响应超时(ms)", draft.responseTimeoutMs, { onDraftChange(draft.copy(responseTimeoutMs = it)) })
-                }
+        } else {
+            fields.forEach { field ->
+                renderProtocolTransportField(
+                    field = field,
+                    draft = draft,
+                    onDraftChange = onDraftChange,
+                )
             }
-
-            else -> {
+            fields.mapNotNull { field ->
+                field.helperText?.takeIf { helper -> helper.isNotBlank() }?.let { helper ->
+                    field.label to helper
+                }
+            }.forEach { (label, helperText) ->
                 fullWidth {
-                    CupertinoStatusStrip("当前协议模板没有额外通信字段。")
+                    CupertinoStatusStrip("$label：$helperText")
                 }
             }
         }
     }
+}
+
+private fun CupertinoFormGridScope.renderProtocolTransportField(
+    field: ProtocolTransportFieldMetadataResponse,
+    draft: ProtocolDraft,
+    onDraftChange: (ProtocolDraft) -> Unit,
+) {
+    when (field.widget) {
+        ProtocolTransportFieldWidget.SELECT -> {
+            item {
+                CupertinoSelectionField(
+                    label = field.label,
+                    options = field.toCupertinoOptions(),
+                    selectedValue = draft.transportFieldValue(field.key).ifBlank { null },
+                    onSelected = { selected ->
+                        onDraftChange(
+                            draft.withTransportFieldValue(
+                                key = field.key,
+                                value = selected.orEmpty(),
+                            ),
+                        )
+                    },
+                )
+            }
+        }
+
+        ProtocolTransportFieldWidget.TEXT,
+        ProtocolTransportFieldWidget.NUMBER -> {
+            item {
+                CupertinoTextField(
+                    label = field.label,
+                    value = draft.transportFieldValue(field.key),
+                    onValueChange = { value ->
+                        onDraftChange(
+                            draft.withTransportFieldValue(
+                                key = field.key,
+                                value = value,
+                            ),
+                        )
+                    },
+                    placeholder = field.placeholder,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * 转换协议传输字段选项。
+ */
+private fun ProtocolTransportFieldMetadataResponse.toCupertinoOptions(): List<CupertinoOption<String>> {
+    return options.map { option ->
+        CupertinoOption(
+            value = option.value,
+            label = optionLabel(option.value),
+            caption = option.description,
+        )
+    }
+}
+
+/**
+ * 生成协议传输字段选项标签。
+ *
+ * @param rawValue 原始值。
+ */
+private fun ProtocolTransportFieldMetadataResponse.optionLabel(
+    rawValue: String,
+): String {
+    if (key != ProtocolTransportFieldKey.PARITY) {
+        return options.firstOrNull { option -> option.value == rawValue }?.label ?: rawValue
+    }
+    return Parity.entries
+        .firstOrNull { option -> option.name == rawValue }
+        ?.label()
+        ?: rawValue
 }
 
 @Composable

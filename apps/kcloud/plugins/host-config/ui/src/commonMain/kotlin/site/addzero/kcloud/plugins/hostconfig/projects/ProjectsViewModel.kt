@@ -49,14 +49,14 @@ import site.addzero.kcloud.plugins.mcuconsole.api.external.generated.DeviceInfoA
  * @property projectApi 项目API。
  * @property tagApi 标签API。
  * @property templateApi 模板API。
- * @property projectUploadApi 项目上传API。
+ * @property projectSqliteApi 工程 sqlite 传输API。
  * @property deviceInfoApi 设备infoAPI。
  */
 class ProjectsViewModel(
     private val projectApi: ProjectApi,
     private val tagApi: TagApi,
     private val templateApi: TemplateApi,
-    private val projectUploadApi: ProjectUploadApi,
+    private val projectSqliteApi: ProjectUploadApi,
     private val deviceInfoApi: DeviceInfoApi,
 ) : ViewModel() {
     var screenState by mutableStateOf(ProjectsScreenState())
@@ -714,7 +714,7 @@ class ProjectsViewModel(
             return
         }
         mutate("工程 sqlite 已导出") {
-            val response = projectUploadApi.exportProjectSqlite(projectId)
+            val response = projectSqliteApi.exportProjectSqlite(projectId)
             screenState = screenState.copy(
                 noticeMessage = "已导出 SQLite 到 ${response.filePath}",
                 errorMessage = null,
@@ -729,7 +729,7 @@ class ProjectsViewModel(
      */
     fun importProjectSqlite(sourceFilePath: String) {
         mutate("工程 sqlite 已导入") {
-            val response = projectUploadApi.importProjectSqlite(
+            val response = projectSqliteApi.importProjectSqlite(
                 ProjectSqliteImportRequest(sourceFilePath = sourceFilePath),
             )
             screenState = screenState.copy(
