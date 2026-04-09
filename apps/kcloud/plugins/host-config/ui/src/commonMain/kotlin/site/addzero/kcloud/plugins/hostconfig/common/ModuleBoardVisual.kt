@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,10 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
@@ -183,175 +180,76 @@ internal fun HostConfigModuleBoard(
 ) {
     val palette = model.family.palette()
     val spec = model.toFrontSpec(compact)
-    val outerShape = RoundedCornerShape(if (compact) 20.dp else 28.dp)
-    val faceShape = RoundedCornerShape(if (compact) 18.dp else 24.dp)
+    val outerShape = RoundedCornerShape(if (compact) 18.dp else 22.dp)
 
-    Box(
+    Column(
         modifier = modifier
             .fillMaxWidth()
-            .height(if (compact) 220.dp else 344.dp)
-            .shadow(
-                elevation = if (compact) 10.dp else 18.dp,
-                shape = outerShape,
-                clip = false,
-            )
-            .graphicsLayer {
-                rotationX = if (compact) 3f else 7f
-                rotationY = if (compact) -2f else -5f
-            }
             .clip(outerShape)
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(palette.shellTop, palette.shellBottom),
+                    colors = listOf(palette.faceTop, palette.faceBottom),
                 ),
             )
             .border(
                 width = 1.dp,
-                color = palette.stroke.copy(alpha = 0.65f),
+                color = palette.stroke.copy(alpha = 0.34f),
                 shape = outerShape,
-            ),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (compact) 10.dp else 12.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.30f),
-                                Color.Transparent,
-                                palette.accentTop.copy(alpha = 0.24f),
-                            ),
-                        ),
-                    ),
             )
-
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(if (compact) 10.dp else 14.dp),
-                horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp),
-            ) {
-                ModuleBoardAccentRail(
-                    model = model,
-                    spec = spec,
-                    palette = palette,
-                    compact = compact,
-                    modifier = Modifier
-                        .width(if (compact) 60.dp else 80.dp)
-                        .fillMaxHeight(),
-                )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight()
-                        .clip(faceShape)
-                        .background(
-                            brush = Brush.verticalGradient(
-                                colors = listOf(palette.faceTop, palette.faceBottom),
-                            ),
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = palette.stroke.copy(alpha = 0.72f),
-                            shape = faceShape,
-                        )
-                        .padding(if (compact) 10.dp else 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp),
-                ) {
-                    ModuleBoardHeader(
-                        model = model,
-                        palette = palette,
-                        compact = compact,
-                    )
-                    ModuleBoardHardwareStrip(
-                        spec = spec,
-                        palette = palette,
-                        compact = compact,
-                    )
-                    if (
-                        spec.statusLights.isNotEmpty() ||
-                        spec.fuseWindows.isNotEmpty() ||
-                        spec.calibrationMarks.isNotEmpty()
-                    ) {
-                        ModuleBoardServiceStrip(
-                            spec = spec,
-                            palette = palette,
-                            compact = compact,
-                        )
-                    }
-                    if (spec.rangeSwitches.isNotEmpty()) {
-                        ModuleBoardRangeSwitchStrip(
-                            switches = spec.rangeSwitches,
-                            palette = palette,
-                            compact = compact,
-                        )
-                    }
-                    spec.terminalRows.forEach { row ->
-                        ModuleBoardTerminalRow(
-                            groups = row,
-                            palette = palette,
-                            compact = compact,
-                        )
-                    }
-                    ModuleBoardChipRow(
-                        model = model,
-                        labels = spec.chipLabels,
-                        palette = palette,
-                        compact = compact,
-                    )
-                    if (spec.ventSlotCount > 0) {
-                        ModuleBoardVentSlotRow(
-                            slotCount = spec.ventSlotCount,
-                            palette = palette,
-                            compact = compact,
-                        )
-                    }
-                    ModuleBoardScrewTerminalRow(
-                        marks = spec.screwMarks,
-                        palette = palette,
-                        compact = compact,
-                    )
-                }
-            }
-
-            ModuleBoardBottomRail(
-                label = spec.railClipLabel,
+            .padding(if (compact) 10.dp else 14.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp),
+    ) {
+        ModuleBoardSummaryRow(
+            model = model,
+            spec = spec,
+            palette = palette,
+            compact = compact,
+        )
+        ModuleBoardHardwareStrip(
+            spec = spec,
+            palette = palette,
+            compact = compact,
+        )
+        if (
+            spec.statusLights.isNotEmpty() ||
+            spec.fuseWindows.isNotEmpty() ||
+            spec.calibrationMarks.isNotEmpty()
+        ) {
+            ModuleBoardServiceStrip(
+                spec = spec,
                 palette = palette,
                 compact = compact,
             )
         }
-    }
-}
-
-@Composable
-private fun ModuleBoardBottomRail(
-    label: String,
-    palette: ModuleBoardPalette,
-    compact: Boolean,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(if (compact) 24.dp else 30.dp)
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        palette.shellBottom.copy(alpha = 0.92f),
-                        Color.Black.copy(alpha = 0.22f),
-                        palette.accentBottom.copy(alpha = 0.34f),
-                    ),
-                ),
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        ModuleBoardDinRailClip(
-            label = label,
+        if (spec.rangeSwitches.isNotEmpty()) {
+            ModuleBoardRangeSwitchStrip(
+                switches = spec.rangeSwitches,
+                palette = palette,
+                compact = compact,
+            )
+        }
+        spec.terminalRows.forEach { row ->
+            ModuleBoardTerminalRow(
+                groups = row,
+                palette = palette,
+                compact = compact,
+            )
+        }
+        ModuleBoardChipRow(
+            model = model,
+            labels = spec.chipLabels,
+            palette = palette,
+            compact = compact,
+        )
+        if (spec.ventSlotCount > 0) {
+            ModuleBoardVentSlotRow(
+                slotCount = spec.ventSlotCount,
+                palette = palette,
+                compact = compact,
+            )
+        }
+        ModuleBoardScrewTerminalRow(
+            marks = spec.screwMarks,
             palette = palette,
             compact = compact,
         )
@@ -359,68 +257,87 @@ private fun ModuleBoardBottomRail(
 }
 
 @Composable
-private fun ModuleBoardDinRailClip(
-    label: String,
+private fun ModuleBoardSummaryRow(
+    model: ModuleBoardModel,
+    spec: ModuleBoardFrontSpec,
     palette: ModuleBoardPalette,
     compact: Boolean,
 ) {
     Row(
-        modifier = Modifier
-            .clip(
-                RoundedCornerShape(
-                    topStart = 12.dp,
-                    topEnd = 12.dp,
-                    bottomStart = 8.dp,
-                    bottomEnd = 8.dp,
-                ),
-            )
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        palette.steelTop.copy(alpha = 0.92f),
-                        palette.steelBottom.copy(alpha = 0.92f),
-                    ),
-                ),
-            )
-            .border(
-                width = 1.dp,
-                color = Color.White.copy(alpha = 0.12f),
-                shape = RoundedCornerShape(
-                    topStart = 12.dp,
-                    topEnd = 12.dp,
-                    bottomStart = 8.dp,
-                    bottomEnd = 8.dp,
-                ),
-            )
-            .padding(horizontal = if (compact) 12.dp else 16.dp, vertical = if (compact) 4.dp else 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+        verticalAlignment = Alignment.Top,
     ) {
-        repeat(2) {
-            Box(
-                modifier = Modifier
-                    .size(if (compact) 7.dp else 8.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.24f))
-                    .border(
-                        width = 1.dp,
-                        color = Color.White.copy(alpha = 0.10f),
-                        shape = CircleShape,
-                    ),
-            )
-        }
-        CupertinoText(
-            text = label,
-            style = CupertinoTheme.typography.caption2,
-            color = Color.White.copy(alpha = 0.82f),
+        ModuleBoardAccentRail(
+            model = model,
+            spec = spec,
+            palette = palette,
+            compact = compact,
+            modifier = Modifier.width(if (compact) 112.dp else 138.dp),
         )
-        Box(
+        Column(
             modifier = Modifier
-                .width(if (compact) 18.dp else 22.dp)
-                .height(if (compact) 6.dp else 7.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.Black.copy(alpha = 0.22f)),
-        )
+                .weight(1f)
+                .clip(RoundedCornerShape(if (compact) 16.dp else 18.dp))
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            palette.shellTop.copy(alpha = 0.48f),
+                            palette.shellBottom.copy(alpha = 0.32f),
+                        ),
+                    ),
+                )
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.10f),
+                    shape = RoundedCornerShape(if (compact) 16.dp else 18.dp),
+                )
+                .padding(if (compact) 10.dp else 12.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
+        ) {
+            ModuleBoardHeader(
+                model = model,
+                palette = palette,
+                compact = compact,
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
+            ) {
+                ModuleBoardMetricBadge(
+                    title = "系列",
+                    value = model.family.code,
+                    palette = palette,
+                    modifier = Modifier.weight(1f),
+                )
+                ModuleBoardMetricBadge(
+                    title = "通道",
+                    value = model.channelCount.toString(),
+                    palette = palette,
+                    modifier = Modifier.weight(1f),
+                )
+                ModuleBoardMetricBadge(
+                    title = "设备",
+                    value = model.deviceCount.toString(),
+                    palette = palette,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ModuleBoardInfoTag(
+                    text = spec.busLabel,
+                    palette = palette,
+                )
+                ModuleBoardInfoTag(
+                    text = spec.terminalLegend,
+                    palette = palette,
+                )
+            }
+        }
     }
 }
 
@@ -434,22 +351,25 @@ private fun ModuleBoardAccentRail(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(if (compact) 18.dp else 22.dp))
+            .clip(RoundedCornerShape(if (compact) 16.dp else 18.dp))
             .background(
                 brush = Brush.verticalGradient(
-                    colors = listOf(palette.accentTop, palette.accentBottom),
+                    colors = listOf(
+                        palette.accentTop.copy(alpha = 0.94f),
+                        palette.accentBottom.copy(alpha = 0.92f),
+                    ),
                 ),
             )
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.16f),
-                shape = RoundedCornerShape(if (compact) 18.dp else 22.dp),
+                shape = RoundedCornerShape(if (compact) 16.dp else 18.dp),
             )
             .padding(horizontal = if (compact) 8.dp else 10.dp, vertical = if (compact) 10.dp else 12.dp),
-        verticalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 10.dp),
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             CupertinoText(
                 text = model.family.code,
@@ -476,8 +396,9 @@ private fun ModuleBoardAccentRail(
             )
         }
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             ModuleBoardSmallMeta(
                 title = "CH",
@@ -487,13 +408,47 @@ private fun ModuleBoardAccentRail(
                 title = "DEV",
                 value = model.deviceCount.toString(),
             )
-            ModuleBoardRailNameplate(
-                title = spec.nameplateTitle,
-                serial = spec.nameplateSerial,
-                palette = palette,
-                compact = compact,
-            )
         }
+        ModuleBoardRailNameplate(
+            title = spec.nameplateTitle,
+            serial = spec.nameplateSerial,
+            palette = palette,
+            compact = compact,
+        )
+    }
+}
+
+@Composable
+private fun ModuleBoardMetricBadge(
+    title: String,
+    value: String,
+    palette: ModuleBoardPalette,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.06f))
+            .border(
+                width = 1.dp,
+                color = palette.stroke.copy(alpha = 0.16f),
+                shape = RoundedCornerShape(12.dp),
+            )
+            .padding(horizontal = 8.dp, vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        CupertinoText(
+            text = title,
+            style = CupertinoTheme.typography.caption2,
+            color = Color.White.copy(alpha = 0.52f),
+        )
+        CupertinoText(
+            text = value,
+            style = CupertinoTheme.typography.footnote,
+            color = Color.White.copy(alpha = 0.92f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

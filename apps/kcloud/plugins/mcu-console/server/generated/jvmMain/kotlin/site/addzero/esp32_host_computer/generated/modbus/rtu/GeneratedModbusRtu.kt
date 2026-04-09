@@ -238,44 +238,64 @@ class DeviceWriteApiGeneratedRtuGateway(private val configuredDefaultConfig: Mod
 
     suspend fun writeIndicatorLights(config: ModbusRtuEndpointConfig? = null, faultLightOn: Boolean, runLightOn: Boolean): site.addzero.device.protocol.modbus.model.ModbusCommandResult {
         val resolvedConfig = resolveConfig(config)
-        val coilValues = MutableList(2) { false }
-        coilValues[0] = faultLightOn
-        coilValues[1] = runLightOn
-        executor.writeMultipleCoils(resolvedConfig, 24, coilValues)
-        return site.addzero.device.protocol.modbus.model.ModbusCommandResult(accepted = true, summary = "操作已下发：write-indicator-lights")
+        try {
+            val coilValues = MutableList(2) { false }
+            coilValues[0] = faultLightOn
+            coilValues[1] = runLightOn
+            executor.writeMultipleCoils(resolvedConfig, 24, coilValues)
+            return site.addzero.device.protocol.modbus.model.ModbusCommandResult(accepted = true, summary = "操作已下发：write-indicator-lights")
+        } catch (exception: site.addzero.modbus.ModbusProtocolException) {
+            return site.addzero.device.protocol.modbus.model.ModbusCommandResult(
+                accepted = false,
+                summary = exception.message ?: "操作失败：write-indicator-lights",
+                functionCode = exception.functionCode,
+                exceptionCode = exception.exceptionCode,
+                exceptionName = exception.exceptionName,
+            )
+        }
     }
 
     override suspend fun writeFlashConfig(magicWord: Int, portConfig: ByteArray, uartParams: ByteArray, slaveAddress: Int, debounceParams: ByteArray, modbusInterval: Int, wdtEnable: Int, firmwareUpgrade: Int, diHardwareFirmware: ByteArray, diStatus: ByteArray, faultStatus: Int, crc: Int): site.addzero.device.protocol.modbus.model.ModbusCommandResult = writeFlashConfig(config = null, magicWord = magicWord, portConfig = portConfig, uartParams = uartParams, slaveAddress = slaveAddress, debounceParams = debounceParams, modbusInterval = modbusInterval, wdtEnable = wdtEnable, firmwareUpgrade = firmwareUpgrade, diHardwareFirmware = diHardwareFirmware, diStatus = diStatus, faultStatus = faultStatus, crc = crc)
 
     suspend fun writeFlashConfig(config: ModbusRtuEndpointConfig? = null, magicWord: Int, portConfig: ByteArray, uartParams: ByteArray, slaveAddress: Int, debounceParams: ByteArray, modbusInterval: Int, wdtEnable: Int, firmwareUpgrade: Int, diHardwareFirmware: ByteArray, diStatus: ByteArray, faultStatus: Int, crc: Int): site.addzero.device.protocol.modbus.model.ModbusCommandResult {
         val resolvedConfig = resolveConfig(config)
-        val encodedValues = MutableList(33) { 0 }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U32_BE, magicWord.toString())
-            .forEachIndexed { index, value -> encodedValues[0 + index] = value }
-        ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, portConfig, 24)
-            .forEachIndexed { index, value -> encodedValues[2 + index] = value }
-        ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, uartParams, 16)
-            .forEachIndexed { index, value -> encodedValues[14 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U8, slaveAddress.toString())
-            .forEachIndexed { index, value -> encodedValues[22 + index] = value }
-        ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, debounceParams, 4)
-            .forEachIndexed { index, value -> encodedValues[23 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U16, modbusInterval.toString())
-            .forEachIndexed { index, value -> encodedValues[25 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U8, wdtEnable.toString())
-            .forEachIndexed { index, value -> encodedValues[26 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U8, firmwareUpgrade.toString())
-            .forEachIndexed { index, value -> encodedValues[27 + index] = value }
-        ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, diHardwareFirmware, 2)
-            .forEachIndexed { index, value -> encodedValues[28 + index] = value }
-        ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, diStatus, 3)
-            .forEachIndexed { index, value -> encodedValues[29 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U8, faultStatus.toString())
-            .forEachIndexed { index, value -> encodedValues[31 + index] = value }
-        ModbusCodecSupport.encodeValue(ModbusCodec.U16, crc.toString())
-            .forEachIndexed { index, value -> encodedValues[32 + index] = value }
-        executor.writeMultipleRegisters(resolvedConfig, 200, encodedValues)
-        return site.addzero.device.protocol.modbus.model.ModbusCommandResult(accepted = true, summary = "操作已下发：write-flash-config")
+        try {
+            val encodedValues = MutableList(33) { 0 }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U32_BE, magicWord.toString())
+                .forEachIndexed { index, value -> encodedValues[0 + index] = value }
+            ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, portConfig, 24)
+                .forEachIndexed { index, value -> encodedValues[2 + index] = value }
+            ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, uartParams, 16)
+                .forEachIndexed { index, value -> encodedValues[14 + index] = value }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U8, slaveAddress.toString())
+                .forEachIndexed { index, value -> encodedValues[22 + index] = value }
+            ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, debounceParams, 4)
+                .forEachIndexed { index, value -> encodedValues[23 + index] = value }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U16, modbusInterval.toString())
+                .forEachIndexed { index, value -> encodedValues[25 + index] = value }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U8, wdtEnable.toString())
+                .forEachIndexed { index, value -> encodedValues[26 + index] = value }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U8, firmwareUpgrade.toString())
+                .forEachIndexed { index, value -> encodedValues[27 + index] = value }
+            ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, diHardwareFirmware, 2)
+                .forEachIndexed { index, value -> encodedValues[28 + index] = value }
+            ModbusCodecSupport.encodeByteArray(ModbusCodec.BYTE_ARRAY, diStatus, 3)
+                .forEachIndexed { index, value -> encodedValues[29 + index] = value }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U8, faultStatus.toString())
+                .forEachIndexed { index, value -> encodedValues[31 + index] = value }
+            ModbusCodecSupport.encodeValue(ModbusCodec.U16, crc.toString())
+                .forEachIndexed { index, value -> encodedValues[32 + index] = value }
+            executor.writeMultipleRegisters(resolvedConfig, 200, encodedValues)
+            return site.addzero.device.protocol.modbus.model.ModbusCommandResult(accepted = true, summary = "操作已下发：write-flash-config")
+        } catch (exception: site.addzero.modbus.ModbusProtocolException) {
+            return site.addzero.device.protocol.modbus.model.ModbusCommandResult(
+                accepted = false,
+                summary = exception.message ?: "操作失败：write-flash-config",
+                functionCode = exception.functionCode,
+                exceptionCode = exception.exceptionCode,
+                exceptionName = exception.exceptionName,
+            )
+        }
     }
 
 }

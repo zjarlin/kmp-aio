@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.koin.core.annotation.Single
+import site.addzero.cupertino.workbench.scaffolding.CupertinoWorkbenchSidebarMode
 import site.addzero.kcloud.shell.navigation.RouteCatalog
 
 @Single
@@ -31,8 +32,11 @@ class ShellState(
     var trayPanelVisible by mutableStateOf(false)
         private set
 
-    var sidebarVisible by mutableStateOf(true)
+    var sidebarMode by mutableStateOf(CupertinoWorkbenchSidebarMode.Expanded)
         private set
+
+    val sidebarVisible
+        get() = sidebarMode == CupertinoWorkbenchSidebarMode.Expanded
 
     fun selectRoute(
         routePath: String,
@@ -80,15 +84,18 @@ class ShellState(
     }
 
     fun showSidebar() {
-        sidebarVisible = true
+        sidebarMode = CupertinoWorkbenchSidebarMode.Expanded
     }
 
     fun hideSidebar() {
-        sidebarVisible = false
+        sidebarMode = CupertinoWorkbenchSidebarMode.Collapsed
     }
 
     fun toggleSidebar() {
-        sidebarVisible = !sidebarVisible
+        sidebarMode = when (sidebarMode) {
+            CupertinoWorkbenchSidebarMode.Expanded -> CupertinoWorkbenchSidebarMode.Collapsed
+            CupertinoWorkbenchSidebarMode.Collapsed -> CupertinoWorkbenchSidebarMode.Expanded
+        }
     }
 
     fun popNavigation() {

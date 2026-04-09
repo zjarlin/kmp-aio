@@ -30,7 +30,7 @@ class CodegenMetadataBuildCliTest {
 
                 val serverOutputRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin")
                 val sharedOutputRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin")
-                val metadataRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/modbus-metadata")
+                val metadataRoot = workspaceRoot.resolve("t/Docs/generated/modbus-metadata")
 
                 main(
                     arrayOf(

@@ -86,9 +86,15 @@ object Fetchers {
         allScalarFields()
         protocol {
             allScalarFields()
+            protocolTemplate {
+                allScalarFields()
+            }
         }
         moduleTemplate {
             allScalarFields()
+            protocolTemplate {
+                allScalarFields()
+            }
         }
     }
 

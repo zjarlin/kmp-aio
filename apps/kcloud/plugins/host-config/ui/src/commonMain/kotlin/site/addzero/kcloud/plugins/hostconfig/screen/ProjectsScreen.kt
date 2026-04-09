@@ -8,7 +8,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,14 +18,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,17 +34,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import io.github.robinpcrd.cupertino.CupertinoActionSheet
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
-import io.github.robinpcrd.cupertino.cancel
-import io.github.robinpcrd.cupertino.default
-import io.github.robinpcrd.cupertino.destructive
+import io.github.robinpcrd.cupertino.CupertinoSurface
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import org.koin.compose.viewmodel.koinViewModel
-import site.addzero.component.search_bar.AddSearchBar
-import site.addzero.component.tree.AddTree
 import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
@@ -52,6 +52,7 @@ import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.button.WorkbenchIconButton
 import site.addzero.cupertino.workbench.material3.Icon
+import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
@@ -102,9 +103,9 @@ import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
     order = 0.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "宿主配置",
+            name = "元数据配置",
             icon = "SettingsApplications",
-            order = 10,
+            order = -10,
         ),
         defaultInScene = true,
     ),
@@ -124,6 +125,7 @@ fun ProjectsScreen() {
     var moveSeed by remember { mutableStateOf<MoveNodeSeed?>(null) }
     var uploadSeed by remember { mutableStateOf<UploadSeed?>(null) }
     var nodeActionMenu by remember { mutableStateOf<NodeActionMenuSeed?>(null) }
+    var currentNodePanelCollapsed by remember { mutableStateOf(false) }
 
     val currentCreateSpec = resolveCurrentCreateSpec(state)
     val treeViewModel = rememberTreeViewModel<site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode>()
@@ -324,6 +326,10 @@ fun ProjectsScreen() {
     fun openNodeActionMenu(
         node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode,
     ) {
+        if (nodeActionMenu?.node?.id == node.id) {
+            nodeActionMenu = null
+            return
+        }
         val menuSeed = resolveNodeActionMenu(
             state = state,
             node = node,
@@ -333,104 +339,85 @@ fun ProjectsScreen() {
         }
     }
 
-    LaunchedEffect(treeViewModel) {
-        treeViewModel.configure(
-            getId = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.id },
-            getLabel = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.label },
-            getChildren = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.children },
-            getIcon = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode -> node.kind.icon() },
-        )
-    }
-
-    LaunchedEffect(treeViewModel, state.treeNodes) {
-        treeViewModel.setItems(
-            newItems = state.treeNodes,
-            initiallyExpandedIds = state.treeNodes.allBranchIds(),
-        )
-    }
-
-    LaunchedEffect(treeViewModel, state.selectedNodeId) {
-        treeViewModel.selectNode(state.selectedNodeId)
-    }
-
-    SideEffect {
-        treeViewModel.onNodeClick = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
-            viewModel.selectNode(node.id)
-        }
-        treeViewModel.onNodeContextMenu = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
-            openNodeActionMenu(node)
-        }
-    }
-
     Row(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Column(
+        WorkbenchTreeSidebar(
+            items = state.treeNodes,
+            selectedId = state.selectedNodeId,
+            onNodeClick = { node ->
+                viewModel.selectNode(node.id)
+            },
+            onNodeContextMenu = { node ->
+                viewModel.selectNode(node.id)
+                openNodeActionMenu(node)
+            },
             modifier = Modifier
                 .fillMaxHeight()
-                .weight(0.30f)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            state.errorMessage?.let { message ->
-                HostConfigStatusStrip(message)
-            }
-            state.noticeMessage?.let { message ->
-                HostConfigStatusStrip(message)
-            }
-            if (
-                state.errorMessage == null &&
-                state.noticeMessage == null &&
-                currentCreateSpec.hint != null
-            ) {
-                HostConfigStatusStrip(currentCreateSpec.hint)
-            }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                WorkbenchActionButton(
-                    text = "新建当前类型",
-                    onClick = {
-                        val node = currentCreateSpec.node ?: return@WorkbenchActionButton
-                        val actionType = currentCreateSpec.actionType ?: return@WorkbenchActionButton
-                        handleNodeAction(node, actionType)
-                    },
-                    variant = WorkbenchButtonVariant.Default,
-                    enabled = currentCreateSpec.enabled,
-                )
-                WorkbenchActionButton(
-                    text = "新建工程",
-                    onClick = {
-                        viewModel.clearNotice()
-                        projectEditor = ProjectEditorSeed()
-                    },
-                    variant = WorkbenchButtonVariant.Outline,
-                )
-                WorkbenchActionButton(
-                    text = if (state.loading) "加载中" else "刷新",
-                    onClick = viewModel::refresh,
-                    variant = WorkbenchButtonVariant.Outline,
-                )
-            }
-            AddSearchBar(
-                keyword = treeViewModel.searchQuery,
-                onKeyWordChanged = { query: String ->
-                    treeViewModel.updateSearchQuery(query)
-                    if (query.isNotBlank()) {
-                        treeViewModel.performSearch()
+                .widthIn(min = 280.dp, max = 320.dp),
+            searchPlaceholder = "搜索工程树",
+            treeViewModel = treeViewModel,
+            header = {
+                state.errorMessage?.let { message ->
+                    HostConfigStatusStrip(message)
+                }
+                state.noticeMessage?.let { message ->
+                    HostConfigStatusStrip(message)
+                }
+                if (
+                    state.errorMessage == null &&
+                    state.noticeMessage == null &&
+                    currentCreateSpec.hint != null
+                ) {
+                    HostConfigStatusStrip(currentCreateSpec.hint)
+                }
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        WorkbenchActionButton(
+                            text = "新建当前",
+                            onClick = {
+                                val node = currentCreateSpec.node ?: return@WorkbenchActionButton
+                                val actionType = currentCreateSpec.actionType ?: return@WorkbenchActionButton
+                                handleNodeAction(node, actionType)
+                            },
+                            modifier = Modifier.weight(1f),
+                            variant = WorkbenchButtonVariant.Default,
+                            enabled = currentCreateSpec.enabled,
+                        )
+                        WorkbenchActionButton(
+                            text = "新建工程",
+                            onClick = {
+                                viewModel.clearNotice()
+                                projectEditor = ProjectEditorSeed()
+                            },
+                            modifier = Modifier.weight(1f),
+                            variant = WorkbenchButtonVariant.Outline,
+                        )
                     }
-                },
-                onSearch = treeViewModel::performSearch,
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = "搜索工程树",
-            )
-            AddTree(
-                viewModel = treeViewModel,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                selectableLabel = true,
-                nodeTrailingContent = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
+                    WorkbenchActionButton(
+                        text = if (state.loading) "加载中" else "刷新",
+                        onClick = viewModel::refresh,
+                        variant = WorkbenchButtonVariant.Secondary,
+                    )
+                }
+            },
+            getId = { node -> node.id },
+            getLabel = { node -> node.label },
+            getCaption = { node -> node.caption },
+            getChildren = { node -> node.children },
+            getIcon = { node -> node.kind.icon() },
+            nodeTrailingContent = { node: site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode ->
+                Box(
+                    contentAlignment = Alignment.TopEnd,
+                ) {
                     WorkbenchIconButton(
                         onClick = {
                             viewModel.selectNode(node.id)
@@ -443,36 +430,42 @@ fun ProjectsScreen() {
                             contentDescription = null,
                         )
                     }
-                },
-            )
-        }
+                    nodeActionMenu
+                        ?.takeIf { seed -> seed.node.id == node.id }
+                        ?.let { seed ->
+                            NodeActionDropdownMenu(
+                                seed = seed,
+                                onDismissRequest = {
+                                    nodeActionMenu = null
+                                },
+                                onAction = { actionType ->
+                                    nodeActionMenu = null
+                                    handleNodeAction(seed.node, actionType)
+                                },
+                            )
+                        }
+                }
+            },
+        )
 
         Column(
             modifier = Modifier
-                .weight(0.70f)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .weight(1f)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(0.48f)
-                    .fillMaxWidth(),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    CurrentNodePanel(
-                        state = state,
-                        onSelectNode = viewModel::selectNode,
-                    )
-                }
-            }
+            CurrentNodePanel(
+                state = state,
+                onSelectNode = viewModel::selectNode,
+                collapsed = currentNodePanelCollapsed,
+                onToggleCollapsed = {
+                    currentNodePanelCollapsed = !currentNodePanelCollapsed
+                },
+            )
 
             Box(
                 modifier = Modifier
-                    .weight(0.52f)
+                    .weight(1f)
                     .fillMaxWidth(),
             ) {
                 Column(
@@ -489,19 +482,6 @@ fun ProjectsScreen() {
                 }
             }
         }
-    }
-
-    nodeActionMenu?.let { seed ->
-        NodeActionSheet(
-            seed = seed,
-            onDismissRequest = {
-                nodeActionMenu = null
-            },
-            onAction = { actionType ->
-                nodeActionMenu = null
-                handleNodeAction(seed.node, actionType)
-            },
-        )
     }
 
     projectEditor?.let { seed ->
@@ -944,15 +924,24 @@ fun ProjectsScreen() {
 private fun CurrentNodePanel(
     state: ProjectsScreenState,
     onSelectNode: (String) -> Unit,
+    collapsed: Boolean,
+    onToggleCollapsed: () -> Unit,
 ) {
     val nodeKind = resolveSelectedNodeKind(state)
     HostConfigPanel(
-        title = "当前节点信息",
-        subtitle = when (nodeKind) {
-            null -> "请选择左侧节点"
-            else -> "${nodeKind.label()}表单"
+        title = "当前节点",
+        actions = {
+            WorkbenchActionButton(
+                text = if (collapsed) "展开" else "折叠",
+                onClick = onToggleCollapsed,
+                variant = WorkbenchButtonVariant.Outline,
+            )
         },
     ) {
+        if (collapsed) {
+            return@HostConfigPanel
+        }
+
         if (nodeKind == null) {
             HostConfigStatusStrip("当前还没有可展示的工程节点，先点击左侧的新建。")
             return@HostConfigPanel
@@ -963,49 +952,61 @@ private fun CurrentNodePanel(
                 val project = state.selectedProject
                 val projectTree = state.selectedProjectTree
                 val modules = projectTree?.allModules().orEmpty()
-                HostConfigSectionTitle("基础信息")
-                HostConfigKeyValueRow("工程名称", project?.name.orDash())
-                HostConfigKeyValueRow("描述", project?.description.orDash())
-                HostConfigKeyValueRow("备注", project?.remark.orDash())
-                HostConfigKeyValueRow("排序", project?.sortIndex?.toString() ?: "-")
-                HostConfigKeyValueRow("协议数量", projectTree?.protocols?.size?.toString() ?: "0")
-                HostConfigKeyValueRow("模块数量", modules.size.toString())
-                HostConfigKeyValueRow(
-                    "设备总数",
-                    projectTree?.let { tree ->
-                        (
-                            tree.allModules().sumOf { module -> module.devices.size }
-                            ).toString()
-                    } ?: "0",
+                val protocolCount = projectTree?.protocols?.size ?: 0
+                val deviceCount = projectTree?.allModules()?.sumOf { module -> module.devices.size } ?: 0
+                val tagCount = projectTree?.allModules()?.sumOf { module ->
+                    module.devices.sumOf { device -> device.tags.size }
+                } ?: 0
+
+                HostConfigNodeSummary(
+                    title = project?.name.orDash(),
+                    subtitle = project?.description?.takeIf { it.isNotBlank() } ?: "工程级配置与模块资源概览",
+                    kind = nodeKind,
+                    badges = listOfNotNull(
+                        state.uploadStatus?.statusText?.takeIf { it.isNotBlank() }?.let { status -> "上传 $status" },
+                        project?.remark?.takeIf { it.isNotBlank() }?.let { "已写备注" },
+                    ),
+                    metrics = listOf(
+                        NodeMetricItem("协议", protocolCount.toString()),
+                        NodeMetricItem("模块", modules.size.toString()),
+                        NodeMetricItem("设备", deviceCount.toString()),
+                        NodeMetricItem("点位", tagCount.toString()),
+                    ),
                 )
-                HostConfigKeyValueRow(
-                    "点位总数",
-                    projectTree?.let { tree ->
-                        (
-                            tree.allModules().sumOf { module ->
-                                module.devices.sumOf { device -> device.tags.size }
-                            }
-                            ).toString()
-                    } ?: "0",
+                HostConfigDenseInfoSection(
+                    title = "工程资料",
+                    entries = listOf(
+                        "工程名称" to project?.name.orDash(),
+                        "描述" to project?.description.orDash(),
+                        "备注" to project?.remark.orDash(),
+                        "排序" to (project?.sortIndex?.toString() ?: "-"),
+                    ),
                 )
                 if (modules.isNotEmpty()) {
-                    HostConfigSectionTitle("板卡总览")
-                    ProjectModuleRack(
-                        projectId = project?.id,
-                        modules = modules,
-                        moduleTemplates = state.moduleTemplates,
-                        onSelectNode = onSelectNode,
-                    )
+                    HostConfigDenseSection(
+                        title = "模块总览",
+                        subtitle = "按模块快速查看板卡形态与设备承载情况。",
+                    ) {
+                        ProjectModuleRack(
+                            projectId = project?.id,
+                            modules = modules,
+                            moduleTemplates = state.moduleTemplates,
+                            onSelectNode = onSelectNode,
+                        )
+                    }
                 }
-
-                HostConfigSectionTitle("上传状态")
-                HostConfigKeyValueRow("当前状态", state.uploadStatus?.statusText ?: "待开始")
-                HostConfigKeyValueRow("进度", state.uploadStatus?.progress?.let { "$it%" } ?: "0%")
-                HostConfigKeyValueRow("目标 IP", state.uploadStatus?.ipAddress.orDash())
-                HostConfigKeyValueRow("工程路径", state.uploadStatus?.projectPath.orDash())
-                HostConfigKeyValueRow("已选文件", state.uploadStatus?.selectedFileName.orDash())
-                HostConfigKeyValueRow("备份文件", state.uploadStatus?.backupFileName.orDash())
-                HostConfigKeyValueRow("备份大小", state.uploadStatus?.backupSizeBytes.toSizeLabel())
+                HostConfigDenseInfoSection(
+                    title = "上传状态",
+                    entries = listOf(
+                        "当前状态" to (state.uploadStatus?.statusText ?: "待开始"),
+                        "进度" to (state.uploadStatus?.progress?.let { "$it%" } ?: "0%"),
+                        "目标 IP" to state.uploadStatus?.ipAddress.orDash(),
+                        "工程路径" to state.uploadStatus?.projectPath.orDash(),
+                        "已选文件" to state.uploadStatus?.selectedFileName.orDash(),
+                        "备份文件" to state.uploadStatus?.backupFileName.orDash(),
+                        "备份大小" to state.uploadStatus?.backupSizeBytes.toSizeLabel(),
+                    ),
+                )
                 state.uploadStatus?.detailText?.takeIf { it.isNotBlank() }?.let { detail ->
                     HostConfigStatusStrip(detail)
                 }
@@ -1013,57 +1014,129 @@ private fun CurrentNodePanel(
 
             HostConfigNodeKind.PROTOCOL -> {
                 val protocol = state.selectedProtocol
-                HostConfigSectionTitle("基础信息")
-                HostConfigKeyValueRow("协议名称", protocol?.name.orDash())
-                HostConfigKeyValueRow("协议模板", protocol?.protocolTemplateName.orDash())
-                HostConfigKeyValueRow("模板编码", protocol?.protocolTemplateCode.orDash())
-                HostConfigKeyValueRow("轮询间隔(ms)", protocol?.pollingIntervalMs?.toString() ?: "-")
-                HostConfigKeyValueRow("排序", protocol?.sortIndex?.toString() ?: "-")
-                HostConfigKeyValueRow("模块数量", protocol?.modules?.size?.toString() ?: "0")
-                HostConfigSectionTitle("通信配置")
-                renderTransportConfigRows(protocol?.transportConfig)
+                val transportConfig = protocol?.transportConfig
+                HostConfigNodeSummary(
+                    title = protocol?.name.orDash(),
+                    subtitle = protocol?.protocolTemplateName.orDash(),
+                    kind = nodeKind,
+                    badges = listOfNotNull(
+                        protocol?.protocolTemplateCode?.takeIf { it.isNotBlank() },
+                        transportConfig?.transportType?.label(),
+                    ),
+                    metrics = listOf(
+                        NodeMetricItem("模块", protocol?.modules?.size?.toString() ?: "0"),
+                        NodeMetricItem("轮询", protocol?.pollingIntervalMs?.let { "${it}ms" } ?: "-"),
+                        NodeMetricItem("链路", transportConfig?.toSummary() ?: "未配置"),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "协议资料",
+                    entries = listOf(
+                        "协议名称" to protocol?.name.orDash(),
+                        "协议模板" to protocol?.protocolTemplateName.orDash(),
+                        "模板编码" to protocol?.protocolTemplateCode.orDash(),
+                        "轮询间隔(ms)" to (protocol?.pollingIntervalMs?.toString() ?: "-"),
+                        "排序" to (protocol?.sortIndex?.toString() ?: "-"),
+                        "模块数量" to (protocol?.modules?.size?.toString() ?: "0"),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "通信参数",
+                    entries = transportConfig?.toDisplayRows().orEmpty(),
+                    emptyText = "当前没有通信参数。",
+                )
             }
 
             HostConfigNodeKind.MODULE -> {
                 val module = state.selectedModule
                 val moduleProtocol = state.selectedModuleProtocol
-                module?.let { item ->
-                    HostConfigSectionTitle("板卡模型")
-                    HostConfigModuleBoard(
-                        model = resolveModuleBoardModel(
-                            module = item,
-                            moduleTemplates = state.moduleTemplates,
-                        ),
+                val boardModel = module?.let { item ->
+                    resolveModuleBoardModel(
+                        module = item,
+                        moduleTemplates = state.moduleTemplates,
                     )
                 }
-                HostConfigSectionTitle("基础信息")
-                HostConfigKeyValueRow("模块名称", module?.name.orDash())
-                HostConfigKeyValueRow("模块模板", module?.moduleTemplateName.orDash())
-                HostConfigKeyValueRow("模板编码", module?.moduleTemplateCode.orDash())
-                HostConfigKeyValueRow("所属协议", moduleProtocol?.name.orDash())
-                HostConfigKeyValueRow("排序", module?.sortIndex?.toString() ?: "-")
-                HostConfigKeyValueRow("设备数量", module?.devices?.size?.toString() ?: "0")
-                HostConfigSectionTitle("继承通信")
-                renderTransportConfigRows(moduleProtocol?.transportConfig)
+                HostConfigNodeSummary(
+                    title = module?.name.orDash(),
+                    subtitle = module?.moduleTemplateName.orDash(),
+                    kind = nodeKind,
+                    badges = listOfNotNull(
+                        module?.moduleTemplateCode?.takeIf { it.isNotBlank() },
+                        moduleProtocol?.name?.takeIf { it.isNotBlank() }?.let { name -> "协议 $name" },
+                    ),
+                    metrics = listOf(
+                        NodeMetricItem("通道", boardModel?.channelCount?.toString() ?: "-"),
+                        NodeMetricItem("设备", module?.devices?.size?.toString() ?: "0"),
+                        NodeMetricItem("排序", module?.sortIndex?.toString() ?: "-"),
+                    ),
+                )
+                boardModel?.let { board ->
+                    HostConfigDenseSection(
+                        title = "模块视图",
+                        subtitle = "用规整模块卡片展示当前板卡的接口、状态与端子布局。",
+                    ) {
+                        HostConfigModuleBoard(
+                            model = board,
+                        )
+                    }
+                }
+                HostConfigDenseInfoSection(
+                    title = "模块资料",
+                    entries = listOf(
+                        "模块名称" to module?.name.orDash(),
+                        "模块模板" to module?.moduleTemplateName.orDash(),
+                        "模板编码" to module?.moduleTemplateCode.orDash(),
+                        "所属协议" to moduleProtocol?.name.orDash(),
+                        "排序" to (module?.sortIndex?.toString() ?: "-"),
+                        "设备数量" to (module?.devices?.size?.toString() ?: "0"),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "继承通信",
+                    entries = moduleProtocol?.transportConfig?.toDisplayRows().orEmpty(),
+                    emptyText = "当前没有继承到通信参数。",
+                )
             }
 
             HostConfigNodeKind.DEVICE -> {
                 val device = state.selectedDevice
-                HostConfigSectionTitle("基础信息")
-                HostConfigKeyValueRow("设备名称", device?.name.orDash())
-                HostConfigKeyValueRow("设备类型", device?.deviceTypeName.orDash())
-                HostConfigKeyValueRow("类型编码", device?.deviceTypeCode.orDash())
-                HostConfigKeyValueRow("站号", device?.stationNo?.toString() ?: "-")
-                HostConfigKeyValueRow("请求间隔(ms)", device?.requestIntervalMs?.toString() ?: "-")
-                HostConfigKeyValueRow("写值间隔(ms)", device?.writeIntervalMs?.toString() ?: "-")
-                HostConfigKeyValueRow("2 字节顺序", device?.byteOrder2?.label() ?: "-")
-                HostConfigKeyValueRow("4 字节顺序", device?.byteOrder4?.label() ?: "-")
-                HostConfigKeyValueRow("浮点顺序", device?.floatOrder?.label() ?: "-")
-                HostConfigKeyValueRow("模拟量批量", listOf(device?.batchAnalogStart, device?.batchAnalogLength).joinToString(" / ") { it?.toString() ?: "-" })
-                HostConfigKeyValueRow("数字量批量", listOf(device?.batchDigitalStart, device?.batchDigitalLength).joinToString(" / ") { it?.toString() ?: "-" })
-                HostConfigKeyValueRow("禁用", if (device?.disabled == true) "是" else "否")
-                HostConfigKeyValueRow("排序", device?.sortIndex?.toString() ?: "-")
-                HostConfigKeyValueRow("点位数量", device?.tags?.size?.toString() ?: "0")
+                HostConfigNodeSummary(
+                    title = device?.name.orDash(),
+                    subtitle = device?.deviceTypeName.orDash(),
+                    kind = nodeKind,
+                    badges = listOfNotNull(
+                        device?.deviceTypeCode?.takeIf { it.isNotBlank() },
+                        if (device?.disabled == true) "已禁用" else "已启用",
+                    ),
+                    metrics = listOf(
+                        NodeMetricItem("站号", device?.stationNo?.toString() ?: "-"),
+                        NodeMetricItem("点位", device?.tags?.size?.toString() ?: "0"),
+                        NodeMetricItem("排序", device?.sortIndex?.toString() ?: "-"),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "设备资料",
+                    entries = listOf(
+                        "设备名称" to device?.name.orDash(),
+                        "设备类型" to device?.deviceTypeName.orDash(),
+                        "类型编码" to device?.deviceTypeCode.orDash(),
+                        "站号" to (device?.stationNo?.toString() ?: "-"),
+                        "请求间隔(ms)" to (device?.requestIntervalMs?.toString() ?: "-"),
+                        "写值间隔(ms)" to (device?.writeIntervalMs?.toString() ?: "-"),
+                        "禁用" to if (device?.disabled == true) "是" else "否",
+                        "点位数量" to (device?.tags?.size?.toString() ?: "0"),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "字节与批量",
+                    entries = listOf(
+                        "2 字节顺序" to (device?.byteOrder2?.label() ?: "-"),
+                        "4 字节顺序" to (device?.byteOrder4?.label() ?: "-"),
+                        "浮点顺序" to (device?.floatOrder?.label() ?: "-"),
+                        "模拟量批量" to listOf(device?.batchAnalogStart, device?.batchAnalogLength).joinToString(" / ") { it?.toString() ?: "-" },
+                        "数字量批量" to listOf(device?.batchDigitalStart, device?.batchDigitalLength).joinToString(" / ") { it?.toString() ?: "-" },
+                    ),
+                )
             }
 
             HostConfigNodeKind.TAG -> {
@@ -1072,27 +1145,343 @@ private fun CurrentNodePanel(
                     HostConfigStatusStrip("当前点位详情尚未加载完成。")
                     return@HostConfigPanel
                 }
-                HostConfigSectionTitle("基础信息")
-                HostConfigKeyValueRow("点位名称", tag.name)
-                HostConfigKeyValueRow("描述", tag.description.orDash())
-                HostConfigKeyValueRow("数据类型", tag.dataTypeName)
-                HostConfigKeyValueRow("寄存器类型", tag.registerTypeName)
-                HostConfigKeyValueRow("寄存器地址", tag.registerAddress.toString())
-                HostConfigKeyValueRow("启用", if (tag.enabled) "是" else "否")
-                HostConfigKeyValueRow("默认值", tag.defaultValue.orDash())
-                HostConfigKeyValueRow("异常值", tag.exceptionValue.orDash())
-                HostConfigKeyValueRow("点位类型", tag.pointType?.label() ?: "-")
-                HostConfigKeyValueRow("防抖(ms)", tag.debounceMs?.toString() ?: "-")
-                HostConfigKeyValueRow("排序", tag.sortIndex.toString())
-                HostConfigKeyValueRow("线性转换", if (tag.scalingEnabled) "已启用" else "未启用")
+                HostConfigNodeSummary(
+                    title = tag.name,
+                    subtitle = "${tag.dataTypeName} · ${tag.registerTypeName}",
+                    kind = nodeKind,
+                    badges = listOf(
+                        if (tag.enabled) "已启用" else "未启用",
+                        tag.pointType?.label() ?: "未分组",
+                    ),
+                    metrics = listOf(
+                        NodeMetricItem("地址", tag.registerAddress.toString()),
+                        NodeMetricItem("值文本", tag.valueTexts.size.toString()),
+                        NodeMetricItem("缩放", if (tag.scalingEnabled) "开启" else "关闭"),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "点位资料",
+                    entries = listOf(
+                        "点位名称" to tag.name,
+                        "描述" to tag.description.orDash(),
+                        "数据类型" to tag.dataTypeName,
+                        "寄存器类型" to tag.registerTypeName,
+                        "寄存器地址" to tag.registerAddress.toString(),
+                        "启用" to if (tag.enabled) "是" else "否",
+                        "点位类型" to (tag.pointType?.label() ?: "-"),
+                        "排序" to tag.sortIndex.toString(),
+                    ),
+                )
+                HostConfigDenseInfoSection(
+                    title = "采集策略",
+                    entries = listOf(
+                        "默认值" to tag.defaultValue.orDash(),
+                        "异常值" to tag.exceptionValue.orDash(),
+                        "防抖(ms)" to (tag.debounceMs?.toString() ?: "-"),
+                        "线性转换" to if (tag.scalingEnabled) "已启用" else "未启用",
+                    ),
+                )
                 if (tag.scalingEnabled) {
-                    HostConfigKeyValueRow("偏移量", tag.scalingOffset.orDash())
-                    HostConfigKeyValueRow("原始范围", "${tag.rawMin.orDash()} ~ ${tag.rawMax.orDash()}")
-                    HostConfigKeyValueRow("工程范围", "${tag.engMin.orDash()} ~ ${tag.engMax.orDash()}")
+                    HostConfigDenseInfoSection(
+                        title = "线性转换",
+                        entries = listOf(
+                            "偏移量" to tag.scalingOffset.orDash(),
+                            "原始范围" to "${tag.rawMin.orDash()} ~ ${tag.rawMax.orDash()}",
+                            "工程范围" to "${tag.engMin.orDash()} ~ ${tag.engMax.orDash()}",
+                        ),
+                    )
                 }
-                HostConfigKeyValueRow("值文本条目", tag.valueTexts.size.toString())
             }
         }
+    }
+}
+
+private data class NodeMetricItem(
+    val label: String,
+    val value: String,
+)
+
+@Composable
+private fun HostConfigNodeSummary(
+    title: String,
+    subtitle: String,
+    kind: HostConfigNodeKind,
+    badges: List<String>,
+    metrics: List<NodeMetricItem>,
+) {
+    val accent = kind.summaryAccentColor()
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        accent.copy(alpha = 0.18f),
+                        CupertinoTheme.colorScheme.tertiarySystemGroupedBackground,
+                    ),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = 0.26f),
+                shape = RoundedCornerShape(18.dp),
+            )
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                CupertinoText(
+                    text = title,
+                    style = CupertinoTheme.typography.title3,
+                )
+                CupertinoText(
+                    text = subtitle,
+                    style = CupertinoTheme.typography.footnote,
+                    color = CupertinoTheme.colorScheme.secondaryLabel,
+                )
+            }
+            HostConfigSummaryBadge(
+                text = kind.label(),
+                accent = accent,
+            )
+        }
+        if (badges.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                badges.forEach { badge ->
+                    HostConfigSummaryBadge(
+                        text = badge,
+                        accent = accent,
+                        emphasized = false,
+                    )
+                }
+            }
+        }
+        if (metrics.isNotEmpty()) {
+            HostConfigMetricRow(
+                metrics = metrics,
+                accent = accent,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HostConfigMetricRow(
+    metrics: List<NodeMetricItem>,
+    accent: Color,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        metrics.chunked(4).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                repeat(4) { index ->
+                    val item = row.getOrNull(index)
+                    if (item == null) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    } else {
+                        HostConfigMetricCard(
+                            item = item,
+                            accent = accent,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostConfigMetricCard(
+    item: NodeMetricItem,
+    accent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(CupertinoTheme.colorScheme.secondarySystemGroupedBackground)
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = 0.16f),
+                shape = RoundedCornerShape(14.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        CupertinoText(
+            text = item.label,
+            style = CupertinoTheme.typography.caption2,
+            color = CupertinoTheme.colorScheme.secondaryLabel,
+        )
+        CupertinoText(
+            text = item.value,
+            style = CupertinoTheme.typography.footnote,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun HostConfigSummaryBadge(
+    text: String,
+    accent: Color,
+    emphasized: Boolean = true,
+) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(
+                if (emphasized) {
+                    accent.copy(alpha = 0.16f)
+                } else {
+                    CupertinoTheme.colorScheme.secondarySystemGroupedBackground
+                },
+            )
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = if (emphasized) 0.26f else 0.14f),
+                shape = RoundedCornerShape(999.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+    ) {
+        CupertinoText(
+            text = text,
+            style = CupertinoTheme.typography.caption2,
+            color = if (emphasized) accent else CupertinoTheme.colorScheme.label,
+        )
+    }
+}
+
+@Composable
+private fun HostConfigDenseSection(
+    title: String,
+    subtitle: String? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            CupertinoText(
+                text = title,
+                style = CupertinoTheme.typography.headline,
+            )
+            subtitle?.takeIf { it.isNotBlank() }?.let { text ->
+                CupertinoText(
+                    text = text,
+                    style = CupertinoTheme.typography.footnote,
+                    color = CupertinoTheme.colorScheme.secondaryLabel,
+                )
+            }
+        }
+        content()
+    }
+}
+
+@Composable
+private fun HostConfigDenseInfoSection(
+    title: String,
+    entries: List<Pair<String, String>>,
+    subtitle: String? = null,
+    columns: Int = 2,
+    emptyText: String? = null,
+) {
+    HostConfigDenseSection(
+        title = title,
+        subtitle = subtitle,
+    ) {
+        if (entries.isEmpty()) {
+            emptyText?.let { text ->
+                HostConfigStatusStrip(text)
+            }
+            return@HostConfigDenseSection
+        }
+        HostConfigDenseInfoGrid(
+            entries = entries,
+            columns = columns,
+        )
+    }
+}
+
+@Composable
+private fun HostConfigDenseInfoGrid(
+    entries: List<Pair<String, String>>,
+    columns: Int,
+) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        entries.chunked(columns.coerceAtLeast(1)).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                repeat(columns.coerceAtLeast(1)) { index ->
+                    val entry = row.getOrNull(index)
+                    if (entry == null) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    } else {
+                        HostConfigDenseInfoCell(
+                            label = entry.first,
+                            value = entry.second,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HostConfigDenseInfoCell(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(CupertinoTheme.colorScheme.tertiarySystemGroupedBackground)
+            .border(
+                width = 1.dp,
+                color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.24f),
+                shape = RoundedCornerShape(14.dp),
+            )
+            .padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        CupertinoText(
+            text = label,
+            style = CupertinoTheme.typography.caption2,
+            color = CupertinoTheme.colorScheme.secondaryLabel,
+        )
+        CupertinoText(
+            text = value,
+            style = CupertinoTheme.typography.footnote,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -1106,14 +1495,6 @@ private fun NodeChildrenPanel(
     val nodeKind = resolveSelectedNodeKind(state)
     HostConfigPanel(
         title = if (nodeKind == HostConfigNodeKind.TAG) "子项信息" else "下级节点",
-        subtitle = when (nodeKind) {
-            null -> "请选择左侧节点"
-            HostConfigNodeKind.PROJECT -> "当前工程下挂接的协议实例。"
-            HostConfigNodeKind.PROTOCOL -> "当前协议下的模块。"
-            HostConfigNodeKind.MODULE -> "当前模块下的设备。"
-            HostConfigNodeKind.DEVICE -> "当前设备下的标签分页。"
-            HostConfigNodeKind.TAG -> "当前标签携带的值文本子项。"
-        },
         actions = {
             if (nodeKind == HostConfigNodeKind.DEVICE) {
                 WorkbenchActionButton(
@@ -1331,153 +1712,77 @@ private fun ProjectModuleRack(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             CupertinoText(
-                text = "远程 I/O 背板",
+                text = "模块总览",
                 style = CupertinoTheme.typography.headline,
             )
             CupertinoText(
-                text = "${modules.size} 个插槽",
+                text = "${modules.size} 个模块",
                 style = CupertinoTheme.typography.footnote,
                 color = CupertinoTheme.colorScheme.secondaryLabel,
             )
         }
 
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(18.dp))
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF313A46),
-                            Color(0xFF1F262F),
-                        ),
-                    ),
-                )
-                .border(
-                    width = 1.dp,
-                    color = Color.White.copy(alpha = 0.08f),
-                    shape = RoundedCornerShape(18.dp),
-                )
-                .padding(12.dp),
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(12.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.White.copy(alpha = 0.10f),
-                                    Color.Black.copy(alpha = 0.22f),
-                                    Color.White.copy(alpha = 0.04f),
-                                ),
-                            ),
-                        ),
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modules.forEachIndexed { index, module ->
+                Column(
+                    modifier = Modifier.width(296.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    modules.forEachIndexed { index, module ->
-                        Column(
-                            modifier = Modifier.width(292.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                CupertinoText(
-                                    text = "SLOT ${index + 1}",
-                                    style = CupertinoTheme.typography.caption1,
-                                    color = Color.White.copy(alpha = 0.76f),
-                                )
-                                CupertinoText(
-                                    text = "${module.devices.size} 台设备",
-                                    style = CupertinoTheme.typography.caption2,
-                                    color = Color.White.copy(alpha = 0.50f),
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(
-                                        brush = Brush.verticalGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = 0.05f),
-                                                Color.Black.copy(alpha = 0.12f),
-                                            ),
-                                        ),
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        color = Color.White.copy(alpha = 0.08f),
-                                        shape = RoundedCornerShape(18.dp),
-                                    )
-                                    .padding(8.dp)
-                                    .clickable(
-                                        enabled = projectId != null,
-                                        onClick = {
-                                            projectId?.let { safeProjectId ->
-                                                onSelectNode(
-                                                    ProjectsViewModel.buildModuleNodeId(
-                                                        projectId = safeProjectId,
-                                                        moduleId = module.id,
-                                                    ),
-                                                )
-                                            }
-                                        },
-                                    ),
-                            ) {
-                                HostConfigModuleBoard(
-                                    model = resolveModuleBoardModel(
-                                        module = module,
-                                        moduleTemplates = moduleTemplates,
-                                    ),
-                                    compact = true,
-                                )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(10.dp)
-                                    .clip(RoundedCornerShape(999.dp))
-                                    .background(
-                                        brush = Brush.horizontalGradient(
-                                            colors = listOf(
-                                                Color.Black.copy(alpha = 0.28f),
-                                                Color.White.copy(alpha = 0.06f),
-                                                Color.Black.copy(alpha = 0.18f),
-                                            ),
-                                        ),
-                                    ),
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        CupertinoText(
+                            text = "模块 ${index + 1}",
+                            style = CupertinoTheme.typography.caption1,
+                            color = CupertinoTheme.colorScheme.secondaryLabel,
+                        )
+                        CupertinoText(
+                            text = "${module.devices.size} 台设备",
+                            style = CupertinoTheme.typography.caption2,
+                            color = CupertinoTheme.colorScheme.tertiaryLabel,
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(CupertinoTheme.colorScheme.secondarySystemGroupedBackground)
+                            .border(
+                                width = 1.dp,
+                                color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.28f),
+                                shape = RoundedCornerShape(18.dp),
                             )
-                        }
+                            .padding(8.dp)
+                            .clickable(
+                                enabled = projectId != null,
+                                onClick = {
+                                    projectId?.let { safeProjectId ->
+                                        onSelectNode(
+                                            ProjectsViewModel.buildModuleNodeId(
+                                                projectId = safeProjectId,
+                                                moduleId = module.id,
+                                            ),
+                                        )
+                                    }
+                                },
+                            ),
+                    ) {
+                        HostConfigModuleBoard(
+                            model = resolveModuleBoardModel(
+                                module = module,
+                                moduleTemplates = moduleTemplates,
+                            ),
+                            compact = true,
+                        )
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.Black.copy(alpha = 0.28f),
-                                    Color.White.copy(alpha = 0.08f),
-                                    Color.Black.copy(alpha = 0.22f),
-                                ),
-                            ),
-                        ),
-                )
             }
         }
     }
@@ -1987,7 +2292,7 @@ private fun TagEditorDialog(
 
         HostConfigPanel(
             title = "数字量文本",
-            subtitle = "对应旧宿主配置里的值文本映射。",
+            subtitle = "对应历史配置里的值文本映射。",
         ) {
             valueTexts.forEachIndexed { index, item ->
                 HostConfigPanel(
@@ -2154,75 +2459,104 @@ private fun UploadProjectDialog(
 }
 
 @Composable
-private fun NodeActionSheet(
+private fun NodeActionDropdownMenu(
     seed: NodeActionMenuSeed,
     onDismissRequest: () -> Unit,
     onAction: (NodeActionType) -> Unit,
 ) {
-    CupertinoActionSheet(
-        visible = true,
+    Popup(
+        alignment = Alignment.TopEnd,
+        offset = IntOffset(0, 30),
         onDismissRequest = onDismissRequest,
-        title = {
+        properties = PopupProperties(
+            focusable = true,
+            clippingEnabled = false,
+        ),
+    ) {
+        CupertinoSurface(
+            modifier = Modifier
+                .width(220.dp)
+                .border(
+                    width = 1.dp,
+                    color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.22f),
+                    shape = CupertinoTheme.shapes.large,
+                ),
+            color = CupertinoTheme.colorScheme.secondarySystemGroupedBackground,
+            shape = CupertinoTheme.shapes.large,
+        ) {
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                CupertinoText(seed.title)
-                seed.subtitle.takeIf { subtitle -> subtitle.isNotBlank() }?.let { subtitle ->
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     CupertinoText(
-                        text = subtitle,
-                        style = CupertinoTheme.typography.footnote,
-                        color = CupertinoTheme.colorScheme.secondaryLabel,
+                        text = seed.title,
+                        style = CupertinoTheme.typography.subhead,
                     )
+                    seed.subtitle.takeIf { subtitle -> subtitle.isNotBlank() }?.let { subtitle ->
+                        CupertinoText(
+                            text = subtitle,
+                            style = CupertinoTheme.typography.footnote,
+                            color = CupertinoTheme.colorScheme.secondaryLabel,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
-            }
-        },
-        buttons = {
-            seed.items.forEach { item ->
-                val buttonBody: @Composable () -> Unit = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(1.dp)
+                        .background(CupertinoTheme.colorScheme.separator.copy(alpha = 0.14f)),
+                )
+                seed.items.forEach { item ->
+                    val titleColor = when {
+                        !item.enabled -> CupertinoTheme.colorScheme.secondaryLabel.copy(alpha = 0.62f)
+                        item.destructive -> Color(0xFFC83C35)
+                        else -> CupertinoTheme.colorScheme.label
+                    }
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(CupertinoTheme.shapes.medium)
+                            .clickable(
+                                enabled = item.enabled,
+                            ) {
+                                onAction(item.type)
+                            }
+                            .background(
+                                if (item.enabled) {
+                                    CupertinoTheme.colorScheme.tertiarySystemGroupedBackground
+                                } else {
+                                    CupertinoTheme.colorScheme.secondarySystemGroupedBackground
+                                },
+                            )
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        CupertinoText(item.title)
+                        CupertinoText(
+                            text = item.title,
+                            color = titleColor,
+                        )
                         item.note?.takeIf { note -> note.isNotBlank() }?.let { note ->
                             CupertinoText(
                                 text = note,
                                 style = CupertinoTheme.typography.footnote,
-                                color = CupertinoTheme.colorScheme.secondaryLabel,
+                                color = CupertinoTheme.colorScheme.secondaryLabel.copy(
+                                    alpha = if (item.enabled) 1f else 0.7f,
+                                ),
                             )
                         }
                     }
                 }
-                if (item.destructive) {
-                    destructive(
-                        onClick = {
-                            if (item.enabled) {
-                                onAction(item.type)
-                            }
-                        },
-                    ) {
-                        buttonBody()
-                    }
-                } else {
-                    default(
-                        onClick = {
-                            if (item.enabled) {
-                                onAction(item.type)
-                            }
-                        },
-                    ) {
-                        buttonBody()
-                    }
-                }
             }
-            cancel(
-                onClick = onDismissRequest,
-            ) {
-                CupertinoText("取消")
-            }
-        },
-    )
+        }
+    }
 }
 
 @Composable
@@ -2580,6 +2914,16 @@ private fun resolveSelectedNodeKind(
         ?: state.selectedProject?.let { HostConfigNodeKind.PROJECT }
 }
 
+private fun HostConfigNodeKind.summaryAccentColor(): Color {
+    return when (this) {
+        HostConfigNodeKind.PROJECT -> Color(0xFF2F80ED)
+        HostConfigNodeKind.PROTOCOL -> Color(0xFF2E9E8E)
+        HostConfigNodeKind.MODULE -> Color(0xFF3FA56B)
+        HostConfigNodeKind.DEVICE -> Color(0xFFF29B38)
+        HostConfigNodeKind.TAG -> Color(0xFF6B7A90)
+    }
+}
+
 private fun site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse?.allModules():
     List<site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode> {
     val project = this ?: return emptyList()
@@ -2785,22 +3129,6 @@ private fun ProtocolDraft.toTransportConfig(
         )
 
         else -> null
-    }
-}
-
-private fun List<site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode>.allBranchIds(): Set<Any> {
-    return buildSet {
-        fun collect(nodes: List<site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode>) {
-            nodes.forEach { node ->
-                if (node.children.isEmpty()) {
-                    return@forEach
-                }
-                add(node.id)
-                collect(node.children)
-            }
-        }
-
-        collect(this@allBranchIds)
     }
 }
 

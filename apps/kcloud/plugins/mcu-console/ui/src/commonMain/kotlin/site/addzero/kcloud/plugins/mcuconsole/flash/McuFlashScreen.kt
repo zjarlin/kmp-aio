@@ -30,7 +30,7 @@ import site.addzero.cupertino.workbench.material3.Text
     order = 10.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "物联网上位机",
+            name = "上位机",
             icon = "Build",
             order = 0,
         ),

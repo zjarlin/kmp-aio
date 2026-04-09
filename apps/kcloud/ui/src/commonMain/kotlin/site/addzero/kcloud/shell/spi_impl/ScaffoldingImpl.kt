@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.sp
 import org.koin.core.annotation.Single
 import site.addzero.cupertino.workbench.material3.MaterialTheme
 import site.addzero.cupertino.workbench.material3.Text
+import site.addzero.kcloud.shell.overlay.RenderGlobalNotificationOverlay
 import site.addzero.cupertino.workbench.menu.WorkbenchTopBarActionContributor
 import site.addzero.cupertino.workbench.menu.WorkbenchTopBarActionsHost
 import site.addzero.workbenchshell.spi.content.ContentRender
@@ -86,6 +87,6 @@ class ScaffoldingImpl(
 
     @Composable
     override fun RenderOverlay() {
-//        Text("Overlay")
+        RenderGlobalNotificationOverlay()
     }
 }

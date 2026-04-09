@@ -14,6 +14,7 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val generateMcuConsoleUiApisTaskPath = ":apps:kcloud:plugins:mcu-console:server:kspKotlinJvm"
 //val addzeroLibJvmVersion: String by project
 val routeOwnerModuleDir =
@@ -26,6 +27,7 @@ dependencies{
 
 ksp {
     //route 上下文
+    arg("sharedSourceDir", routeSharedSourceDir.asFile.absolutePath)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
     arg("routeAggregationRole", "contributor")

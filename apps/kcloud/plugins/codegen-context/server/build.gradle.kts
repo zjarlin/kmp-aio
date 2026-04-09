@@ -25,7 +25,7 @@ val mcuConsoleSharedGeneratedContractDir =
     )
 val mcuConsoleMetadataOutputDir =
     rootProject.layout.projectDirectory.dir(
-        "apps/kcloud/plugins/mcu-console/server/generated/modbus-metadata",
+        "../t/Docs/generated/modbus-metadata",
     )
 val codegenContextServerJvmJar = tasks.named<Jar>("jvmJar")
 val codegenContextServerJvmRuntimeClasspath = configurations.named("jvmRuntimeClasspath")

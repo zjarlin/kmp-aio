@@ -7,7 +7,7 @@ plugins {
 val hostConfigUiProjectDir = layout.projectDirectory.dir("../ui")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
 val generatedApiRootDir =
-    hostConfigUiProjectDir.dir("build/generated/source/controller2api/commonMain/kotlin")
+    hostConfigUiProjectDir.dir("build/generated/ksp/commonMain/kotlin")
 
 /** API 生成目录。 */
 val generatedApiOutputDir =
@@ -53,7 +53,7 @@ kotlin {
 }
 
 val cleanHostConfigGeneratedApis by tasks.registering(Delete::class) {
-    delete(generatedApiRootDir.asFile)
+    delete(generatedApiOutputDir.asFile)
 }
 
 tasks.matching { task ->

@@ -2,9 +2,10 @@ package site.addzero.kcloud.window.main
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.CompositionLocalProvider
 import org.koin.compose.koinInject
-import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
+import site.addzero.cupertino.workbench.metrics.LocalWorkbenchMetrics
+import site.addzero.cupertino.workbench.metrics.WorkbenchPresets
 import site.addzero.cupertino.workbench.scaffolding.RenderCupertinoWorkbenchScaffolding
 import site.addzero.cupertino.workbench.theme.CupertinoWorkbenchTheme
 import site.addzero.kcloud.theme.ShellThemeState
@@ -22,21 +23,24 @@ fun RenderWorkbenchWindow(
     val darkTheme = themeMode.resolveDarkTheme(
         systemDarkTheme = isSystemInDarkTheme(),
     )
-    val uiMetrics = currentWorkbenchMetrics()
-    val sidebarVisible = shellState.sidebarVisible
+    val workbenchMetrics = WorkbenchPresets.DesktopCompact
 
     CupertinoWorkbenchTheme(
         darkTheme = darkTheme,
         content = {
-            RenderCupertinoWorkbenchScaffolding(
-                scaffolding = scaffolding,
-                sidebarVisible = sidebarVisible,
-                onSidebarToggle = shellState::toggleSidebar,
-                defaultSidebarRatio = uiMetrics.sidebarRatio,
-                minSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMinWidth else 0.dp,
-                maxSidebarWidth = if (sidebarVisible) uiMetrics.sidebarMaxWidth else 0.dp,
-            )
-            scaffolding.RenderOverlay()
+            CompositionLocalProvider(
+                LocalWorkbenchMetrics provides workbenchMetrics,
+            ) {
+                RenderCupertinoWorkbenchScaffolding(
+                    scaffolding = scaffolding,
+                    sidebarMode = shellState.sidebarMode,
+                    onSidebarToggle = shellState::toggleSidebar,
+                    defaultSidebarRatio = workbenchMetrics.sidebarRatio,
+                    minSidebarWidth = workbenchMetrics.sidebarMinWidth,
+                    maxSidebarWidth = workbenchMetrics.sidebarMaxWidth,
+                )
+                scaffolding.RenderOverlay()
+            }
         },
     )
 }

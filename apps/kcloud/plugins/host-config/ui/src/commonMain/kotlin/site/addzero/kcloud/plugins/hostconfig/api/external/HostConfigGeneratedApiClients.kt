@@ -18,11 +18,11 @@ import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createTagAp
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.createTemplateApi
 
 /**
- * host-config 生成 API 的 Koin 叶子入口。
+ * host-config generated API 的源码级叶子桥接。
  *
- * controller2api 生成的 `ApisModule` 当前没有稳定进入 UI 根配置自动发现链，
- * 这里用 source-controlled 的 `@Single` bridge 兜底，确保页面级 ViewModel
- * 在运行时总能拿到 generated API 代理。
+ * 当前这个模块里 `@Configuration` 没有被 Koin 稳定识别，
+ * 所以这里回退到 root scan 可见的 `@Single` 叶子定义。
+ * generated 接口本体仍然留在 build/generated 目录，不进入源码树。
  */
 @Single
 class CatalogApiClient(

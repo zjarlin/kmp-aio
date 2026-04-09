@@ -13,6 +13,7 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")
@@ -28,6 +29,7 @@ val routeOwnerModuleDir =
 val generateCodegenContextUiApisTaskPath = ":apps:kcloud:plugins:codegen-context:server:kspKotlinJvm"
 
 ksp {
+    arg("sharedSourceDir", routeSharedSourceDir.asFile.absolutePath)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
     arg("routeAggregationRole", "contributor")

@@ -25,6 +25,7 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val desktopMainClass = "site.addzero.kcloud.MainKt"
+val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val routeOwnerModuleDir =
     kotlin
         .sourceSets
@@ -40,6 +41,7 @@ val routeContributorTaskPaths = listOf(
 )
 
 ksp {
+    arg("sharedSourceDir", routeSharedSourceDir.asFile.absolutePath)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
     arg("routeAggregationRole", "owner")

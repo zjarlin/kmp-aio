@@ -44,9 +44,9 @@ import site.addzero.kcloud.plugins.hostconfig.common.orDash
     order = 20.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "宿主配置",
+            name = "元数据配置",
             icon = "SettingsApplications",
-            order = 10,
+            order = -10,
         ),
     ),
 )

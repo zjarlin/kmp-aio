@@ -648,7 +648,7 @@ class ProjectsViewModel(
             screenState = screenState.copy(
                 loading = false,
                 busy = false,
-                errorMessage = throwable.message ?: "加载宿主配置失败",
+                errorMessage = throwable.message ?: "加载元数据配置失败",
             )
         }
     }
