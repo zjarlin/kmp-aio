@@ -12,6 +12,7 @@ import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceUpdateRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectSqliteImportRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModulePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
@@ -97,6 +98,18 @@ class ProjectsViewModel(
     }
 
     /**
+     * 显示错误消息。
+     *
+     * @param message 错误消息。
+     */
+    fun showError(message: String) {
+        screenState = screenState.copy(
+            errorMessage = message,
+            noticeMessage = null,
+        )
+    }
+
+    /**
      * 选择项目。
      *
      * @param projectId 项目 ID。
@@ -128,7 +141,6 @@ class ProjectsViewModel(
             applySelection(
                 selectedProjectId = node.projectId,
                 selectedNodeId = node.id,
-                uploadStatusProjectId = node.projectId,
             )
         }
     }
@@ -596,7 +608,7 @@ class ProjectsViewModel(
         request: TagCreateRequest,
         valueTexts: List<TagValueTextInput>,
     ) {
-        mutate("点位已创建") {
+        mutate("标签已创建") {
             val created = tagApi.createTag(deviceId, request)
             tagApi.replaceValueTexts(
                 tagId = created.id,
@@ -605,7 +617,7 @@ class ProjectsViewModel(
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildTagNodeId(projectId, deviceId, created.id),
-                noticeMessage = "点位已创建",
+                noticeMessage = "标签已创建",
             )
         }
     }
@@ -626,7 +638,7 @@ class ProjectsViewModel(
         request: TagUpdateRequest,
         valueTexts: List<TagValueTextInput>,
     ) {
-        mutate("点位已更新") {
+        mutate("标签已更新") {
             tagApi.updateTag(tagId, request)
             tagApi.replaceValueTexts(
                 tagId = tagId,
@@ -635,7 +647,7 @@ class ProjectsViewModel(
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildTagNodeId(projectId, deviceId, tagId),
-                noticeMessage = "点位已更新",
+                noticeMessage = "标签已更新",
             )
         }
     }
@@ -654,7 +666,7 @@ class ProjectsViewModel(
         tagId: Long,
         sortIndex: Int,
     ) {
-        mutate("点位位置已更新") {
+        mutate("标签位置已更新") {
             tagApi.updateTagPosition(
                 tagId = tagId,
                 request = TagPositionUpdateRequest(
@@ -665,7 +677,7 @@ class ProjectsViewModel(
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildTagNodeId(projectId, deviceId, tagId),
-                noticeMessage = "点位位置已更新",
+                noticeMessage = "标签位置已更新",
             )
         }
     }
@@ -682,67 +694,47 @@ class ProjectsViewModel(
         deviceId: Long,
         tagId: Long,
     ) {
-        mutate("点位已删除") {
+        mutate("标签已删除") {
             tagApi.deleteTag(tagId)
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildDeviceNodeId(projectId, deviceId),
-                noticeMessage = "点位已删除",
+                noticeMessage = "标签已删除",
             )
         }
     }
 
     /**
-     * 更新上传状态。
+     * 导出当前选中工程为 sqlite 文件。
      */
-    fun updateUploadStatus() {
-        val projectId = screenState.selectedProjectId ?: return
-        viewModelScope.launch {
-            val uploadStatus = projectUploadApi.getProjectUploadStatus(projectId)
+    fun exportSelectedProjectSqlite() {
+        val projectId = screenState.selectedProjectId
+        if (projectId == null) {
+            showError("请先在左侧选择一个工程，再导出 sqlite 文件")
+            return
+        }
+        mutate("工程 sqlite 已导出") {
+            val response = projectUploadApi.exportProjectSqlite(projectId)
             screenState = screenState.copy(
-                uploadStatus = uploadStatus,
+                noticeMessage = "已导出 SQLite 到 ${response.filePath}",
+                errorMessage = null,
             )
         }
     }
 
     /**
-     * 处理submit上传。
+     * 导入本地 sqlite 工程文件到数据目录。
      *
-     * @param request 请求参数。
+     * @param sourceFilePath 源文件路径。
      */
-    fun submitUpload(
-        request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest,
-    ) {
-        val projectId = screenState.selectedProjectId ?: return
-        mutate("上传请求已提交") {
-            val uploadStatus = projectUploadApi.uploadProject(projectId, request)
-            screenState = screenState.copy(
-                uploadStatus = uploadStatus,
-                noticeMessage = "上传请求已提交",
-            )
-        }
-    }
-
-    /**
-     * 处理trigger上传action。
-     *
-     * @param action action。
-     * @param request 请求参数。
-     */
-    fun triggerUploadAction(
-        action: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction,
-        request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest,
-    ) {
-        val projectId = screenState.selectedProjectId ?: return
-        mutate("${action.name} 操作已提交") {
-            val uploadStatus = projectUploadApi.triggerProjectUploadRemoteAction(
-                projectId = projectId,
-                action = action,
-                request = request,
+    fun importProjectSqlite(sourceFilePath: String) {
+        mutate("工程 sqlite 已导入") {
+            val response = projectUploadApi.importProjectSqlite(
+                ProjectSqliteImportRequest(sourceFilePath = sourceFilePath),
             )
             screenState = screenState.copy(
-                uploadStatus = uploadStatus,
-                noticeMessage = "${action.name} 操作已提交",
+                noticeMessage = "已导入 SQLite 到 ${response.filePath}",
+                errorMessage = null,
             )
         }
     }
@@ -850,7 +842,6 @@ class ProjectsViewModel(
             applySelection(
                 selectedProjectId = selectedProjectId,
                 selectedNodeId = selectedNodeId,
-                uploadStatusProjectId = selectedProjectId,
             )
         }.onFailure { throwable ->
             screenState = screenState.copy(
@@ -866,12 +857,10 @@ class ProjectsViewModel(
      *
      * @param selectedProjectId 选中项目 ID。
      * @param selectedNodeId 选中node ID。
-     * @param uploadStatusProjectId 上传状态项目 ID。
      */
     private suspend fun applySelection(
         selectedProjectId: Long,
         selectedNodeId: String,
-        uploadStatusProjectId: Long,
     ) {
         val nextState = screenState.copy(
             selectedProjectId = selectedProjectId,
@@ -921,10 +910,6 @@ class ProjectsViewModel(
         } else {
             clearModuleBoardRuntime()
         }
-
-        screenState = screenState.copy(
-            uploadStatus = projectUploadApi.getProjectUploadStatus(uploadStatusProjectId),
-        )
     }
 
     /**

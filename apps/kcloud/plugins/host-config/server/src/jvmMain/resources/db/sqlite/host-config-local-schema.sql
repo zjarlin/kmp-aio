@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS host_config_protocol_template (
     code TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
+    metadata_json TEXT,
     sort_index INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
@@ -338,11 +339,11 @@ CREATE TABLE IF NOT EXISTS host_config_project_gateway_pin_config (
 );
 
 INSERT OR IGNORE INTO host_config_protocol_template (
-    id, code, name, description, sort_index, created_at, updated_at
+    id, code, name, description, metadata_json, sort_index, created_at, updated_at
 ) VALUES
-    (1, 'MODBUS_RTU_CLIENT', 'ModbusRTU', 'Modbus RTU 客户端协议', 1, 1743465600000, 1744156800000),
-    (2, 'MODBUS_TCP_CLIENT', 'ModbusTCP', 'Modbus TCP 客户端协议', 2, 1743465600000, 1744156800000),
-    (3, 'MQTT_CLIENT', 'Mqtt', 'MQTT 客户端协议', 3, 1743465600000, 1744156800000);
+    (1, 'MODBUS_RTU_CLIENT', 'ModbusRTU', 'Modbus RTU 客户端协议', '{"transportType":"RTU","transportForm":{"title":"通信配置","subtitle":"协议模板元数据决定字段集合，新增 RTU 类协议时不再改界面分支。","summaryKeys":["PORT_NAME","BAUD_RATE","PARITY"],"fields":[{"key":"PORT_NAME","label":"串口","widget":"TEXT","required":true,"placeholder":"例如 COM4"},{"key":"BAUD_RATE","label":"波特率","widget":"SELECT","required":true,"helperText":"300-115200bps 可选","defaultValue":"9600","options":[{"value":"300","label":"300"},{"value":"600","label":"600"},{"value":"1200","label":"1200"},{"value":"2400","label":"2400"},{"value":"4800","label":"4800"},{"value":"9600","label":"9600"},{"value":"19200","label":"19200"},{"value":"38400","label":"38400"},{"value":"57600","label":"57600"},{"value":"115200","label":"115200"}]},{"key":"DATA_BITS","label":"数据位","widget":"SELECT","required":true,"helperText":"7 位、8 位可选","defaultValue":"8","options":[{"value":"7","label":"7"},{"value":"8","label":"8"}]},{"key":"STOP_BITS","label":"停止位","widget":"SELECT","required":true,"helperText":"1 位、2 位可选","defaultValue":"1","options":[{"value":"1","label":"1"},{"value":"2","label":"2"}]},{"key":"PARITY","label":"校验位","widget":"SELECT","required":true,"defaultValue":"NONE","options":[{"value":"NONE","label":"NONE"},{"value":"ODD","label":"ODD"},{"value":"EVEN","label":"EVEN"}]},{"key":"RESPONSE_TIMEOUT_MS","label":"响应超时(ms)","widget":"NUMBER","helperText":"按协议模板元数据控制默认值和提示文案。","defaultValue":"1000"}]}}', 1, 1743465600000, 1744156800000),
+    (2, 'MODBUS_TCP_CLIENT', 'ModbusTCP', 'Modbus TCP 客户端协议', '{"transportType":"TCP","transportForm":{"title":"通信配置","subtitle":"协议模板元数据决定字段集合，新增 TCP 类协议时只补模板元数据。","summaryKeys":["HOST","TCP_PORT"],"fields":[{"key":"HOST","label":"主机地址","widget":"TEXT","required":true,"placeholder":"例如 192.168.1.10"},{"key":"TCP_PORT","label":"TCP 端口","widget":"NUMBER","required":true,"defaultValue":"502","placeholder":"默认 502"},{"key":"RESPONSE_TIMEOUT_MS","label":"响应超时(ms)","widget":"NUMBER","defaultValue":"1000"}]}}', 2, 1743465600000, 1744156800000),
+    (3, 'MQTT_CLIENT', 'Mqtt', 'MQTT 客户端协议', '{"transportForm":{"title":"通信配置","subtitle":"当前 MQTT 模板暂未定义额外通信字段。","summaryKeys":[],"fields":[]}}', 3, 1743465600000, 1744156800000);
 
 INSERT OR IGNORE INTO host_config_module_template (
     id, protocol_template_id, code, name, description, sort_index, channel_count, created_at, updated_at

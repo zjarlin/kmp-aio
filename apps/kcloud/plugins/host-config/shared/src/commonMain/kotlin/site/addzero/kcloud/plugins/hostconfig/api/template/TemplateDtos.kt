@@ -18,6 +18,7 @@ data class TemplateOptionResponse(
     val name: String,
     val description: String?,
     val sortIndex: Int,
+    val metadata: ProtocolTemplateMetadataResponse? = null,
 )
 
 @Serializable

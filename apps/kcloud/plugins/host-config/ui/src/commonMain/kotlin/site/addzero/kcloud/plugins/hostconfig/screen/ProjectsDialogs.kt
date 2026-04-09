@@ -43,7 +43,6 @@ import site.addzero.cupertino.workbench.components.form.CupertinoFormSection
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
@@ -52,7 +51,6 @@ import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.label
 import site.addzero.kcloud.plugins.hostconfig.common.orDash
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
-import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
 import site.addzero.kcloud.plugins.hostconfig.projects.findModule
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
@@ -299,7 +297,7 @@ internal fun CreateTagDialog(
         )
     }
     CupertinoDialog(
-        title = "新建点位",
+        title = "新建标签",
         onDismissRequest = onDismissRequest,
         width = 860.dp,
         actions = {
@@ -365,98 +363,6 @@ internal fun MoveNodeDialog(
             }
             item {
                 CupertinoTextField("排序", sortIndex, { sortIndex = it })
-            }
-        }
-    }
-}
-
-@Composable
-/**
- * 处理上传项目dialog。
- *
- * @param state 状态。
- * @param saving saving。
- * @param onDismissRequest ondismiss请求。
- * @param onSubmit onsubmit。
- * @param onTriggerAction ontriggeraction。
- */
-internal fun UploadProjectDialog(
-    state: ProjectsScreenState,
-    saving: Boolean,
-    onDismissRequest: () -> Unit,
-    onSubmit: (UploadDraft) -> Unit,
-    onTriggerAction: (ProjectUploadRemoteAction, String) -> Unit,
-) {
-    val uploadStatus = state.uploadStatus
-    var ipAddress by remember(uploadStatus) { mutableStateOf(uploadStatus?.ipAddress.orEmpty()) }
-    var projectPath by remember(uploadStatus) { mutableStateOf(uploadStatus?.projectPath.orEmpty()) }
-    var selectedFileName by remember(uploadStatus) { mutableStateOf(uploadStatus?.selectedFileName.orEmpty()) }
-    var includeDriverConfig by remember(uploadStatus) { mutableStateOf(uploadStatus?.includeDriverConfig ?: true) }
-    var includeFirmwareUpgrade by remember(uploadStatus) { mutableStateOf(uploadStatus?.includeFirmwareUpgrade ?: false) }
-    var fastMode by remember(uploadStatus) { mutableStateOf(uploadStatus?.fastMode ?: false) }
-
-    CupertinoDialog(
-        title = "上传工程",
-        onDismissRequest = onDismissRequest,
-        width = 920.dp,
-        actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "提交中" else "提交上传",
-                onClick = {
-                    onSubmit(
-                        UploadDraft(
-                            ipAddress = ipAddress,
-                            includeDriverConfig = includeDriverConfig,
-                            includeFirmwareUpgrade = includeFirmwareUpgrade,
-                            projectPath = projectPath,
-                            selectedFileName = selectedFileName,
-                            fastMode = fastMode,
-                        ),
-                    )
-                },
-                enabled = !saving && ipAddress.isNotBlank(),
-            )
-        },
-    ) {
-        CupertinoPanel(title = "进度", subtitle = uploadStatus?.statusText ?: "待开始") {
-            CupertinoKeyValueRow("进度", uploadStatus?.progress?.let { "$it%" } ?: "0%")
-            CupertinoKeyValueRow("详情", uploadStatus?.detailText.orDash())
-            CupertinoKeyValueRow("备份文件", uploadStatus?.backupFileName.orDash())
-            CupertinoKeyValueRow("下载地址", uploadStatus?.backupDownloadUrl.orDash())
-        }
-        CupertinoFormSection(
-            title = "上传参数",
-            subtitle = "把地址、路径和布尔开关压缩在首屏，减少来回滚动。",
-        ) {
-            item { CupertinoTextField("IP 地址", ipAddress, { ipAddress = it }, placeholder = "请输入目标设备 IP") }
-            item { CupertinoTextField("已选文件名", selectedFileName, { selectedFileName = it }) }
-            fullWidth { CupertinoTextField("工程路径", projectPath, { projectPath = it }) }
-            item { CupertinoBooleanField("上传驱动配置", includeDriverConfig, { includeDriverConfig = it }) }
-            item { CupertinoBooleanField("上传固件升级", includeFirmwareUpgrade, { includeFirmwareUpgrade = it }) }
-            item { CupertinoBooleanField("极速模式", fastMode, { fastMode = it }) }
-        }
-        CupertinoPanel(
-            title = "远程动作",
-            subtitle = "备份、还原、删除与远程重启会保留最近一次动作状态。",
-        ) {
-            CupertinoFormGrid {
-                listOf(
-                    ProjectUploadRemoteAction.BACKUP to "备份配置工程",
-                    ProjectUploadRemoteAction.RESTORE to "还原配置工程",
-                    ProjectUploadRemoteAction.DELETE to "删除配置工程",
-                    ProjectUploadRemoteAction.RESTART to "远程重启",
-                ).forEach { (action, label) ->
-                    item {
-                        WorkbenchActionButton(
-                            text = label,
-                            onClick = { onTriggerAction(action, ipAddress) },
-                            modifier = Modifier.fillMaxWidth(),
-                            variant = WorkbenchButtonVariant.Outline,
-                            enabled = ipAddress.isNotBlank() && !saving,
-                        )
-                    }
-                }
             }
         }
     }

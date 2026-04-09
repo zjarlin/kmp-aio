@@ -44,6 +44,7 @@ fun ProjectsScreen() {
     val viewModel = koinViewModel<ProjectsViewModel>()
     val state = viewModel.screenState
     val treeViewModel = rememberTreeViewModel<HostConfigTreeNode>()
+    val sqliteFilePicker = remember { HostConfigProjectSqliteFilePicker() }
 
     var createProject by remember { mutableStateOf(false) }
     var linkProtocolSeed by remember { mutableStateOf<LinkProtocolSeed?>(null) }
@@ -52,7 +53,6 @@ fun ProjectsScreen() {
     var createDeviceSeed by remember { mutableStateOf<CreateDeviceSeed?>(null) }
     var createTagSeed by remember { mutableStateOf<CreateTagSeed?>(null) }
     var moveSeed by remember { mutableStateOf<MoveNodeSeed?>(null) }
-    var uploadSeed by remember { mutableStateOf<UploadSeed?>(null) }
     var nodeActionMenu by remember { mutableStateOf<NodeActionMenuSeed?>(null) }
     var currentNodePanelCollapsed by remember { mutableStateOf(false) }
     var editingNodeId by remember { mutableStateOf<String?>(null) }
@@ -161,7 +161,6 @@ fun ProjectsScreen() {
 
             NodeActionType.MOVE -> moveSeed = MoveNodeSeed(node)
             NodeActionType.DELETE -> deleteNode(node)
-            NodeActionType.UPLOAD_PROJECT -> uploadSeed = UploadSeed(node.projectId)
         }
     }
 
@@ -203,11 +202,13 @@ fun ProjectsScreen() {
             viewModel.clearNotice()
             createProject = true
         },
-        onDownloadProject = {
-            viewModel.showNotice("下载工程入口已添加，后续接入 sqlite 导出。")
+        onExportProjectSqlite = {
+            viewModel.exportSelectedProjectSqlite()
         },
-        onImportProject = {
-            viewModel.showNotice("导入工程入口已添加，后续接入本地 sqlite 文件选择。")
+        onImportProjectSqlite = {
+            sqliteFilePicker.pickSqliteFile { selectedPath ->
+                selectedPath?.let(viewModel::importProjectSqlite)
+            }
         },
         onRefresh = viewModel::refresh,
         onSelectNode = ::selectNodeFromPage,
@@ -252,7 +253,6 @@ fun ProjectsScreen() {
         createDeviceSeed = createDeviceSeed,
         createTagSeed = createTagSeed,
         moveSeed = moveSeed,
-        uploadSeed = uploadSeed,
         onDismissCreateProject = { createProject = false },
         onDismissLinkProtocol = { linkProtocolSeed = null },
         onDismissChooseModuleProtocol = { chooseModuleProtocolSeed = null },
@@ -260,7 +260,6 @@ fun ProjectsScreen() {
         onDismissCreateDevice = { createDeviceSeed = null },
         onDismissCreateTag = { createTagSeed = null },
         onDismissMoveNode = { moveSeed = null },
-        onDismissUpload = { uploadSeed = null },
         onOpenCreateModule = ::openCreateModule,
     )
 }

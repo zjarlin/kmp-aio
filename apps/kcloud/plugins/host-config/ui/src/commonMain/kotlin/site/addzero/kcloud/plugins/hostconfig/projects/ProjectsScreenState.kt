@@ -1,7 +1,6 @@
 package site.addzero.kcloud.plugins.hostconfig.projects
 
 import site.addzero.kcloud.plugins.hostconfig.api.common.PageResponse
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
@@ -42,7 +41,6 @@ private val EmptyTagPage = PageResponse<TagResponse>(
  * @property tagSize 标签size。
  * @property tagPage 标签分页。
  * @property selectedTagDetail 选中标签详情。
- * @property uploadStatus 上传状态。
  * @property moduleBoardRuntime 模块boardruntime。
  * @property moduleBoardLoading 模块board加载。
  * @property moduleBoardErrorMessage 模块board错误消息。
@@ -66,7 +64,6 @@ data class ProjectsScreenState(
     val tagSize: Int = 12,
     val tagPage: PageResponse<TagResponse> = EmptyTagPage,
     val selectedTagDetail: TagResponse? = null,
-    val uploadStatus: ProjectUploadOperationResponse? = null,
     val moduleBoardRuntime: ModuleBoardRuntimeSnapshot? = null,
     val moduleBoardLoading: Boolean = false,
     val moduleBoardErrorMessage: String? = null,

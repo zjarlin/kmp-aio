@@ -1,22 +1,17 @@
 package site.addzero.kcloud.plugins.hostconfig.routes.upload
 
 import org.koin.core.annotation.Single
-import org.springframework.core.io.Resource
-import org.springframework.http.ResponseEntity
-import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectSqliteFileResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectSqliteImportRequest
 import site.addzero.kcloud.plugins.hostconfig.service.ProjectConfigService
 
 /**
- * 宿主配置里的上传与备份路由，负责上传状态和备份动作。
+ * 宿主配置里的工程 sqlite 传输路由。
  */
 @Single
 @RestController
@@ -24,31 +19,15 @@ import site.addzero.kcloud.plugins.hostconfig.service.ProjectConfigService
 class ProjectUploadController(
     private val projectConfigService: ProjectConfigService,
 ) {
-    /** 读取工程上传状态，供项目页工具条轮询展示。 */
-    @GetMapping("/projects/{projectId}/upload-project")
-    fun getProjectUploadStatus(
+    /** 导出当前工程为 sqlite 文件，并落到本地数据目录。 */
+    @PostMapping("/projects/{projectId}/project-sqlite/export")
+    fun exportProjectSqlite(
         @PathVariable projectId: Long,
-    ): ProjectUploadOperationResponse = projectConfigService.getProjectUploadStatus(projectId)
+    ): ProjectSqliteFileResponse = projectConfigService.exportProjectSqlite(projectId)
 
-    /** 接收上传工程请求，当前版本先持久化动作状态。 */
-    @PostMapping("/projects/{projectId}/upload-project")
-    fun uploadProject(
-        @PathVariable projectId: Long,
-        @RequestBody request: ProjectUploadRequest,
-    ): ProjectUploadOperationResponse = projectConfigService.uploadProject(projectId, request)
-
-    /** 触发上传相关远程动作，备份会同步生成可下载文件。 */
-    @PostMapping("/projects/{projectId}/upload-project/actions/{action}")
-    fun triggerProjectUploadRemoteAction(
-        @PathVariable projectId: Long,
-        @PathVariable action: ProjectUploadRemoteAction,
-        @RequestBody request: ProjectUploadRemoteActionRequest,
-    ): ProjectUploadOperationResponse =
-        projectConfigService.triggerProjectUploadRemoteAction(projectId, action, request)
-
-    /** 下载最近一次备份文件，供桌面端直接保存。 */
-    @GetMapping("/projects/{projectId}/upload-project/backup")
-    fun downloadProjectBackup(
-        @PathVariable projectId: Long,
-    ): ResponseEntity<Resource> = projectConfigService.downloadProjectBackup(projectId)
+    /** 导入本地 sqlite 工程文件到数据目录。 */
+    @PostMapping("/project-sqlite/import")
+    fun importProjectSqlite(
+        @RequestBody request: ProjectSqliteImportRequest,
+    ): ProjectSqliteFileResponse = projectConfigService.importProjectSqlite(request)
 }

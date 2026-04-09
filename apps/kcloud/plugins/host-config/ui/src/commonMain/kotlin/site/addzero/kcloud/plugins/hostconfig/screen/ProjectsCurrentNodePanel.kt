@@ -15,7 +15,6 @@ import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.orDash
 import site.addzero.kcloud.plugins.hostconfig.common.resolveModuleBoardModel
-import site.addzero.kcloud.plugins.hostconfig.common.toSizeLabel
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
@@ -99,14 +98,13 @@ internal fun CurrentNodePanel(
                     subtitle = project?.description?.takeIf { it.isNotBlank() } ?: "工程级配置与模块资源概览",
                     kind = nodeKind,
                     badges = listOfNotNull(
-                        state.uploadStatus?.statusText?.takeIf { it.isNotBlank() }?.let { "上传 $it" },
                         project?.remark?.takeIf { it.isNotBlank() }?.let { "已写备注" },
                     ),
                     metrics = listOf(
                         NodeMetricItem("协议", protocolCount.toString()),
                         NodeMetricItem("模块", modules.size.toString()),
                         NodeMetricItem("设备", deviceCount.toString()),
-                        NodeMetricItem("点位", tagCount.toString()),
+                        NodeMetricItem("标签", tagCount.toString()),
                     ),
                 )
 
@@ -144,21 +142,6 @@ internal fun CurrentNodePanel(
                                 onSelectNode = onSelectNode,
                             )
                         }
-                    }
-                    HostConfigDenseInfoSection(
-                        title = "上传状态",
-                        entries = listOf(
-                            "当前状态" to (state.uploadStatus?.statusText ?: "待开始"),
-                            "进度" to (state.uploadStatus?.progress?.let { "$it%" } ?: "0%"),
-                            "目标 IP" to state.uploadStatus?.ipAddress.orDash(),
-                            "工程路径" to state.uploadStatus?.projectPath.orDash(),
-                            "已选文件" to state.uploadStatus?.selectedFileName.orDash(),
-                            "备份文件" to state.uploadStatus?.backupFileName.orDash(),
-                            "备份大小" to state.uploadStatus?.backupSizeBytes.toSizeLabel(),
-                        ),
-                    )
-                    state.uploadStatus?.detailText?.takeIf { it.isNotBlank() }?.let { detail ->
-                        CupertinoStatusStrip(detail)
                     }
                 }
             }
@@ -303,7 +286,7 @@ internal fun CurrentNodePanel(
                     ),
                     metrics = listOf(
                         NodeMetricItem("站号", device?.stationNo?.toString() ?: "-"),
-                        NodeMetricItem("点位", device?.tags?.size?.toString() ?: "0"),
+                        NodeMetricItem("标签", device?.tags?.size?.toString() ?: "0"),
                         NodeMetricItem("排序", device?.sortIndex?.toString() ?: "-"),
                     ),
                 )
@@ -337,7 +320,7 @@ internal fun CurrentNodePanel(
                             "请求间隔(ms)" to (device?.requestIntervalMs?.toString() ?: "-"),
                             "写值间隔(ms)" to (device?.writeIntervalMs?.toString() ?: "-"),
                             "禁用" to if (device?.disabled == true) "是" else "否",
-                            "点位数量" to (device?.tags?.size?.toString() ?: "0"),
+                            "标签数量" to (device?.tags?.size?.toString() ?: "0"),
                         ),
                     )
                     HostConfigDenseInfoSection(
@@ -356,7 +339,7 @@ internal fun CurrentNodePanel(
             HostConfigNodeKind.TAG -> {
                 val tag = state.selectedTagDetail
                 if (tag == null) {
-                    CupertinoStatusStrip("当前点位详情尚未加载完成。")
+                    CupertinoStatusStrip("当前标签详情尚未加载完成。")
                     return@CupertinoPanel
                 }
                 HostConfigNodeSummary(
@@ -377,7 +360,7 @@ internal fun CurrentNodePanel(
                     val projectId = selectedNode?.projectId
                     val deviceId = selectedNode?.parentEntityId
                     if (projectId == null || deviceId == null) {
-                        CupertinoStatusStrip("当前点位上下文缺失，暂时无法保存。")
+                        CupertinoStatusStrip("当前标签上下文缺失，暂时无法保存。")
                     } else {
                         var draft by remember(tag) { mutableStateOf(tag.toTagDraft()) }
                         CurrentNodeInlineEditorBar(
@@ -394,15 +377,15 @@ internal fun CurrentNodePanel(
                     }
                 } else {
                     HostConfigDenseInfoSection(
-                        title = "点位资料",
+                        title = "标签资料",
                         entries = listOf(
-                            "点位名称" to tag.name,
+                            "标签名称" to tag.name,
                             "描述" to tag.description.orDash(),
                             "数据类型" to tag.dataTypeName,
                             "寄存器类型" to tag.registerTypeName,
                             "寄存器地址" to tag.registerAddress.toString(),
                             "启用" to if (tag.enabled) "是" else "否",
-                            "点位类型" to (tag.pointType?.label() ?: "-"),
+                            "标签类型" to (tag.pointType?.label() ?: "-"),
                             "排序" to tag.sortIndex.toString(),
                         ),
                     )

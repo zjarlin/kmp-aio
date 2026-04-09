@@ -23,6 +23,7 @@ import site.addzero.annotation.RouteScene
 )
 @Composable
 fun GatewayScreen() {
+//    TodoText("")
     FeatureUnavailableScreen(
         title = "网关配置",
         subtitle = "网关接入配置后续会放到这里，当前版本先关闭入口内容。",

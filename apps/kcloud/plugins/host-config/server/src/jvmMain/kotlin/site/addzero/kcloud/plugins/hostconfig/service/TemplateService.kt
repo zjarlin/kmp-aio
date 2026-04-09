@@ -42,6 +42,7 @@ class TemplateService(
                 name = it.name,
                 description = it.description,
                 sortIndex = it.sortIndex,
+                metadata = ProtocolTemplateMetadataRegistry.resolve(it.code, it.metadataJson),
             )
         }
     }

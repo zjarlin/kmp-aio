@@ -141,7 +141,7 @@ internal fun NodeChildrenPanel(
                         },
                     ) {
                         CupertinoKeyValueRow("站号", device.stationNo.toString())
-                        CupertinoKeyValueRow("点位数量", device.tags.size.toString())
+                        CupertinoKeyValueRow("标签数量", device.tags.size.toString())
                         CupertinoKeyValueRow("禁用", if (device.disabled) "是" else "否")
                     }
                 }

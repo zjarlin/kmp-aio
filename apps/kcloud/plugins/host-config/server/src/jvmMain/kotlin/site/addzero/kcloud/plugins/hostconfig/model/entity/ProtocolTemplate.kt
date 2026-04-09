@@ -30,6 +30,11 @@ interface ProtocolTemplate : EpochBaseEntity {
     val description: String?
 
     /**
+     * 元数据 JSON。
+     */
+    val metadataJson: String?
+
+    /**
      * 排序序号。
      */
     val sortIndex: Int

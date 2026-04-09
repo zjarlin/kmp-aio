@@ -1,28 +1,19 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
 import java.math.BigDecimal
-import java.nio.charset.StandardCharsets
-import java.util.concurrent.ConcurrentHashMap
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import org.springframework.core.io.Resource
-import org.springframework.http.ContentDisposition
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationResponse
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectSqliteFileResponse
+import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectSqliteImportRequest
 import site.addzero.kmp.exp.BusinessValidationException
 import site.addzero.kmp.exp.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
@@ -33,14 +24,11 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
  * 提供项目配置相关服务。
  *
  * @property sql Jimmer SQL 客户端。
- * @property projectBackupArchiveService 项目备份归档服务。
  */
 class ProjectConfigService(
     private val sql: KSqlClient,
-    private val projectBackupArchiveService: ProjectBackupArchiveService,
+    private val projectSqliteTransferService: ProjectSqliteTransferService,
 ) {
-    private val uploadOperationStates = ConcurrentHashMap<Long, ProjectUploadOperationResponse>()
-
     companion object {
         private const val DEFAULT_FAULT_INDICATOR_PIN = "PA8"
         private const val DEFAULT_RUNNING_INDICATOR_PIN = "PA2"
@@ -235,129 +223,26 @@ class ProjectConfigService(
     }
 
     /**
-     * 获取项目上传状态。
+     * 导出工程 sqlite 文件到本地数据目录。
      *
-     * @param projectId 项目 ID。
+     * @param projectId 工程 ID。
      */
-    fun getProjectUploadStatus(projectId: Long): ProjectUploadOperationResponse {
+    fun exportProjectSqlite(
+        projectId: Long,
+    ): ProjectSqliteFileResponse {
         ensureProjectExists(projectId)
-        val idle = uploadOperationStates[projectId]
-            ?: ProjectUploadOperationResponse(
-                projectId = projectId,
-                operation = "IDLE",
-                progress = 0,
-                statusText = "待开始",
-                detailText = "尚未发起上传工程或远程操作",
-                ipAddress = null,
-                projectPath = null,
-                selectedFileName = null,
-                includeDriverConfig = true,
-                includeFirmwareUpgrade = false,
-                fastMode = false,
-                backupFileName = null,
-                backupDownloadUrl = null,
-                backupSizeBytes = null,
-                updatedAt = now(),
-            )
-        return attachBackupMetadata(projectId, idle)
+        return projectSqliteTransferService.exportProjectSqlite(projectId)
     }
 
     /**
-     * 处理上传项目。
+     * 导入工程 sqlite 文件到本地数据目录。
      *
-     * @param projectId 项目 ID。
      * @param request 请求参数。
      */
-    fun uploadProject(
-        projectId: Long,
-        request: ProjectUploadRequest,
-    ): ProjectUploadOperationResponse {
-        ensureProjectExists(projectId)
-        if (request.projectPath.cleanNullable() == null && request.selectedFileName.cleanNullable() == null) {
-            throw BusinessValidationException("Project path or selected file name is required")
-        }
-        if (!request.includeDriverConfig && !request.includeFirmwareUpgrade) {
-            throw BusinessValidationException("At least one upload item must be selected")
-        }
-        return rememberUploadOperation(
-            projectId = projectId,
-            operation = "UPLOAD",
-            progress = 18,
-            statusText = "服务端已接收上传请求",
-            detailText = "当前版本已完成接口打通，设备侧上传执行器待接入",
-            ipAddress = request.ipAddress.cleanNullable(),
-            projectPath = request.projectPath.cleanNullable(),
-            selectedFileName = request.selectedFileName.cleanNullable(),
-            includeDriverConfig = request.includeDriverConfig,
-            includeFirmwareUpgrade = request.includeFirmwareUpgrade,
-            fastMode = request.fastMode,
-        )
-    }
-
-    /**
-     * 处理trigger项目上传远程action。
-     *
-     * @param projectId 项目 ID。
-     * @param action action。
-     * @param request 请求参数。
-     */
-    fun triggerProjectUploadRemoteAction(
-        projectId: Long,
-        action: ProjectUploadRemoteAction,
-        request: ProjectUploadRemoteActionRequest,
-    ): ProjectUploadOperationResponse {
-        ensureProjectExists(projectId)
-        if (action == ProjectUploadRemoteAction.BACKUP) {
-            val backup = projectBackupArchiveService.createBackup(projectId)
-            return rememberUploadOperation(
-                projectId = projectId,
-                operation = action.name,
-                progress = 100,
-                statusText = "备份配置工程完成",
-                detailText = backup.summaryText,
-                ipAddress = request.ipAddress.cleanNullable(),
-                projectPath = null,
-                selectedFileName = null,
-                includeDriverConfig = true,
-                includeFirmwareUpgrade = true,
-                fastMode = false,
-                backupFileName = backup.fileName,
-                backupDownloadUrl = buildBackupDownloadUrl(projectId),
-                backupSizeBytes = backup.sizeBytes,
-            )
-        }
-        return rememberUploadOperation(
-            projectId = projectId,
-            operation = action.name,
-            progress = 12,
-            statusText = "${action.toLabel()}请求已接收",
-            detailText = "当前版本仅完成接口与参数校验，设备执行器待接入",
-            ipAddress = request.ipAddress.cleanNullable(),
-            projectPath = null,
-            selectedFileName = null,
-            includeDriverConfig = false,
-            includeFirmwareUpgrade = false,
-            fastMode = false,
-        )
-    }
-
-    /**
-     * 处理download项目备份。
-     *
-     * @param projectId 项目 ID。
-     */
-    fun downloadProjectBackup(projectId: Long): ResponseEntity<Resource> {
-        ensureProjectExists(projectId)
-        val resource = projectBackupArchiveService.loadBackupResource(projectId)
-        val headers = HttpHeaders()
-        headers.contentDisposition = ContentDisposition.attachment()
-            .filename(resource.filename ?: "project-backup.json", StandardCharsets.UTF_8)
-            .build()
-        return ResponseEntity.ok()
-            .headers(headers)
-            .contentLength(resource.contentLength())
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(resource)
+    fun importProjectSqlite(
+        request: ProjectSqliteImportRequest,
+    ): ProjectSqliteFileResponse {
+        return projectSqliteTransferService.importProjectSqlite(request.sourceFilePath)
     }
 
     /**
@@ -411,91 +296,6 @@ class ProjectConfigService(
             throw NotFoundException("Project not found")
         }
     }
-
-    /**
-     * 处理remember上传operation。
-     *
-     * @param projectId 项目 ID。
-     * @param operation operation。
-     * @param progress 当前进度。
-     * @param statusText 状态文本。
-     * @param detailText 详情文本。
-     * @param ipAddress ip地址。
-     * @param projectPath 项目路径。
-     * @param selectedFileName 选中file名称。
-     * @param includeDriverConfig includedriver配置。
-     * @param includeFirmwareUpgrade include固件upgrade。
-     * @param fastMode fast模式。
-     * @param backupFileName 备份file名称。
-     * @param backupDownloadUrl 备份download地址。
-     * @param backupSizeBytes 备份size字节。
-     */
-    private fun rememberUploadOperation(
-        projectId: Long,
-        operation: String,
-        progress: Int,
-        statusText: String,
-        detailText: String?,
-        ipAddress: String?,
-        projectPath: String?,
-        selectedFileName: String?,
-        includeDriverConfig: Boolean,
-        includeFirmwareUpgrade: Boolean,
-        fastMode: Boolean,
-        backupFileName: String? = null,
-        backupDownloadUrl: String? = null,
-        backupSizeBytes: Long? = null,
-    ): ProjectUploadOperationResponse {
-        val response = ProjectUploadOperationResponse(
-            projectId = projectId,
-            operation = operation,
-            progress = progress,
-            statusText = statusText,
-            detailText = detailText,
-            ipAddress = ipAddress,
-            projectPath = projectPath,
-            selectedFileName = selectedFileName,
-            includeDriverConfig = includeDriverConfig,
-            includeFirmwareUpgrade = includeFirmwareUpgrade,
-            fastMode = fastMode,
-            backupFileName = backupFileName,
-            backupDownloadUrl = backupDownloadUrl,
-            backupSizeBytes = backupSizeBytes,
-            updatedAt = now(),
-        )
-        val enriched = attachBackupMetadata(projectId, response)
-        uploadOperationStates[projectId] = enriched
-        return enriched
-    }
-
-    /**
-     * 处理attach备份metadata。
-     *
-     * @param projectId 项目 ID。
-     * @param response 响应。
-     */
-    private fun attachBackupMetadata(
-        projectId: Long,
-        response: ProjectUploadOperationResponse,
-    ): ProjectUploadOperationResponse {
-        if (response.backupFileName != null && response.backupDownloadUrl != null && response.backupSizeBytes != null) {
-            return response
-        }
-        val backup = projectBackupArchiveService.findBackup(projectId) ?: return response
-        return response.copy(
-            backupFileName = backup.fileName,
-            backupDownloadUrl = buildBackupDownloadUrl(projectId),
-            backupSizeBytes = backup.sizeBytes,
-        )
-    }
-
-    /**
-     * 构建备份download地址。
-     *
-     * @param projectId 项目 ID。
-     */
-    private fun buildBackupDownloadUrl(projectId: Long): String =
-        "/api/host-config/v1/projects/$projectId/upload-project/backup"
 
     /**
      * 处理项目MQTT配置。
@@ -580,17 +380,6 @@ class ProjectConfigService(
      */
     private fun BigDecimal?.toApiDecimal(): String? =
         this?.stripTrailingZeros()?.toPlainString()
-
-    /**
-     * 处理项目上传远程action。
-     */
-    private fun ProjectUploadRemoteAction.toLabel(): String =
-        when (this) {
-            ProjectUploadRemoteAction.BACKUP -> "备份配置工程"
-            ProjectUploadRemoteAction.RESTORE -> "还原配置工程"
-            ProjectUploadRemoteAction.DELETE -> "删除配置工程"
-            ProjectUploadRemoteAction.RESTART -> "远程重启"
-        }
 
     /**
      * 获取当前时间戳。

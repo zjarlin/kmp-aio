@@ -13,6 +13,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +28,6 @@ import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.cupertino.workbench.material3.Icon
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
-import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.icon
@@ -67,8 +68,8 @@ internal fun ProjectsWorkbenchContent(
     editingNodeId: String?,
     nodeActionMenu: NodeActionMenuSeed?,
     onCreateProject: () -> Unit,
-    onDownloadProject: () -> Unit,
-    onImportProject: () -> Unit,
+    onExportProjectSqlite: () -> Unit,
+    onImportProjectSqlite: () -> Unit,
     onRefresh: () -> Unit,
     onSelectNode: (String) -> Unit,
     onNodeAction: (HostConfigTreeNode, NodeActionType) -> Unit,
@@ -103,28 +104,15 @@ internal fun ProjectsWorkbenchContent(
             header = {
                 state.errorMessage?.let { CupertinoStatusStrip(it) }
                 state.noticeMessage?.let { CupertinoStatusStrip(it) }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WorkbenchActionButton(
-                        text = "新建工程",
-                        onClick = onCreateProject,
-                        variant = WorkbenchButtonVariant.Outline,
-                    )
-                    WorkbenchActionButton(
-                        text = "下载工程",
-                        onClick = onDownloadProject,
-                        variant = WorkbenchButtonVariant.Outline,
-                    )
-                    WorkbenchActionButton(
-                        text = "导入工程",
-                        onClick = onImportProject,
-                        variant = WorkbenchButtonVariant.Outline,
-                    )
-                    WorkbenchActionButton(
-                        text = if (state.loading) "加载中" else "刷新",
-                        onClick = onRefresh,
-                        variant = WorkbenchButtonVariant.Secondary,
-                    )
-                }
+                ProjectsSidebarActionGrid(
+                    loading = state.loading,
+                    busy = state.busy,
+                    hasSelectedProject = state.selectedProjectId != null,
+                    onCreateProject = onCreateProject,
+                    onExportProjectSqlite = onExportProjectSqlite,
+                    onImportProjectSqlite = onImportProjectSqlite,
+                    onRefresh = onRefresh,
+                )
             },
             getId = { it.id },
             getLabel = { it.label },
@@ -190,6 +178,64 @@ internal fun ProjectsWorkbenchContent(
 }
 
 @Composable
+private fun ProjectsSidebarActionGrid(
+    loading: Boolean,
+    busy: Boolean,
+    hasSelectedProject: Boolean,
+    onCreateProject: () -> Unit,
+    onExportProjectSqlite: () -> Unit,
+    onImportProjectSqlite: () -> Unit,
+    onRefresh: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            WorkbenchActionButton(
+                text = "新建工程",
+                onClick = onCreateProject,
+                imageVector = Icons.Outlined.Add,
+                modifier = Modifier.weight(1f),
+                variant = WorkbenchButtonVariant.Default,
+                enabled = !busy,
+            )
+            WorkbenchActionButton(
+                text = "下载工程",
+                onClick = onExportProjectSqlite,
+                modifier = Modifier.weight(1f),
+                variant = WorkbenchButtonVariant.Outline,
+                enabled = hasSelectedProject && !busy,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            WorkbenchActionButton(
+                text = "导入工程",
+                onClick = onImportProjectSqlite,
+                imageVector = Icons.Outlined.Upload,
+                modifier = Modifier.weight(1f),
+                variant = WorkbenchButtonVariant.Secondary,
+                enabled = !busy,
+            )
+            WorkbenchActionButton(
+                text = if (loading) "加载中" else "刷新",
+                onClick = onRefresh,
+                imageVector = Icons.Outlined.Refresh,
+                modifier = Modifier.weight(1f),
+                variant = WorkbenchButtonVariant.Ghost,
+                enabled = !busy,
+            )
+        }
+    }
+}
+
+@Composable
 /**
  * 处理项目dialog主机。
  *
@@ -202,7 +248,6 @@ internal fun ProjectsWorkbenchContent(
  * @param createDeviceSeed 创建设备seed。
  * @param createTagSeed 创建标签seed。
  * @param moveSeed 移动seed。
- * @param uploadSeed 上传seed。
  * @param onDismissCreateProject ondismiss创建项目。
  * @param onDismissLinkProtocol ondismiss关联协议。
  * @param onDismissChooseModuleProtocol ondismisschoose模块协议。
@@ -210,7 +255,6 @@ internal fun ProjectsWorkbenchContent(
  * @param onDismissCreateDevice ondismiss创建设备。
  * @param onDismissCreateTag ondismiss创建标签。
  * @param onDismissMoveNode ondismiss移动node。
- * @param onDismissUpload ondismiss上传。
  * @param onOpenCreateModule on打开创建模块。
  */
 internal fun ProjectsDialogHost(
@@ -223,7 +267,6 @@ internal fun ProjectsDialogHost(
     createDeviceSeed: CreateDeviceSeed?,
     createTagSeed: CreateTagSeed?,
     moveSeed: MoveNodeSeed?,
-    uploadSeed: UploadSeed?,
     onDismissCreateProject: () -> Unit,
     onDismissLinkProtocol: () -> Unit,
     onDismissChooseModuleProtocol: () -> Unit,
@@ -231,7 +274,6 @@ internal fun ProjectsDialogHost(
     onDismissCreateDevice: () -> Unit,
     onDismissCreateTag: () -> Unit,
     onDismissMoveNode: () -> Unit,
-    onDismissUpload: () -> Unit,
     onOpenCreateModule: (Long, site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode) -> Unit,
 ) {
     if (createProject) {
@@ -358,33 +400,6 @@ internal fun ProjectsDialogHost(
                     HostConfigNodeKind.PROJECT -> Unit
                 }
                 onDismissMoveNode()
-            },
-        )
-    }
-
-    uploadSeed?.let {
-        UploadProjectDialog(
-            state = state,
-            saving = state.busy,
-            onDismissRequest = onDismissUpload,
-            onSubmit = { draft ->
-                viewModel.submitUpload(
-                    ProjectUploadRequest(
-                        ipAddress = draft.ipAddress,
-                        includeDriverConfig = draft.includeDriverConfig,
-                        includeFirmwareUpgrade = draft.includeFirmwareUpgrade,
-                        projectPath = draft.projectPath.ifBlank { null },
-                        selectedFileName = draft.selectedFileName.ifBlank { null },
-                        fastMode = draft.fastMode,
-                    ),
-                )
-                onDismissUpload()
-            },
-            onTriggerAction = { action, ipAddress ->
-                viewModel.triggerUploadAction(
-                    action = action,
-                    request = ProjectUploadRemoteActionRequest(ipAddress = ipAddress),
-                )
             },
         )
     }

@@ -182,79 +182,32 @@ data class ProjectGatewayPinConfigResponse(
 
 @Serializable
 /**
- * 表示项目上传请求参数。
+ * 表示导入本地工程 sqlite 文件请求。
  *
- * @property ipAddress ip地址。
- * @property includeDriverConfig includedriver配置。
- * @property includeFirmwareUpgrade include固件upgrade。
- * @property projectPath 项目路径。
- * @property selectedFileName 选中file名称。
- * @property fastMode fast模式。
+ * @property sourceFilePath 源文件绝对路径。
  */
-data class ProjectUploadRequest(
-    val ipAddress: String,
-    val includeDriverConfig: Boolean = true,
-    val includeFirmwareUpgrade: Boolean = false,
-    val projectPath: String? = null,
-    val selectedFileName: String? = null,
-    val fastMode: Boolean = false,
+data class ProjectSqliteImportRequest(
+    val sourceFilePath: String,
 )
 
 @Serializable
 /**
- * 表示项目上传远程action请求参数。
+ * 表示本地工程 sqlite 文件结果。
  *
- * @property ipAddress ip地址。
+ * @property projectId 工程 ID，导入场景可为空。
+ * @property projectName 工程名称，导入场景可为空。
+ * @property fileName 文件名。
+ * @property filePath 文件绝对路径。
+ * @property dataDirectory 数据目录绝对路径。
+ * @property sizeBytes 文件大小。
+ * @property summaryText 摘要信息。
  */
-data class ProjectUploadRemoteActionRequest(
-    val ipAddress: String,
-)
-
-@Serializable
-/**
- * 定义项目上传远程action枚举。
- */
-enum class ProjectUploadRemoteAction {
-    BACKUP,
-    RESTORE,
-    DELETE,
-    RESTART,
-}
-
-@Serializable
-/**
- * 表示项目上传operation响应结果。
- *
- * @property projectId 项目 ID。
- * @property operation operation。
- * @property progress progress。
- * @property statusText 状态文本。
- * @property detailText 详情文本。
- * @property ipAddress ip地址。
- * @property projectPath 项目路径。
- * @property selectedFileName 选中file名称。
- * @property includeDriverConfig includedriver配置。
- * @property includeFirmwareUpgrade include固件upgrade。
- * @property fastMode fast模式。
- * @property backupFileName 备份file名称。
- * @property backupDownloadUrl 备份download地址。
- * @property backupSizeBytes 备份size字节。
- * @property updatedAt 更新时间戳。
- */
-data class ProjectUploadOperationResponse(
-    val projectId: Long,
-    val operation: String,
-    val progress: Int,
-    val statusText: String,
-    val detailText: String?,
-    val ipAddress: String?,
-    val projectPath: String?,
-    val selectedFileName: String?,
-    val includeDriverConfig: Boolean,
-    val includeFirmwareUpgrade: Boolean,
-    val fastMode: Boolean,
-    val backupFileName: String?,
-    val backupDownloadUrl: String?,
-    val backupSizeBytes: Long?,
-    val updatedAt: Long,
+data class ProjectSqliteFileResponse(
+    val projectId: Long? = null,
+    val projectName: String? = null,
+    val fileName: String,
+    val filePath: String,
+    val dataDirectory: String,
+    val sizeBytes: Long,
+    val summaryText: String,
 )

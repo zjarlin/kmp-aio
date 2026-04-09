@@ -340,9 +340,9 @@ internal fun TagEditorForm(
 ) {
     CupertinoFormSection(
         title = "基础信息",
-        subtitle = "点位命名、说明和启用状态优先集中展示。",
+        subtitle = "标签命名、说明和启用状态优先集中展示。",
     ) {
-        item { CupertinoTextField("点位名称", draft.name, { onDraftChange(draft.copy(name = it)) }) }
+        item { CupertinoTextField("标签名称", draft.name, { onDraftChange(draft.copy(name = it)) }) }
         item { CupertinoTextField("排序", draft.sortIndex, { onDraftChange(draft.copy(sortIndex = it)) }) }
         fullWidth {
             CupertinoTextField(
@@ -354,7 +354,7 @@ internal fun TagEditorForm(
         }
         item {
             CupertinoBooleanField(
-                label = "启用点位",
+                label = "启用标签",
                 checked = draft.enabled,
                 onCheckedChange = { checked -> onDraftChange(draft.copy(enabled = checked)) },
             )
@@ -390,7 +390,7 @@ internal fun TagEditorForm(
         item { CupertinoTextField("寄存器地址", draft.registerAddress, { onDraftChange(draft.copy(registerAddress = it)) }) }
         item {
             CupertinoSelectionField(
-                label = "点位类型",
+                label = "标签类型",
                 options = PointType.entries.map { CupertinoOption(it, it.label()) },
                 selectedValue = draft.pointType,
                 onSelected = { onDraftChange(draft.copy(pointType = it)) },

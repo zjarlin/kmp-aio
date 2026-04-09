@@ -112,7 +112,6 @@ internal fun resolveNodeActionMenu(
                     enabled = linkableProtocols.isNotEmpty(),
                     note = if (linkableProtocols.isEmpty()) "当前工程已关联全部协议字典" else null,
                 ),
-                NodeActionItem(type = NodeActionType.UPLOAD_PROJECT, title = "上传工程"),
                 NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
             )
         }
@@ -189,6 +188,7 @@ internal fun HostConfigNodeKind.summaryAccentColor(): Color {
 internal fun ProjectTreeResponse?.allModules(): List<ModuleTreeNode> {
     val project = this ?: return emptyList()
     return (project.modules + project.protocols.flatMap { protocol -> protocol.modules })
+        .distinctBy { module -> module.id }
         .sortedWith(compareBy<ModuleTreeNode> { module -> module.sortIndex }.thenBy { module -> module.name })
 }
 
@@ -287,15 +287,6 @@ internal data class MoveNodeSeed(
 )
 
 /**
- * 表示上传seed。
- *
- * @property projectId 项目 ID。
- */
-internal data class UploadSeed(
-    val projectId: Long,
-)
-
-/**
  * 表示nodeaction类型。
  */
 internal enum class NodeActionType {
@@ -305,7 +296,6 @@ internal enum class NodeActionType {
     CREATE_TAG,
     MOVE,
     DELETE,
-    UPLOAD_PROJECT,
 }
 
 /**
@@ -501,25 +491,6 @@ internal data class TagDraft(
 internal data class TagValueTextDraft(
     val rawValue: String,
     val displayText: String,
-)
-
-/**
- * 表示上传draft。
- *
- * @property ipAddress ip地址。
- * @property includeDriverConfig includedriver配置。
- * @property includeFirmwareUpgrade include固件upgrade。
- * @property projectPath 项目路径。
- * @property selectedFileName 选中file名称。
- * @property fastMode fast模式。
- */
-internal data class UploadDraft(
-    val ipAddress: String,
-    val includeDriverConfig: Boolean,
-    val includeFirmwareUpgrade: Boolean,
-    val projectPath: String,
-    val selectedFileName: String,
-    val fastMode: Boolean,
 )
 
 /**
@@ -963,6 +934,6 @@ internal fun HostConfigNodeKind.label(): String {
         HostConfigNodeKind.PROTOCOL -> "协议"
         HostConfigNodeKind.MODULE -> "模块"
         HostConfigNodeKind.DEVICE -> "设备"
-        HostConfigNodeKind.TAG -> "点位"
+        HostConfigNodeKind.TAG -> "标签"
     }
 }
