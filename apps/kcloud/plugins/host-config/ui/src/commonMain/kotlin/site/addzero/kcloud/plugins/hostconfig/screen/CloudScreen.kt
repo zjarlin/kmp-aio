@@ -29,14 +29,14 @@ import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.cloud.CloudViewModel
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigBooleanField
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigDialog
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigFormSection
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigStatusStrip
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTextField
+import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
+import site.addzero.cupertino.workbench.components.form.CupertinoFormSection
+import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
+import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
+import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
+import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.kcloud.plugins.hostconfig.common.orDash
+import site.addzero.cupertino.workbench.components.dialog.CupertinoDialog
 
 @Route(
     title = "云接入",
@@ -52,6 +52,9 @@ import site.addzero.kcloud.plugins.hostconfig.common.orDash
     ),
 )
 @Composable
+/**
+ * 处理云接入界面。
+ */
 fun CloudScreen() {
     val viewModel = koinViewModel<CloudViewModel>()
     val state = viewModel.screenState
@@ -76,10 +79,10 @@ fun CloudScreen() {
             getIcon = { Icons.Outlined.SettingsApplications },
             header = {
                 state.errorMessage?.let { message ->
-                    HostConfigStatusStrip(message)
+                    CupertinoStatusStrip(message)
                 }
                 state.noticeMessage?.let { message ->
-                    HostConfigStatusStrip(message)
+                    CupertinoStatusStrip(message)
                 }
                 WorkbenchActionButton(
                     text = if (state.loading) "加载中" else "刷新",
@@ -95,7 +98,7 @@ fun CloudScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            HostConfigPanel(
+            CupertinoPanel(
                 title = state.selectedProject?.name ?: "未选择工程",
                 subtitle = "MQTT 指标与接入参数概览",
                 actions = {
@@ -110,25 +113,25 @@ fun CloudScreen() {
                     )
                 },
             ) {
-                HostConfigKeyValueRow("启用 MQTT", if (state.mqttConfig.enabled) "是" else "否")
-                HostConfigKeyValueRow("网关名称", state.mqttConfig.gatewayName.orDash())
-                HostConfigKeyValueRow("接入地址", state.mqttConfig.host.orDash())
-                HostConfigKeyValueRow("端口", state.mqttConfig.port?.toString() ?: "-")
-                HostConfigKeyValueRow("主题", state.mqttConfig.topic.orDash())
-                HostConfigKeyValueRow("QoS", state.mqttConfig.qos?.toString() ?: "-")
-                HostConfigKeyValueRow("Client ID", state.mqttConfig.clientId.orDash())
-                HostConfigKeyValueRow("精度阈值", state.mqttConfig.precision.orDash())
+                CupertinoKeyValueRow("启用 MQTT", if (state.mqttConfig.enabled) "是" else "否")
+                CupertinoKeyValueRow("网关名称", state.mqttConfig.gatewayName.orDash())
+                CupertinoKeyValueRow("接入地址", state.mqttConfig.host.orDash())
+                CupertinoKeyValueRow("端口", state.mqttConfig.port?.toString() ?: "-")
+                CupertinoKeyValueRow("主题", state.mqttConfig.topic.orDash())
+                CupertinoKeyValueRow("QoS", state.mqttConfig.qos?.toString() ?: "-")
+                CupertinoKeyValueRow("Client ID", state.mqttConfig.clientId.orDash())
+                CupertinoKeyValueRow("精度阈值", state.mqttConfig.precision.orDash())
             }
 
-            HostConfigPanel(
+            CupertinoPanel(
                 title = "状态指标",
                 subtitle = "用于快速确认当前工程的云接入关键开关。",
             ) {
-                HostConfigKeyValueRow("断点续传", if (state.mqttConfig.breakpointResume) "开启" else "关闭")
-                HostConfigKeyValueRow("启用认证", if (state.mqttConfig.authEnabled) "开启" else "关闭")
-                HostConfigKeyValueRow("启用 TLS", if (state.mqttConfig.tlsEnabled) "开启" else "关闭")
-                HostConfigKeyValueRow("值变化上报", if (state.mqttConfig.valueChangeRatioEnabled) "开启" else "关闭")
-                HostConfigKeyValueRow("禁用云端控制", if (state.mqttConfig.cloudControlDisabled) "是" else "否")
+                CupertinoKeyValueRow("断点续传", if (state.mqttConfig.breakpointResume) "开启" else "关闭")
+                CupertinoKeyValueRow("启用认证", if (state.mqttConfig.authEnabled) "开启" else "关闭")
+                CupertinoKeyValueRow("启用 TLS", if (state.mqttConfig.tlsEnabled) "开启" else "关闭")
+                CupertinoKeyValueRow("值变化上报", if (state.mqttConfig.valueChangeRatioEnabled) "开启" else "关闭")
+                CupertinoKeyValueRow("禁用云端控制", if (state.mqttConfig.cloudControlDisabled) "是" else "否")
             }
         }
     }
@@ -149,6 +152,14 @@ fun CloudScreen() {
 }
 
 @Composable
+/**
+ * 处理云接入配置dialog。
+ *
+ * @param initial initial。
+ * @param saving saving。
+ * @param onDismissRequest ondismiss请求。
+ * @param onSave on保存。
+ */
 private fun CloudConfigDialog(
     initial: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectMqttConfigResponse,
     saving: Boolean,
@@ -176,7 +187,7 @@ private fun CloudConfigDialog(
     var valueChangeRatioEnabled by remember(initial.id, initial.valueChangeRatioEnabled) { mutableStateOf(initial.valueChangeRatioEnabled) }
     var cloudControlDisabled by remember(initial.id, initial.cloudControlDisabled) { mutableStateOf(initial.cloudControlDisabled) }
 
-    HostConfigDialog(
+    CupertinoDialog(
         title = "编辑 MQTT",
         onDismissRequest = onDismissRequest,
         actions = {
@@ -217,79 +228,79 @@ private fun CloudConfigDialog(
             )
         },
     ) {
-        HostConfigFormSection(
+        CupertinoFormSection(
             title = "开关策略",
             subtitle = "高频布尔项集中放在首屏，方便快速核对。",
         ) {
             item {
-                HostConfigBooleanField("启用 MQTT", enabled, { enabled = it })
+                CupertinoBooleanField("启用 MQTT", enabled, { enabled = it })
             }
             item {
-                HostConfigBooleanField("断点续传", breakpointResume, { breakpointResume = it })
+                CupertinoBooleanField("断点续传", breakpointResume, { breakpointResume = it })
             }
             item {
-                HostConfigBooleanField("启用认证", authEnabled, { authEnabled = it })
+                CupertinoBooleanField("启用认证", authEnabled, { authEnabled = it })
             }
             item {
-                HostConfigBooleanField("启用 TLS", tlsEnabled, { tlsEnabled = it })
+                CupertinoBooleanField("启用 TLS", tlsEnabled, { tlsEnabled = it })
             }
             item {
-                HostConfigBooleanField("值变化上报", valueChangeRatioEnabled, { valueChangeRatioEnabled = it })
+                CupertinoBooleanField("值变化上报", valueChangeRatioEnabled, { valueChangeRatioEnabled = it })
             }
             item {
-                HostConfigBooleanField("禁用云端控制", cloudControlDisabled, { cloudControlDisabled = it })
+                CupertinoBooleanField("禁用云端控制", cloudControlDisabled, { cloudControlDisabled = it })
             }
         }
-        HostConfigFormSection(
+        CupertinoFormSection(
             title = "连接参数",
             subtitle = "地址、主题和网关标识默认双栏并排。",
         ) {
             item {
-                HostConfigTextField("网关名称", gatewayName, { gatewayName = it })
+                CupertinoTextField("网关名称", gatewayName, { gatewayName = it })
             }
             item {
-                HostConfigTextField("云平台厂家", vendor, { vendor = it })
+                CupertinoTextField("云平台厂家", vendor, { vendor = it })
             }
             item {
-                HostConfigTextField("IP 地址", host, { host = it }, placeholder = "例如 10.0.0.15")
+                CupertinoTextField("IP 地址", host, { host = it }, placeholder = "例如 10.0.0.15")
             }
             item {
-                HostConfigTextField("端口号", port, { port = it })
+                CupertinoTextField("端口号", port, { port = it })
             }
             item {
-                HostConfigTextField("主题", topic, { topic = it })
+                CupertinoTextField("主题", topic, { topic = it })
             }
             item {
-                HostConfigTextField("网关 ID", gatewayId, { gatewayId = it })
+                CupertinoTextField("网关 ID", gatewayId, { gatewayId = it })
             }
             item {
-                HostConfigTextField("Client ID", clientId, { clientId = it })
+                CupertinoTextField("Client ID", clientId, { clientId = it })
             }
             item {
-                HostConfigTextField("QoS", qos, { qos = it })
+                CupertinoTextField("QoS", qos, { qos = it })
             }
             item {
-                HostConfigTextField("保活时间", keepAliveSec, { keepAliveSec = it })
+                CupertinoTextField("保活时间", keepAliveSec, { keepAliveSec = it })
             }
             item {
-                HostConfigTextField("上报周期", reportPeriodSec, { reportPeriodSec = it })
+                CupertinoTextField("上报周期", reportPeriodSec, { reportPeriodSec = it })
             }
             item {
-                HostConfigTextField("变化精度", precision, { precision = it })
+                CupertinoTextField("变化精度", precision, { precision = it })
             }
         }
-        HostConfigFormSection(
+        CupertinoFormSection(
             title = "认证与证书",
             subtitle = "认证和 TLS 相关字段单独成组，避免和连接参数混在一起。",
         ) {
             item {
-                HostConfigTextField("用户名", username, { username = it })
+                CupertinoTextField("用户名", username, { username = it })
             }
             item {
-                HostConfigTextField("密码", passwordEncrypted, { passwordEncrypted = it })
+                CupertinoTextField("密码", passwordEncrypted, { passwordEncrypted = it })
             }
             item {
-                HostConfigTextField("证书引用", certFileRef, { certFileRef = it })
+                CupertinoTextField("证书引用", certFileRef, { certFileRef = it })
             }
         }
     }

@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
 import io.ktor.server.application.Application
+import io.ktor.server.application.log
 import java.sql.Connection
 import javax.sql.DataSource
 import org.koin.core.annotation.Named
@@ -23,10 +24,30 @@ class HostConfigLegacyTransportMigration(
     override val order: Int = 210
     override val enable: Boolean = true
 
+    /**
+     * 处理oninstall。
+     *
+     * @param application 应用。
+     */
     override fun onInstall(application: Application) {
+        if (isSqliteDatasource()) {
+            application.log.info("Skip host-config legacy transport migration for SQLite local datasource.")
+            return
+        }
         migrateLegacyModuleTransportConfig(dataSource)
     }
 
+    private fun isSqliteDatasource(): Boolean {
+        dataSource.connection.use { connection ->
+            return connection.metaData.url.startsWith("jdbc:sqlite:")
+        }
+    }
+
+    /**
+     * 处理migrate旧版模块传输配置。
+     *
+     * @param dataSource 数据来源。
+     */
     private fun migrateLegacyModuleTransportConfig(
         dataSource: DataSource,
     ) {
@@ -109,6 +130,11 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 加载协议。
+     *
+     * @param connection 数据库连接。
+     */
     private fun loadProtocols(
         connection: Connection,
     ): List<ProtocolMigrationRow> {
@@ -148,6 +174,11 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 加载旧版模块。
+     *
+     * @param connection 数据库连接。
+     */
     private fun loadLegacyModules(
         connection: Connection,
     ): List<LegacyModuleTransportRow> {
@@ -188,6 +219,12 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 更新协议传输。
+     *
+     * @param connection 数据库连接。
+     * @param update 更新。
+     */
     private fun updateProtocolTransport(
         connection: Connection,
         update: ProtocolTransportUpdate,
@@ -222,6 +259,12 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 处理clear旧版模块传输。
+     *
+     * @param connection 数据库连接。
+     * @param protocolId 协议 ID。
+     */
     private fun clearLegacyModuleTransport(
         connection: Connection,
         protocolId: Long,
@@ -244,6 +287,12 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 构建conflict消息。
+     *
+     * @param protocol 协议。
+     * @param legacyModules 旧版模块。
+     */
     private fun buildConflictMessage(
         protocol: ProtocolMigrationRow,
         legacyModules: List<LegacyModuleTransportRow>,
@@ -259,6 +308,12 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 构建unsupported旧版消息。
+     *
+     * @param protocol 协议。
+     * @param legacyModules 旧版模块。
+     */
     private fun buildUnsupportedLegacyMessage(
         protocol: ProtocolMigrationRow,
         legacyModules: List<LegacyModuleTransportRow>,
@@ -275,6 +330,14 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 构建协议mismatch消息。
+     *
+     * @param protocol 协议。
+     * @param currentConfig 当前配置。
+     * @param migratedConfig migrated配置。
+     * @param legacyModules 旧版模块。
+     */
     private fun buildProtocolMismatchMessage(
         protocol: ProtocolMigrationRow,
         currentConfig: ProtocolTransportConfig,
@@ -296,6 +359,9 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 处理协议传输配置。
+     */
     private fun ProtocolTransportConfig.describe(): String {
         return when (transportType) {
             TransportType.RTU -> {
@@ -308,6 +374,11 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 处理旧版模块传输row。
+     *
+     * @param protocolTemplateCode 协议模板编码。
+     */
     private fun LegacyModuleTransportRow.toTransportConfig(
         protocolTemplateCode: String,
     ): ProtocolTransportConfig? {
@@ -339,6 +410,9 @@ class HostConfigLegacyTransportMigration(
         }
     }
 
+    /**
+     * 处理旧版模块传输row。
+     */
     private fun LegacyModuleTransportRow.hasLegacyValues(): Boolean {
         return portName != null ||
             baudRate != null ||
@@ -348,10 +422,16 @@ class HostConfigLegacyTransportMigration(
             responseTimeoutMs != null
     }
 
+    /**
+     * 处理旧版模块传输row。
+     */
     private fun LegacyModuleTransportRow.describeLegacyValues(): String {
         return "portName=${portName.orEmpty()}, baudRate=${baudRate}, dataBits=${dataBits}, stopBits=${stopBits}, parity=${parity}, responseTimeoutMs=${responseTimeoutMs}"
     }
 
+    /**
+     * 处理java。
+     */
     private fun java.sql.ResultSet.toProtocolTransportConfig(): ProtocolTransportConfig? {
         val transportType = getNullableEnum<TransportType>("transport_type") ?: return null
         return ProtocolTransportConfig(
@@ -367,12 +447,22 @@ class HostConfigLegacyTransportMigration(
         )
     }
 
+    /**
+     * 处理java。
+     *
+     * @param columnLabel columnlabel。
+     */
     private fun java.sql.ResultSet.getNullableString(
         columnLabel: String,
     ): String? {
         return getString(columnLabel)?.trim()?.ifBlank { null }
     }
 
+    /**
+     * 处理java。
+     *
+     * @param columnLabel columnlabel。
+     */
     private fun java.sql.ResultSet.getNullableInt(
         columnLabel: String,
     ): Int? {
@@ -392,6 +482,14 @@ class HostConfigLegacyTransportMigration(
             ?: error("Unknown enum value '$value' in column '$columnLabel'")
     }
 
+    /**
+     * 表示协议迁移row。
+     *
+     * @property id 主键 ID。
+     * @property name 名称。
+     * @property templateCode 模板编码。
+     * @property transportConfig 传输配置。
+     */
     private data class ProtocolMigrationRow(
         val id: Long,
         val name: String,
@@ -399,6 +497,19 @@ class HostConfigLegacyTransportMigration(
         val transportConfig: ProtocolTransportConfig?,
     )
 
+    /**
+     * 表示旧版模块传输row。
+     *
+     * @property protocolId 协议 ID。
+     * @property moduleId 模块 ID。
+     * @property moduleName 模块名称。
+     * @property portName 端口名。
+     * @property baudRate 波特率。
+     * @property dataBits 数据位。
+     * @property stopBits 停止位。
+     * @property parity 校验位。
+     * @property responseTimeoutMs 响应超时时间（毫秒）。
+     */
     private data class LegacyModuleTransportRow(
         val protocolId: Long,
         val moduleId: Long,
@@ -411,6 +522,12 @@ class HostConfigLegacyTransportMigration(
         val responseTimeoutMs: Int?,
     )
 
+    /**
+     * 表示协议传输更新。
+     *
+     * @property protocolId 协议 ID。
+     * @property transportConfig 传输配置。
+     */
     private data class ProtocolTransportUpdate(
         val protocolId: Long,
         val transportConfig: ProtocolTransportConfig,

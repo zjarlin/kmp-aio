@@ -22,6 +22,9 @@ import site.addzero.component.text.TodoText
     ),
 )
 @Composable
+/**
+ * 处理mcu控制界面。
+ */
 fun McuControlScreen() {
     TodoText(
         title = "MCU 控制台",

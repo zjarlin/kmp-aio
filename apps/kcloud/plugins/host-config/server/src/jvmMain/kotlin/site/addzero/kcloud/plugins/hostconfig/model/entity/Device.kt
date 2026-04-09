@@ -13,48 +13,108 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
 
 @Entity
 @Table(name = "host_config_device")
+/**
+ * 定义设备实体。
+ */
 interface Device {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    /**
+     * 主键 ID。
+     */
     val id: Long
 
+    /**
+     * 名称。
+     */
     val name: String
 
+    /**
+     * stationno。
+     */
     val stationNo: Int
 
+    /**
+     * 请求间隔（毫秒）。
+     */
     val requestIntervalMs: Int?
 
+    /**
+     * 写入间隔（毫秒）。
+     */
     val writeIntervalMs: Int?
 
+    /**
+     * 双字节字节序。
+     */
     val byteOrder2: ByteOrder2?
 
+    /**
+     * 四字节字节序。
+     */
     val byteOrder4: ByteOrder4?
 
+    /**
+     * 浮点字序。
+     */
     val floatOrder: FloatOrder?
 
+    /**
+     * 批量analog开始。
+     */
     val batchAnalogStart: Int?
 
+    /**
+     * 批量analoglength。
+     */
     val batchAnalogLength: Int?
 
+    /**
+     * 批量digital开始。
+     */
     val batchDigitalStart: Int?
 
+    /**
+     * 批量digitallength。
+     */
     val batchDigitalLength: Int?
 
+    /**
+     * disabled。
+     */
     val disabled: Boolean
 
+    /**
+     * 排序序号。
+     */
     val sortIndex: Int
 
+    /**
+     * 创建时间戳。
+     */
     val createdAt: Long
 
+    /**
+     * 更新时间戳。
+     */
     val updatedAt: Long
 
     @ManyToOne
+    /**
+     * 模块。
+     */
     val module: ModuleInstance
 
     @ManyToOne
+    /**
+     * 设备类型。
+     */
     val deviceType: DeviceType
 
     @OneToMany(mappedBy = "device")
+    /**
+     * 标签。
+     */
     val tags: List<Tag>
 }

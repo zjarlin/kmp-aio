@@ -16,9 +16,12 @@ import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import site.addzero.cupertino.workbench.components.field.CupertinoTextField
+import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
+import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
+import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.cupertino.workbench.material3.CircularProgressIndicator
 import site.addzero.cupertino.workbench.material3.MaterialTheme
-import site.addzero.cupertino.workbench.material3.OutlinedTextField
 import site.addzero.cupertino.workbench.material3.Surface
 import site.addzero.cupertino.workbench.material3.Text
 
@@ -37,6 +40,9 @@ import site.addzero.cupertino.workbench.material3.Text
     ),
 )
 @Composable
+/**
+ * 处理mcu烧录界面。
+ */
 fun McuFlashScreen() {
     val viewModel = koinViewModel<McuFlashViewModel>()
     val state = viewModel.screenState
@@ -58,21 +64,18 @@ fun McuFlashScreen() {
             McuFlashBanner(
                 text = message,
                 tone = MaterialTheme.colorScheme.errorContainer,
-                contentColor = MaterialTheme.colorScheme.onErrorContainer,
             )
         }
         state.noticeMessage?.let { message ->
             McuFlashBanner(
                 text = message,
                 tone = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
             )
         }
         state.probeMessage?.takeIf { it != state.noticeMessage }?.let { message ->
             McuFlashBanner(
                 text = message,
                 tone = MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         BoxWithConstraints(
@@ -135,13 +138,21 @@ fun McuFlashScreen() {
 }
 
 @Composable
+/**
+ * 处理mcu烧录header。
+ *
+ * @param state 状态。
+ * @param onRefreshAll on刷新all。
+ * @param onRefreshProbes on刷新探针。
+ * @param onRefreshStatus on刷新状态。
+ */
 private fun McuFlashHeader(
     state: McuFlashScreenState,
     onRefreshAll: () -> Unit,
     onRefreshProbes: () -> Unit,
     onRefreshStatus: () -> Unit,
 ) {
-    McuFlashPanel(
+    CupertinoPanel(
         title = "MCU 烧录",
         subtitle = "通过 ST-Link SWD 选择探针、填写固件路径并发起烧录。",
         actions = {
@@ -191,6 +202,16 @@ private fun McuFlashHeader(
 }
 
 @Composable
+/**
+ * 处理mcu烧录配置panel。
+ *
+ * @param state 状态。
+ * @param onProfileSelected on配置档选中。
+ * @param onFirmwarePathChanged on固件路径changed。
+ * @param onStartAddressChanged on起始地址changed。
+ * @param onStartFlash on开始烧录。
+ * @param onReset on重置。
+ */
 private fun McuFlashConfigPanel(
     state: McuFlashScreenState,
     onProfileSelected: (String) -> Unit,
@@ -199,7 +220,7 @@ private fun McuFlashConfigPanel(
     onStartFlash: () -> Unit,
     onReset: () -> Unit,
 ) {
-    McuFlashPanel(
+    CupertinoPanel(
         title = "烧录配置",
         subtitle = "配置列表来自后台 `FlashController`，页面只负责选择和触发。",
     ) {
@@ -223,38 +244,24 @@ private fun McuFlashConfigPanel(
             }
         }
 
-        OutlinedTextField(
+        CupertinoTextField(
+            label = "固件路径",
             value = state.firmwarePath,
             onValueChange = onFirmwarePathChanged,
             modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("固件路径")
-            },
-            placeholder = {
-                Text(state.selectedProfile?.artifactHint ?: "例如 /tmp/firmware.bin")
-            },
-            supportingText = {
-                Text("当前直接填写本机固件文件路径，后端会按 ST-Link 流程读取并烧录。")
-            },
+            placeholder = state.selectedProfile?.artifactHint ?: "例如 /tmp/firmware.bin",
+            description = "当前直接填写本机固件文件路径，后端会按 ST-Link 流程读取并烧录。",
             singleLine = true,
-            enabled = !state.running && !state.busy,
         )
 
-        OutlinedTextField(
+        CupertinoTextField(
+            label = "起始地址",
             value = state.startAddressInput,
             onValueChange = onStartAddressChanged,
             modifier = Modifier.fillMaxWidth(),
-            label = {
-                Text("起始地址")
-            },
-            placeholder = {
-                Text(state.selectedProfile?.defaultStartAddress?.toHexAddress() ?: "0x08000000")
-            },
-            supportingText = {
-                Text("留空时使用当前配置默认地址，支持 `0x08000000` 或十进制。")
-            },
+            placeholder = state.selectedProfile?.defaultStartAddress?.toHexAddress() ?: "0x08000000",
+            description = "留空时使用当前配置默认地址，支持 `0x08000000` 或十进制。",
             singleLine = true,
-            enabled = !state.running && !state.busy,
         )
 
         Row(
@@ -279,12 +286,19 @@ private fun McuFlashConfigPanel(
 }
 
 @Composable
+/**
+ * 处理mcu烧录探针panel。
+ *
+ * @param state 状态。
+ * @param onSelectAuto on选择自动。
+ * @param onProbeSelected on探针选中。
+ */
 private fun McuFlashProbePanel(
     state: McuFlashScreenState,
     onSelectAuto: () -> Unit,
     onProbeSelected: (String) -> Unit,
 ) {
-    McuFlashPanel(
+    CupertinoPanel(
         title = "ST-Link 探针",
         subtitle = "手动指定序列号时，后端会把该序列号传给 `StLinkConfig`。",
     ) {
@@ -321,11 +335,16 @@ private fun McuFlashProbePanel(
 }
 
 @Composable
+/**
+ * 处理mcu烧录状态panel。
+ *
+ * @param state 状态。
+ */
 private fun McuFlashStatusPanel(
     state: McuFlashScreenState,
 ) {
     val progress = (state.status.progressPercent / 100.0).coerceIn(0.0, 1.0).toFloat()
-    McuFlashPanel(
+    CupertinoPanel(
         title = "任务状态",
         subtitle = "这里展示后端当前保存的烧录状态快照。",
     ) {
@@ -357,13 +376,18 @@ private fun McuFlashStatusPanel(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             statusRows.forEach { (label, value) ->
-                McuFlashKeyValueRow(label, value)
+                CupertinoKeyValueRow(label, value)
             }
         }
     }
 }
 
 @Composable
+/**
+ * 处理mcu烧录runtime摘要panel。
+ *
+ * @param state 状态。
+ */
 private fun McuFlashRuntimeSummaryPanel(
     state: McuFlashScreenState,
 ) {
@@ -387,106 +411,81 @@ private fun McuFlashRuntimeSummaryPanel(
             }.orDash()
         },
     )
-    McuFlashPanel(
+    CupertinoPanel(
         title = "运行摘要",
         subtitle = "便于确认当前目标、电压和探针落点。",
     ) {
         summaryRows.forEach { (label, value) ->
-            McuFlashKeyValueRow(label, value)
+            CupertinoKeyValueRow(label, value)
         }
     }
 }
 
 @Composable
+/**
+ * 处理mcu烧录panel。
+ *
+ * @param title title。
+ * @param subtitle subtitle。
+ * @param actions actions。
+ * @param content content。
+ */
 private fun McuFlashPanel(
     title: String,
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
-            ) {
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleLarge,
-                    )
-                    subtitle?.takeIf { it.isNotBlank() }?.let { text ->
-                        Text(
-                            text = text,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    content = actions,
-                )
-            }
-            content()
-        }
-    }
+    CupertinoPanel(
+        title = title,
+        subtitle = subtitle,
+        actions = actions,
+        content = content,
+    )
 }
 
 @Composable
+/**
+ * 处理mcu烧录banner。
+ *
+ * @param text 文本。
+ * @param tone tone。
+ */
 private fun McuFlashBanner(
     text: String,
     tone: Color,
-    contentColor: Color,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = tone,
-        contentColor = contentColor,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
+    CupertinoStatusStrip(
+        text = text,
+        tone = tone,
+    )
 }
 
 @Composable
+/**
+ * 处理mcu烧录inline提示。
+ *
+ * @param text 文本。
+ */
 private fun McuFlashInlineNotice(
     text: String,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
+    CupertinoStatusStrip(
+        text = text,
+        tone = MaterialTheme.colorScheme.surfaceVariant,
+    )
 }
 
 @Composable
+/**
+ * 处理mcu烧录selectablecard。
+ *
+ * @param title title。
+ * @param caption caption。
+ * @param selected 选中。
+ * @param enabled 启用状态。
+ * @param onClick onclick。
+ */
 private fun McuFlashSelectableCard(
     title: String,
     caption: String,
@@ -542,29 +541,11 @@ private fun McuFlashSelectableCard(
 }
 
 @Composable
-private fun McuFlashKeyValueRow(
-    label: String,
-    value: String,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-    }
-}
-
-@Composable
+/**
+ * 处理mcu烧录状态badge。
+ *
+ * @param state 状态。
+ */
 private fun McuFlashStateBadge(
     state: McuFlashRunState,
 ) {
@@ -582,6 +563,11 @@ private fun McuFlashStateBadge(
 }
 
 @Composable
+/**
+ * 处理mcu烧录进度bar。
+ *
+ * @param progress 当前进度。
+ */
 private fun McuFlashProgressBar(
     progress: Float,
 ) {
@@ -607,6 +593,9 @@ private fun McuFlashProgressBar(
     }
 }
 
+/**
+ * 处理mcu烧录运行状态。
+ */
 private fun McuFlashRunState.label(): String {
     return when (this) {
         McuFlashRunState.IDLE -> "空闲"
@@ -617,6 +606,9 @@ private fun McuFlashRunState.label(): String {
 }
 
 @Composable
+/**
+ * 处理mcu烧录运行状态。
+ */
 private fun McuFlashRunState.tint(): Color {
     return when (this) {
         McuFlashRunState.IDLE -> MaterialTheme.colorScheme.primary
@@ -626,6 +618,11 @@ private fun McuFlashRunState.tint(): Color {
     }
 }
 
+/**
+ * 构建配置档caption。
+ *
+ * @param profile 配置档。
+ */
 private fun buildProfileCaption(
     profile: McuFlashProfileSummary,
 ): String {
@@ -639,6 +636,11 @@ private fun buildProfileCaption(
     }.joinToString("  ·  ")
 }
 
+/**
+ * 构建探针caption。
+ *
+ * @param probe 探针。
+ */
 private fun buildProbeCaption(
     probe: McuFlashProbeSummary,
 ): String {
@@ -654,12 +656,18 @@ private fun buildProbeCaption(
     }.joinToString("  ·  ")
 }
 
+/**
+ * 处理mcu烧录探针摘要。
+ */
 private fun McuFlashProbeSummary.displayName(): String {
     return productName
         ?: manufacturerName
         ?: "ST-Link 探针"
 }
 
+/**
+ * 处理列表。
+ */
 private fun List<Int>?.toChipIdLabel(): String {
     if (this == null || isEmpty()) {
         return "未限制"
@@ -669,18 +677,30 @@ private fun List<Int>?.toChipIdLabel(): String {
     }
 }
 
+/**
+ * 处理int。
+ */
 private fun Int.toChipIdLabel(): String {
     return "0x${toString(16).uppercase()}"
 }
 
+/**
+ * 处理int。
+ */
 private fun Int.toHexShort(): String {
     return toString(16).uppercase().padStart(4, '0')
 }
 
+/**
+ * 处理long。
+ */
 private fun Long.toHexAddress(): String {
     return "0x${toString(16).uppercase().padStart(8, '0')}"
 }
 
+/**
+ * 处理long。
+ */
 private fun Long.toSizeLabel(): String {
     if (this <= 0L) {
         return "0 B"
@@ -700,6 +720,9 @@ private fun Long.toSizeLabel(): String {
     return "${gigaBytes.toCompactNumber()} GB"
 }
 
+/**
+ * 处理double。
+ */
 private fun Double.toCompactNumber(): String {
     val rounded = kotlin.math.round(this * 10.0) / 10.0
     return if (rounded == rounded.toInt().toDouble()) {
@@ -709,12 +732,18 @@ private fun Double.toCompactNumber(): String {
     }
 }
 
+/**
+ * 处理int。
+ */
 private fun Int.toVoltageLabel(): String {
     val volts = this / 1000
     val millivolts = (this % 1000).toString().padStart(3, '0')
     return "$volts.$millivolts V"
 }
 
+/**
+ * 处理boolean。
+ */
 private fun Boolean.toYesNo(): String {
     return if (this) {
         "是"
@@ -723,6 +752,9 @@ private fun Boolean.toYesNo(): String {
     }
 }
 
+/**
+ * 处理string。
+ */
 private fun String?.orDash(): String {
     return this?.takeIf { it.isNotBlank() } ?: "-"
 }

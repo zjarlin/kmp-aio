@@ -1,36 +1,40 @@
 package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
 
 import java.sql.Connection
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.nio.file.InvalidPathException
-import java.nio.file.Path
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
+import kotlinx.serialization.json.Json
 import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextSummaryDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenRtuGenerationDefaultsDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenTcpGenerationDefaultsDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.GenerateContractsResponseDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.*
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.model.entity.*
-import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.BusinessValidationException
-import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.ConflictException
-import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.NotFoundException
+import site.addzero.kmp.exp.BusinessValidationException
+import site.addzero.kmp.exp.ConflictException
+import site.addzero.kmp.exp.NotFoundException
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenBindingTargetMode
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenClassKind
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenConsumerTarget
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenFunctionCode
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenSchemaDirection
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenTransportType
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenNodeKind
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.service.Fetchers
+import site.addzero.util.jvmstr.toGeneratedMethodName
+import site.addzero.util.jvmstr.toGeneratedPropertyName
+import site.addzero.util.jvmstr.toGeneratedTypeName
 
 @Single
+/**
+ * 提供代码生成上下文的查询、保存与生成服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ * @property jdbc 主机配置 JDBC 工具。
+ * @property contractGenerator contractgenerator。
+ */
 class CodegenContextService(
     private val sql: KSqlClient,
     private val jdbc: JdbcExecutor,
@@ -42,12 +46,18 @@ class CodegenContextService(
         val PACKAGE_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*")
         val SQLITE_DATE_TIME_FORMATTER: DateTimeFormatter =
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        val JSON = Json { ignoreUnknownKeys = true }
+        const val MODBUS_FIELD_DEFINITION_CODE = "MODBUS_FIELD"
+        const val FIELD_TRANSPORT_TYPE_PARAM = "transportType"
         val SUPPORTED_PROTOCOL_TEMPLATE_CODES = setOf(
             "MODBUS_RTU_CLIENT",
             "MODBUS_TCP_CLIENT",
         )
     }
 
+    /**
+     * 列出上下文。
+     */
     fun listContexts(): List<CodegenContextSummaryDto> {
         return sql.createQuery(CodegenContext::class) {
             orderBy(table.name.asc(), table.id.asc())
@@ -57,19 +67,42 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 获取上下文。
+     *
+     * @param contextId 上下文 ID。
+     */
     fun getContext(
         contextId: Long,
     ): CodegenContextDetailDto {
         return loadContext(contextId).toDetailDto()
     }
 
+    /**
+     * 列出上下文定义。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
+    fun listContextDefinitions(
+        protocolTemplateId: Long,
+    ): List<CodegenContextDefinitionDto> {
+        ensureSupportedTemplate(loadProtocolTemplate(protocolTemplateId))
+        return loadContextDefinitions(protocolTemplateId)
+    }
+
+    /**
+     * 保存上下文。
+     *
+     * @param request 请求参数。
+     */
     fun saveContext(
         request: CodegenContextDetailDto,
     ): CodegenContextDetailDto {
         val normalized = request.normalized()
-        validate(normalized)
         val protocolTemplate = loadProtocolTemplate(normalized.protocolTemplateId)
         ensureSupportedTemplate(protocolTemplate)
+        val availableDefinitions = loadContextDefinitions(normalized.protocolTemplateId)
+        validate(normalized, availableDefinitions)
         val generationSettings = normalized.generationSettings
         val contextId =
             jdbc.withTransaction { connection ->
@@ -110,9 +143,16 @@ class CodegenContextService(
                                 tcp_unit_id,
                                 tcp_timeout_ms,
                                 tcp_retries,
+                                mqtt_broker_url,
+                                mqtt_client_id,
+                                mqtt_request_topic,
+                                mqtt_response_topic,
+                                mqtt_qos,
+                                mqtt_timeout_ms,
+                                mqtt_retries,
                                 create_time,
                                 update_time
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """.trimIndent(),
                             normalized.code,
                             normalized.name,
@@ -142,6 +182,13 @@ class CodegenContextService(
                             generationSettings.tcpDefaults.unitId,
                             generationSettings.tcpDefaults.timeoutMs,
                             generationSettings.tcpDefaults.retries,
+                            generationSettings.mqttDefaults.brokerUrl,
+                            generationSettings.mqttDefaults.clientId,
+                            generationSettings.mqttDefaults.requestTopic,
+                            generationSettings.mqttDefaults.responseTopic,
+                            generationSettings.mqttDefaults.qos,
+                            generationSettings.mqttDefaults.timeoutMs,
+                            generationSettings.mqttDefaults.retries,
                             now,
                             now,
                         )
@@ -180,6 +227,13 @@ class CodegenContextService(
                                 tcp_unit_id = ?,
                                 tcp_timeout_ms = ?,
                                 tcp_retries = ?,
+                                mqtt_broker_url = ?,
+                                mqtt_client_id = ?,
+                                mqtt_request_topic = ?,
+                                mqtt_response_topic = ?,
+                                mqtt_qos = ?,
+                                mqtt_timeout_ms = ?,
+                                mqtt_retries = ?,
                                 update_time = ?
                             WHERE id = ?
                             """.trimIndent(),
@@ -211,17 +265,35 @@ class CodegenContextService(
                             generationSettings.tcpDefaults.unitId,
                             generationSettings.tcpDefaults.timeoutMs,
                             generationSettings.tcpDefaults.retries,
+                            generationSettings.mqttDefaults.brokerUrl,
+                            generationSettings.mqttDefaults.clientId,
+                            generationSettings.mqttDefaults.requestTopic,
+                            generationSettings.mqttDefaults.responseTopic,
+                            generationSettings.mqttDefaults.qos,
+                            generationSettings.mqttDefaults.timeoutMs,
+                            generationSettings.mqttDefaults.retries,
                             now,
                             existingId,
                         )
                         existingId
                     }
-                syncSchemas(connection, resolvedId, normalized.schemas)
+                replaceClasses(
+                    connection = connection,
+                    contextId = resolvedId,
+                    protocolTemplateId = normalized.protocolTemplateId,
+                    classes = normalized.classes,
+                    availableDefinitions = availableDefinitions,
+                )
                 resolvedId
             }
         return getContext(contextId)
     }
 
+    /**
+     * 删除上下文。
+     *
+     * @param contextId 上下文 ID。
+     */
     fun deleteContext(
         contextId: Long,
     ) {
@@ -231,191 +303,222 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 处理generatecontracts。
+     *
+     * @param contextId 上下文 ID。
+     */
     fun generateContracts(
         contextId: Long,
     ): GenerateContractsResponseDto {
         return contractGenerator.generate(getContext(contextId))
     }
 
-    private fun syncSchemas(
+    /**
+     * 替换类。
+     *
+     * @param connection 数据库连接。
+     * @param contextId 上下文 ID。
+     * @param protocolTemplateId 协议模板 ID。
+     * @param classes 类。
+     * @param availableDefinitions 可用定义。
+     */
+    private fun replaceClasses(
         connection: Connection,
         contextId: Long,
-        schemas: List<CodegenSchemaDto>,
+        protocolTemplateId: Long,
+        classes: List<CodegenClassDto>,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
     ) {
-        val existingSchemaIds =
-            jdbc.queryIds(
-                connection,
-                "SELECT id FROM codegen_context_schema WHERE context_id = ?",
-                contextId,
-            ).toMutableSet()
-        val retainedSchemaIds = mutableSetOf<Long>()
-        schemas.sortedBy { it.sortIndex }.forEach { schema ->
-            val existingSchemaId = schema.id
-            val schemaId =
-                if (existingSchemaId == null) {
+        jdbc.update(connection, "DELETE FROM codegen_context_class WHERE context_id = ?", contextId)
+        if (classes.isEmpty()) {
+            return
+        }
+        classes.sortedBy(CodegenClassDto::sortIndex).forEach { classDto ->
+            val classId =
+                jdbc.insertAndReturnId(
+                    connection,
+                    """
+                    INSERT INTO codegen_context_class (
+                        context_id,
+                        name,
+                        description,
+                        sort_index,
+                        class_kind,
+                        class_name,
+                        package_name,
+                        create_time,
+                        update_time
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    contextId,
+                    classDto.name,
+                    classDto.description,
+                    classDto.sortIndex,
+                    classDto.classKind.name,
+                    classDto.className,
+                    classDto.packageName,
+                    nowSqlValue(),
+                    nowSqlValue(),
+                )
+            insertBindings(
+                connection = connection,
+                protocolTemplateId = protocolTemplateId,
+                availableDefinitions = availableDefinitions,
+                bindings = classDto.bindings,
+                ownerClassId = classId,
+            )
+            classDto.methods.sortedBy(CodegenMethodDto::sortIndex).forEach { methodDto ->
+                val methodId =
                     jdbc.insertAndReturnId(
                         connection,
                         """
-                        INSERT INTO codegen_context_schema (
-                            context_id,
+                        INSERT INTO codegen_context_method (
+                            owner_class_id,
                             name,
                             description,
                             sort_index,
-                            direction,
-                            function_code,
-                            base_address,
                             method_name,
-                            model_name,
+                            request_class_name,
+                            response_class_name,
                             create_time,
                             update_time
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """.trimIndent(),
-                        contextId,
-                        schema.name,
-                        schema.description,
-                        schema.sortIndex,
-                        schema.direction.name,
-                        schema.functionCode.name,
-                        schema.baseAddress,
-                        schema.methodName,
-                        schema.modelName,
+                        classId,
+                        methodDto.name,
+                        methodDto.description,
+                        methodDto.sortIndex,
+                        methodDto.methodName,
+                        methodDto.requestClassName,
+                        methodDto.responseClassName,
                         nowSqlValue(),
                         nowSqlValue(),
                     )
-                } else {
-                    if (existingSchemaId !in existingSchemaIds) {
-                        throw BusinessValidationException("Schema id $existingSchemaId does not belong to context $contextId.")
-                    }
-                    jdbc.update(
-                        connection,
-                        """
-                        UPDATE codegen_context_schema
-                        SET name = ?,
-                            description = ?,
-                            sort_index = ?,
-                            direction = ?,
-                            function_code = ?,
-                            base_address = ?,
-                            method_name = ?,
-                            model_name = ?,
-                            update_time = ?
-                        WHERE id = ?
-                        """.trimIndent(),
-                        schema.name,
-                        schema.description,
-                        schema.sortIndex,
-                        schema.direction.name,
-                        schema.functionCode.name,
-                        schema.baseAddress,
-                        schema.methodName,
-                        schema.modelName,
-                        nowSqlValue(),
-                        existingSchemaId,
-                    )
-                    existingSchemaId
-                }
-            retainedSchemaIds += schemaId
-            syncFields(connection, schemaId, schema.fields)
-        }
-        existingSchemaIds.filterNot(retainedSchemaIds::contains).forEach { schemaId ->
-            jdbc.update(connection, "DELETE FROM codegen_context_schema WHERE id = ?", schemaId)
-        }
-    }
-
-    private fun syncFields(
-        connection: Connection,
-        schemaId: Long,
-        fields: List<CodegenFieldDto>,
-    ) {
-        val existingFieldIds =
-            jdbc.queryIds(
-                connection,
-                "SELECT id FROM codegen_context_field WHERE schema_id = ?",
-                schemaId,
-            ).toMutableSet()
-        val retainedFieldIds = mutableSetOf<Long>()
-        fields.sortedBy { it.sortIndex }.forEach { field ->
-            val existingFieldId = field.id
-            val fieldId =
-                if (existingFieldId == null) {
+                insertBindings(
+                    connection = connection,
+                    protocolTemplateId = protocolTemplateId,
+                    availableDefinitions = availableDefinitions,
+                    bindings = methodDto.bindings,
+                    ownerMethodId = methodId,
+                )
+            }
+            classDto.properties.sortedBy(CodegenPropertyDto::sortIndex).forEach { propertyDto ->
+                val propertyId =
                     jdbc.insertAndReturnId(
                         connection,
                         """
-                        INSERT INTO codegen_context_field (
-                            schema_id,
+                        INSERT INTO codegen_context_property (
+                            owner_class_id,
                             name,
                             description,
                             sort_index,
                             property_name,
-                            transport_type,
-                            register_offset,
-                            bit_offset,
-                            length,
-                            translation_hint,
+                            type_name,
+                            nullable,
                             default_literal,
                             create_time,
                             update_time
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """.trimIndent(),
-                        schemaId,
-                        field.name,
-                        field.description,
-                        field.sortIndex,
-                        field.propertyName,
-                        field.transportType.name,
-                        field.registerOffset,
-                        field.bitOffset,
-                        field.length,
-                        field.translationHint,
-                        field.defaultLiteral,
+                        classId,
+                        propertyDto.name,
+                        propertyDto.description,
+                        propertyDto.sortIndex,
+                        propertyDto.propertyName,
+                        propertyDto.typeName,
+                        if (propertyDto.nullable) 1 else 0,
+                        propertyDto.defaultLiteral,
                         nowSqlValue(),
                         nowSqlValue(),
                     )
-                } else {
-                    if (existingFieldId !in existingFieldIds) {
-                        throw BusinessValidationException("Field id $existingFieldId does not belong to schema $schemaId.")
-                    }
-                    jdbc.update(
-                        connection,
-                        """
-                        UPDATE codegen_context_field
-                        SET name = ?,
-                            description = ?,
-                            sort_index = ?,
-                            property_name = ?,
-                            transport_type = ?,
-                            register_offset = ?,
-                            bit_offset = ?,
-                            length = ?,
-                            translation_hint = ?,
-                            default_literal = ?,
-                            update_time = ?
-                        WHERE id = ?
-                        """.trimIndent(),
-                        field.name,
-                        field.description,
-                        field.sortIndex,
-                        field.propertyName,
-                        field.transportType.name,
-                        field.registerOffset,
-                        field.bitOffset,
-                        field.length,
-                        field.translationHint,
-                        field.defaultLiteral,
-                        nowSqlValue(),
-                        existingFieldId,
-                    )
-                    existingFieldId
-                }
-            retainedFieldIds += fieldId
-        }
-        existingFieldIds.filterNot(retainedFieldIds::contains).forEach { fieldId ->
-            jdbc.update(connection, "DELETE FROM codegen_context_field WHERE id = ?", fieldId)
+                insertBindings(
+                    connection = connection,
+                    protocolTemplateId = protocolTemplateId,
+                    availableDefinitions = availableDefinitions,
+                    bindings = propertyDto.bindings,
+                    ownerPropertyId = propertyId,
+                )
+            }
         }
     }
 
+    /**
+     * 处理insert绑定。
+     *
+     * @param connection 数据库连接。
+     * @param protocolTemplateId 协议模板 ID。
+     * @param availableDefinitions 可用定义。
+     * @param bindings 绑定。
+     * @param ownerClassId owner类 ID。
+     * @param ownerMethodId owner方法 ID。
+     * @param ownerPropertyId owner属性 ID。
+     */
+    private fun insertBindings(
+        connection: Connection,
+        protocolTemplateId: Long,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
+        bindings: List<CodegenContextBindingDto>,
+        ownerClassId: Long? = null,
+        ownerMethodId: Long? = null,
+        ownerPropertyId: Long? = null,
+    ) {
+        bindings.sortedBy(CodegenContextBindingDto::sortIndex).forEach { bindingDto ->
+            val definition = resolveDefinitionForBinding(protocolTemplateId, availableDefinitions, bindingDto)
+            val bindingId =
+                jdbc.insertAndReturnId(
+                    connection,
+                    """
+                    INSERT INTO codegen_context_binding (
+                        definition_id,
+                        owner_class_id,
+                        owner_method_id,
+                        owner_property_id,
+                        sort_index,
+                        create_time,
+                        update_time
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    requireNotNull(definition.id),
+                    ownerClassId,
+                    ownerMethodId,
+                    ownerPropertyId,
+                    bindingDto.sortIndex,
+                    nowSqlValue(),
+                    nowSqlValue(),
+                )
+            bindingDto.values.forEach { valueDto ->
+                val paramDefinition = resolveParamDefinitionForValue(definition, valueDto)
+                jdbc.insertAndReturnId(
+                    connection,
+                    """
+                    INSERT INTO codegen_context_binding_value (
+                        binding_id,
+                        param_definition_id,
+                        value,
+                        create_time,
+                        update_time
+                    ) VALUES (?, ?, ?, ?, ?)
+                    """.trimIndent(),
+                    bindingId,
+                    requireNotNull(paramDefinition.id),
+                    valueDto.value,
+                    nowSqlValue(),
+                    nowSqlValue(),
+                )
+            }
+        }
+    }
+
+    /**
+     * 处理校验。
+     *
+     * @param request 请求参数。
+     * @param availableDefinitions 可用定义。
+     */
     private fun validate(
         request: CodegenContextDetailDto,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
     ) {
         if (!CODE_PATTERN.matches(request.code)) {
             throw BusinessValidationException("Context code must match ${CODE_PATTERN.pattern}.")
@@ -428,16 +531,18 @@ class CodegenContextService(
         }
         request.externalCOutputRoot?.let(::validateExternalCOutputRoot)
         validateGenerationSettings(request.generationSettings)
-        val duplicateMethods =
-            request.schemas.groupBy { it.methodName }.filterValues { schemas -> schemas.size > 1 }.keys
-        if (duplicateMethods.isNotEmpty()) {
-            throw BusinessValidationException("Duplicate schema methodName values: ${duplicateMethods.joinToString()}.")
-        }
-        request.schemas.forEach { schema ->
-            validateSchema(schema)
-        }
+        validateClasses(
+            protocolTemplateId = request.protocolTemplateId,
+            classes = request.classes,
+            availableDefinitions = availableDefinitions,
+        )
     }
 
+    /**
+     * 校验外部 C 输出根目录。
+     *
+     * @param rawPath 原始路径。
+     */
     private fun validateExternalCOutputRoot(
         rawPath: String,
     ) {
@@ -452,6 +557,11 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 校验生成设置。
+     *
+     * @param settings 设置。
+     */
     private fun validateGenerationSettings(
         settings: CodegenGenerationSettingsDto,
     ) {
@@ -479,8 +589,15 @@ class CodegenContextService(
         }
         validateRtuDefaults(settings.rtuDefaults)
         validateTcpDefaults(settings.tcpDefaults)
+        validateMqttDefaults(settings.mqttDefaults)
     }
 
+    /**
+     * 校验absolute路径。
+     *
+     * @param fieldName field名称。
+     * @param rawPath 原始路径。
+     */
     private fun validateAbsolutePath(
         fieldName: String,
         rawPath: String,
@@ -496,6 +613,11 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 校验RTU默认。
+     *
+     * @param defaults 默认。
+     */
     private fun validateRtuDefaults(
         defaults: CodegenRtuGenerationDefaultsDto,
     ) {
@@ -525,6 +647,11 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 校验TCP默认。
+     *
+     * @param defaults 默认。
+     */
     private fun validateTcpDefaults(
         defaults: CodegenTcpGenerationDefaultsDto,
     ) {
@@ -545,152 +672,254 @@ class CodegenContextService(
         }
     }
 
-    private fun validateSchema(
-        schema: CodegenSchemaDto,
+    /**
+     * 校验MQTT默认。
+     *
+     * @param defaults 默认。
+     */
+    private fun validateMqttDefaults(
+        defaults: CodegenMqttGenerationDefaultsDto,
     ) {
-        if (schema.name.isBlank()) {
-            throw BusinessValidationException("Schema name cannot be blank.")
+        if (defaults.brokerUrl.isBlank()) {
+            throw BusinessValidationException("mqttDefaults.brokerUrl cannot be blank.")
         }
-        if (!IDENTIFIER_PATTERN.matches(schema.methodName)) {
-            throw BusinessValidationException("Schema methodName '${schema.methodName}' is not a valid Kotlin identifier.")
+        if (defaults.clientId.isBlank()) {
+            throw BusinessValidationException("mqttDefaults.clientId cannot be blank.")
         }
-        if (schema.fields.isEmpty()) {
-            throw BusinessValidationException("Schema ${schema.methodName} must define at least one field.")
+        if (defaults.requestTopic.isBlank()) {
+            throw BusinessValidationException("mqttDefaults.requestTopic cannot be blank.")
         }
-        if (schema.direction == CodegenSchemaDirection.READ && schema.modelName.isNullOrBlank()) {
-            throw BusinessValidationException("READ schema ${schema.methodName} must define modelName.")
+        if (defaults.responseTopic.isBlank()) {
+            throw BusinessValidationException("mqttDefaults.responseTopic cannot be blank.")
         }
-        val modelName = schema.modelName
-        if (!modelName.isNullOrBlank() && !IDENTIFIER_PATTERN.matches(modelName)) {
-            throw BusinessValidationException("Schema modelName '$modelName' is not a valid Kotlin identifier.")
+        if (defaults.qos !in 0..2) {
+            throw BusinessValidationException("mqttDefaults.qos must be between 0 and 2.")
         }
-        ensureDirectionMatchesFunctionCode(schema)
-        val duplicateProperties =
-            schema.fields.groupBy { it.propertyName }.filterValues { fields -> fields.size > 1 }.keys
-        if (duplicateProperties.isNotEmpty()) {
-            throw BusinessValidationException(
-                "Schema ${schema.methodName} has duplicate propertyName values: ${duplicateProperties.joinToString()}.",
-            )
+        if (defaults.timeoutMs < 1) {
+            throw BusinessValidationException("mqttDefaults.timeoutMs must be positive.")
         }
-        schema.fields.forEach { field ->
-            validateField(schema, field)
-        }
-        validateFieldOverlaps(schema)
-        when (schema.functionCode) {
-            CodegenFunctionCode.WRITE_SINGLE_COIL -> {
-                if (schema.fields.size != 1 || schema.fields.single().transportType != CodegenTransportType.BOOL_COIL) {
-                    throw BusinessValidationException("WRITE_SINGLE_COIL requires exactly one BOOL_COIL field.")
-                }
-            }
-
-            CodegenFunctionCode.WRITE_SINGLE_REGISTER -> {
-                if (schema.fields.size != 1 || schema.fields.single().transportType != CodegenTransportType.U16) {
-                    throw BusinessValidationException("WRITE_SINGLE_REGISTER requires exactly one U16 field.")
-                }
-            }
-
-            else -> Unit
+        if (defaults.retries < 0) {
+            throw BusinessValidationException("mqttDefaults.retries must be >= 0.")
         }
     }
 
-    private fun validateField(
-        schema: CodegenSchemaDto,
-        field: CodegenFieldDto,
+    /**
+     * 校验类。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     * @param classes 类。
+     * @param availableDefinitions 可用定义。
+     */
+    private fun validateClasses(
+        protocolTemplateId: Long,
+        classes: List<CodegenClassDto>,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
     ) {
-        if (field.name.isBlank()) {
-            throw BusinessValidationException("Field name cannot be blank in schema ${schema.methodName}.")
+        val duplicateClassNames =
+            classes.groupBy { codegenClass -> codegenClass.className }.filterValues { grouped -> grouped.size > 1 }.keys
+        if (duplicateClassNames.isNotEmpty()) {
+            throw BusinessValidationException("Duplicate className values: ${duplicateClassNames.joinToString()}.")
         }
-        if (!IDENTIFIER_PATTERN.matches(field.propertyName)) {
-            throw BusinessValidationException("Field propertyName '${field.propertyName}' is not a valid Kotlin identifier.")
+        classes.forEach { codegenClass ->
+            validateClass(protocolTemplateId, codegenClass, availableDefinitions)
         }
-        if (field.registerOffset < 0) {
-            throw BusinessValidationException("Field ${field.propertyName} must use registerOffset >= 0.")
-        }
-        if (field.bitOffset != 0) {
-            throw BusinessValidationException("Field ${field.propertyName} currently requires bitOffset = 0 in V1.")
-        }
-        if (field.length < 1) {
-            throw BusinessValidationException("Field ${field.propertyName} must use length >= 1.")
-        }
-        when (field.transportType) {
-            CodegenTransportType.BOOL_COIL,
-            CodegenTransportType.U8,
-            CodegenTransportType.U16,
-            CodegenTransportType.U32_BE -> {
-                if (field.length != 1) {
-                    throw BusinessValidationException("Field ${field.propertyName} only supports length = 1 in V1.")
-                }
+        if (classes.isNotEmpty()) {
+            val derivedSchemas = classes.toModbusSpecs(protocolTemplateId, availableDefinitions)
+            val duplicateMethods =
+                derivedSchemas.groupBy(ModbusSchemaSpec::methodName).filterValues { grouped -> grouped.size > 1 }.keys
+            if (duplicateMethods.isNotEmpty()) {
+                throw BusinessValidationException(
+                    "Duplicate generated methodName values in generic model: ${duplicateMethods.joinToString()}.",
+                )
             }
-
-            CodegenTransportType.BYTE_ARRAY,
-            CodegenTransportType.STRING_ASCII,
-            CodegenTransportType.STRING_UTF8 -> Unit
-        }
-        val expectsCoil = schema.functionCode.expectsCoilSpace()
-        if (expectsCoil && field.transportType != CodegenTransportType.BOOL_COIL) {
-            throw BusinessValidationException(
-                "Schema ${schema.methodName} uses ${schema.functionCode.name}, so field ${field.propertyName} must be BOOL_COIL.",
-            )
-        }
-        if (!expectsCoil && field.transportType == CodegenTransportType.BOOL_COIL) {
-            throw BusinessValidationException(
-                "Schema ${schema.methodName} uses ${schema.functionCode.name}, so field ${field.propertyName} cannot be BOOL_COIL.",
-            )
+            derivedSchemas.forEach { schema ->
+                validateModbusSchema(schema, IDENTIFIER_PATTERN)
+            }
         }
     }
 
-    private fun validateFieldOverlaps(
-        schema: CodegenSchemaDto,
+    /**
+     * 校验类。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     * @param codegenClass 代码生成类。
+     * @param availableDefinitions 可用定义。
+     */
+    private fun validateClass(
+        protocolTemplateId: Long,
+        codegenClass: CodegenClassDto,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
     ) {
-        val occupied = linkedSetOf<String>()
-        schema.fields.sortedBy { it.sortIndex }.forEach { field ->
-            val keys =
-                if (schema.functionCode.expectsCoilSpace()) {
-                    listOf("c${field.registerOffset}")
-                } else {
-                    val width = field.transportType.registerWidth(field.length)
-                    (field.registerOffset until field.registerOffset + width).map { register ->
-                        "r$register"
+        if (codegenClass.name.isBlank()) {
+            throw BusinessValidationException("Class name cannot be blank.")
+        }
+        if (!IDENTIFIER_PATTERN.matches(codegenClass.className)) {
+            throw BusinessValidationException("Class className '${codegenClass.className}' is not a valid Kotlin identifier.")
+        }
+        codegenClass.packageName?.let { packageName ->
+            if (!PACKAGE_PATTERN.matches(packageName)) {
+                throw BusinessValidationException("Class packageName '$packageName' is not a valid Kotlin package name.")
+            }
+        }
+        validateBindings(
+            protocolTemplateId = protocolTemplateId,
+            expectedKind = CodegenNodeKind.CLASS,
+            bindings = codegenClass.bindings,
+            availableDefinitions = availableDefinitions,
+        )
+        val duplicateMethodNames =
+            codegenClass.methods.groupBy(CodegenMethodDto::methodName).filterValues { grouped -> grouped.size > 1 }.keys
+        if (duplicateMethodNames.isNotEmpty()) {
+            throw BusinessValidationException(
+                "Class ${codegenClass.className} has duplicate methodName values: ${duplicateMethodNames.joinToString()}.",
+            )
+        }
+        val duplicatePropertyNames =
+            codegenClass.properties.groupBy(CodegenPropertyDto::propertyName).filterValues { grouped -> grouped.size > 1 }.keys
+        if (duplicatePropertyNames.isNotEmpty()) {
+            throw BusinessValidationException(
+                "Class ${codegenClass.className} has duplicate propertyName values: ${duplicatePropertyNames.joinToString()}.",
+            )
+        }
+        codegenClass.methods.forEach { method ->
+            validateMethod(protocolTemplateId, codegenClass, method, availableDefinitions)
+        }
+        codegenClass.properties.forEach { property ->
+            validateProperty(protocolTemplateId, codegenClass, property, availableDefinitions)
+        }
+    }
+
+    /**
+     * 校验方法。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     * @param ownerClass owner类。
+     * @param method 方法。
+     * @param availableDefinitions 可用定义。
+     */
+    private fun validateMethod(
+        protocolTemplateId: Long,
+        ownerClass: CodegenClassDto,
+        method: CodegenMethodDto,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
+    ) {
+        if (method.name.isBlank()) {
+            throw BusinessValidationException("Method name cannot be blank in class ${ownerClass.className}.")
+        }
+        if (!IDENTIFIER_PATTERN.matches(method.methodName)) {
+            throw BusinessValidationException("Method ${method.methodName} is not a valid Kotlin identifier.")
+        }
+        method.requestClassName?.let { requestClassName ->
+            if (!IDENTIFIER_PATTERN.matches(requestClassName)) {
+                throw BusinessValidationException("Method requestClassName '$requestClassName' is not a valid Kotlin identifier.")
+            }
+        }
+        method.responseClassName?.let { responseClassName ->
+            if (!IDENTIFIER_PATTERN.matches(responseClassName)) {
+                throw BusinessValidationException("Method responseClassName '$responseClassName' is not a valid Kotlin identifier.")
+            }
+        }
+        validateBindings(
+            protocolTemplateId = protocolTemplateId,
+            expectedKind = CodegenNodeKind.METHOD,
+            bindings = method.bindings,
+            availableDefinitions = availableDefinitions,
+        )
+    }
+
+    /**
+     * 校验属性。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     * @param ownerClass owner类。
+     * @param property 属性。
+     * @param availableDefinitions 可用定义。
+     */
+    private fun validateProperty(
+        protocolTemplateId: Long,
+        ownerClass: CodegenClassDto,
+        property: CodegenPropertyDto,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
+    ) {
+        if (property.name.isBlank()) {
+            throw BusinessValidationException("Property name cannot be blank in class ${ownerClass.className}.")
+        }
+        if (!IDENTIFIER_PATTERN.matches(property.propertyName)) {
+            throw BusinessValidationException("Property ${property.propertyName} is not a valid Kotlin identifier.")
+        }
+        if (property.typeName.isBlank()) {
+            throw BusinessValidationException("Property ${property.propertyName} must declare typeName.")
+        }
+        validateBindings(
+            protocolTemplateId = protocolTemplateId,
+            expectedKind = CodegenNodeKind.FIELD,
+            bindings = property.bindings,
+            availableDefinitions = availableDefinitions,
+        )
+    }
+
+    /**
+     * 校验绑定。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     * @param expectedKind expected类型。
+     * @param bindings 绑定。
+     * @param availableDefinitions 可用定义。
+     */
+    private fun validateBindings(
+        protocolTemplateId: Long,
+        expectedKind: CodegenNodeKind,
+        bindings: List<CodegenContextBindingDto>,
+        availableDefinitions: List<CodegenContextDefinitionDto>,
+    ) {
+        val seenDefinitionCodes = mutableMapOf<String, Int>()
+        bindings.forEach { binding ->
+            val definition = resolveDefinitionForBinding(protocolTemplateId, availableDefinitions, binding)
+            validateBindingTargetKind(definition, expectedKind)
+            val currentCount = seenDefinitionCodes.getOrDefault(definition.code, 0) + 1
+            seenDefinitionCodes[definition.code] = currentCount
+            if (definition.bindingTargetMode == CodegenBindingTargetMode.SINGLE && currentCount > 1) {
+                throw BusinessValidationException("Context definition ${definition.code} can only be bound once on $expectedKind.")
+            }
+            val duplicateParamCodes =
+                binding.values.groupBy(CodegenContextBindingValueDto::paramCode).filterValues { grouped -> grouped.size > 1 }.keys
+            if (duplicateParamCodes.isNotEmpty()) {
+                throw BusinessValidationException(
+                    "Binding ${definition.code} has duplicate paramCode values: ${duplicateParamCodes.joinToString()}.",
+                )
+            }
+            definition.params.forEach { paramDefinition ->
+                val bindingValue =
+                    binding.values.firstOrNull { value ->
+                        value.paramCode == paramDefinition.code || value.paramDefinitionId == paramDefinition.id
                     }
-                }
-            keys.forEach { key ->
-                if (!occupied.add(key)) {
-                    throw BusinessValidationException(
-                        "Schema ${schema.methodName} has overlapping field layout around ${field.propertyName}.",
-                    )
-                }
+                validateBindingValueType(paramDefinition, bindingValue?.value ?: paramDefinition.defaultValue)
             }
         }
     }
 
-    private fun ensureDirectionMatchesFunctionCode(
-        schema: CodegenSchemaDto,
+    /**
+     * 校验绑定目标类型。
+     *
+     * @param definition 定义。
+     * @param expectedKind expected类型。
+     */
+    private fun validateBindingTargetKind(
+        definition: CodegenContextDefinitionDto,
+        expectedKind: CodegenNodeKind,
     ) {
-        val allowedFunctionCodes =
-            when (schema.direction) {
-                CodegenSchemaDirection.READ ->
-                    setOf(
-                        CodegenFunctionCode.READ_COILS,
-                        CodegenFunctionCode.READ_DISCRETE_INPUTS,
-                        CodegenFunctionCode.READ_INPUT_REGISTERS,
-                        CodegenFunctionCode.READ_HOLDING_REGISTERS,
-                    )
-
-                CodegenSchemaDirection.WRITE ->
-                    setOf(
-                        CodegenFunctionCode.WRITE_SINGLE_COIL,
-                        CodegenFunctionCode.WRITE_MULTIPLE_COILS,
-                        CodegenFunctionCode.WRITE_SINGLE_REGISTER,
-                        CodegenFunctionCode.WRITE_MULTIPLE_REGISTERS,
-                    )
-            }
-        if (schema.functionCode !in allowedFunctionCodes) {
+        if (definition.targetKind != expectedKind) {
             throw BusinessValidationException(
-                "Schema ${schema.methodName} uses ${schema.functionCode.name}, which does not match ${schema.direction.name}.",
+                "Context definition ${definition.code} targets ${definition.targetKind}, cannot bind to $expectedKind.",
             )
         }
     }
 
+    /**
+     * 确保supported模板。
+     *
+     * @param protocolTemplate 协议模板。
+     */
     private fun ensureSupportedTemplate(
         protocolTemplate: ProtocolTemplate,
     ) {
@@ -701,6 +930,11 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 加载上下文。
+     *
+     * @param contextId 上下文 ID。
+     */
     private fun loadContext(
         contextId: Long,
     ): CodegenContext {
@@ -710,6 +944,11 @@ class CodegenContextService(
         }.execute().firstOrNull() ?: throw NotFoundException("Codegen context $contextId was not found.")
     }
 
+    /**
+     * 加载协议模板。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
     private fun loadProtocolTemplate(
         protocolTemplateId: Long,
     ): ProtocolTemplate {
@@ -719,6 +958,28 @@ class CodegenContextService(
         }.execute().firstOrNull() ?: throw NotFoundException("Protocol template $protocolTemplateId was not found.")
     }
 
+    /**
+     * 加载上下文定义。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
+    private fun loadContextDefinitions(
+        protocolTemplateId: Long,
+    ): List<CodegenContextDefinitionDto> {
+        return sql.createQuery(CodegenContextDefinition::class) {
+            where(table.protocolTemplate.id eq protocolTemplateId)
+            orderBy(table.sortIndex.asc(), table.id.asc())
+            select(table.fetch(CodegenContextFetchers.definitionDetail))
+        }.execute().map { definition ->
+            definition.toDto()
+        }
+    }
+
+    /**
+     * 确保上下文存在性。
+     *
+     * @param contextId 上下文 ID。
+     */
     private fun ensureContextExists(
         contextId: Long,
     ) {
@@ -732,6 +993,13 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 确保编码唯一性。
+     *
+     * @param connection 数据库连接。
+     * @param code 编码。
+     * @param ignoreId ignore ID。
+     */
     private fun ensureCodeUnique(
         connection: Connection,
         code: String,
@@ -757,6 +1025,9 @@ class CodegenContextService(
         }
     }
 
+    /**
+     * 处理代码生成上下文。
+     */
     private fun CodegenContext.toSummaryDto(): CodegenContextSummaryDto {
         return CodegenContextSummaryDto(
             id = id,
@@ -771,6 +1042,9 @@ class CodegenContextService(
         )
     }
 
+    /**
+     * 处理代码生成上下文。
+     */
     private fun CodegenContext.toDetailDto(): CodegenContextDetailDto {
         return CodegenContextDetailDto(
             id = id,
@@ -812,41 +1086,202 @@ class CodegenContextService(
                             timeoutMs = tcpTimeoutMs,
                             retries = tcpRetries,
                         ),
+                    mqttDefaults =
+                        CodegenMqttGenerationDefaultsDto(
+                            brokerUrl = mqttBrokerUrl,
+                            clientId = mqttClientId,
+                            requestTopic = mqttRequestTopic,
+                            responseTopic = mqttResponseTopic,
+                            qos = mqttQos,
+                            timeoutMs = mqttTimeoutMs,
+                            retries = mqttRetries,
+                        ),
                 ),
-            schemas =
-                schemas.sortedWith(compareBy(CodegenSchema::sortIndex, CodegenSchema::id)).map { schema ->
-                    CodegenSchemaDto(
-                        id = schema.id,
-                        name = schema.name,
-                        description = schema.description,
-                        sortIndex = schema.sortIndex,
-                        direction = schema.direction,
-                        functionCode = schema.functionCode,
-                        baseAddress = schema.baseAddress,
-                        methodName = schema.methodName,
-                        modelName = schema.modelName,
-                        fields =
-                            schema.fields.sortedWith(compareBy(CodegenField::sortIndex, CodegenField::id)).map { field ->
-                                CodegenFieldDto(
-                                    id = field.id,
-                                    name = field.name,
-                                    description = field.description,
-                                    sortIndex = field.sortIndex,
-                                    propertyName = field.propertyName,
-                                    transportType = field.transportType,
-                                    registerOffset = field.registerOffset,
-                                    bitOffset = field.bitOffset,
-                                    length = field.length,
-                                    translationHint = field.translationHint,
-                                    defaultLiteral = field.defaultLiteral,
-                                )
-                            },
-                    )
+            availableContextDefinitions = loadContextDefinitions(protocolTemplate.id),
+            classes =
+                classes.sortedWith(compareBy(CodegenClass::sortIndex, CodegenClass::id)).map { codegenClass ->
+                    codegenClass.toDto()
                 },
         )
     }
 
+    /**
+     * 处理代码生成上下文定义。
+     */
+    private fun CodegenContextDefinition.toDto(): CodegenContextDefinitionDto {
+        return CodegenContextDefinitionDto(
+            id = id,
+            code = code,
+            name = name,
+            description = description,
+            sortIndex = sortIndex,
+            targetKind = targetKind,
+            bindingTargetMode = bindingTargetMode,
+            sourceKind = sourceKind,
+            params =
+                params.sortedWith(compareBy(CodegenContextParamDefinition::sortIndex, CodegenContextParamDefinition::id)).map { param ->
+                    param.toDto()
+                },
+        )
+    }
+
+    /**
+     * 处理代码生成上下文参数定义。
+     */
+    private fun CodegenContextParamDefinition.toDto(): CodegenContextParamDefinitionDto {
+        return CodegenContextParamDefinitionDto(
+            id = id,
+            code = code,
+            name = name,
+            description = description,
+            sortIndex = sortIndex,
+            valueType = valueType,
+            required = required,
+            defaultValue = defaultValue,
+            enumOptions = enumOptions.decodeEnumOptions(),
+            placeholder = placeholder,
+        )
+    }
+
+    /**
+     * 处理代码生成类。
+     */
+    private fun CodegenClass.toDto(): CodegenClassDto {
+        return CodegenClassDto(
+            id = id,
+            name = name,
+            description = description,
+            sortIndex = sortIndex,
+            classKind = classKind,
+            className = className,
+            packageName = packageName,
+            bindings =
+                bindings.sortedWith(compareBy(CodegenContextBinding::sortIndex, CodegenContextBinding::id)).map { binding ->
+                    binding.toDto()
+                },
+            methods =
+                methods.sortedWith(compareBy(CodegenMethod::sortIndex, CodegenMethod::id)).map { method ->
+                    method.toDto()
+                },
+            properties =
+                properties.sortedWith(compareBy(CodegenProperty::sortIndex, CodegenProperty::id)).map { property ->
+                    property.toDto()
+                },
+        )
+    }
+
+    /**
+     * 处理代码生成方法。
+     */
+    private fun CodegenMethod.toDto(): CodegenMethodDto {
+        return CodegenMethodDto(
+            id = id,
+            name = name,
+            description = description,
+            sortIndex = sortIndex,
+            methodName = methodName,
+            requestClassName = requestClassName,
+            responseClassName = responseClassName,
+            bindings =
+                bindings.sortedWith(compareBy(CodegenContextBinding::sortIndex, CodegenContextBinding::id)).map { binding ->
+                    binding.toDto()
+                },
+        )
+    }
+
+    /**
+     * 处理代码生成属性。
+     */
+    private fun CodegenProperty.toDto(): CodegenPropertyDto {
+        return CodegenPropertyDto(
+            id = id,
+            name = name,
+            description = description,
+            sortIndex = sortIndex,
+            propertyName = propertyName,
+            typeName = typeName,
+            nullable = nullable,
+            defaultLiteral = defaultLiteral,
+            bindings =
+                bindings.sortedWith(compareBy(CodegenContextBinding::sortIndex, CodegenContextBinding::id)).map { binding ->
+                    binding.toDto()
+                },
+        )
+    }
+
+    /**
+     * 处理代码生成上下文绑定。
+     */
+    private fun CodegenContextBinding.toDto(): CodegenContextBindingDto {
+        return CodegenContextBindingDto(
+            id = id,
+            definitionId = definition.id,
+            definitionCode = definition.code,
+            sortIndex = sortIndex,
+            values =
+                values.sortedWith(compareBy(CodegenContextBindingValue::id)).map { value ->
+                    value.toDto()
+                },
+        )
+    }
+
+    /**
+     * 处理代码生成上下文绑定值。
+     */
+    private fun CodegenContextBindingValue.toDto(): CodegenContextBindingValueDto {
+        return CodegenContextBindingValueDto(
+            id = id,
+            paramDefinitionId = paramDefinition.id,
+            paramCode = paramDefinition.code,
+            value = value,
+        )
+    }
+
+    /**
+     * 处理代码生成上下文详情数据传输对象。
+     */
     private fun CodegenContextDetailDto.normalized(): CodegenContextDetailDto {
+        val trimmedClasses =
+            classes.map { codegenClass ->
+                codegenClass.copy(
+                    name = codegenClass.name.trim(),
+                    description = codegenClass.description.cleanNullable(),
+                    className = codegenClass.className.trim(),
+                    packageName = codegenClass.packageName.cleanNullable(),
+                    bindings =
+                        codegenClass.bindings.map { binding ->
+                            binding.normalized()
+                        },
+                    methods =
+                        codegenClass.methods.map { method ->
+                            method.copy(
+                                name = method.name.trim(),
+                                description = method.description.cleanNullable(),
+                                methodName = method.methodName.trim(),
+                                requestClassName = method.requestClassName.cleanNullable(),
+                                responseClassName = method.responseClassName.cleanNullable(),
+                                bindings =
+                                    method.bindings.map { binding ->
+                                        binding.normalized()
+                                    },
+                            )
+                        },
+                    properties =
+                        codegenClass.properties.map { property ->
+                            property.copy(
+                                name = property.name.trim(),
+                                description = property.description.cleanNullable(),
+                                propertyName = property.propertyName.trim(),
+                                typeName = property.typeName.trim(),
+                                defaultLiteral = property.defaultLiteral.cleanNullable(),
+                                bindings =
+                                    property.bindings.map { binding ->
+                                        binding.normalized()
+                                    },
+                            )
+                        },
+                )
+            }.normalizeGeneratedIdentifiers()
         return copy(
             code = code.trim(),
             name = name.trim(),
@@ -855,32 +1290,198 @@ class CodegenContextService(
             consumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
             externalCOutputRoot = externalCOutputRoot.cleanNullable(),
             generationSettings = generationSettings.normalized(),
-            schemas =
-                schemas.map { schema ->
-                    schema.copy(
-                        name = schema.name.trim(),
-                        description = schema.description.cleanNullable(),
-                        methodName = schema.methodName.trim(),
-                        modelName = schema.modelName.cleanNullable(),
-                        fields =
-                            schema.fields.map { field ->
-                                field.copy(
-                                    name = field.name.trim(),
-                                    description = field.description.cleanNullable(),
-                                    propertyName = field.propertyName.trim(),
-                                    translationHint = field.translationHint.cleanNullable(),
-                                    defaultLiteral = field.defaultLiteral.cleanNullable(),
-                                )
-                            },
+            availableContextDefinitions = emptyList(),
+            classes = trimmedClasses,
+        )
+    }
+
+    /**
+     * 处理代码生成上下文绑定数据传输对象。
+     */
+    private fun CodegenContextBindingDto.normalized(): CodegenContextBindingDto {
+        return copy(
+            definitionCode = definitionCode.trim(),
+            values =
+                values.map { value ->
+                    value.copy(
+                        paramCode = value.paramCode.trim(),
+                        value = value.value.cleanNullable(),
                     )
                 },
         )
     }
 
+    /**
+     * 处理string。
+     */
     private fun String?.cleanNullable(): String? {
         return this?.trim()?.takeIf(String::isNotBlank)
     }
 
+    /**
+     * 为类、方法与属性补齐后端派生标识符。
+     */
+    private fun List<CodegenClassDto>.normalizeGeneratedIdentifiers(): List<CodegenClassDto> {
+        val classesWithResolvedMembers =
+            map { codegenClass ->
+                codegenClass.copy(
+                    methods = codegenClass.methods.normalizeGeneratedMethodIdentifiers(),
+                    properties = codegenClass.properties.normalizeGeneratedPropertyIdentifiers(),
+                )
+            }
+        val requestNameQueues = mutableMapOf<String, ArrayDeque<String>>()
+        val responseNameQueues = mutableMapOf<String, ArrayDeque<String>>()
+        classesWithResolvedMembers.flatMap(CodegenClassDto::methods).forEach { method ->
+            requestNameQueues.getOrPut(method.name) { ArrayDeque() }.addLast(requireNotNull(method.requestClassName))
+            responseNameQueues.getOrPut(method.name) { ArrayDeque() }.addLast(requireNotNull(method.responseClassName))
+        }
+        val usedClassNames = mutableSetOf<String>()
+        return classesWithResolvedMembers.map { codegenClass ->
+            val explicitClassName = codegenClass.className.cleanNullable()
+            val resolvedClassName =
+                if (explicitClassName != null) {
+                    explicitClassName
+                } else {
+                    val matchedMethodClassName =
+                        requestNameQueues.pollGeneratedClassName(
+                            methodDisplayName = codegenClass.name.removeSuffix("请求实体"),
+                            enabled = codegenClass.name.endsWith("请求实体"),
+                        ) ?: responseNameQueues.pollGeneratedClassName(
+                            methodDisplayName = codegenClass.name.removeSuffix("响应实体"),
+                            enabled = codegenClass.name.endsWith("响应实体"),
+                        )
+                    ensureUniqueGeneratedIdentifier(
+                        base = matchedMethodClassName ?: codegenClass.name.toGeneratedTypeName(),
+                        existing = usedClassNames,
+                    )
+                }
+            usedClassNames += resolvedClassName
+            codegenClass.copy(className = resolvedClassName)
+        }
+    }
+
+    /**
+     * 为方法补齐后端派生名称。
+     */
+    private fun List<CodegenMethodDto>.normalizeGeneratedMethodIdentifiers(): List<CodegenMethodDto> {
+        val usedMethodNames = mutableSetOf<String>()
+        return map { method ->
+            val explicitMethodName = method.methodName.cleanNullable()
+            val resolvedMethodName =
+                explicitMethodName
+                    ?: ensureUniqueGeneratedIdentifier(
+                        base = method.name.toGeneratedMethodName(),
+                        existing = usedMethodNames,
+                    )
+            usedMethodNames += resolvedMethodName
+            method.copy(
+                methodName = resolvedMethodName,
+                requestClassName = method.requestClassName.cleanNullable() ?: resolvedMethodName.toGeneratedTypeName("GeneratedMethod") + "Request",
+                responseClassName = method.responseClassName.cleanNullable() ?: resolvedMethodName.toGeneratedTypeName("GeneratedMethod") + "Response",
+            )
+        }
+    }
+
+    /**
+     * 为属性补齐后端派生名称与类型。
+     */
+    private fun List<CodegenPropertyDto>.normalizeGeneratedPropertyIdentifiers(): List<CodegenPropertyDto> {
+        val usedPropertyNames = mutableSetOf<String>()
+        return map { property ->
+            val explicitPropertyName = property.propertyName.cleanNullable()
+            val resolvedPropertyName =
+                explicitPropertyName
+                    ?: ensureUniqueGeneratedIdentifier(
+                        base = property.name.toGeneratedPropertyName(),
+                        existing = usedPropertyNames,
+                    )
+            usedPropertyNames += resolvedPropertyName
+            property.copy(
+                propertyName = resolvedPropertyName,
+                typeName = property.typeName.cleanNullable() ?: property.bindings.bindingValue(MODBUS_FIELD_DEFINITION_CODE, FIELD_TRANSPORT_TYPE_PARAM).toPropertyTypeName(),
+            )
+        }
+    }
+
+    /**
+     * 从队列中按显示名取出下一个派生类名。
+     *
+     * @param methodDisplayName 方法显示名。
+     * @param enabled 是否启用当前匹配。
+     */
+    private fun MutableMap<String, ArrayDeque<String>>.pollGeneratedClassName(
+        methodDisplayName: String,
+        enabled: Boolean,
+    ): String? {
+        if (!enabled) {
+            return null
+        }
+        val queue = get(methodDisplayName) ?: return null
+        if (queue.isEmpty()) {
+            remove(methodDisplayName)
+            return null
+        }
+        val value = queue.removeFirst()
+        if (queue.isEmpty()) {
+            remove(methodDisplayName)
+        }
+        return value
+    }
+
+    /**
+     * 从绑定中读取字段值。
+     *
+     * @param definitionCode 定义编码。
+     * @param paramCode 参数编码。
+     */
+    private fun List<CodegenContextBindingDto>.bindingValue(
+        definitionCode: String,
+        paramCode: String,
+    ): String? =
+        firstOrNull { binding -> binding.definitionCode == definitionCode }
+            ?.values
+            ?.firstOrNull { value -> value.paramCode == paramCode }
+            ?.value
+            ?.cleanNullable()
+
+    /**
+     * 根据 transportType 推断属性类型。
+     */
+    private fun String?.toPropertyTypeName(): String =
+        when (this) {
+            "BOOL_COIL" -> "Boolean"
+            "STRING_ASCII",
+            "STRING_UTF8" -> "String"
+            else -> "Int"
+        }
+
+    /**
+     * 为自动派生名称补齐唯一后缀。
+     *
+     * @param base 基础名称。
+     * @param existing 已存在名称。
+     */
+    private fun ensureUniqueGeneratedIdentifier(
+        base: String,
+        existing: Collection<String>,
+    ): String {
+        val candidateBase = base.ifBlank { "generatedName" }
+        if (candidateBase !in existing) {
+            return candidateBase
+        }
+        var index = 2
+        while (true) {
+            val candidate = "$candidateBase$index"
+            if (candidate !in existing) {
+                return candidate
+            }
+            index += 1
+        }
+    }
+
+    /**
+     * 处理代码生成设置数据传输对象。
+     */
     private fun CodegenGenerationSettingsDto.normalized(): CodegenGenerationSettingsDto {
         return copy(
             serverOutputRoot = serverOutputRoot.cleanNullable(),
@@ -900,30 +1501,32 @@ class CodegenContextService(
                 tcpDefaults.copy(
                     host = tcpDefaults.host.trim(),
                 ),
+            mqttDefaults =
+                mqttDefaults.copy(
+                    brokerUrl = mqttDefaults.brokerUrl.trim(),
+                    clientId = mqttDefaults.clientId.trim(),
+                    requestTopic = mqttDefaults.requestTopic.trim(),
+                    responseTopic = mqttDefaults.responseTopic.trim(),
+                ),
         )
     }
 
+    /**
+     * 处理当前时间sql值。
+     */
     private fun nowSqlValue(): String {
         return SQLITE_DATE_TIME_FORMATTER.format(Instant.now().atZone(ZoneId.systemDefault()).toLocalDateTime())
     }
+
+    /**
+     * 处理string。
+     */
+    private fun String?.decodeEnumOptions(): List<String> {
+        val raw = this?.trim()?.takeIf(String::isNotBlank) ?: return emptyList()
+        return runCatching {
+            JSON.decodeFromString<List<String>>(raw)
+        }.getOrDefault(
+            raw.split('\n').map(String::trim).filter(String::isNotBlank),
+        )
+    }
 }
-
-private fun CodegenFunctionCode.expectsCoilSpace(): Boolean =
-    when (this) {
-        CodegenFunctionCode.READ_COILS,
-        CodegenFunctionCode.READ_DISCRETE_INPUTS,
-        CodegenFunctionCode.WRITE_SINGLE_COIL,
-        CodegenFunctionCode.WRITE_MULTIPLE_COILS -> true
-        else -> false
-    }
-
-private fun CodegenTransportType.registerWidth(length: Int): Int =
-    when (this) {
-        CodegenTransportType.BOOL_COIL,
-        CodegenTransportType.U8,
-        CodegenTransportType.U16 -> 1
-        CodegenTransportType.U32_BE -> 2
-        CodegenTransportType.BYTE_ARRAY -> (length + 1) / 2
-        CodegenTransportType.STRING_ASCII,
-        CodegenTransportType.STRING_UTF8 -> length
-    }

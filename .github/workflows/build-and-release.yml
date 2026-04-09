@@ -1,6 +1,7 @@
 name: Build and Release
 
 on:
+  workflow_dispatch:
   push:
     branches: [master, main, develop]
     tags: ['v*']
@@ -12,62 +13,6 @@ env:
   GRADLE_OPTS: -Dorg.gradle.daemon=false -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=2g" -Dorg.gradle.configureondemand=true
 
 jobs:
-  build-wasm:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Checkout addzero-lib-jvm
-        uses: actions/checkout@v4
-        with:
-          repository: zjarlin/addzero-lib-jvm
-          path: addzero-lib-jvm
-          fetch-depth: 1
-
-      - name: Prepare shared build-logic checkouts
-        shell: bash
-        run: |
-          rm -rf checkouts/build-logic addzero-lib-jvm/checkouts/build-logic
-          mkdir -p checkouts addzero-lib-jvm/checkouts
-          git clone --depth 1 https://gitee.com/zjarlin/build-logic.git checkouts/build-logic
-          python - <<'PY'
-          from pathlib import Path
-
-          catalog = Path("checkouts/build-logic/gradle/libs.versions.toml")
-          text = catalog.read_text()
-          if 'jna = "5.14.0"' not in text:
-              text = text.replace('jimmer-ksp-version = "0.9.120"\n', 'jimmer-ksp-version = "0.9.120"\njna = "5.14.0"\n')
-          alias = 'net-java-dev-jna-jna = { group = "net.java.dev.jna", name = "jna", version.ref = "jna" }\n'
-          marker = 'javazoom-jlayer = { group = "javazoom", name = "jlayer", version.ref = "javazoom-jlayer" }\n'
-          if alias not in text:
-              text = text.replace(marker, marker + alias)
-          catalog.write_text(text)
-          PY
-          cp -R checkouts/build-logic addzero-lib-jvm/checkouts/build-logic
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          java-version: ${{ env.JAVA_VERSION }}
-          distribution: temurin
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-home-cache-cleanup: true
-
-      - name: Package KCloud Wasm Release
-        run: ./gradlew :apps:kcloud:ui:wasmDistZip --parallel
-
-      - name: Upload Wasm Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: kcloud-wasm-dist
-          path: apps/kcloud/ui/build/dist/release/dist.zip
-          retention-days: 7
-          if-no-files-found: error
-
   build-desktop:
     strategy:
       fail-fast: false
@@ -89,18 +34,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout addzero-lib-jvm
-        uses: actions/checkout@v4
-        with:
-          repository: zjarlin/addzero-lib-jvm
-          path: addzero-lib-jvm
-          fetch-depth: 1
-
-      - name: Prepare shared build-logic checkouts
+      - name: Prepare build-logic checkout
         shell: bash
         run: |
-          rm -rf checkouts/build-logic addzero-lib-jvm/checkouts/build-logic
-          mkdir -p checkouts addzero-lib-jvm/checkouts
+          rm -rf checkouts/build-logic
+          mkdir -p checkouts
           git clone --depth 1 https://gitee.com/zjarlin/build-logic.git checkouts/build-logic
           python - <<'PY'
           from pathlib import Path
@@ -115,7 +53,6 @@ jobs:
               text = text.replace(marker, marker + alias)
           catalog.write_text(text)
           PY
-          cp -R checkouts/build-logic addzero-lib-jvm/checkouts/build-logic
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -129,7 +66,7 @@ jobs:
           gradle-home-cache-cleanup: true
 
       - name: Package KCloud Desktop (${{ matrix.target }})
-        run: ${{ matrix.gradlew }} :apps:kcloud:ui:packageReleaseDistributionForCurrentOS --parallel
+        run: ${{ matrix.gradlew }} :apps:kcloud:ui:packageDistributionForCurrentOS --parallel
 
       - name: Upload Desktop Artifact
         uses: actions/upload-artifact@v4
@@ -140,7 +77,7 @@ jobs:
           if-no-files-found: error
 
   create-release:
-    needs: [build-wasm, build-desktop]
+    needs: [build-desktop]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
@@ -159,7 +96,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/kcloud-wasm-dist/dist.zip
             artifacts/kcloud-macos-installer/**/*.dmg
             artifacts/kcloud-windows-installer/**/*.msi
           generate_release_notes: true

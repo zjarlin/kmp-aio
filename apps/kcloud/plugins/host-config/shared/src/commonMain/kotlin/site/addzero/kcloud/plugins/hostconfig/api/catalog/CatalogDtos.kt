@@ -3,6 +3,9 @@ package site.addzero.kcloud.plugins.hostconfig.api.catalog
 import kotlinx.serialization.Serializable
 
 @Serializable
+/**
+ * 定义目录entity类型枚举。
+ */
 enum class CatalogEntityType {
     PRODUCT,
     DEVICE,
@@ -12,6 +15,9 @@ enum class CatalogEntityType {
 }
 
 @Serializable
+/**
+ * 定义目录字段widget类型枚举。
+ */
 enum class CatalogFieldWidgetType {
     TEXT,
     TEXTAREA,
@@ -23,6 +29,9 @@ enum class CatalogFieldWidgetType {
 }
 
 @Serializable
+/**
+ * 定义目录值render类型枚举。
+ */
 enum class CatalogValueRenderType {
     TEXT,
     BOOLEAN,
@@ -33,6 +42,13 @@ enum class CatalogValueRenderType {
 }
 
 @Serializable
+/**
+ * 表示目录快照响应结果。
+ *
+ * @property products products。
+ * @property labels labels。
+ * @property metadata 元数据。
+ */
 data class CatalogSnapshotResponse(
     val products: List<ProductDefinitionTreeResponse>,
     val labels: List<LabelDefinitionResponse>,
@@ -40,6 +56,18 @@ data class CatalogSnapshotResponse(
 )
 
 @Serializable
+/**
+ * 表示product定义创建请求参数。
+ *
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property vendor vendor。
+ * @property category category。
+ * @property enabled 是否启用。
+ * @property sortIndex 排序序号。
+ * @property labelIds label ID 列表。
+ */
 data class ProductDefinitionCreateRequest(
     val code: String,
     val name: String,
@@ -52,6 +80,18 @@ data class ProductDefinitionCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示product定义更新请求参数。
+ *
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property vendor vendor。
+ * @property category category。
+ * @property enabled 是否启用。
+ * @property sortIndex 排序序号。
+ * @property labelIds label ID 列表。
+ */
 data class ProductDefinitionUpdateRequest(
     val code: String,
     val name: String,
@@ -64,6 +104,22 @@ data class ProductDefinitionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示product定义树响应结果。
+ *
+ * @property id 主键 ID。
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property vendor vendor。
+ * @property category category。
+ * @property enabled 是否启用。
+ * @property sortIndex 排序序号。
+ * @property labels labels。
+ * @property devices 设备。
+ * @property createdAt 创建时间戳。
+ * @property updatedAt 更新时间戳。
+ */
 data class ProductDefinitionTreeResponse(
     val id: Long,
     val code: String,
@@ -80,6 +136,17 @@ data class ProductDefinitionTreeResponse(
 )
 
 @Serializable
+/**
+ * 表示设备定义创建请求参数。
+ *
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property deviceTypeId 设备类型 ID。
+ * @property supportsTelemetry 支持telemetry。
+ * @property supportsControl 支持控制。
+ * @property sortIndex 排序序号。
+ */
 data class DeviceDefinitionCreateRequest(
     val code: String,
     val name: String,
@@ -91,6 +158,17 @@ data class DeviceDefinitionCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示设备定义更新请求参数。
+ *
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property deviceTypeId 设备类型 ID。
+ * @property supportsTelemetry 支持telemetry。
+ * @property supportsControl 支持控制。
+ * @property sortIndex 排序序号。
+ */
 data class DeviceDefinitionUpdateRequest(
     val code: String,
     val name: String,
@@ -102,6 +180,25 @@ data class DeviceDefinitionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示设备定义树响应结果。
+ *
+ * @property id 主键 ID。
+ * @property productId product ID。
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property deviceTypeId 设备类型 ID。
+ * @property deviceTypeCode 设备类型编码。
+ * @property deviceTypeName 设备类型名称。
+ * @property supportsTelemetry 支持telemetry。
+ * @property supportsControl 支持控制。
+ * @property sortIndex 排序序号。
+ * @property properties 属性。
+ * @property features features。
+ * @property createdAt 创建时间戳。
+ * @property updatedAt 更新时间戳。
+ */
 data class DeviceDefinitionTreeResponse(
     val id: Long,
     val productId: Long,
@@ -121,6 +218,22 @@ data class DeviceDefinitionTreeResponse(
 )
 
 @Serializable
+/**
+ * 表示属性定义创建请求参数。
+ *
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property dataTypeId 数据类型 ID。
+ * @property unit 单元。
+ * @property required 是否必填。
+ * @property writable writable。
+ * @property telemetry telemetry。
+ * @property nullable 是否可空。
+ * @property length length。
+ * @property attributes attributes。
+ * @property sortIndex 排序序号。
+ */
 data class PropertyDefinitionCreateRequest(
     val identifier: String,
     val name: String,
@@ -137,6 +250,22 @@ data class PropertyDefinitionCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示属性定义更新请求参数。
+ *
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property dataTypeId 数据类型 ID。
+ * @property unit 单元。
+ * @property required 是否必填。
+ * @property writable writable。
+ * @property telemetry telemetry。
+ * @property nullable 是否可空。
+ * @property length length。
+ * @property attributes attributes。
+ * @property sortIndex 排序序号。
+ */
 data class PropertyDefinitionUpdateRequest(
     val identifier: String,
     val name: String,
@@ -153,6 +282,28 @@ data class PropertyDefinitionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示属性定义响应结果。
+ *
+ * @property id 主键 ID。
+ * @property deviceDefinitionId 设备定义 ID。
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property dataTypeId 数据类型 ID。
+ * @property dataTypeCode 数据类型编码。
+ * @property dataTypeName 数据类型名。
+ * @property unit 单元。
+ * @property required 是否必填。
+ * @property writable writable。
+ * @property telemetry telemetry。
+ * @property nullable 是否可空。
+ * @property length length。
+ * @property attributes attributes。
+ * @property sortIndex 排序序号。
+ * @property createdAt 创建时间戳。
+ * @property updatedAt 更新时间戳。
+ */
 data class PropertyDefinitionResponse(
     val id: Long,
     val deviceDefinitionId: Long,
@@ -175,6 +326,17 @@ data class PropertyDefinitionResponse(
 )
 
 @Serializable
+/**
+ * 表示feature定义创建请求参数。
+ *
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property inputSchema 输入结构。
+ * @property outputSchema 输出结构。
+ * @property asynchronous asynchronous。
+ * @property sortIndex 排序序号。
+ */
 data class FeatureDefinitionCreateRequest(
     val identifier: String,
     val name: String,
@@ -186,6 +348,17 @@ data class FeatureDefinitionCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示feature定义更新请求参数。
+ *
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property inputSchema 输入结构。
+ * @property outputSchema 输出结构。
+ * @property asynchronous asynchronous。
+ * @property sortIndex 排序序号。
+ */
 data class FeatureDefinitionUpdateRequest(
     val identifier: String,
     val name: String,
@@ -197,6 +370,21 @@ data class FeatureDefinitionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示feature定义响应结果。
+ *
+ * @property id 主键 ID。
+ * @property deviceDefinitionId 设备定义 ID。
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property inputSchema 输入结构。
+ * @property outputSchema 输出结构。
+ * @property asynchronous asynchronous。
+ * @property sortIndex 排序序号。
+ * @property createdAt 创建时间戳。
+ * @property updatedAt 更新时间戳。
+ */
 data class FeatureDefinitionResponse(
     val id: Long,
     val deviceDefinitionId: Long,
@@ -212,6 +400,15 @@ data class FeatureDefinitionResponse(
 )
 
 @Serializable
+/**
+ * 表示标签定义创建请求参数。
+ *
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property colorHex colorhex。
+ * @property sortIndex 排序序号。
+ */
 data class LabelDefinitionCreateRequest(
     val code: String,
     val name: String,
@@ -221,6 +418,15 @@ data class LabelDefinitionCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示标签定义更新请求参数。
+ *
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property colorHex colorhex。
+ * @property sortIndex 排序序号。
+ */
 data class LabelDefinitionUpdateRequest(
     val code: String,
     val name: String,
@@ -230,6 +436,18 @@ data class LabelDefinitionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示标签定义响应结果。
+ *
+ * @property id 主键 ID。
+ * @property code 编码。
+ * @property name 名称。
+ * @property description 描述。
+ * @property colorHex colorhex。
+ * @property sortIndex 排序序号。
+ * @property createdAt 创建时间戳。
+ * @property updatedAt 更新时间戳。
+ */
 data class LabelDefinitionResponse(
     val id: Long,
     val code: String,
@@ -242,12 +460,27 @@ data class LabelDefinitionResponse(
 )
 
 @Serializable
+/**
+ * 表示目录metadata响应结果。
+ *
+ * @property entities entities。
+ * @property optionSets 选项sets。
+ */
 data class CatalogMetadataResponse(
     val entities: List<CatalogEntityMetadataResponse>,
     val optionSets: List<CatalogOptionSetResponse> = emptyList(),
 )
 
 @Serializable
+/**
+ * 表示目录entitymetadata响应结果。
+ *
+ * @property entityType entity类型。
+ * @property title title。
+ * @property subtitle subtitle。
+ * @property formFields formfields。
+ * @property detailFields 详情fields。
+ */
 data class CatalogEntityMetadataResponse(
     val entityType: CatalogEntityType,
     val title: String,
@@ -257,6 +490,20 @@ data class CatalogEntityMetadataResponse(
 )
 
 @Serializable
+/**
+ * 表示目录字段metadata响应结果。
+ *
+ * @property key key。
+ * @property label label。
+ * @property widget widget。
+ * @property required 是否必填。
+ * @property multiple multiple。
+ * @property readOnly readonly。
+ * @property placeholder 占位提示。
+ * @property helperText helper文本。
+ * @property optionSource 选项来源。
+ * @property options 选项。
+ */
 data class CatalogFieldMetadataResponse(
     val key: String,
     val label: String,
@@ -271,6 +518,13 @@ data class CatalogFieldMetadataResponse(
 )
 
 @Serializable
+/**
+ * 表示目录字段选项响应结果。
+ *
+ * @property value 值。
+ * @property label label。
+ * @property description 描述。
+ */
 data class CatalogFieldOptionResponse(
     val value: String,
     val label: String,
@@ -278,12 +532,25 @@ data class CatalogFieldOptionResponse(
 )
 
 @Serializable
+/**
+ * 表示目录选项set响应结果。
+ *
+ * @property key key。
+ * @property options 选项。
+ */
 data class CatalogOptionSetResponse(
     val key: String,
     val options: List<CatalogFieldOptionResponse>,
 )
 
 @Serializable
+/**
+ * 表示目录详情字段metadata响应结果。
+ *
+ * @property key key。
+ * @property label label。
+ * @property renderType render类型。
+ */
 data class CatalogDetailFieldMetadataResponse(
     val key: String,
     val label: String,
@@ -291,6 +558,17 @@ data class CatalogDetailFieldMetadataResponse(
 )
 
 @Serializable
+/**
+ * 表示speciot属性响应结果。
+ *
+ * @property identifier identifier。
+ * @property name 名称。
+ * @property description 描述。
+ * @property unit 单元。
+ * @property valueType 取值类型。
+ * @property length length。
+ * @property attributes attributes。
+ */
 data class SpecIotPropertyResponse(
     val identifier: String,
     val name: String?,

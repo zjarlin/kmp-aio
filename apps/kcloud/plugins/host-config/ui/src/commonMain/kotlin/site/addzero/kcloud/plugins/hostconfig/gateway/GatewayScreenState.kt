@@ -5,6 +5,20 @@ import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConf
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
+/**
+ * 表示网关界面状态。
+ *
+ * @property loading 加载状态。
+ * @property busy 繁忙状态。
+ * @property errorMessage 错误消息。
+ * @property noticeMessage 提示消息。
+ * @property projects 项目列表。
+ * @property selectedProjectId 选中项目 ID。
+ * @property selectedTransport 选中的传输方式。
+ * @property pinConfig 引脚配置。
+ * @property tcpConfig TCP 配置。
+ * @property rtuConfig RTU 配置。
+ */
 data class GatewayScreenState(
     val loading: Boolean = true,
     val busy: Boolean = false,
@@ -24,6 +38,11 @@ data class GatewayScreenState(
         get() = if (selectedTransport == TransportType.TCP) tcpConfig else rtuConfig
 }
 
+/**
+ * 处理默认网关配置。
+ *
+ * @param transportType 传输类型。
+ */
 fun defaultGatewayConfig(
     transportType: TransportType,
 ): ProjectModbusServerConfigResponse {
@@ -41,6 +60,9 @@ fun defaultGatewayConfig(
     )
 }
 
+/**
+ * 处理默认网关pin配置。
+ */
 fun defaultGatewayPinConfig(): ProjectGatewayPinConfigResponse {
     return ProjectGatewayPinConfigResponse(
         id = null,

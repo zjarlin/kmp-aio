@@ -9,22 +9,46 @@ import org.babyfish.jimmer.sql.Table
 
 @Entity
 @Table(name = "host_config_tag_value_text")
+/**
+ * 定义标签值text实体。
+ */
 interface TagValueText {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    /**
+     * 主键 ID。
+     */
     val id: Long
 
+    /**
+     * raw值。
+     */
     val rawValue: String
 
+    /**
+     * displaytext。
+     */
     val displayText: String
 
+    /**
+     * 排序序号。
+     */
     val sortIndex: Int
 
+    /**
+     * 创建时间戳。
+     */
     val createdAt: Long
 
+    /**
+     * 更新时间戳。
+     */
     val updatedAt: Long
 
     @ManyToOne
+    /**
+     * 标签。
+     */
     val tag: Tag
 }

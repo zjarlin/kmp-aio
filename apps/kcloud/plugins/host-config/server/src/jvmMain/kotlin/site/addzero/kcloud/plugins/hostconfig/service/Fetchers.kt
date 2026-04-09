@@ -25,6 +25,9 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.Tag
 import site.addzero.kcloud.plugins.hostconfig.model.entity.TagValueText
 import site.addzero.kcloud.plugins.hostconfig.model.entity.by
 
+/**
+ * 集中定义对应内容查询抓取器。
+ */
 object Fetchers {
 
     val projectTree: Fetcher<Project> = newFetcher(Project::class).by {

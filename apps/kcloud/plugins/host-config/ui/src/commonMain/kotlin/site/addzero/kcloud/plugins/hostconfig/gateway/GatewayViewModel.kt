@@ -14,6 +14,12 @@ import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectApi
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @KoinViewModel
+/**
+ * 管理网关界面的状态与交互逻辑。
+ *
+ * @property projectApi 项目API。
+ * @property gatewayConfigApi 网关配置API。
+ */
 class GatewayViewModel(
     private val projectApi: ProjectApi,
     private val gatewayConfigApi: GatewayConfigApi,
@@ -25,6 +31,9 @@ class GatewayViewModel(
         refresh()
     }
 
+    /**
+     * 处理clear提示。
+     */
     fun clearNotice() {
         screenState = screenState.copy(
             noticeMessage = null,
@@ -32,12 +41,20 @@ class GatewayViewModel(
         )
     }
 
+    /**
+     * 刷新当前界面数据。
+     */
     fun refresh() {
         viewModelScope.launch {
             loadPage()
         }
     }
 
+    /**
+     * 选择项目。
+     *
+     * @param projectId 项目 ID。
+     */
     fun selectProject(
         projectId: Long,
     ) {
@@ -46,6 +63,11 @@ class GatewayViewModel(
         }
     }
 
+    /**
+     * 选择传输。
+     *
+     * @param transportType 传输类型。
+     */
     fun selectTransport(
         transportType: TransportType,
     ) {
@@ -54,6 +76,12 @@ class GatewayViewModel(
         )
     }
 
+    /**
+     * 保存配置。
+     *
+     * @param transportType 传输类型。
+     * @param request 请求参数。
+     */
     fun saveConfig(
         transportType: TransportType,
         request: ProjectModbusServerConfigRequest,
@@ -88,6 +116,11 @@ class GatewayViewModel(
         }
     }
 
+    /**
+     * 保存pin配置。
+     *
+     * @param request 请求参数。
+     */
     fun savePinConfig(
         request: ProjectGatewayPinConfigRequest,
     ) {
@@ -113,6 +146,11 @@ class GatewayViewModel(
         }
     }
 
+    /**
+     * 加载分页。
+     *
+     * @param preferredProjectId preferred项目 ID。
+     */
     private suspend fun loadPage(
         preferredProjectId: Long? = screenState.selectedProjectId,
     ) {

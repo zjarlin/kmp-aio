@@ -21,6 +21,9 @@ import site.addzero.component.text.TodoText
     ),
 )
 @Composable
+/**
+ * 处理mcu调试界面。
+ */
 fun McuDebugScreen() {
     TodoText(
         title = "MCU 调试",

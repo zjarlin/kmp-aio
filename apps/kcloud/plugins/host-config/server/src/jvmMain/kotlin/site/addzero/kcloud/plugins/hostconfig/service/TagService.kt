@@ -1,6 +1,7 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
 import java.math.BigDecimal
+import java.sql.Connection
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
@@ -8,6 +9,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
 import site.addzero.kcloud.plugins.hostconfig.api.common.PageResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.ReplaceTagValueTextsRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagCreateRequest
@@ -15,18 +17,36 @@ import site.addzero.kcloud.plugins.hostconfig.api.tag.TagPositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagValueTextResponse
-import site.addzero.kcloud.plugins.hostconfig.routes.common.BusinessValidationException
-import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
-import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
+import site.addzero.kmp.exp.BusinessValidationException
+import site.addzero.kmp.exp.ConflictException
+import site.addzero.kmp.exp.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
 @Single
+/**
+ * 提供标签相关服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ * @property jdbc 主机配置 JDBC 工具。
+ */
 class TagService(
     private val sql: KSqlClient,
-    private val jdbc: HostConfigJdbc,
+    private val jdbc: JdbcExecutor,
 ) {
+    /**
+     * 获取标签。
+     *
+     * @param tagId 标签 ID。
+     */
     fun getTag(tagId: Long): TagResponse = loadTag(tagId).toResponse()
 
+    /**
+     * 列出标签。
+     *
+     * @param deviceId 设备 ID。
+     * @param offset offset。
+     * @param size size。
+     */
     fun listTags(
         deviceId: Long,
         offset: Int,
@@ -50,6 +70,12 @@ class TagService(
         )
     }
 
+    /**
+     * 创建标签。
+     *
+     * @param deviceId 设备 ID。
+     * @param request 请求参数。
+     */
     fun createTag(
         deviceId: Long,
         request: TagCreateRequest,
@@ -103,6 +129,12 @@ class TagService(
         return loadTag(tag.id).toResponse()
     }
 
+    /**
+     * 更新标签。
+     *
+     * @param tagId 标签 ID。
+     * @param request 请求参数。
+     */
     fun updateTag(
         tagId: Long,
         request: TagUpdateRequest,
@@ -155,6 +187,12 @@ class TagService(
         return loadTag(tagId).toResponse()
     }
 
+    /**
+     * 替换值texts。
+     *
+     * @param tagId 标签 ID。
+     * @param request 请求参数。
+     */
     fun replaceValueTexts(
         tagId: Long,
         request: ReplaceTagValueTextsRequest,
@@ -181,6 +219,12 @@ class TagService(
         return loadTag(tagId).toResponse().valueTexts
     }
 
+    /**
+     * 更新标签位置。
+     *
+     * @param tagId 标签 ID。
+     * @param request 请求参数。
+     */
     fun updateTagPosition(
         tagId: Long,
         request: TagPositionUpdateRequest,
@@ -193,11 +237,28 @@ class TagService(
         return loadTag(tagId).toResponse()
     }
 
+    /**
+     * 删除标签。
+     *
+     * @param tagId 标签 ID。
+     */
     fun deleteTag(tagId: Long) {
         loadTag(tagId)
-        jdbc.update("DELETE FROM host_config_tag WHERE id = ?", tagId)
+        executeUpdate("DELETE FROM host_config_tag WHERE id = ?", tagId)
     }
 
+    /**
+     * 校验标签请求。
+     *
+     * @param scalingEnabled 缩放启用状态。
+     * @param hasRawMin has原始min。
+     * @param hasRawMax has原始max。
+     * @param hasEngMin has工程min。
+     * @param hasEngMax has工程max。
+     * @param forwardEnabled 转发启用状态。
+     * @param forwardRegisterTypeId 转发寄存器类型 ID。
+     * @param forwardRegisterAddress 转发寄存器地址。
+     */
     private fun validateTagRequest(
         scalingEnabled: Boolean,
         hasRawMin: Boolean,
@@ -216,6 +277,13 @@ class TagService(
         }
     }
 
+    /**
+     * 确保标签名称唯一性。
+     *
+     * @param deviceId 设备 ID。
+     * @param name 名称。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureTagNameUnique(
         deviceId: Long,
         name: String,
@@ -233,6 +301,14 @@ class TagService(
         }
     }
 
+    /**
+     * 确保标签地址唯一性。
+     *
+     * @param deviceId 设备 ID。
+     * @param registerTypeId 寄存器类型 ID。
+     * @param registerAddress 寄存器地址。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureTagAddressUnique(
         deviceId: Long,
         registerTypeId: Long,
@@ -252,6 +328,11 @@ class TagService(
         }
     }
 
+    /**
+     * 确保设备存在性。
+     *
+     * @param deviceId 设备 ID。
+     */
     private fun ensureDeviceExists(deviceId: Long) {
         val exists = sql.exists(Device::class) {
             where(table.id eq deviceId)
@@ -261,6 +342,11 @@ class TagService(
         }
     }
 
+    /**
+     * 确保数据类型存在性。
+     *
+     * @param dataTypeId 数据类型 ID。
+     */
     private fun ensureDataTypeExists(dataTypeId: Long) {
         val exists = sql.exists(DataType::class) {
             where(table.id eq dataTypeId)
@@ -270,6 +356,11 @@ class TagService(
         }
     }
 
+    /**
+     * 确保register类型存在性。
+     *
+     * @param registerTypeId 寄存器类型 ID。
+     */
     private fun ensureRegisterTypeExists(registerTypeId: Long) {
         val exists = sql.exists(RegisterType::class) {
             where(table.id eq registerTypeId)
@@ -279,53 +370,96 @@ class TagService(
         }
     }
 
+    /**
+     * 加载标签。
+     *
+     * @param tagId 标签 ID。
+     */
     private fun loadTag(tagId: Long): Tag =
         sql.createQuery(Tag::class) {
             where(table.id eq tagId)
             select(table.fetch(Fetchers.tagDetail))
         }.execute().firstOrNull() ?: throw NotFoundException("Tag not found")
 
+    /**
+     * 移动标签。
+     *
+     * @param tagId 标签 ID。
+     * @param currentDeviceId 当前设备 ID。
+     * @param targetDeviceId 目标设备 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun moveTag(
         tagId: Long,
         currentDeviceId: Long,
         targetDeviceId: Long,
         sortIndex: Int,
     ) {
-        if (currentDeviceId == targetDeviceId) {
-            val orderedIds = reorderIds(
-                jdbc.queryIds(
+        jdbc.withTransaction { connection ->
+            if (currentDeviceId == targetDeviceId) {
+                val orderedIds = reorderIds(
+                    queryIds(
+                        connection,
+                        "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
+                        currentDeviceId,
+                    ),
+                    tagId,
+                    sortIndex,
+                )
+                batchUpdateSort(
+                    connection,
+                    "UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?",
+                    orderedIds,
+                )
+                return@withTransaction
+            }
+
+            jdbc.update(
+                connection,
+                "UPDATE host_config_tag SET device_id = ?, updated_at = ? WHERE id = ?",
+                targetDeviceId,
+                now(),
+                tagId,
+            )
+            val oldIds = queryIds(
+                connection,
+                "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
+                currentDeviceId,
+            )
+            val newIds = reorderIds(
+                queryIds(
+                    connection,
                     "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
-                    currentDeviceId,
+                    targetDeviceId,
                 ),
                 tagId,
                 sortIndex,
             )
-            batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
-            return
+            batchUpdateSort(connection, "UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
+            batchUpdateSort(connection, "UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
         }
-
-        jdbc.update(
-            "UPDATE host_config_tag SET device_id = ?, updated_at = ? WHERE id = ?",
-            targetDeviceId,
-            now(),
-            tagId,
-        )
-        val oldIds = jdbc.queryIds(
-            "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
-            currentDeviceId,
-        )
-        val newIds = reorderIds(
-            jdbc.queryIds(
-                "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
-                targetDeviceId,
-            ),
-            tagId,
-            sortIndex,
-        )
-        batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
-        batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
     }
 
+    private fun executeUpdate(
+        sql: String,
+        vararg args: Any?,
+    ): Int = jdbc.withTransaction { connection ->
+        jdbc.update(connection, sql, *args)
+    }
+
+    private fun queryIds(
+        connection: Connection,
+        sql: String,
+        vararg args: Any?,
+    ): MutableList<Long> = jdbc.queryIds(connection, sql, *args).toMutableList()
+
+    /**
+     * 按目标位置重排 ID 列表。
+     *
+     * @param ids ID 列表。
+     * @param movedId 需要移动的 ID。
+     * @param targetIndex 目标位置索引。
+     */
     private fun reorderIds(
         ids: MutableList<Long>,
         movedId: Long,
@@ -336,17 +470,30 @@ class TagService(
         return ids
     }
 
+    /**
+     * 批量更新排序字段。
+     *
+     * @param sql SQL 语句。
+     * @param orderedIds 排序后的 ID 列表。
+     */
     private fun batchUpdateSort(
+        connection: Connection,
         sql: String,
         orderedIds: List<Long>,
     ) {
-        jdbc.batchUpdateSort(
-            sql = sql,
-            orderedIds = orderedIds,
-            updatedAt = now(),
+        val updatedAt = now()
+        jdbc.batchUpdate(
+            connection,
+            sql,
+            orderedIds.mapIndexed { index, id ->
+                listOf(index, updatedAt, id)
+            },
         )
     }
 
+    /**
+     * 处理标签。
+     */
     private fun Tag.toResponse(): TagResponse =
         TagResponse(
             id = id,
@@ -388,14 +535,26 @@ class TagService(
                 },
         )
 
+    /**
+     * 处理string。
+     */
     private fun String?.cleanNullable(): String? =
         this?.trim()?.ifBlank { null }
 
+    /**
+     * 处理string。
+     */
     private fun String?.toDecimalOrNull(): BigDecimal? =
         this.cleanNullable()?.toBigDecimalOrNull()
 
+    /**
+     * 处理bigdecimal。
+     */
     private fun BigDecimal?.toApiDecimal(): String? =
         this?.stripTrailingZeros()?.toPlainString()
 
+    /**
+     * 获取当前时间戳。
+     */
     private fun now(): Long = System.currentTimeMillis()
 }

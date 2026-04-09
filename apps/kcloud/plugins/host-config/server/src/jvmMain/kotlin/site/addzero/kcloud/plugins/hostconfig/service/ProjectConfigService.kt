@@ -23,12 +23,18 @@ import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadOperationR
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest
-import site.addzero.kcloud.plugins.hostconfig.routes.common.BusinessValidationException
-import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
+import site.addzero.kmp.exp.BusinessValidationException
+import site.addzero.kmp.exp.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Single
+/**
+ * 提供项目配置相关服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ * @property projectBackupArchiveService 项目备份归档服务。
+ */
 class ProjectConfigService(
     private val sql: KSqlClient,
     private val projectBackupArchiveService: ProjectBackupArchiveService,
@@ -40,6 +46,11 @@ class ProjectConfigService(
         private const val DEFAULT_RUNNING_INDICATOR_PIN = "PA2"
     }
 
+    /**
+     * 获取MQTT配置。
+     *
+     * @param projectId 项目 ID。
+     */
     fun getMqttConfig(projectId: Long): ProjectMqttConfigResponse {
         ensureProjectExists(projectId)
         val config = loadMqttConfig(projectId)
@@ -69,6 +80,12 @@ class ProjectConfigService(
             )
     }
 
+    /**
+     * 更新MQTT配置。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun updateMqttConfig(
         projectId: Long,
         request: ProjectMqttConfigRequest,
@@ -109,6 +126,12 @@ class ProjectConfigService(
             ?: throw NotFoundException("MQTT config not found")
     }
 
+    /**
+     * 获取modbus服务端配置。
+     *
+     * @param projectId 项目 ID。
+     * @param transportType 传输类型。
+     */
     fun getModbusServerConfig(
         projectId: Long,
         transportType: TransportType,
@@ -130,6 +153,11 @@ class ProjectConfigService(
             )
     }
 
+    /**
+     * 获取网关pin配置。
+     *
+     * @param projectId 项目 ID。
+     */
     fun getGatewayPinConfig(projectId: Long): ProjectGatewayPinConfigResponse {
         ensureProjectExists(projectId)
         val config = loadGatewayPinConfig(projectId)
@@ -141,6 +169,13 @@ class ProjectConfigService(
             )
     }
 
+    /**
+     * 更新modbus服务端配置。
+     *
+     * @param projectId 项目 ID。
+     * @param transportType 传输类型。
+     * @param request 请求参数。
+     */
     fun updateModbusServerConfig(
         projectId: Long,
         transportType: TransportType,
@@ -171,6 +206,12 @@ class ProjectConfigService(
             ?: throw NotFoundException("Modbus server config not found")
     }
 
+    /**
+     * 更新网关pin配置。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun updateGatewayPinConfig(
         projectId: Long,
         request: ProjectGatewayPinConfigRequest,
@@ -193,6 +234,11 @@ class ProjectConfigService(
             ?: throw NotFoundException("Gateway pin config not found")
     }
 
+    /**
+     * 获取项目上传状态。
+     *
+     * @param projectId 项目 ID。
+     */
     fun getProjectUploadStatus(projectId: Long): ProjectUploadOperationResponse {
         ensureProjectExists(projectId)
         val idle = uploadOperationStates[projectId]
@@ -216,6 +262,12 @@ class ProjectConfigService(
         return attachBackupMetadata(projectId, idle)
     }
 
+    /**
+     * 处理上传项目。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun uploadProject(
         projectId: Long,
         request: ProjectUploadRequest,
@@ -242,6 +294,13 @@ class ProjectConfigService(
         )
     }
 
+    /**
+     * 处理trigger项目上传远程action。
+     *
+     * @param projectId 项目 ID。
+     * @param action action。
+     * @param request 请求参数。
+     */
     fun triggerProjectUploadRemoteAction(
         projectId: Long,
         action: ProjectUploadRemoteAction,
@@ -282,6 +341,11 @@ class ProjectConfigService(
         )
     }
 
+    /**
+     * 处理download项目备份。
+     *
+     * @param projectId 项目 ID。
+     */
     fun downloadProjectBackup(projectId: Long): ResponseEntity<Resource> {
         ensureProjectExists(projectId)
         val resource = projectBackupArchiveService.loadBackupResource(projectId)
@@ -296,12 +360,23 @@ class ProjectConfigService(
             .body(resource)
     }
 
+    /**
+     * 加载MQTT配置。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun loadMqttConfig(projectId: Long): ProjectMqttConfig? =
         sql.createQuery(ProjectMqttConfig::class) {
             where(table.project.id eq projectId)
             select(table.fetch(Fetchers.mqttConfig))
         }.execute().firstOrNull()
 
+    /**
+     * 加载modbus配置。
+     *
+     * @param projectId 项目 ID。
+     * @param transportType 传输类型。
+     */
     private fun loadModbusConfig(
         projectId: Long,
         transportType: TransportType,
@@ -312,12 +387,22 @@ class ProjectConfigService(
             select(table.fetch(Fetchers.modbusConfig))
         }.execute().firstOrNull()
 
+    /**
+     * 加载网关pin配置。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun loadGatewayPinConfig(projectId: Long): ProjectGatewayPinConfig? =
         sql.createQuery(ProjectGatewayPinConfig::class) {
             where(table.project.id eq projectId)
             select(table)
         }.execute().firstOrNull()
 
+    /**
+     * 确保项目存在性。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun ensureProjectExists(projectId: Long) {
         val exists = sql.exists(Project::class) {
             where(table.id eq projectId)
@@ -327,6 +412,24 @@ class ProjectConfigService(
         }
     }
 
+    /**
+     * 处理remember上传operation。
+     *
+     * @param projectId 项目 ID。
+     * @param operation operation。
+     * @param progress 当前进度。
+     * @param statusText 状态文本。
+     * @param detailText 详情文本。
+     * @param ipAddress ip地址。
+     * @param projectPath 项目路径。
+     * @param selectedFileName 选中file名称。
+     * @param includeDriverConfig includedriver配置。
+     * @param includeFirmwareUpgrade include固件upgrade。
+     * @param fastMode fast模式。
+     * @param backupFileName 备份file名称。
+     * @param backupDownloadUrl 备份download地址。
+     * @param backupSizeBytes 备份size字节。
+     */
     private fun rememberUploadOperation(
         projectId: Long,
         operation: String,
@@ -365,6 +468,12 @@ class ProjectConfigService(
         return enriched
     }
 
+    /**
+     * 处理attach备份metadata。
+     *
+     * @param projectId 项目 ID。
+     * @param response 响应。
+     */
     private fun attachBackupMetadata(
         projectId: Long,
         response: ProjectUploadOperationResponse,
@@ -380,9 +489,17 @@ class ProjectConfigService(
         )
     }
 
+    /**
+     * 构建备份download地址。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun buildBackupDownloadUrl(projectId: Long): String =
         "/api/host-config/v1/projects/$projectId/upload-project/backup"
 
+    /**
+     * 处理项目MQTT配置。
+     */
     private fun ProjectMqttConfig.toResponse(): ProjectMqttConfigResponse =
         ProjectMqttConfigResponse(
             id = id,
@@ -408,6 +525,9 @@ class ProjectConfigService(
             cloudControlDisabled = cloudControlDisabled,
         )
 
+    /**
+     * 处理项目modbus服务端配置。
+     */
     private fun ProjectModbusServerConfig.toResponse(): ProjectModbusServerConfigResponse =
         ProjectModbusServerConfigResponse(
             id = id,
@@ -422,6 +542,9 @@ class ProjectConfigService(
             stationNo = stationNo,
         )
 
+    /**
+     * 处理项目网关pin配置。
+     */
     private fun ProjectGatewayPinConfig.toResponse(): ProjectGatewayPinConfigResponse =
         ProjectGatewayPinConfigResponse(
             id = id,
@@ -429,21 +552,38 @@ class ProjectConfigService(
             runningIndicatorPin = runningIndicatorPin,
         )
 
+    /**
+     * 处理string。
+     */
     private fun String?.cleanNullable(): String? =
         this?.trim()?.ifBlank { null }
 
+    /**
+     * 处理string。
+     *
+     * @param defaultValue 默认值。
+     */
     private fun String.normalizePin(
         defaultValue: String,
     ): String {
         return trim().ifBlank { defaultValue }
     }
 
+    /**
+     * 处理string。
+     */
     private fun String?.toDecimalOrNull(): BigDecimal? =
         this.cleanNullable()?.toBigDecimalOrNull()
 
+    /**
+     * 处理bigdecimal。
+     */
     private fun BigDecimal?.toApiDecimal(): String? =
         this?.stripTrailingZeros()?.toPlainString()
 
+    /**
+     * 处理项目上传远程action。
+     */
     private fun ProjectUploadRemoteAction.toLabel(): String =
         when (this) {
             ProjectUploadRemoteAction.BACKUP -> "备份配置工程"
@@ -452,5 +592,8 @@ class ProjectConfigService(
             ProjectUploadRemoteAction.RESTART -> "远程重启"
         }
 
+    /**
+     * 获取当前时间戳。
+     */
     private fun now(): Long = System.currentTimeMillis()
 }

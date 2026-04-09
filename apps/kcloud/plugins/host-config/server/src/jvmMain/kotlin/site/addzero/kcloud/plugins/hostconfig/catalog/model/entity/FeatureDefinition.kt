@@ -31,10 +31,14 @@ interface FeatureDefinition {
     /** 功能说明。 */
     val description: String?
 
-    /** 输入参数 JSON Schema。 */
+    /**
+     * 输入结构。
+     */
     val inputSchema: String?
 
-    /** 输出结果 JSON Schema。 */
+    /**
+     * 输出结构。
+     */
     val outputSchema: String?
 
     /** 是否异步执行。 */
@@ -43,10 +47,14 @@ interface FeatureDefinition {
     /** 同级排序值，越小越靠前。 */
     val sortIndex: Int
 
-    /** 创建时间，使用 epoch millis。 */
+    /**
+     * 创建时间戳。
+     */
     val createdAt: Long
 
-    /** 最近更新时间，使用 epoch millis。 */
+    /**
+     * 更新时间戳。
+     */
     val updatedAt: Long
 
     /** 所属设备定义。 */

@@ -8,6 +8,14 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Serializable
+/**
+ * 表示项目创建请求参数。
+ *
+ * @property name 名称。
+ * @property description 描述。
+ * @property remark 备注。
+ * @property sortIndex 排序序号。
+ */
 data class ProjectCreateRequest(
     val name: String,
     val description: String? = null,
@@ -16,6 +24,14 @@ data class ProjectCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示项目更新请求参数。
+ *
+ * @property name 名称。
+ * @property description 描述。
+ * @property remark 备注。
+ * @property sortIndex 排序序号。
+ */
 data class ProjectUpdateRequest(
     val name: String,
     val description: String? = null,
@@ -24,6 +40,17 @@ data class ProjectUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示项目响应结果。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property description 描述。
+ * @property remark 备注。
+ * @property sortIndex 排序序号。
+ * @property createdAt 创建时间戳。
+ * @property updatedAt 更新时间戳。
+ */
 data class ProjectResponse(
     val id: Long,
     val name: String,
@@ -35,11 +62,27 @@ data class ProjectResponse(
 )
 
 @Serializable
+/**
+ * 表示项目位置更新请求参数。
+ *
+ * @property sortIndex 排序序号。
+ */
 data class ProjectPositionUpdateRequest(
     val sortIndex: Int = 0,
 )
 
 @Serializable
+/**
+ * 表示项目树响应结果。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property description 描述。
+ * @property remark 备注。
+ * @property sortIndex 排序序号。
+ * @property protocols 协议。
+ * @property modules 模块。
+ */
 data class ProjectTreeResponse(
     val id: Long,
     val name: String,
@@ -51,6 +94,19 @@ data class ProjectTreeResponse(
 )
 
 @Serializable
+/**
+ * 表示协议传输配置。
+ *
+ * @property transportType 传输类型。
+ * @property host 主机地址。
+ * @property tcpPort TCP端口。
+ * @property portName 端口名。
+ * @property baudRate 波特率。
+ * @property dataBits 数据位。
+ * @property stopBits 停止位。
+ * @property parity 校验位。
+ * @property responseTimeoutMs 响应超时时间（毫秒）。
+ */
 data class ProtocolTransportConfig(
     val transportType: TransportType,
     val host: String? = null,
@@ -64,6 +120,19 @@ data class ProtocolTransportConfig(
 )
 
 @Serializable
+/**
+ * 表示协议树node。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property pollingIntervalMs 轮询间隔（毫秒）。
+ * @property sortIndex 排序序号。
+ * @property protocolTemplateId 协议模板 ID。
+ * @property protocolTemplateCode 协议模板编码。
+ * @property protocolTemplateName 协议模板名称。
+ * @property transportConfig 传输配置。
+ * @property modules 模块。
+ */
 data class ProtocolTreeNode(
     val id: Long,
     val name: String,
@@ -77,6 +146,18 @@ data class ProtocolTreeNode(
 )
 
 @Serializable
+/**
+ * 表示模块树node。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property protocolId 协议 ID。
+ * @property sortIndex 排序序号。
+ * @property moduleTemplateId 模块模板 ID。
+ * @property moduleTemplateCode 模块模板编码。
+ * @property moduleTemplateName 模块模板名称。
+ * @property devices 设备。
+ */
 data class ModuleTreeNode(
     val id: Long,
     val name: String,
@@ -89,6 +170,28 @@ data class ModuleTreeNode(
 )
 
 @Serializable
+/**
+ * 表示设备树node。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property stationNo stationno。
+ * @property requestIntervalMs 请求间隔（毫秒）。
+ * @property writeIntervalMs 写入间隔（毫秒）。
+ * @property byteOrder2 双字节字节序。
+ * @property byteOrder4 四字节字节序。
+ * @property floatOrder 浮点字序。
+ * @property batchAnalogStart batchanalog开始。
+ * @property batchAnalogLength batchanaloglength。
+ * @property batchDigitalStart batchdigital开始。
+ * @property batchDigitalLength batchdigitallength。
+ * @property disabled disabled。
+ * @property sortIndex 排序序号。
+ * @property deviceTypeId 设备类型 ID。
+ * @property deviceTypeCode 设备类型编码。
+ * @property deviceTypeName 设备类型名称。
+ * @property tags 标签。
+ */
 data class DeviceTreeNode(
     val id: Long,
     val name: String,
@@ -111,6 +214,13 @@ data class DeviceTreeNode(
 )
 
 @Serializable
+/**
+ * 表示标签树node。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property sortIndex 排序序号。
+ */
 data class TagTreeNode(
     val id: Long,
     val name: String,
@@ -118,6 +228,15 @@ data class TagTreeNode(
 )
 
 @Serializable
+/**
+ * 表示协议创建请求参数。
+ *
+ * @property name 名称。
+ * @property protocolTemplateId 协议模板 ID。
+ * @property pollingIntervalMs 轮询间隔（毫秒）。
+ * @property transportConfig 传输配置。
+ * @property sortIndex 排序序号。
+ */
 data class ProtocolCreateRequest(
     val name: String,
     val protocolTemplateId: Long,
@@ -127,6 +246,16 @@ data class ProtocolCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示协议更新请求参数。
+ *
+ * @property projectId 项目 ID。
+ * @property name 名称。
+ * @property protocolTemplateId 协议模板 ID。
+ * @property pollingIntervalMs 轮询间隔（毫秒）。
+ * @property transportConfig 传输配置。
+ * @property sortIndex 排序序号。
+ */
 data class ProtocolUpdateRequest(
     val projectId: Long,
     val name: String,
@@ -137,6 +266,16 @@ data class ProtocolUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示协议响应结果。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property pollingIntervalMs 轮询间隔（毫秒）。
+ * @property sortIndex 排序序号。
+ * @property protocolTemplateId 协议模板 ID。
+ * @property transportConfig 传输配置。
+ */
 data class ProtocolResponse(
     val id: Long,
     val name: String,
@@ -147,6 +286,16 @@ data class ProtocolResponse(
 )
 
 @Serializable
+/**
+ * 表示协议目录item响应结果。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property pollingIntervalMs 轮询间隔（毫秒）。
+ * @property protocolTemplateId 协议模板 ID。
+ * @property protocolTemplateCode 协议模板编码。
+ * @property protocolTemplateName 协议模板名称。
+ */
 data class ProtocolCatalogItemResponse(
     val id: Long,
     val name: String,
@@ -157,12 +306,25 @@ data class ProtocolCatalogItemResponse(
 )
 
 @Serializable
+/**
+ * 表示关联existing协议请求参数。
+ *
+ * @property protocolId 协议 ID。
+ * @property sortIndex 排序序号。
+ */
 data class LinkExistingProtocolRequest(
     val protocolId: Long,
     val sortIndex: Int = 0,
 )
 
 @Serializable
+/**
+ * 表示协议位置更新请求参数。
+ *
+ * @property sourceProjectId 来源项目 ID。
+ * @property targetProjectId 目标项目 ID。
+ * @property sortIndex 排序序号。
+ */
 data class ProtocolPositionUpdateRequest(
     val sourceProjectId: Long,
     val targetProjectId: Long,
@@ -170,6 +332,13 @@ data class ProtocolPositionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示模块创建请求参数。
+ *
+ * @property name 名称。
+ * @property moduleTemplateId 模块模板 ID。
+ * @property sortIndex 排序序号。
+ */
 data class ModuleCreateRequest(
     val name: String,
     val moduleTemplateId: Long,
@@ -177,6 +346,13 @@ data class ModuleCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示模块更新请求参数。
+ *
+ * @property name 名称。
+ * @property moduleTemplateId 模块模板 ID。
+ * @property sortIndex 排序序号。
+ */
 data class ModuleUpdateRequest(
     val name: String,
     val moduleTemplateId: Long,
@@ -184,6 +360,15 @@ data class ModuleUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示模块响应结果。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property protocolId 协议 ID。
+ * @property sortIndex 排序序号。
+ * @property moduleTemplateId 模块模板 ID。
+ */
 data class ModuleResponse(
     val id: Long,
     val name: String,
@@ -193,6 +378,14 @@ data class ModuleResponse(
 )
 
 @Serializable
+/**
+ * 表示模块位置更新请求参数。
+ *
+ * @property protocolId 协议 ID。
+ * @property projectId 项目 ID。
+ * @property sourceProjectId 来源项目 ID。
+ * @property sortIndex 排序序号。
+ */
 data class ModulePositionUpdateRequest(
     val protocolId: Long? = null,
     val projectId: Long? = null,
@@ -201,6 +394,24 @@ data class ModulePositionUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示设备创建请求参数。
+ *
+ * @property name 名称。
+ * @property deviceTypeId 设备类型 ID。
+ * @property stationNo stationno。
+ * @property requestIntervalMs 请求间隔（毫秒）。
+ * @property writeIntervalMs 写入间隔（毫秒）。
+ * @property byteOrder2 双字节字节序。
+ * @property byteOrder4 四字节字节序。
+ * @property floatOrder 浮点字序。
+ * @property batchAnalogStart batchanalog开始。
+ * @property batchAnalogLength batchanaloglength。
+ * @property batchDigitalStart batchdigital开始。
+ * @property batchDigitalLength batchdigitallength。
+ * @property disabled disabled。
+ * @property sortIndex 排序序号。
+ */
 data class DeviceCreateRequest(
     val name: String,
     val deviceTypeId: Long,
@@ -219,6 +430,24 @@ data class DeviceCreateRequest(
 )
 
 @Serializable
+/**
+ * 表示设备更新请求参数。
+ *
+ * @property name 名称。
+ * @property deviceTypeId 设备类型 ID。
+ * @property stationNo stationno。
+ * @property requestIntervalMs 请求间隔（毫秒）。
+ * @property writeIntervalMs 写入间隔（毫秒）。
+ * @property byteOrder2 双字节字节序。
+ * @property byteOrder4 四字节字节序。
+ * @property floatOrder 浮点字序。
+ * @property batchAnalogStart batchanalog开始。
+ * @property batchAnalogLength batchanaloglength。
+ * @property batchDigitalStart batchdigital开始。
+ * @property batchDigitalLength batchdigitallength。
+ * @property disabled disabled。
+ * @property sortIndex 排序序号。
+ */
 data class DeviceUpdateRequest(
     val name: String,
     val deviceTypeId: Long,
@@ -237,6 +466,25 @@ data class DeviceUpdateRequest(
 )
 
 @Serializable
+/**
+ * 表示设备响应结果。
+ *
+ * @property id 主键 ID。
+ * @property name 名称。
+ * @property stationNo stationno。
+ * @property requestIntervalMs 请求间隔（毫秒）。
+ * @property writeIntervalMs 写入间隔（毫秒）。
+ * @property byteOrder2 双字节字节序。
+ * @property byteOrder4 四字节字节序。
+ * @property floatOrder 浮点字序。
+ * @property batchAnalogStart batchanalog开始。
+ * @property batchAnalogLength batchanaloglength。
+ * @property batchDigitalStart batchdigital开始。
+ * @property batchDigitalLength batchdigitallength。
+ * @property disabled disabled。
+ * @property sortIndex 排序序号。
+ * @property deviceTypeId 设备类型 ID。
+ */
 data class DeviceResponse(
     val id: Long,
     val name: String,
@@ -256,6 +504,12 @@ data class DeviceResponse(
 )
 
 @Serializable
+/**
+ * 表示设备位置更新请求参数。
+ *
+ * @property moduleId 模块 ID。
+ * @property sortIndex 排序序号。
+ */
 data class DevicePositionUpdateRequest(
     val moduleId: Long,
     val sortIndex: Int = 0,

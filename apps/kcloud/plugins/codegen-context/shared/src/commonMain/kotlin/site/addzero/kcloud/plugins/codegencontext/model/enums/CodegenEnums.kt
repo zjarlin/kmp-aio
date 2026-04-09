@@ -3,35 +3,62 @@ package site.addzero.kcloud.plugins.codegencontext.model.enums
 import kotlinx.serialization.Serializable
 
 @Serializable
+/**
+ * 定义代码生成消费目标枚举。
+ */
 enum class CodegenConsumerTarget {
     MCU_CONSOLE,
 }
 
 @Serializable
-enum class CodegenSchemaDirection {
-    READ,
-    WRITE,
+/**
+ * 定义代码生成node类型枚举。
+ */
+enum class CodegenNodeKind {
+    CLASS,
+    METHOD,
+    FIELD,
 }
 
 @Serializable
-enum class CodegenFunctionCode {
-    READ_COILS,
-    READ_DISCRETE_INPUTS,
-    READ_INPUT_REGISTERS,
-    READ_HOLDING_REGISTERS,
-    WRITE_SINGLE_COIL,
-    WRITE_MULTIPLE_COILS,
-    WRITE_SINGLE_REGISTER,
-    WRITE_MULTIPLE_REGISTERS,
+/**
+ * 定义代码生成类型枚举。
+ */
+enum class CodegenClassKind {
+    SERVICE,
+    MODEL,
+    ENUM,
 }
 
 @Serializable
-enum class CodegenTransportType {
-    BOOL_COIL,
-    U8,
-    U16,
-    U32_BE,
-    BYTE_ARRAY,
-    STRING_ASCII,
-    STRING_UTF8,
+/**
+ * 定义代码生成上下文值类型枚举。
+ */
+enum class CodegenContextValueType {
+    STRING,
+    TEXT,
+    INT,
+    LONG,
+    DECIMAL,
+    BOOLEAN,
+    ENUM,
+    PATH,
+}
+
+@Serializable
+/**
+ * 定义代码生成绑定目标模式枚举。
+ */
+enum class CodegenBindingTargetMode {
+    SINGLE,
+    MULTIPLE,
+}
+
+@Serializable
+/**
+ * 定义代码生成定义来源类型枚举。
+ */
+enum class CodegenDefinitionSourceKind {
+    BUILTIN,
+    CUSTOM,
 }

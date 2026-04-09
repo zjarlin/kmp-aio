@@ -4,10 +4,9 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.plugins.statuspages.StatusPagesConfig
 import io.ktor.server.response.respond
-import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.hostconfig.api.common.ApiErrorResponse
-import site.addzero.kcloud.plugins.hostconfig.routes.common.ApiException
+import site.addzero.kmp.exp.ApiException
 import site.addzero.starter.statuspages.spi.StatusPagesSpi
 
 /**
@@ -20,6 +19,11 @@ import site.addzero.starter.statuspages.spi.StatusPagesSpi
 class HostConfigStatusPagesSpi : StatusPagesSpi {
     override val order: Int = 100
 
+    /**
+     * 处理状态页配置。
+     *
+     * @param application 应用。
+     */
     override fun StatusPagesConfig.configure(application: Application) {
         exception<ApiException> { call, cause ->
             val status = HttpStatusCode.fromValue(cause.status)

@@ -12,8 +12,12 @@ import site.addzero.kcloud.di.initDesktopHostKoin
 import site.addzero.kcloud.runtime.KCloudHostRuntime
 import site.addzero.kcloud.server.startServer
 
+private const val EMBEDDED_SERVER_DB_MODE_PROPERTY: String = "kcloud.server.db"
+private const val EMBEDDED_SERVER_DB_MODE_SQLITE: String = "sqlite"
+
 fun main() {
     try {
+        configureEmbeddedServerDefaults()
         initDesktopHostKoin()
         val serverEngine = startServerOrReuseExisting()
 
@@ -36,6 +40,12 @@ fun main() {
     } catch (throwable: Throwable) {
         printDesktopStartupFailure(throwable)
         throw throwable
+    }
+}
+
+private fun configureEmbeddedServerDefaults() {
+    if (System.getProperty(EMBEDDED_SERVER_DB_MODE_PROPERTY).isNullOrBlank()) {
+        System.setProperty(EMBEDDED_SERVER_DB_MODE_PROPERTY, EMBEDDED_SERVER_DB_MODE_SQLITE)
     }
 }
 

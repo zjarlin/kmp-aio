@@ -31,13 +31,13 @@ import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.gateway.GatewayViewModel
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigBooleanField
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigDialog
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigFormSection
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigStatusStrip
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTextField
+import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
+import site.addzero.cupertino.workbench.components.form.CupertinoFormSection
+import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
+import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
+import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
+import site.addzero.cupertino.workbench.components.field.CupertinoTextField
+import site.addzero.cupertino.workbench.components.dialog.CupertinoDialog
 import site.addzero.kcloud.plugins.hostconfig.common.label
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
@@ -56,6 +56,9 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
     ),
 )
 @Composable
+/**
+ * 处理网关界面。
+ */
 fun GatewayScreen() {
     val viewModel = koinViewModel<GatewayViewModel>()
     val state = viewModel.screenState
@@ -81,10 +84,10 @@ fun GatewayScreen() {
             getIcon = { Icons.Outlined.SettingsApplications },
             header = {
                 state.errorMessage?.let { message ->
-                    HostConfigStatusStrip(message)
+                    CupertinoStatusStrip(message)
                 }
                 state.noticeMessage?.let { message ->
-                    HostConfigStatusStrip(message)
+                    CupertinoStatusStrip(message)
                 }
                 WorkbenchActionButton(
                     text = if (state.loading) "加载中" else "刷新",
@@ -100,7 +103,7 @@ fun GatewayScreen() {
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            HostConfigPanel(
+            CupertinoPanel(
                 title = state.selectedProject?.name ?: "未选择工程",
                 subtitle = "Modbus TCP / RTU 服务端参数概览",
                 actions = {
@@ -136,18 +139,18 @@ fun GatewayScreen() {
                     }
                 }
                 val config = state.activeConfig
-                HostConfigKeyValueRow("启用", if (config.enabled) "是" else "否")
-                HostConfigKeyValueRow("传输类型", config.transportType.label())
-                HostConfigKeyValueRow("TCP 端口", config.tcpPort?.toString() ?: "-")
-                HostConfigKeyValueRow("串口", config.portName ?: "-")
-                HostConfigKeyValueRow("波特率", config.baudRate?.toString() ?: "-")
-                HostConfigKeyValueRow("数据位", config.dataBits?.toString() ?: "-")
-                HostConfigKeyValueRow("停止位", config.stopBits?.toString() ?: "-")
-                HostConfigKeyValueRow("校验位", config.parity?.label() ?: "-")
-                HostConfigKeyValueRow("站号", config.stationNo?.toString() ?: "-")
+                CupertinoKeyValueRow("启用", if (config.enabled) "是" else "否")
+                CupertinoKeyValueRow("传输类型", config.transportType.label())
+                CupertinoKeyValueRow("TCP 端口", config.tcpPort?.toString() ?: "-")
+                CupertinoKeyValueRow("串口", config.portName ?: "-")
+                CupertinoKeyValueRow("波特率", config.baudRate?.toString() ?: "-")
+                CupertinoKeyValueRow("数据位", config.dataBits?.toString() ?: "-")
+                CupertinoKeyValueRow("停止位", config.stopBits?.toString() ?: "-")
+                CupertinoKeyValueRow("校验位", config.parity?.label() ?: "-")
+                CupertinoKeyValueRow("站号", config.stationNo?.toString() ?: "-")
             }
 
-            HostConfigPanel(
+            CupertinoPanel(
                 title = "下位机引脚",
                 subtitle = "项目级控制灯与运行指示灯引脚配置。",
                 actions = {
@@ -162,8 +165,8 @@ fun GatewayScreen() {
                     )
                 },
             ) {
-                HostConfigKeyValueRow("故障控制灯引脚", state.pinConfig.faultIndicatorPin)
-                HostConfigKeyValueRow("运行指示灯引脚", state.pinConfig.runningIndicatorPin)
+                CupertinoKeyValueRow("故障控制灯引脚", state.pinConfig.faultIndicatorPin)
+                CupertinoKeyValueRow("运行指示灯引脚", state.pinConfig.runningIndicatorPin)
             }
         }
     }
@@ -199,6 +202,15 @@ fun GatewayScreen() {
 }
 
 @Composable
+/**
+ * 处理网关配置dialog。
+ *
+ * @param transportType 传输类型。
+ * @param initial initial。
+ * @param saving saving。
+ * @param onDismissRequest ondismiss请求。
+ * @param onSave on保存。
+ */
 private fun GatewayConfigDialog(
     transportType: TransportType,
     initial: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigResponse,
@@ -215,7 +227,7 @@ private fun GatewayConfigDialog(
     var parity by remember(initial.id, initial.parity) { mutableStateOf(initial.parity ?: Parity.NONE) }
     var stationNo by remember(initial.id, initial.stationNo) { mutableStateOf(initial.stationNo?.toString().orEmpty()) }
 
-    HostConfigDialog(
+    CupertinoDialog(
         title = "编辑 ${transportType.label()} 网关",
         onDismissRequest = onDismissRequest,
         actions = {
@@ -244,45 +256,45 @@ private fun GatewayConfigDialog(
             )
         },
     ) {
-        HostConfigFormSection(
+        CupertinoFormSection(
             title = "服务开关",
             subtitle = "先确定是否启用，再录入 TCP 或 RTU 参数。",
         ) {
             item {
-                HostConfigBooleanField("启用服务端", enabled, { enabled = it })
+                CupertinoBooleanField("启用服务端", enabled, { enabled = it })
             }
         }
         if (transportType == TransportType.TCP) {
-            HostConfigFormSection(
+            CupertinoFormSection(
                 title = "TCP 配置",
                 subtitle = "TCP 模式下只保留端口号这一项核心参数。",
             ) {
                 item {
-                    HostConfigTextField("TCP 端口", tcpPort, { tcpPort = it })
+                    CupertinoTextField("TCP 端口", tcpPort, { tcpPort = it })
                 }
             }
         } else {
-            HostConfigFormSection(
+            CupertinoFormSection(
                 title = "RTU 配置",
                 subtitle = "串口参数默认双栏并排，减少来回滚动。",
             ) {
                 item {
-                    HostConfigTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
+                    CupertinoTextField("串口", portName, { portName = it }, placeholder = "例如 COM3")
                 }
                 item {
-                    HostConfigTextField("波特率", baudRate, { baudRate = it })
+                    CupertinoTextField("波特率", baudRate, { baudRate = it })
                 }
                 item {
-                    HostConfigTextField("数据位", dataBits, { dataBits = it })
+                    CupertinoTextField("数据位", dataBits, { dataBits = it })
                 }
                 item {
-                    HostConfigTextField("停止位", stopBits, { stopBits = it })
+                    CupertinoTextField("停止位", stopBits, { stopBits = it })
                 }
                 item {
-                    HostConfigTextField("站号", stationNo, { stationNo = it })
+                    CupertinoTextField("站号", stationNo, { stationNo = it })
                 }
             }
-            HostConfigPanel(
+            CupertinoPanel(
                 title = "校验位",
                 subtitle = "点击切换当前 RTU 校验位。",
             ) {
@@ -309,6 +321,14 @@ private fun GatewayConfigDialog(
 }
 
 @Composable
+/**
+ * 处理网关pin配置dialog。
+ *
+ * @param initial initial。
+ * @param saving saving。
+ * @param onDismissRequest ondismiss请求。
+ * @param onSave on保存。
+ */
 private fun GatewayPinConfigDialog(
     initial: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigResponse,
     saving: Boolean,
@@ -322,7 +342,7 @@ private fun GatewayPinConfigDialog(
         mutableStateOf(initial.runningIndicatorPin)
     }
 
-    HostConfigDialog(
+    CupertinoDialog(
         title = "编辑下位机引脚",
         onDismissRequest = onDismissRequest,
         actions = {
@@ -345,19 +365,19 @@ private fun GatewayPinConfigDialog(
             )
         },
     ) {
-        HostConfigPanel(
+        CupertinoPanel(
             title = "引脚建议值",
             subtitle = "默认下位机定义：故障控制灯 PA8，运行指示灯 PA2。",
         ) {
-            HostConfigKeyValueRow("故障控制灯", "PA8")
-            HostConfigKeyValueRow("运行指示灯", "PA2")
+            CupertinoKeyValueRow("故障控制灯", "PA8")
+            CupertinoKeyValueRow("运行指示灯", "PA2")
         }
-        HostConfigFormSection(
+        CupertinoFormSection(
             title = "引脚配置",
             subtitle = "把建议值和编辑字段分开，修改时更不容易看花。",
         ) {
             item {
-                HostConfigTextField(
+                CupertinoTextField(
                     label = "故障控制灯引脚",
                     value = faultIndicatorPin,
                     onValueChange = { faultIndicatorPin = it },
@@ -365,7 +385,7 @@ private fun GatewayPinConfigDialog(
                 )
             }
             item {
-                HostConfigTextField(
+                CupertinoTextField(
                     label = "运行指示灯引脚",
                     value = runningIndicatorPin,
                     onValueChange = { runningIndicatorPin = it },

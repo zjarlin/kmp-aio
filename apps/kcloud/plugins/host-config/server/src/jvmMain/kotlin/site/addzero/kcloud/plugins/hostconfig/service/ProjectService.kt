@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
+import java.sql.ResultSet
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
@@ -7,6 +8,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.jimmer.jdbc.JdbcExecutor
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -31,21 +33,30 @@ import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.TagTreeNode
-import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
-import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
+import site.addzero.kmp.exp.ConflictException
+import site.addzero.kmp.exp.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Single
+/**
+ * 提供项目、协议、模块和设备的主机配置管理服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ * @property jdbc 主机配置 JDBC 工具。
+ */
 class ProjectService(
     private val sql: KSqlClient,
-    private val jdbc: HostConfigJdbc,
+    private val jdbc: JdbcExecutor,
 ) {
 
     private companion object {
         val SUPPORTED_PROTOCOL_NAMES = setOf("ModbusRTU", "ModbusTCP", "MQTT")
     }
 
+    /**
+     * 列出项目。
+     */
     fun listProjects(): List<ProjectResponse> {
         return sql.createQuery(Project::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -54,10 +65,20 @@ class ProjectService(
             .map { it.toResponse() }
     }
 
+    /**
+     * 获取项目。
+     *
+     * @param projectId 项目 ID。
+     */
     fun getProject(projectId: Long): ProjectResponse {
         return loadProject(projectId).toResponse()
     }
 
+    /**
+     * 获取项目树。
+     *
+     * @param projectId 项目 ID。
+     */
     fun getProjectTree(projectId: Long): ProjectTreeResponse {
         val project = sql.createQuery(Project::class) {
             where(table.id eq projectId)
@@ -66,6 +87,9 @@ class ProjectService(
         return project.toTreeResponse()
     }
 
+    /**
+     * 列出协议。
+     */
     fun listProtocols(): List<ProtocolCatalogItemResponse> {
         return sql.createQuery(ProtocolInstance::class) {
             orderBy(table.name.asc(), table.id.asc())
@@ -85,6 +109,11 @@ class ProjectService(
             }
     }
 
+    /**
+     * 创建项目。
+     *
+     * @param request 请求参数。
+     */
     fun createProject(request: ProjectCreateRequest): ProjectResponse {
         val name = request.name.trim()
         ensureProjectNameUnique(name, null)
@@ -103,6 +132,12 @@ class ProjectService(
         return project.toResponse()
     }
 
+    /**
+     * 更新项目。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun updateProject(projectId: Long, request: ProjectUpdateRequest): ProjectResponse {
         ensureProjectExists(projectId)
         val name = request.name.trim()
@@ -122,25 +157,46 @@ class ProjectService(
         return project.toResponse()
     }
 
+    /**
+     * 更新项目位置。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun updateProjectPosition(projectId: Long, request: ProjectPositionUpdateRequest): ProjectResponse {
         ensureProjectExists(projectId)
         reorderProjects(projectId, request.sortIndex)
         return loadProject(projectId).toResponse()
     }
 
+    /**
+     * 删除项目。
+     *
+     * @param projectId 项目 ID。
+     */
     fun deleteProject(projectId: Long) {
         ensureProjectExists(projectId)
         val protocolIds = queryIds(
             "SELECT protocol_id FROM host_config_project_protocol WHERE project_id = ? ORDER BY sort_index ASC, id ASC",
             projectId,
         )
-        jdbc.update("DELETE FROM host_config_project WHERE id = ?", projectId)
+        executeUpdate("DELETE FROM host_config_project WHERE id = ?", projectId)
         deleteOrphanProtocols(protocolIds)
     }
 
+    /**
+     * 创建协议。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun createProtocol(projectId: Long, request: ProtocolCreateRequest): ProtocolResponse {
         ensureProjectExists(projectId)
         val protocolTemplate = loadProtocolTemplate(request.protocolTemplateId)
+        ensureProjectProtocolTemplateUnique(
+            projectId = projectId,
+            protocolTemplateId = protocolTemplate.id,
+        )
         val name = request.name.trim()
         ensureProtocolNameUnique(name, null)
         val now = now()
@@ -172,18 +228,40 @@ class ProjectService(
         return loadProjectProtocol(projectId, protocol.id).toResponse()
     }
 
+    /**
+     * 关联协议。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun linkProtocol(projectId: Long, request: LinkExistingProtocolRequest): ProtocolResponse {
         ensureProjectExists(projectId)
-        ensureProtocolExists(request.protocolId)
+        val protocol = loadProtocol(request.protocolId)
+        ensureProjectProtocolTemplateUnique(
+            projectId = projectId,
+            protocolTemplateId = protocol.protocolTemplate.id,
+            excludeProtocolId = protocol.id,
+        )
         ensureProtocolNotLinked(projectId, request.protocolId)
         val link = createProjectProtocolLink(projectId, request.protocolId, request.sortIndex, now())
         reorderProtocolLinks(projectId, link.id, request.sortIndex)
         return loadProjectProtocol(projectId, request.protocolId).toResponse()
     }
 
+    /**
+     * 更新协议。
+     *
+     * @param protocolId 协议 ID。
+     * @param request 请求参数。
+     */
     fun updateProtocol(protocolId: Long, request: ProtocolUpdateRequest): ProtocolResponse {
         val link = loadProjectProtocol(request.projectId, protocolId)
         val protocolTemplate = loadProtocolTemplate(request.protocolTemplateId)
+        ensureProjectProtocolTemplateUnique(
+            projectId = request.projectId,
+            protocolTemplateId = protocolTemplate.id,
+            excludeProtocolId = protocolId,
+        )
         val name = request.name.trim()
         ensureProtocolNameUnique(name, protocolId)
         val transportConfig = normalizeProtocolTransportConfig(
@@ -213,21 +291,45 @@ class ProjectService(
         return loadProjectProtocol(request.projectId, protocolId).toResponse()
     }
 
+    /**
+     * 更新协议位置。
+     *
+     * @param protocolId 协议 ID。
+     * @param request 请求参数。
+     */
     fun updateProtocolPosition(protocolId: Long, request: ProtocolPositionUpdateRequest): ProtocolResponse {
         ensureProjectExists(request.sourceProjectId)
         ensureProjectExists(request.targetProjectId)
         val link = loadProjectProtocol(request.sourceProjectId, protocolId)
+        val protocol = loadProtocol(protocolId)
+        ensureProjectProtocolTemplateUnique(
+            projectId = request.targetProjectId,
+            protocolTemplateId = protocol.protocolTemplate.id,
+            excludeProtocolId = protocolId,
+        )
         moveProtocol(link.id, protocolId, request.sourceProjectId, request.targetProjectId, request.sortIndex)
         return loadProjectProtocol(request.targetProjectId, protocolId).toResponse()
     }
 
+    /**
+     * 删除协议。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     */
     fun deleteProtocol(projectId: Long, protocolId: Long) {
         val link = loadProjectProtocol(projectId, protocolId)
-        jdbc.update("DELETE FROM host_config_project_protocol WHERE id = ?", link.id)
+        executeUpdate("DELETE FROM host_config_project_protocol WHERE id = ?", link.id)
         normalizeProtocolLinks(projectId)
         deleteOrphanProtocols(listOf(protocolId))
     }
 
+    /**
+     * 创建模块。
+     *
+     * @param protocolId 协议 ID。
+     * @param request 请求参数。
+     */
     fun createModule(protocolId: Long, request: ModuleCreateRequest): ModuleResponse {
         val protocol = loadProtocol(protocolId)
         val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
@@ -252,6 +354,12 @@ class ProjectService(
         return loadModule(module.id).toResponse()
     }
 
+    /**
+     * 创建项目模块。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun createProjectModule(projectId: Long, request: ModuleCreateRequest): ModuleResponse {
         ensureProjectExists(projectId)
         val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
@@ -259,6 +367,12 @@ class ProjectService(
         return createModule(protocolId, request)
     }
 
+    /**
+     * 更新模块。
+     *
+     * @param moduleId 模块 ID。
+     * @param request 请求参数。
+     */
     fun updateModule(moduleId: Long, request: ModuleUpdateRequest): ModuleResponse {
         val current = loadModule(moduleId)
         val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
@@ -282,6 +396,12 @@ class ProjectService(
         return loadModule(module.id).toResponse()
     }
 
+    /**
+     * 更新模块位置。
+     *
+     * @param moduleId 模块 ID。
+     * @param request 请求参数。
+     */
     fun updateModulePosition(moduleId: Long, request: ModulePositionUpdateRequest): ModuleResponse {
         val current = loadModule(moduleId)
         when {
@@ -316,11 +436,22 @@ class ProjectService(
         return loadModule(moduleId).toResponse()
     }
 
+    /**
+     * 删除模块。
+     *
+     * @param moduleId 模块 ID。
+     */
     fun deleteModule(moduleId: Long) {
         ensureModuleExists(moduleId)
-        jdbc.update("DELETE FROM host_config_module_instance WHERE id = ?", moduleId)
+        executeUpdate("DELETE FROM host_config_module_instance WHERE id = ?", moduleId)
     }
 
+    /**
+     * 创建设备。
+     *
+     * @param moduleId 模块 ID。
+     * @param request 请求参数。
+     */
     fun createDevice(moduleId: Long, request: DeviceCreateRequest): DeviceResponse {
         ensureModuleExists(moduleId)
         ensureDeviceTypeExists(request.deviceTypeId)
@@ -352,6 +483,12 @@ class ProjectService(
         return loadDevice(device.id).toResponse()
     }
 
+    /**
+     * 更新设备。
+     *
+     * @param deviceId 设备 ID。
+     * @param request 请求参数。
+     */
     fun updateDevice(deviceId: Long, request: DeviceUpdateRequest): DeviceResponse {
         val current = loadDevice(deviceId)
         ensureDeviceTypeExists(request.deviceTypeId)
@@ -382,6 +519,12 @@ class ProjectService(
         return loadDevice(device.id).toResponse()
     }
 
+    /**
+     * 更新设备位置。
+     *
+     * @param deviceId 设备 ID。
+     * @param request 请求参数。
+     */
     fun updateDevicePosition(deviceId: Long, request: DevicePositionUpdateRequest): DeviceResponse {
         val current = loadDevice(deviceId)
         ensureModuleExists(request.moduleId)
@@ -390,11 +533,22 @@ class ProjectService(
         return loadDevice(deviceId).toResponse()
     }
 
+    /**
+     * 删除设备。
+     *
+     * @param deviceId 设备 ID。
+     */
     fun deleteDevice(deviceId: Long) {
         ensureDeviceExists(deviceId)
-        jdbc.update("DELETE FROM host_config_device WHERE id = ?", deviceId)
+        executeUpdate("DELETE FROM host_config_device WHERE id = ?", deviceId)
     }
 
+    /**
+     * 确保项目名称唯一性。
+     *
+     * @param name 名称。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureProjectNameUnique(name: String, excludeId: Long?) {
         val exists = sql.exists(Project::class) {
             where(table.name eq name)
@@ -407,6 +561,12 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保协议名称唯一性。
+     *
+     * @param name 名称。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureProtocolNameUnique(name: String, excludeId: Long?) {
         val exists = sql.exists(ProtocolInstance::class) {
             where(table.name eq name)
@@ -419,6 +579,13 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保模块名称唯一性。
+     *
+     * @param protocolId 协议 ID。
+     * @param name 名称。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureModuleNameUnique(protocolId: Long, name: String, excludeId: Long?) {
         val exists = sql.exists(ModuleInstance::class) {
             where(table.protocol.id eq protocolId)
@@ -432,6 +599,13 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保设备名称唯一性。
+     *
+     * @param moduleId 模块 ID。
+     * @param name 名称。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureDeviceNameUnique(moduleId: Long, name: String, excludeId: Long?) {
         val exists = sql.exists(Device::class) {
             where(table.module.id eq moduleId)
@@ -445,6 +619,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保项目存在性。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun ensureProjectExists(projectId: Long) {
         val exists = sql.exists(Project::class) {
             where(table.id eq projectId)
@@ -454,6 +633,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保协议存在性。
+     *
+     * @param protocolId 协议 ID。
+     */
     private fun ensureProtocolExists(protocolId: Long) {
         val exists = sql.exists(ProtocolInstance::class) {
             where(table.id eq protocolId)
@@ -463,6 +647,35 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保项目内协议模板关联唯一。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolTemplateId 协议模板 ID。
+     * @param excludeProtocolId 需要排除的协议 ID。
+     */
+    private fun ensureProjectProtocolTemplateUnique(
+        projectId: Long,
+        protocolTemplateId: Long,
+        excludeProtocolId: Long? = null,
+    ) {
+        val exists = sql.exists(ProjectProtocol::class) {
+            where(table.project.id eq projectId)
+            where(table.protocol.protocolTemplate.id eq protocolTemplateId)
+            if (excludeProtocolId != null) {
+                where(table.protocol.id ne excludeProtocolId)
+            }
+        }
+        if (exists) {
+            throw ConflictException("Project already links a protocol for this template")
+        }
+    }
+
+    /**
+     * 确保模块存在性。
+     *
+     * @param moduleId 模块 ID。
+     */
     private fun ensureModuleExists(moduleId: Long) {
         val exists = sql.exists(ModuleInstance::class) {
             where(table.id eq moduleId)
@@ -472,6 +685,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保设备存在性。
+     *
+     * @param deviceId 设备 ID。
+     */
     private fun ensureDeviceExists(deviceId: Long) {
         val exists = sql.exists(Device::class) {
             where(table.id eq deviceId)
@@ -481,6 +699,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保协议模板存在性。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
     private fun ensureProtocolTemplateExists(protocolTemplateId: Long) {
         val exists = sql.exists(ProtocolTemplate::class) {
             where(table.id eq protocolTemplateId)
@@ -490,6 +713,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保模块模板存在性。
+     *
+     * @param moduleTemplateId 模块模板 ID。
+     */
     private fun ensureModuleTemplateExists(moduleTemplateId: Long) {
         val exists = sql.exists(ModuleTemplate::class) {
             where(table.id eq moduleTemplateId)
@@ -499,6 +727,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 确保设备类型存在性。
+     *
+     * @param deviceTypeId 设备类型 ID。
+     */
     private fun ensureDeviceTypeExists(deviceTypeId: Long) {
         val exists = sql.exists(DeviceType::class) {
             where(table.id eq deviceTypeId)
@@ -508,6 +741,11 @@ class ProjectService(
         }
     }
 
+    /**
+     * 加载项目。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun loadProject(projectId: Long): Project {
         return sql.createQuery(Project::class) {
             where(table.id eq projectId)
@@ -515,6 +753,11 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Project not found")
     }
 
+    /**
+     * 加载协议。
+     *
+     * @param protocolId 协议 ID。
+     */
     private fun loadProtocol(protocolId: Long): ProtocolInstance {
         return sql.createQuery(ProtocolInstance::class) {
             where(table.id eq protocolId)
@@ -522,6 +765,12 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Protocol not found")
     }
 
+    /**
+     * 加载项目协议。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     */
     private fun loadProjectProtocol(projectId: Long, protocolId: Long): ProjectProtocol {
         return sql.createQuery(ProjectProtocol::class) {
             where(table.project.id eq projectId)
@@ -530,6 +779,14 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Protocol relation not found")
     }
 
+    /**
+     * 创建项目协议关联。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     * @param sortIndex 目标排序序号。
+     * @param createdAt 创建时间戳。
+     */
     private fun createProjectProtocolLink(projectId: Long, protocolId: Long, sortIndex: Int, createdAt: Long): ProjectProtocol {
         return sql.saveCommand(
             ProjectProtocol {
@@ -544,6 +801,11 @@ class ProjectService(
         }.execute().modifiedEntity
     }
 
+    /**
+     * 加载模块。
+     *
+     * @param moduleId 模块 ID。
+     */
     private fun loadModule(moduleId: Long): ModuleInstance {
         return sql.createQuery(ModuleInstance::class) {
             where(table.id eq moduleId)
@@ -551,6 +813,11 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Module not found")
     }
 
+    /**
+     * 加载模块模板。
+     *
+     * @param moduleTemplateId 模块模板 ID。
+     */
     private fun loadModuleTemplate(moduleTemplateId: Long): ModuleTemplate {
         return sql.createQuery(ModuleTemplate::class) {
             where(table.id eq moduleTemplateId)
@@ -558,6 +825,11 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Module template not found")
     }
 
+    /**
+     * 加载协议模板。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
     private fun loadProtocolTemplate(protocolTemplateId: Long): ProtocolTemplate {
         return sql.createQuery(ProtocolTemplate::class) {
             where(table.id eq protocolTemplateId)
@@ -565,6 +837,11 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Protocol template not found")
     }
 
+    /**
+     * 加载设备。
+     *
+     * @param deviceId 设备 ID。
+     */
     private fun loadDevice(deviceId: Long): Device {
         return sql.createQuery(Device::class) {
             where(table.id eq deviceId)
@@ -572,6 +849,9 @@ class ProjectService(
         }.execute().firstOrNull() ?: throw NotFoundException("Device not found")
     }
 
+    /**
+     * 处理项目。
+     */
     private fun Project.toResponse(): ProjectResponse =
         ProjectResponse(
             id = id,
@@ -583,6 +863,9 @@ class ProjectService(
             updatedAt = updatedAt,
         )
 
+    /**
+     * 处理项目协议。
+     */
     private fun ProjectProtocol.toResponse(): ProtocolResponse =
         ProtocolResponse(
             id = protocol.id,
@@ -593,6 +876,9 @@ class ProjectService(
             transportConfig = protocol.toTransportConfig(),
         )
 
+    /**
+     * 处理模块instance。
+     */
     private fun ModuleInstance.toResponse(): ModuleResponse =
         ModuleResponse(
             id = id,
@@ -602,6 +888,9 @@ class ProjectService(
             moduleTemplateId = moduleTemplate.id,
         )
 
+    /**
+     * 处理设备。
+     */
     private fun Device.toResponse(): DeviceResponse =
         DeviceResponse(
             id = id,
@@ -621,6 +910,9 @@ class ProjectService(
             deviceTypeId = deviceType.id,
         )
 
+    /**
+     * 处理项目。
+     */
     private fun Project.toTreeResponse(): ProjectTreeResponse =
         ProjectTreeResponse(
             id = id,
@@ -655,6 +947,9 @@ class ProjectService(
                 },
         )
 
+    /**
+     * 处理模块instance。
+     */
     private fun ModuleInstance.toTreeNode(): ModuleTreeNode =
         ModuleTreeNode(
             id = id,
@@ -669,6 +964,9 @@ class ProjectService(
                 .map { it.toTreeNode() },
         )
 
+    /**
+     * 处理设备。
+     */
     private fun Device.toTreeNode(): DeviceTreeNode =
         DeviceTreeNode(
             id = id,
@@ -699,6 +997,9 @@ class ProjectService(
                 },
         )
 
+    /**
+     * 处理协议instance。
+     */
     private fun ProtocolInstance.toTransportConfig(): ProtocolTransportConfig? {
         val currentTransportType = transportType ?: return null
         return ProtocolTransportConfig(
@@ -714,6 +1015,12 @@ class ProjectService(
         )
     }
 
+    /**
+     * 根据协议模板规范化传输配置。
+     *
+     * @param protocolTemplateCode 协议模板编码。
+     * @param requestConfig 请求中的传输配置。
+     */
     private fun normalizeProtocolTransportConfig(
         protocolTemplateCode: String,
         requestConfig: ProtocolTransportConfig?,
@@ -740,6 +1047,12 @@ class ProjectService(
         }
     }
 
+    /**
+     * 校验模块模板与协议模板是否匹配。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     * @param moduleTemplate 模块模板对象。
+     */
     private fun ensureModuleTemplateMatchesProtocol(
         protocolTemplateId: Long,
         moduleTemplate: ModuleTemplate,
@@ -749,11 +1062,26 @@ class ProjectService(
         }
     }
 
+    /**
+     * 重排项目。
+     *
+     * @param projectId 项目 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun reorderProjects(projectId: Long, sortIndex: Int) {
         val orderedIds = reorderIds(queryIds("SELECT id FROM host_config_project ORDER BY sort_index ASC, id ASC"), projectId, sortIndex)
         batchUpdateSort("UPDATE host_config_project SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
     }
 
+    /**
+     * 移动协议。
+     *
+     * @param linkId 关联记录 ID。
+     * @param protocolId 协议 ID。
+     * @param currentProjectId 当前项目 ID。
+     * @param targetProjectId 目标项目 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun moveProtocol(linkId: Long, protocolId: Long, currentProjectId: Long, targetProjectId: Long, sortIndex: Int) {
         if (currentProjectId == targetProjectId) {
             reorderProtocolLinks(currentProjectId, linkId, sortIndex)
@@ -762,7 +1090,7 @@ class ProjectService(
 
         ensureProtocolNotLinked(targetProjectId, protocolId)
         val now = now()
-        jdbc.update(
+        executeUpdate(
             "UPDATE host_config_project_protocol SET project_id = ?, updated_at = ? WHERE id = ?",
             targetProjectId,
             now,
@@ -772,6 +1100,14 @@ class ProjectService(
         reorderProtocolLinks(targetProjectId, linkId, sortIndex)
     }
 
+    /**
+     * 移动模块。
+     *
+     * @param moduleId 模块 ID。
+     * @param currentProtocolId 当前协议 ID。
+     * @param targetProtocolId 目标协议 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun moveModule(moduleId: Long, currentProtocolId: Long, targetProtocolId: Long, sortIndex: Int) {
         if (currentProtocolId == targetProtocolId) {
             val orderedIds = reorderIds(
@@ -784,7 +1120,7 @@ class ProjectService(
         }
 
         val now = now()
-        jdbc.update(
+        executeUpdate(
             "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE id = ?",
             targetProtocolId,
             now,
@@ -803,6 +1139,16 @@ class ProjectService(
         batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
     }
 
+    /**
+     * 移动模块in项目树。
+     *
+     * @param moduleId 模块 ID。
+     * @param currentProtocolId 当前协议 ID。
+     * @param targetProtocolId 目标协议 ID。
+     * @param sourceProjectId 来源项目 ID。
+     * @param targetProjectId 目标项目 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun moveModuleInProjectTree(
         moduleId: Long,
         currentProtocolId: Long,
@@ -813,7 +1159,7 @@ class ProjectService(
     ) {
         if (sourceProjectId == targetProjectId) {
             if (currentProtocolId != targetProtocolId) {
-                jdbc.update(
+                executeUpdate(
                     "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE id = ?",
                     targetProtocolId,
                     now(),
@@ -826,7 +1172,7 @@ class ProjectService(
         }
 
         val oldIds = listProjectModuleIds(sourceProjectId).filterNot { it == moduleId }.toMutableList()
-        jdbc.update(
+        executeUpdate(
             "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE id = ?",
             targetProtocolId,
             now(),
@@ -837,6 +1183,14 @@ class ProjectService(
         batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
     }
 
+    /**
+     * 移动设备。
+     *
+     * @param deviceId 设备 ID。
+     * @param currentModuleId 当前模块 ID。
+     * @param targetModuleId 目标模块 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun moveDevice(deviceId: Long, currentModuleId: Long, targetModuleId: Long, sortIndex: Int) {
         if (currentModuleId == targetModuleId) {
             val orderedIds = reorderIds(
@@ -849,7 +1203,7 @@ class ProjectService(
         }
 
         val now = now()
-        jdbc.update(
+        executeUpdate(
             "UPDATE host_config_device SET module_id = ?, updated_at = ? WHERE id = ?",
             targetModuleId,
             now,
@@ -868,6 +1222,12 @@ class ProjectService(
         batchUpdateSort("UPDATE host_config_device SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
     }
 
+    /**
+     * 确保协议尚未关联到项目。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     */
     private fun ensureProtocolNotLinked(projectId: Long, protocolId: Long) {
         val exists = sql.exists(ProjectProtocol::class) {
             where(table.project.id eq projectId)
@@ -878,6 +1238,13 @@ class ProjectService(
         }
     }
 
+    /**
+     * 重排项目内的协议关联顺序。
+     *
+     * @param projectId 项目 ID。
+     * @param linkId 关联记录 ID。
+     * @param sortIndex 目标排序序号。
+     */
     private fun reorderProtocolLinks(projectId: Long, linkId: Long, sortIndex: Int) {
         val orderedIds = reorderIds(
             queryIds("SELECT id FROM host_config_project_protocol WHERE project_id = ? ORDER BY sort_index ASC, id ASC", projectId),
@@ -887,26 +1254,71 @@ class ProjectService(
         batchUpdateSort("UPDATE host_config_project_protocol SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
     }
 
+    /**
+     * 规范化项目内的协议关联排序。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun normalizeProtocolLinks(projectId: Long) {
         val orderedIds = queryIds("SELECT id FROM host_config_project_protocol WHERE project_id = ? ORDER BY sort_index ASC, id ASC", projectId)
         batchUpdateSort("UPDATE host_config_project_protocol SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
     }
 
+    /**
+     * 删除未被项目关联的孤立协议。
+     *
+     * @param protocolIds 协议 ID 列表。
+     */
     private fun deleteOrphanProtocols(protocolIds: Collection<Long>) {
         protocolIds.toSet().forEach { protocolId ->
-            val linkedCount = jdbc.queryCount(
+            val linkedCount = queryCount(
                 "SELECT COUNT(*) FROM host_config_project_protocol WHERE protocol_id = ?",
                 protocolId,
             )
             if (linkedCount == 0L) {
-                jdbc.update("DELETE FROM host_config_protocol_instance WHERE id = ?", protocolId)
+                executeUpdate("DELETE FROM host_config_protocol_instance WHERE id = ?", protocolId)
             }
         }
     }
 
-    private fun queryIds(sql: String, vararg args: Any): MutableList<Long> =
-        jdbc.queryIds(sql, *args)
+    private fun executeUpdate(
+        sql: String,
+        vararg args: Any?,
+    ): Int = jdbc.withTransaction { connection ->
+        jdbc.update(connection, sql, *args)
+    }
 
+    private fun queryCount(
+        sql: String,
+        vararg args: Any?,
+    ): Long = jdbc.withTransaction { connection ->
+        jdbc.queryCount(connection, sql, *args)
+    }
+
+    /**
+     * 查询 ID 列表。
+     *
+     * @param sql SQL 语句。
+     * @param args SQL 参数列表。
+     */
+    private fun queryIds(sql: String, vararg args: Any): MutableList<Long> =
+        jdbc.withTransaction { connection ->
+            jdbc.queryIds(connection, sql, *args).toMutableList()
+        }
+
+    private fun <T> query(
+        sql: String,
+        vararg args: Any?,
+        mapper: (ResultSet) -> T,
+    ): List<T> = jdbc.withTransaction { connection ->
+        jdbc.query(connection, sql, *args, mapper = mapper)
+    }
+
+    /**
+     * 列出项目模块 ID。
+     *
+     * @param projectId 项目 ID。
+     */
     private fun listProjectModuleIds(projectId: Long): MutableList<Long> =
         queryIds(
             """
@@ -919,8 +1331,14 @@ class ProjectService(
             projectId,
         )
 
+    /**
+     * 根据项目和协议模板解析协议 ID。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolTemplateId 协议模板 ID。
+     */
     private fun resolveProjectProtocolId(projectId: Long, protocolTemplateId: Long): Long {
-        val protocolIds = jdbc.queryList(
+        val protocolIds = query(
             """
             SELECT pp.protocol_id
             FROM host_config_project_protocol pp
@@ -939,8 +1357,13 @@ class ProjectService(
         }
     }
 
+    /**
+     * 根据协议解析所属项目 ID。
+     *
+     * @param protocolId 协议 ID。
+     */
     private fun resolveProjectIdByProtocol(protocolId: Long): Long {
-        return jdbc.queryList(
+        return query(
             """
             SELECT project_id
             FROM host_config_project_protocol
@@ -952,6 +1375,13 @@ class ProjectService(
         ) { rs -> rs.getLong(1) }.firstOrNull() ?: throw NotFoundException("Protocol relation not found")
     }
 
+    /**
+     * 按目标位置重排 ID 列表。
+     *
+     * @param ids ID 列表。
+     * @param movedId 需要移动的 ID。
+     * @param targetIndex 目标位置索引。
+     */
     private fun reorderIds(ids: MutableList<Long>, movedId: Long, targetIndex: Int): MutableList<Long> {
         ids.remove(movedId)
         val normalizedIndex = targetIndex.coerceIn(0, ids.size)
@@ -959,19 +1389,36 @@ class ProjectService(
         return ids
     }
 
+    /**
+     * 批量更新排序字段。
+     *
+     * @param sql SQL 语句。
+     * @param orderedIds 排序后的 ID 列表。
+     */
     private fun batchUpdateSort(sql: String, orderedIds: List<Long>) {
         if (orderedIds.isEmpty()) {
             return
         }
-        jdbc.batchUpdateSort(
-            sql = sql,
-            orderedIds = orderedIds,
-            updatedAt = now(),
-        )
+        val updatedAt = now()
+        jdbc.withTransaction { connection ->
+            jdbc.batchUpdate(
+                connection,
+                sql,
+                orderedIds.mapIndexed { index, id ->
+                    listOf(index, updatedAt, id)
+                },
+            )
+        }
     }
 
+    /**
+     * 处理string。
+     */
     private fun String?.cleanNullable(): String? =
         this?.trim()?.ifBlank { null }
 
+    /**
+     * 获取当前时间戳。
+     */
     private fun now(): Long = System.currentTimeMillis()
 }

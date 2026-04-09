@@ -1,29 +1,21 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.gradle.api.tasks.Delete
 
 plugins {
     id("site.addzero.buildlogic.other.repositories-conventions")
     id("site.addzero.buildlogic.kmp.cmp-lib")
     id("site.addzero.buildlogic.kmp.kmp-json-withtool")
     id("site.addzero.buildlogic.kmp.kmp-ktor-client")
-    id("site.addzero.buildlogic.kmp.kmp-ktorfit")
     id("site.addzero.buildlogic.kmp.kmp-koin")
     id("site.addzero.buildlogic.kmp.kmp-ksp-plugin")
 }
 
 val libs = versionCatalogs.named("libs")
-val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
-val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
-val generateMcuConsoleUiApisTaskPath = ":apps:kcloud:plugins:mcu-console:server:kspKotlinJvm"
 //val addzeroLibJvmVersion: String by project
 val routeOwnerModuleDir =
-    project(":apps:kcloud:ui")
-        .layout
-        .projectDirectory
-        .dir("src/commonMain/kotlin")
-        .asFile
+    gradle.gradleUserHomeDir
+        .resolve("addzero/route-owner/${rootProject.name}/apps-kcloud-ui/commonMain/kotlin")
         .absolutePath
 dependencies{
     kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
@@ -31,7 +23,6 @@ dependencies{
 
 ksp {
     //route 上下文
-    arg("sharedSourceDir", routeSharedSourceDir.asFile.absolutePath)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
     arg("routeAggregationRole", "contributor")
@@ -42,8 +33,8 @@ ksp {
 kotlin {
     sourceSets {
         commonMain {
-            kotlin.srcDir(generatedApiSourceDir)
             dependencies {
+                api(project(":apps:kcloud:plugins:mcu-console:api"))
                 implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
                 implementation(libs.findLibrary("compose-cupertino-workbench").get())
                 implementation(libs.findLibrary("scaffold-spi").get())
@@ -53,26 +44,5 @@ kotlin {
                 implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
             }
         }
-    }
-}
-
-tasks.matching { task ->
-    task.name in setOf(
-        "kspCommonMainKotlinMetadata",
-        "compileCommonMainKotlinMetadata",
-        "compileKotlinJvm",
-    )
-}.configureEach {
-    dependsOn(generateMcuConsoleUiApisTaskPath)
-}
-
-val cleanLegacyRouteSnapshot by tasks.registering(Delete::class) {
-    delete(routeSharedSourceDir.file("site/addzero/generated/RouteKeys.kt"))
-    delete(routeSharedSourceDir.file("site/addzero/generated/RouteTable.kt"))
-}
-
-tasks.configureEach {
-    if (name == "kspCommonMainKotlinMetadata") {
-        finalizedBy(cleanLegacyRouteSnapshot)
     }
 }

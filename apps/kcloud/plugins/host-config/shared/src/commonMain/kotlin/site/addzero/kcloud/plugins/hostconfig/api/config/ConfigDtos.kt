@@ -5,6 +5,30 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @Serializable
+/**
+ * 表示项目MQTT配置请求参数。
+ *
+ * @property enabled 是否启用。
+ * @property breakpointResume breakpointresume。
+ * @property gatewayName 网关名称。
+ * @property vendor vendor。
+ * @property host 主机地址。
+ * @property port 端口。
+ * @property topic 主题。
+ * @property gatewayId 网关 ID。
+ * @property authEnabled auth启用状态。
+ * @property username 用户名。
+ * @property passwordEncrypted 密码encrypted。
+ * @property tlsEnabled tls启用状态。
+ * @property certFileRef certfileref。
+ * @property clientId 客户端 ID。
+ * @property keepAliveSec keepalivesec。
+ * @property qos QoS 等级。
+ * @property reportPeriodSec reportperiodsec。
+ * @property precision precision。
+ * @property valueChangeRatioEnabled 值changeratio启用状态。
+ * @property cloudControlDisabled 云接入控制disabled。
+ */
 data class ProjectMqttConfigRequest(
     val enabled: Boolean = false,
     val breakpointResume: Boolean = false,
@@ -29,6 +53,31 @@ data class ProjectMqttConfigRequest(
 )
 
 @Serializable
+/**
+ * 表示项目MQTT配置响应结果。
+ *
+ * @property id 主键 ID。
+ * @property enabled 是否启用。
+ * @property breakpointResume breakpointresume。
+ * @property gatewayName 网关名称。
+ * @property vendor vendor。
+ * @property host 主机地址。
+ * @property port 端口。
+ * @property topic 主题。
+ * @property gatewayId 网关 ID。
+ * @property authEnabled auth启用状态。
+ * @property username 用户名。
+ * @property passwordEncrypted 密码encrypted。
+ * @property tlsEnabled tls启用状态。
+ * @property certFileRef certfileref。
+ * @property clientId 客户端 ID。
+ * @property keepAliveSec keepalivesec。
+ * @property qos QoS 等级。
+ * @property reportPeriodSec reportperiodsec。
+ * @property precision precision。
+ * @property valueChangeRatioEnabled 值changeratio启用状态。
+ * @property cloudControlDisabled 云接入控制disabled。
+ */
 data class ProjectMqttConfigResponse(
     val id: Long?,
     val enabled: Boolean,
@@ -54,6 +103,18 @@ data class ProjectMqttConfigResponse(
 )
 
 @Serializable
+/**
+ * 表示项目modbus服务端配置请求参数。
+ *
+ * @property enabled 是否启用。
+ * @property tcpPort TCP端口。
+ * @property portName 端口名。
+ * @property baudRate 波特率。
+ * @property dataBits 数据位。
+ * @property stopBits 停止位。
+ * @property parity 校验位。
+ * @property stationNo stationno。
+ */
 data class ProjectModbusServerConfigRequest(
     val enabled: Boolean = false,
     val tcpPort: Int? = null,
@@ -66,6 +127,20 @@ data class ProjectModbusServerConfigRequest(
 )
 
 @Serializable
+/**
+ * 表示项目modbus服务端配置响应结果。
+ *
+ * @property id 主键 ID。
+ * @property transportType 传输类型。
+ * @property enabled 是否启用。
+ * @property tcpPort TCP端口。
+ * @property portName 端口名。
+ * @property baudRate 波特率。
+ * @property dataBits 数据位。
+ * @property stopBits 停止位。
+ * @property parity 校验位。
+ * @property stationNo stationno。
+ */
 data class ProjectModbusServerConfigResponse(
     val id: Long?,
     val transportType: TransportType,
@@ -80,12 +155,25 @@ data class ProjectModbusServerConfigResponse(
 )
 
 @Serializable
+/**
+ * 表示项目网关pin配置请求参数。
+ *
+ * @property faultIndicatorPin faultindicator引脚。
+ * @property runningIndicatorPin runningindicator引脚。
+ */
 data class ProjectGatewayPinConfigRequest(
     val faultIndicatorPin: String = "PA8",
     val runningIndicatorPin: String = "PA2",
 )
 
 @Serializable
+/**
+ * 表示项目网关pin配置响应结果。
+ *
+ * @property id 主键 ID。
+ * @property faultIndicatorPin faultindicator引脚。
+ * @property runningIndicatorPin runningindicator引脚。
+ */
 data class ProjectGatewayPinConfigResponse(
     val id: Long?,
     val faultIndicatorPin: String,
@@ -93,6 +181,16 @@ data class ProjectGatewayPinConfigResponse(
 )
 
 @Serializable
+/**
+ * 表示项目上传请求参数。
+ *
+ * @property ipAddress ip地址。
+ * @property includeDriverConfig includedriver配置。
+ * @property includeFirmwareUpgrade include固件upgrade。
+ * @property projectPath 项目路径。
+ * @property selectedFileName 选中file名称。
+ * @property fastMode fast模式。
+ */
 data class ProjectUploadRequest(
     val ipAddress: String,
     val includeDriverConfig: Boolean = true,
@@ -103,11 +201,19 @@ data class ProjectUploadRequest(
 )
 
 @Serializable
+/**
+ * 表示项目上传远程action请求参数。
+ *
+ * @property ipAddress ip地址。
+ */
 data class ProjectUploadRemoteActionRequest(
     val ipAddress: String,
 )
 
 @Serializable
+/**
+ * 定义项目上传远程action枚举。
+ */
 enum class ProjectUploadRemoteAction {
     BACKUP,
     RESTORE,
@@ -116,6 +222,25 @@ enum class ProjectUploadRemoteAction {
 }
 
 @Serializable
+/**
+ * 表示项目上传operation响应结果。
+ *
+ * @property projectId 项目 ID。
+ * @property operation operation。
+ * @property progress progress。
+ * @property statusText 状态文本。
+ * @property detailText 详情文本。
+ * @property ipAddress ip地址。
+ * @property projectPath 项目路径。
+ * @property selectedFileName 选中file名称。
+ * @property includeDriverConfig includedriver配置。
+ * @property includeFirmwareUpgrade include固件upgrade。
+ * @property fastMode fast模式。
+ * @property backupFileName 备份file名称。
+ * @property backupDownloadUrl 备份download地址。
+ * @property backupSizeBytes 备份size字节。
+ * @property updatedAt 更新时间戳。
+ */
 data class ProjectUploadOperationResponse(
     val projectId: Long,
     val operation: String,

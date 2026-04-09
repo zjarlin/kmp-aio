@@ -27,6 +27,9 @@ import java.util.concurrent.atomic.AtomicReference
 @Single
 @RestController
 @RequestMapping("/api/mcu/flash")
+/**
+ * 提供烧录接口。
+ */
 class FlashController {
     private val statusRef = AtomicReference(McuFlashStatusResponse())
     private val executor = Executors.newSingleThreadExecutor { runnable ->
@@ -36,11 +39,17 @@ class FlashController {
     }
 
     @GetMapping("/profiles")
+    /**
+     * 列出配置档。
+     */
     fun listProfiles(): McuFlashProfilesResponse {
         return McuFlashProfilesResponse(items = profiles.map { it.summary })
     }
 
     @GetMapping("/probes")
+    /**
+     * 列出探针。
+     */
     fun listProbes(): McuFlashProbesResponse {
         return McuFlashProbesResponse(
             items = Stm32StLinkProgrammer.listProbes().map { probe ->
@@ -56,6 +65,11 @@ class FlashController {
     }
 
     @PostMapping("/start")
+    /**
+     * 启动烧录任务。
+     *
+     * @param @RequestBody 请求体。
+     */
     fun startFlash(
         @RequestBody request: McuFlashRequest,
     ): McuFlashStatusResponse {
@@ -151,11 +165,19 @@ class FlashController {
     }
 
     @GetMapping("/status")
+    /**
+     * 获取状态。
+     */
     fun getStatus(): McuFlashStatusResponse {
         return statusRef.get()
     }
 
     @PostMapping("/reset")
+    /**
+     * 处理重置。
+     *
+     * @param @RequestBody 请求体。
+     */
     fun reset(
         @RequestBody request: McuFlashResetRequest,
     ): McuFlashStatusResponse {
@@ -183,6 +205,11 @@ class FlashController {
         }
     }
 
+    /**
+     * 更新进度。
+     *
+     * @param progress 当前进度。
+     */
     private fun updateProgress(
         progress: Stm32FlashProgress,
     ) {
@@ -198,6 +225,11 @@ class FlashController {
         }
     }
 
+    /**
+     * 更新状态。
+     *
+     * @param transform 转换函数。
+     */
     private fun updateStatus(
         transform: McuFlashStatusResponse.() -> McuFlashStatusResponse,
     ) {
@@ -210,6 +242,11 @@ class FlashController {
         }
     }
 
+    /**
+     * 解析配置档。
+     *
+     * @param profileId 配置档 ID。
+     */
     private fun resolveProfile(
         profileId: String,
     ): FlashProfileDefinition {
@@ -217,6 +254,9 @@ class FlashController {
             ?: error("未找到烧录配置: $profileId")
     }
 
+    /**
+     * 获取当前时间戳。
+     */
     private fun now(): String = Instant.now().toString()
 
     private companion object {
@@ -236,6 +276,11 @@ class FlashController {
     }
 }
 
+/**
+ * 表示烧录配置档定义。
+ *
+ * @property summary 摘要。
+ */
 private data class FlashProfileDefinition(
     val summary: McuFlashProfileSummary,
 )

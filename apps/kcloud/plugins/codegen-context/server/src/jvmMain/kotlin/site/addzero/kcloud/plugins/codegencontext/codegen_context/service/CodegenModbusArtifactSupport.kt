@@ -47,6 +47,22 @@ import site.addzero.device.protocol.modbus.ksp.core.ModbusWorkflowModel as KspWo
 
 private const val MCU_DEVICE_PACKAGE = "site.addzero.kcloud.plugins.mcuconsole.modbus.device"
 
+/**
+ * 表示resolved生成设置。
+ *
+ * @property workspaceRoot workspace根目录。
+ * @property serverOutputRoot 服务端输出根目录。
+ * @property sharedOutputRoot 共享输出根目录。
+ * @property serverPackageDir 服务端包dir。
+ * @property sharedPackageDir 共享包dir。
+ * @property gatewayOutputRoot 网关输出根目录。
+ * @property apiClientOutputRoot API 客户端输出根目录。
+ * @property apiClientPackageName API 客户端包名。
+ * @property springRouteOutputRoot Spring 路由输出根目录。
+ * @property cOutputRoot C 输出根目录。
+ * @property markdownOutputRoot Markdown 输出根目录。
+ * @property transportDefaults 传输默认。
+ */
 internal data class ResolvedGenerationSettings(
     val workspaceRoot: Path,
     val serverOutputRoot: Path,
@@ -62,6 +78,9 @@ internal data class ResolvedGenerationSettings(
     val transportDefaults: KspTransportDefaults,
 )
 
+/**
+ * 处理locateworkspace根目录。
+ */
 internal fun locateWorkspaceRoot(): Path {
     val overrideRoot = System.getProperty("codegen.context.repoRoot")?.takeIf(String::isNotBlank)
     var current =
@@ -79,6 +98,9 @@ internal fun locateWorkspaceRoot(): Path {
     error("Unable to locate the kmp-aio workspace root.")
 }
 
+/**
+ * 处理代码生成上下文详情数据传输对象。
+ */
 internal fun CodegenContextDetailDto.resolveGenerationSettings(): ResolvedGenerationSettings {
     val workspaceRoot = locateWorkspaceRoot()
     val settings = generationSettings
@@ -115,39 +137,15 @@ internal fun CodegenContextDetailDto.resolveGenerationSettings(): ResolvedGenera
     )
 }
 
+/**
+ * 处理默认ksp传输默认。
+ */
 internal fun defaultKspTransportDefaults(): KspTransportDefaults =
-    ModbusTransportDefaults(
-        rtu =
-            ModbusRtuTransportDefaults(
-                portPath = "/dev/ttyUSB0",
-                unitId = 1,
-                baudRate = 9600,
-                dataBits = 8,
-                stopBits = 1,
-                parity = "none",
-                timeoutMs = 1_000,
-                retries = 2,
-            ),
-        tcp =
-            ModbusTcpTransportDefaults(
-                host = "127.0.0.1",
-                port = 502,
-                unitId = 1,
-                timeoutMs = 1_000,
-                retries = 2,
-            ),
-        mqtt =
-            ModbusMqttTransportDefaults(
-                brokerUrl = "tcp://127.0.0.1:1883",
-                clientId = "modbus-mqtt-client",
-                requestTopic = "modbus/request",
-                responseTopic = "modbus/response",
-                qos = 1,
-                timeoutMs = 1_000,
-                retries = 2,
-            ),
-    ).toKspTransportDefaults()
+    CodegenGenerationSettingsDto().toKspTransportDefaults()
 
+/**
+ * 处理代码生成设置数据传输对象。
+ */
 internal fun CodegenGenerationSettingsDto.toKspTransportDefaults(): KspTransportDefaults =
     ModbusTransportDefaults(
         rtu =
@@ -171,16 +169,22 @@ internal fun CodegenGenerationSettingsDto.toKspTransportDefaults(): KspTransport
             ),
         mqtt =
             ModbusMqttTransportDefaults(
-                brokerUrl = "tcp://127.0.0.1:1883",
-                clientId = "modbus-mqtt-client",
-                requestTopic = "modbus/request",
-                responseTopic = "modbus/response",
-                qos = 1,
-                timeoutMs = 1_000,
-                retries = 2,
+                brokerUrl = mqttDefaults.brokerUrl,
+                clientId = mqttDefaults.clientId,
+                requestTopic = mqttDefaults.requestTopic,
+                responseTopic = mqttDefaults.responseTopic,
+                qos = mqttDefaults.qos,
+                timeoutMs = mqttDefaults.timeoutMs,
+                retries = mqttDefaults.retries,
             ),
     ).toKspTransportDefaults()
 
+/**
+ * 写入ksp产物with路径。
+ *
+ * @param outputRoot 输出根目录。
+ * @param artifacts artifacts。
+ */
 internal fun writeKspArtifactsWithPaths(
     outputRoot: Path,
     artifacts: List<KspGeneratedArtifact>,
@@ -209,6 +213,12 @@ internal fun writeKspArtifactsWithPaths(
         targetFile.toAbsolutePath().normalize().toString()
     }
 
+/**
+ * 处理cleanup生成包dir。
+ *
+ * @param outputRoot 输出根目录。
+ * @param relativePackagePath relative包路径。
+ */
 internal fun cleanupGeneratedPackageDir(
     outputRoot: Path,
     relativePackagePath: String,
@@ -219,6 +229,12 @@ internal fun cleanupGeneratedPackageDir(
     }
 }
 
+/**
+ * 处理cleanup生成Markdown产物。
+ *
+ * @param outputRoot 输出根目录。
+ * @param transport 传输。
+ */
 internal fun cleanupGeneratedMarkdownArtifacts(
     outputRoot: Path,
     transport: ModbusTransportKind,
@@ -236,6 +252,12 @@ internal fun cleanupGeneratedMarkdownArtifacts(
         }
 }
 
+/**
+ * 解析within根目录。
+ *
+ * @param root 根目录。
+ * @param relative relative。
+ */
 internal fun resolveWithinRoot(
     root: Path,
     relative: String,
@@ -248,9 +270,15 @@ internal fun resolveWithinRoot(
     return target
 }
 
+/**
+ * 处理string。
+ */
 private fun String.toAbsoluteNormalizedPath(): Path =
     Path.of(this).toAbsolutePath().normalize()
 
+/**
+ * 处理modbus传输类型。
+ */
 internal fun ModbusTransportKind.toArtifactKspTransportKind(): KspTransportKind =
     when (this) {
         ModbusTransportKind.RTU -> KspTransportKind.RTU
@@ -258,9 +286,18 @@ internal fun ModbusTransportKind.toArtifactKspTransportKind(): KspTransportKind 
         ModbusTransportKind.MQTT -> KspTransportKind.MQTT
     }
 
+/**
+ * 处理列表。
+ */
 internal fun List<ModbusServiceModel>.toKspServiceModels(): List<KspServiceModel> =
     map(ModbusServiceModel::toKspServiceModel)
 
+/**
+ * 写入textfile。
+ *
+ * @param target 目标。
+ * @param content content。
+ */
 private fun writeTextFile(
     target: Path,
     content: String,
@@ -275,6 +312,9 @@ private fun writeTextFile(
     )
 }
 
+/**
+ * 处理modbus传输默认。
+ */
 private fun ModbusTransportDefaults.toKspTransportDefaults(): KspTransportDefaults =
     KspTransportDefaults(
         rtu =
@@ -308,6 +348,9 @@ private fun ModbusTransportDefaults.toKspTransportDefaults(): KspTransportDefaul
             ),
     )
 
+/**
+ * 处理modbus服务模型。
+ */
 private fun ModbusServiceModel.toKspServiceModel(): KspServiceModel =
     KspServiceModel(
         interfacePackage = interfacePackage,
@@ -322,6 +365,9 @@ private fun ModbusServiceModel.toKspServiceModel(): KspServiceModel =
         workflows = workflows.map(ModbusWorkflowModel::toKspWorkflowModel),
     )
 
+/**
+ * 处理modbusworkflow模型。
+ */
 private fun ModbusWorkflowModel.toKspWorkflowModel(): KspWorkflowModel =
     KspWorkflowModel(
         kind = kind.toKspWorkflowKind(),
@@ -338,11 +384,17 @@ private fun ModbusWorkflowModel.toKspWorkflowModel(): KspWorkflowModel =
         resetMethodName = resetMethodName,
     )
 
+/**
+ * 处理modbusworkflow类型。
+ */
 private fun ModbusWorkflowKind.toKspWorkflowKind(): KspWorkflowKind =
     when (this) {
         ModbusWorkflowKind.FLASH_FIRMWARE -> KspWorkflowKind.FLASH_FIRMWARE
     }
 
+/**
+ * 处理modbusoperation模型。
+ */
 private fun ModbusOperationModel.toKspOperationModel(): KspOperationModel =
     KspOperationModel(
         methodName = methodName,
@@ -357,6 +409,9 @@ private fun ModbusOperationModel.toKspOperationModel(): KspOperationModel =
         doc = doc.toKspDocModel(),
     )
 
+/**
+ * 处理modbusparameter模型。
+ */
 private fun ModbusParameterModel.toKspParameterModel(): KspParameterModel =
     KspParameterModel(
         name = name,
@@ -371,6 +426,9 @@ private fun ModbusParameterModel.toKspParameterModel(): KspParameterModel =
         doc = doc,
     )
 
+/**
+ * 处理modbusreturn类型模型。
+ */
 private fun ModbusReturnTypeModel.toKspReturnTypeModel(): KspReturnTypeModel =
     KspReturnTypeModel(
         qualifiedName = qualifiedName,
@@ -384,6 +442,9 @@ private fun ModbusReturnTypeModel.toKspReturnTypeModel(): KspReturnTypeModel =
         properties = properties.map(ModbusPropertyModel::toKspPropertyModel),
     )
 
+/**
+ * 处理modbusreturn类型。
+ */
 private fun ModbusReturnKind.toKspReturnKind(): KspReturnKind =
     when (this) {
         ModbusReturnKind.UNIT -> KspReturnKind.UNIT
@@ -394,6 +455,9 @@ private fun ModbusReturnKind.toKspReturnKind(): KspReturnKind =
         ModbusReturnKind.COMMAND_RESULT -> KspReturnKind.COMMAND_RESULT
     }
 
+/**
+ * 处理modbus属性模型。
+ */
 private fun ModbusPropertyModel.toKspPropertyModel(): KspPropertyModel =
     KspPropertyModel(
         name = name,
@@ -403,6 +467,9 @@ private fun ModbusPropertyModel.toKspPropertyModel(): KspPropertyModel =
         doc = doc,
     )
 
+/**
+ * 处理modbus字段模型。
+ */
 private fun ModbusFieldModel.toKspFieldModel(): KspFieldModel =
     KspFieldModel(
         codecName = codecName,
@@ -412,6 +479,9 @@ private fun ModbusFieldModel.toKspFieldModel(): KspFieldModel =
         registerWidth = registerWidth,
     )
 
+/**
+ * 处理modbus值类型。
+ */
 private fun ModbusValueKind.toKspValueKind(): KspValueKind =
     when (this) {
         ModbusValueKind.BOOLEAN -> KspValueKind.BOOLEAN
@@ -420,6 +490,9 @@ private fun ModbusValueKind.toKspValueKind(): KspValueKind =
         ModbusValueKind.STRING -> KspValueKind.STRING
     }
 
+/**
+ * 处理modbusdoc模型。
+ */
 private fun ModbusDocModel.toKspDocModel(): KspDocModel =
     KspDocModel(
         summary = summary,

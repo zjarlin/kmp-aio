@@ -10,27 +10,70 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenClassDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextBindingDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextBindingValueDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMethodDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMqttGenerationDefaultsDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenPropertyDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenRtuGenerationDefaultsDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenTcpGenerationDefaultsDto
-import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.BusinessValidationException
-import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.common.NotFoundException
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenFunctionCode
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenSchemaDirection
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenTransportType
+import site.addzero.kmp.exp.BusinessValidationException
+import site.addzero.kmp.exp.NotFoundException
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenClassKind
 
+/**
+ * 验证代码生成上下文服务相关场景。
+ */
 class CodegenContextServiceTest {
 
     @Test
-    fun shouldPersistContextCrudWithNestedSchemasAndHardProtocolRelation() {
+    /**
+     * 处理shouldpersistgeneric类方法属性上下文graph。
+     */
+    fun shouldPersistGenericClassMethodPropertyContextGraph() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
             val saved =
                 fixture.service.saveContext(
-                    baseContextRequest(
+                    genericContextRequest(
                         protocolTemplateId = template.id,
+                        availableDefinitions = definitions,
+                        code = "CTX_GENERIC_CRUD",
+                    ),
+                )
+
+            assertNotNull(saved.id)
+            assertEquals(3, saved.classes.size)
+            assertEquals(2, saved.availableContextDefinitions.size)
+            assertEquals(
+                listOf("MODBUS_OPERATION", "MODBUS_FIELD"),
+                saved.availableContextDefinitions.map { definition -> definition.code },
+            )
+            val serviceClass = saved.classes.first { codegenClass -> codegenClass.className == "DeviceContract" }
+            assertEquals(2, serviceClass.methods.size)
+            assertTrue(saved.classes.all { codegenClass -> codegenClass.id != null })
+            assertTrue(saved.classes.flatMap(CodegenClassDto::methods).all { method -> method.id != null })
+            assertTrue(saved.classes.flatMap(CodegenClassDto::properties).all { property -> property.id != null })
+        }
+    }
+
+    @Test
+    /**
+     * 处理shouldpersist上下文crudwithnested类graphandhard协议relation。
+     */
+    fun shouldPersistContextCrudWithNestedClassGraphAndHardProtocolRelation() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val saved =
+                fixture.service.saveContext(
+                    genericContextRequest(
+                        protocolTemplateId = template.id,
+                        availableDefinitions = definitions,
                         code = "CTX_CRUD",
                     ).copy(
                         externalCOutputRoot = "/Volumes/peer-share/board-fw",
@@ -39,9 +82,9 @@ class CodegenContextServiceTest {
                                 serverOutputRoot = "/Users/test/server/generated/jvmMain/kotlin",
                                 sharedOutputRoot = "/Users/test/shared/generated/commonMain/kotlin",
                                 gatewayOutputRoot = "/Users/test/server/generated/jvmMain/kotlin",
-                                apiClientOutputRoot = "/Users/test/ui/generated/commonMain/kotlin",
+                                apiClientOutputRoot = "/Users/test/api/build/generated/source/controller2api/commonMain/kotlin",
                                 apiClientPackageName = "site.addzero.kcloud.plugins.codegencontext.generated.client",
-                                springRouteOutputRoot = "/Users/test/server/generated-spring/jvmMain/kotlin",
+                                springRouteOutputRoot = "/Users/test/server/build/generated/source/spring2ktor/jvmMain/kotlin",
                                 cOutputRoot = "/Users/test/peer/Docs/generated/modbus/c",
                                 markdownOutputRoot = "/Users/test/peer/Docs/generated/modbus/markdown",
                                 rtuDefaults =
@@ -63,6 +106,16 @@ class CodegenContextServiceTest {
                                         timeoutMs = 3_000,
                                         retries = 5,
                                     ),
+                                mqttDefaults =
+                                    CodegenMqttGenerationDefaultsDto(
+                                        brokerUrl = "tcp://10.0.0.7:1883",
+                                        clientId = "board-gateway",
+                                        requestTopic = "board/request",
+                                        responseTopic = "board/response",
+                                        qos = 2,
+                                        timeoutMs = 4_000,
+                                        retries = 6,
+                                    ),
                             ),
                     ),
                 )
@@ -81,68 +134,41 @@ class CodegenContextServiceTest {
             assertEquals(115200, saved.generationSettings.rtuDefaults.baudRate)
             assertEquals("10.0.0.8", saved.generationSettings.tcpDefaults.host)
             assertEquals(1502, saved.generationSettings.tcpDefaults.port)
-            assertEquals(2, saved.schemas.size)
-            assertTrue(saved.schemas.all { schema -> schema.id != null })
-            assertTrue(saved.schemas.flatMap { schema -> schema.fields }.all { field -> field.id != null })
+            assertEquals("tcp://10.0.0.7:1883", saved.generationSettings.mqttDefaults.brokerUrl)
+            assertEquals("board-gateway", saved.generationSettings.mqttDefaults.clientId)
 
-            val readSchema = saved.schemas.first { it.direction == CodegenSchemaDirection.READ }
             val updated =
                 fixture.service.saveContext(
-                    saved.copy(
-                        name = "Updated Context",
-                        description = "Updated description",
-                        externalCOutputRoot = "/Volumes/peer-share/board-fw-v2",
-                        generationSettings =
-                            saved.generationSettings.copy(
-                                apiClientPackageName = "site.addzero.kcloud.plugins.codegencontext.generated.clientv2",
-                                tcpDefaults = saved.generationSettings.tcpDefaults.copy(host = "10.0.0.9"),
-                            ),
-                        schemas =
-                            listOf(
-                                readSchema.copy(
-                                    name = "Read Updated Snapshot",
-                                    description = "Updated read schema",
-                                    methodName = "readUpdatedSnapshot",
-                                    modelName = "UpdatedSnapshot",
-                                    fields =
-                                        listOf(
-                                            readSchema.fields.first().copy(
-                                                name = "Updated Uptime",
-                                                propertyName = "updatedUptimeMs",
-                                            ),
-                                            CodegenFieldDto(
-                                                name = "Voltage",
-                                                description = "Voltage register",
-                                                sortIndex = 10,
-                                                propertyName = "voltageMv",
-                                                transportType = CodegenTransportType.U16,
-                                                registerOffset = 4,
-                                            ),
-                                        ),
-                                ),
-                            ),
+                    buildUpdatedCrudRequest(
+                        protocolTemplateId = template.id,
+                        availableDefinitions = definitions,
+                        id = saved.id,
+                        code = saved.code,
                     ),
                 )
 
             assertEquals("Updated Context", updated.name)
-            assertEquals(1, updated.schemas.size)
-            assertEquals("readUpdatedSnapshot", updated.schemas.single().methodName)
-            assertEquals(2, updated.schemas.single().fields.size)
+            assertEquals("Updated description", updated.description)
             assertEquals("/Volumes/peer-share/board-fw-v2", updated.externalCOutputRoot)
             assertEquals(
                 "site.addzero.kcloud.plugins.codegencontext.generated.clientv2",
                 updated.generationSettings.apiClientPackageName,
             )
             assertEquals("10.0.0.9", updated.generationSettings.tcpDefaults.host)
-            assertEquals(
-                listOf("updatedUptimeMs", "voltageMv"),
-                updated.schemas.single().fields.map { it.propertyName },
-            )
-            val updatedId = requireNotNull(updated.id)
+            assertEquals(2, updated.classes.size)
+
+            val serviceClass = updated.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
+            assertEquals(1, serviceClass.methods.size)
+            assertEquals("readUpdatedSnapshot", serviceClass.methods.single().methodName)
+
+            val modelClass = updated.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.MODEL }
+            assertEquals("UpdatedSnapshot", modelClass.className)
+            assertEquals(listOf("updatedUptimeMs", "voltageMv"), modelClass.properties.map(CodegenPropertyDto::propertyName))
 
             val listedCodes = fixture.service.listContexts().map { it.code }
             assertContains(listedCodes, "CTX_CRUD")
 
+            val updatedId = requireNotNull(updated.id)
             fixture.service.deleteContext(updatedId)
 
             assertFailsWith<NotFoundException> {
@@ -155,13 +181,24 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    /**
+     * 处理shouldrejectduplicate方法名称insame上下文。
+     */
     fun shouldRejectDuplicateMethodNamesInSameContext() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
-            val base = baseContextRequest(protocolTemplateId = template.id, code = "CTX_DUP_METHOD")
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val base = genericContextRequest(protocolTemplateId = template.id, availableDefinitions = definitions, code = "CTX_DUP_METHOD")
+            val serviceClass = base.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
             val duplicateRequest =
-                base.copy(
-                    schemas = listOf(base.schemas[0], base.schemas[1].copy(methodName = base.schemas[0].methodName)),
+                base.replaceServiceClass(
+                    serviceClass.copy(
+                        methods =
+                            listOf(
+                                serviceClass.methods[0],
+                                serviceClass.methods[1].copy(methodName = serviceClass.methods[0].methodName),
+                            ),
+                    ),
                 )
 
             val error =
@@ -169,59 +206,204 @@ class CodegenContextServiceTest {
                     fixture.service.saveContext(duplicateRequest)
                 }
 
-            assertContains(error.message.orEmpty(), "Duplicate schema methodName")
+            assertContains(error.message.orEmpty(), "duplicate methodName values")
         }
     }
 
     @Test
-    fun shouldRejectReadSchemaWithoutModelName() {
+    /**
+     * 处理shouldderiveread响应类whenmissing。
+     */
+    fun shouldDeriveReadResponseClassWhenMissing() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val base = genericContextRequest(protocolTemplateId = template.id, availableDefinitions = definitions, code = "CTX_MISSING_MODEL")
+            val serviceClass = base.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
             val request =
-                baseContextRequest(protocolTemplateId = template.id, code = "CTX_MISSING_MODEL").copy(
-                    schemas =
-                        listOf(
-                            baseContextRequest(template.id).schemas.first().copy(modelName = null),
-                        ),
+                base.replaceServiceClass(
+                    serviceClass.copy(
+                        methods =
+                            serviceClass.methods.map { method ->
+                                if (method.methodName == "readBoardSnapshot") {
+                                    method.copy(responseClassName = null)
+                                } else {
+                                    method
+                                }
+                            },
+                    ),
                 )
 
-            val error =
-                assertFailsWith<BusinessValidationException> {
-                    fixture.service.saveContext(request)
-                }
-
-            assertContains(error.message.orEmpty(), "must define modelName")
+            val saved = fixture.service.saveContext(request)
+            val savedServiceClass = saved.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
+            assertEquals("readBoardSnapshot", savedServiceClass.methods.first().methodName)
+            assertEquals("ReadBoardSnapshotResponse", savedServiceClass.methods.first().responseClassName)
         }
     }
 
     @Test
+    /**
+     * 处理shouldderiveidentifiersonsavewhenuileavesthemblank。
+     */
+    fun shouldDeriveIdentifiersOnSaveWhenUiLeavesThemBlank() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val saved =
+                fixture.service.saveContext(
+                    CodegenContextDetailDto(
+                        code = "CTX_SERVER_DERIVE",
+                        name = "Server Derived Context",
+                        description = "验证服务端自动补齐标识符。",
+                        protocolTemplateId = template.id,
+                        availableContextDefinitions = definitions,
+                        classes =
+                            listOf(
+                                CodegenClassDto(
+                                    name = "设备读写服务",
+                                    description = "由服务端补齐方法名。",
+                                    sortIndex = 0,
+                                    classKind = CodegenClassKind.SERVICE,
+                                    className = "GeneratedDeviceContractService",
+                                    methods =
+                                        listOf(
+                                            CodegenMethodDto(
+                                                name = "温度读取",
+                                                description = "读取当前温度。",
+                                                sortIndex = 0,
+                                                methodName = "",
+                                                responseClassName = null,
+                                                bindings =
+                                                    listOf(
+                                                        binding(
+                                                            MODBUS_OPERATION_DEFINITION_CODE,
+                                                            "direction" to "READ",
+                                                            "functionCode" to "READ_HOLDING_REGISTERS",
+                                                            "baseAddress" to "10",
+                                                        ),
+                                                    ),
+                                            ),
+                                            CodegenMethodDto(
+                                                name = "温度设置",
+                                                description = "写入目标温度。",
+                                                sortIndex = 10,
+                                                methodName = "",
+                                                requestClassName = null,
+                                                bindings =
+                                                    listOf(
+                                                        binding(
+                                                            MODBUS_OPERATION_DEFINITION_CODE,
+                                                            "direction" to "WRITE",
+                                                            "functionCode" to "WRITE_MULTIPLE_REGISTERS",
+                                                            "baseAddress" to "30",
+                                                        ),
+                                                    ),
+                                            ),
+                                        ),
+                                ),
+                                CodegenClassDto(
+                                    name = "温度读取响应实体",
+                                    description = "服务端应补齐响应类名。",
+                                    sortIndex = 10,
+                                    classKind = CodegenClassKind.MODEL,
+                                    className = "",
+                                    properties =
+                                        listOf(
+                                            CodegenPropertyDto(
+                                                name = "温度",
+                                                description = "当前温度。",
+                                                sortIndex = 0,
+                                                propertyName = "",
+                                                typeName = "",
+                                                bindings =
+                                                    listOf(
+                                                        binding(
+                                                            MODBUS_FIELD_DEFINITION_CODE,
+                                                            "transportType" to "U16",
+                                                            "registerOffset" to "0",
+                                                        ),
+                                                    ),
+                                            ),
+                                        ),
+                                ),
+                                CodegenClassDto(
+                                    name = "温度设置请求实体",
+                                    description = "服务端应补齐请求类名。",
+                                    sortIndex = 20,
+                                    classKind = CodegenClassKind.MODEL,
+                                    className = "",
+                                    properties =
+                                        listOf(
+                                            CodegenPropertyDto(
+                                                name = "备注",
+                                                description = "写入备注。",
+                                                sortIndex = 0,
+                                                propertyName = "",
+                                                typeName = "",
+                                                bindings =
+                                                    listOf(
+                                                        binding(
+                                                            MODBUS_FIELD_DEFINITION_CODE,
+                                                            "transportType" to "STRING_UTF8",
+                                                            "registerOffset" to "1",
+                                                            "length" to "2",
+                                                        ),
+                                                    ),
+                                            ),
+                                        ),
+                                ),
+                            ),
+                    ),
+                )
+
+            val serviceClass = saved.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }
+            assertEquals(listOf("wenDuDuQu", "wenDuSheZhi"), serviceClass.methods.map(CodegenMethodDto::methodName))
+            assertEquals("WenDuDuQuResponse", serviceClass.methods[0].responseClassName)
+            assertEquals("WenDuSheZhiRequest", serviceClass.methods[1].requestClassName)
+
+            val readModel = saved.classes.first { codegenClass -> codegenClass.name == "温度读取响应实体" }
+            assertEquals("WenDuDuQuResponse", readModel.className)
+            assertEquals("wenDu", readModel.properties.single().propertyName)
+            assertEquals("Int", readModel.properties.single().typeName)
+
+            val writeModel = saved.classes.first { codegenClass -> codegenClass.name == "温度设置请求实体" }
+            assertEquals("WenDuSheZhiRequest", writeModel.className)
+            assertEquals("beiZhu", writeModel.properties.single().propertyName)
+            assertEquals("String", writeModel.properties.single().typeName)
+        }
+    }
+
+    @Test
+    /**
+     * 处理shouldrejectoverlapping字段spans。
+     */
     fun shouldRejectOverlappingFieldSpans() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val base = genericContextRequest(protocolTemplateId = template.id, availableDefinitions = definitions, code = "CTX_OVERLAP")
             val request =
-                baseContextRequest(protocolTemplateId = template.id, code = "CTX_OVERLAP").copy(
-                    schemas =
-                        listOf(
-                            baseContextRequest(template.id).schemas.first().copy(
-                                fields =
-                                    listOf(
-                                        CodegenFieldDto(
-                                            name = "Value A",
-                                            sortIndex = 0,
-                                            propertyName = "valueA",
-                                            transportType = CodegenTransportType.U32_BE,
-                                            registerOffset = 0,
-                                        ),
-                                        CodegenFieldDto(
-                                            name = "Value B",
-                                            sortIndex = 1,
-                                            propertyName = "valueB",
-                                            transportType = CodegenTransportType.U16,
-                                            registerOffset = 1,
-                                        ),
+                base.replaceModelClass(
+                    className = "BoardSnapshot",
+                    transform = { model ->
+                        model.copy(
+                            properties =
+                                listOf(
+                                    model.properties[0],
+                                    model.properties[1].copy(
+                                        propertyName = "valueB",
+                                        bindings =
+                                            listOf(
+                                                binding(
+                                                    MODBUS_FIELD_DEFINITION_CODE,
+                                                    "transportType" to "U16",
+                                                    "registerOffset" to "1",
+                                                ),
+                                            ),
                                     ),
-                            ),
-                        ),
+                                ),
+                        )
+                    },
                 )
 
             val error =
@@ -234,30 +416,69 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    /**
+     * 处理shouldrejectinvalid传输andfunction编码combination。
+     */
     fun shouldRejectInvalidTransportAndFunctionCodeCombination() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
-            val request =
-                baseContextRequest(protocolTemplateId = template.id, code = "CTX_INVALID_TRANSPORT").copy(
-                    schemas =
-                        listOf(
-                            baseContextRequest(template.id).schemas.first().copy(
-                                direction = CodegenSchemaDirection.WRITE,
-                                functionCode = CodegenFunctionCode.WRITE_SINGLE_COIL,
-                                modelName = null,
-                                fields =
-                                    listOf(
-                                        CodegenFieldDto(
-                                            name = "Threshold",
-                                            sortIndex = 0,
-                                            propertyName = "threshold",
-                                            transportType = CodegenTransportType.U16,
-                                            registerOffset = 0,
-                                        ),
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val base = genericContextRequest(protocolTemplateId = template.id, availableDefinitions = definitions, code = "CTX_INVALID_TRANSPORT")
+            val withSingleCoilService =
+                base
+                    .replaceServiceClass(
+                        base.classes.first { codegenClass -> codegenClass.classKind == CodegenClassKind.SERVICE }.copy(
+                            methods =
+                                listOf(
+                                    CodegenMethodDto(
+                                        name = "写入单个线圈",
+                                        description = "非法写线圈示例。",
+                                        sortIndex = 0,
+                                        methodName = "writeSingleCoil",
+                                        requestClassName = "WriteSingleCoilRequest",
+                                        bindings =
+                                            listOf(
+                                                binding(
+                                                    MODBUS_OPERATION_DEFINITION_CODE,
+                                                    "direction" to "WRITE",
+                                                    "functionCode" to "WRITE_SINGLE_COIL",
+                                                    "baseAddress" to "0",
+                                                ),
+                                            ),
                                     ),
-                            ),
+                                ),
                         ),
-                )
+                    )
+            val request =
+                withSingleCoilService
+                    .copy(
+                        classes =
+                            withSingleCoilService.classes.filterNot { codegenClass -> codegenClass.className == "WriteBoardConfigRequest" } +
+                                CodegenClassDto(
+                                    name = "非法线圈请求",
+                                    description = "故意使用错误类型。",
+                                    sortIndex = 20,
+                                    classKind = CodegenClassKind.MODEL,
+                                    className = "WriteSingleCoilRequest",
+                                    properties =
+                                        listOf(
+                                            CodegenPropertyDto(
+                                                name = "Threshold",
+                                                sortIndex = 0,
+                                                propertyName = "threshold",
+                                                typeName = "Int",
+                                                bindings =
+                                                    listOf(
+                                                        binding(
+                                                            MODBUS_FIELD_DEFINITION_CODE,
+                                                            "transportType" to "U16",
+                                                            "registerOffset" to "0",
+                                                        ),
+                                                    ),
+                                            ),
+                                        ),
+                                ),
+                    )
 
             val error =
                 assertFailsWith<BusinessValidationException> {
@@ -269,14 +490,18 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    /**
+     * 处理shouldrejectrelative外部 C 输出根目录。
+     */
     fun shouldRejectRelativeExternalCOutputRoot() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val error =
                 assertFailsWith<BusinessValidationException> {
                     fixture.service.saveContext(
-                        baseContextRequest(
+                        genericContextRequest(
                             protocolTemplateId = template.id,
+                            availableDefinitions = fixture.service.listContextDefinitions(template.id),
                             code = "CTX_RELATIVE_OUTPUT",
                         ).copy(
                             externalCOutputRoot = "relative/peer-fw",
@@ -289,19 +514,24 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    /**
+     * 处理shouldrejectAPI 客户端包and输出根目录whenconfiguredalone。
+     */
     fun shouldRejectApiClientPackageAndOutputRootWhenConfiguredAlone() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
             val onlyOutputError =
                 assertFailsWith<BusinessValidationException> {
                     fixture.service.saveContext(
-                        baseContextRequest(
+                        genericContextRequest(
                             protocolTemplateId = template.id,
+                            availableDefinitions = definitions,
                             code = "CTX_CLIENT_OUTPUT_ONLY",
                         ).copy(
                             generationSettings =
                                 CodegenGenerationSettingsDto(
-                                    apiClientOutputRoot = "/Users/test/ui/generated/commonMain/kotlin",
+                                    apiClientOutputRoot = "/Users/test/api/build/generated/source/controller2api/commonMain/kotlin",
                                 ),
                         ),
                     )
@@ -311,8 +541,9 @@ class CodegenContextServiceTest {
             val onlyPackageError =
                 assertFailsWith<BusinessValidationException> {
                     fixture.service.saveContext(
-                        baseContextRequest(
+                        genericContextRequest(
                             protocolTemplateId = template.id,
+                            availableDefinitions = definitions,
                             code = "CTX_CLIENT_PACKAGE_ONLY",
                         ).copy(
                             generationSettings =
@@ -327,18 +558,22 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    /**
+     * 处理should保存andgeneratecontractsandreturn生成file摘要。
+     */
     fun shouldSaveAndGenerateContractsAndReturnGeneratedFileSummary() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val workspaceRoot = createGeneratorWorkspace()
-            val apiClientRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/ui/generated/commonMain/kotlin")
-            val springRouteRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated-spring/jvmMain/kotlin")
+            val apiClientRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/api/build/generated/source/controller2api/commonMain/kotlin")
+            val springRouteRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/source/spring2ktor/jvmMain/kotlin")
             val cRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata/c")
             val markdownRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata/markdown")
             val saved =
                 fixture.service.saveContext(
-                    baseContextRequest(
+                    genericContextRequest(
                         protocolTemplateId = template.id,
+                        availableDefinitions = fixture.service.listContextDefinitions(template.id),
                         code = "CTX_GENERATE",
                     ).copy(
                         generationSettings =
@@ -407,7 +642,11 @@ class CodegenContextServiceTest {
                     },
                 )
                 assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/rtu/modbus_rtu_dispatch.c") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/tcp/modbus_tcp_dispatch.c") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/mqtt/modbus_mqtt_dispatch.c") })
                 assertTrue(response.generatedFiles.any { file -> file.endsWith(".rtu.protocol.md") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith(".tcp.protocol.md") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith(".mqtt.protocol.md") })
                 assertEquals("manual sentinel", manualContractFile.readText())
                 fixture.dataSource.connection.use { connection ->
                     connection.prepareStatement(
@@ -434,6 +673,9 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    /**
+     * 处理shouldgenerate外部CandMarkdown产物whenconfigured。
+     */
     fun shouldGenerateExternalCAndMarkdownArtifactsWhenConfigured() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
@@ -441,8 +683,9 @@ class CodegenContextServiceTest {
             val externalOutputRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata")
             val saved =
                 fixture.service.saveContext(
-                    baseContextRequest(
+                    genericContextRequest(
                         protocolTemplateId = template.id,
+                        availableDefinitions = fixture.service.listContextDefinitions(template.id),
                         code = "CTX_EXTERNAL_OUTPUT",
                     ).copy(
                         externalCOutputRoot = externalOutputRoot.toString(),
@@ -456,160 +699,191 @@ class CodegenContextServiceTest {
                     }
 
                 val cDispatch = externalOutputRoot.resolve("c/generated/modbus/rtu/modbus_rtu_dispatch.c")
+                val tcpDispatch = externalOutputRoot.resolve("c/generated/modbus/tcp/modbus_tcp_dispatch.c")
+                val mqttDispatch = externalOutputRoot.resolve("c/generated/modbus/mqtt/modbus_mqtt_dispatch.c")
                 val protocolDocDir = externalOutputRoot.resolve("markdown/generated/modbus/protocols")
                 assertTrue(cDispatch.exists())
+                assertTrue(tcpDispatch.exists())
+                assertTrue(mqttDispatch.exists())
                 assertTrue(response.generatedFiles.contains(cDispatch.toString()))
+                assertTrue(response.generatedFiles.contains(tcpDispatch.toString()))
+                assertTrue(response.generatedFiles.contains(mqttDispatch.toString()))
                 assertTrue(response.generatedFiles.any { file -> file.startsWith(externalOutputRoot.toString()) })
                 assertContains(response.message, "Generated")
                 assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".rtu.protocol.md") })
-            } finally {
-                deleteWorkspace(workspaceRoot)
-            }
-        }
-    }
-
-    @Test
-    fun shouldGenerateFlashConfigContractsWithU8AndByteArrayFields() {
-        CodegenContextTestFixture().use { fixture ->
-            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
-            val saved =
-                fixture.service.saveContext(
-                    baseContextRequest(
-                        protocolTemplateId = template.id,
-                        code = "CTX_FLASH_CONFIG",
-                    ).copy(
-                        schemas =
-                            listOf(
-                                CodegenSchemaDto(
-                                    name = "读取 Flash 配置",
-                                    description = "读取 Flash 持久化配置。",
-                                    sortIndex = 0,
-                                    direction = CodegenSchemaDirection.READ,
-                                    functionCode = CodegenFunctionCode.READ_HOLDING_REGISTERS,
-                                    baseAddress = 200,
-                                    methodName = "getFlashConfig",
-                                    modelName = "FlashConfig",
-                                    fields =
-                                        listOf(
-                                            CodegenFieldDto(
-                                                name = "魔术字",
-                                                description = "魔术字。",
-                                                sortIndex = 0,
-                                                propertyName = "magicWord",
-                                                transportType = CodegenTransportType.U32_BE,
-                                                registerOffset = 0,
-                                            ),
-                                            CodegenFieldDto(
-                                                name = "端口配置",
-                                                description = "24 路端口配置。",
-                                                sortIndex = 1,
-                                                propertyName = "portConfig",
-                                                transportType = CodegenTransportType.BYTE_ARRAY,
-                                                registerOffset = 2,
-                                                length = 24,
-                                            ),
-                                            CodegenFieldDto(
-                                                name = "从机地址",
-                                                description = "Modbus 从机地址。",
-                                                sortIndex = 2,
-                                                propertyName = "slaveAddress",
-                                                transportType = CodegenTransportType.U8,
-                                                registerOffset = 14,
-                                            ),
-                                        ),
-                                ),
-                                CodegenSchemaDto(
-                                    name = "写入 Flash 配置",
-                                    description = "写入 Flash 持久化配置。",
-                                    sortIndex = 10,
-                                    direction = CodegenSchemaDirection.WRITE,
-                                    functionCode = CodegenFunctionCode.WRITE_MULTIPLE_REGISTERS,
-                                    baseAddress = 200,
-                                    methodName = "writeFlashConfig",
-                                    fields =
-                                        listOf(
-                                            CodegenFieldDto(
-                                                name = "魔术字",
-                                                description = "魔术字。",
-                                                sortIndex = 0,
-                                                propertyName = "magicWord",
-                                                transportType = CodegenTransportType.U32_BE,
-                                                registerOffset = 0,
-                                            ),
-                                            CodegenFieldDto(
-                                                name = "端口配置",
-                                                description = "24 路端口配置。",
-                                                sortIndex = 1,
-                                                propertyName = "portConfig",
-                                                transportType = CodegenTransportType.BYTE_ARRAY,
-                                                registerOffset = 2,
-                                                length = 24,
-                                            ),
-                                            CodegenFieldDto(
-                                                name = "从机地址",
-                                                description = "Modbus 从机地址。",
-                                                sortIndex = 2,
-                                                propertyName = "slaveAddress",
-                                                transportType = CodegenTransportType.U8,
-                                                registerOffset = 14,
-                                            ),
-                                        ),
-                                ),
-                            ),
-                    ),
-                )
-            val workspaceRoot = createGeneratorWorkspace()
-
-            try {
-                val response =
-                    withRepoRoot(workspaceRoot) {
-                        fixture.service.generateContracts(saved.id!!)
-                    }
-
-                assertTrue(response.generatedFiles.size >= 3)
-                val deviceApi =
-                    workspaceRoot.resolve(
-                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin/" +
-                            "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt",
-                    ).readText()
-                val deviceWriteApi =
-                    workspaceRoot.resolve(
-                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin/" +
-                            "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceWriteApi.kt",
-                    ).readText()
-                val flashRegisters =
-                    workspaceRoot.resolve(
-                        "apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin/" +
-                            "site/addzero/kcloud/plugins/mcuconsole/modbus/device/FlashConfigRegisters.kt",
-                    ).readText()
-
-                assertContains(deviceApi, "suspend fun getFlashConfig(): FlashConfigRegisters")
-                assertContains(deviceWriteApi, "suspend fun writeFlashConfig(")
-                assertContains(deviceWriteApi, "portConfig: ByteArray")
-                assertContains(deviceWriteApi, "slaveAddress: Int")
-                assertContains(flashRegisters, "val portConfig: ByteArray")
-                fixture.dataSource.connection.use { connection ->
-                    connection.prepareStatement(
-                        """
-                        SELECT payload
-                        FROM codegen_context_modbus_contract
-                        WHERE context_id = ? AND transport = 'rtu'
-                        """.trimIndent(),
-                    ).use { statement ->
-                        statement.setLong(1, saved.id!!)
-                        statement.executeQuery().use { resultSet ->
-                            assertTrue(resultSet.next())
-                            val payload = resultSet.getString("payload")
-                            assertContains(payload, "\"codecName\":\"BYTE_ARRAY\"")
-                            assertContains(payload, "\"codecName\":\"U8\"")
-                            assertContains(payload, "\"valueKind\":\"BYTES\"")
-                            assertContains(payload, "\"length\":24")
-                        }
-                    }
-                }
+                assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".tcp.protocol.md") })
+                assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".mqtt.protocol.md") })
             } finally {
                 deleteWorkspace(workspaceRoot)
             }
         }
     }
 }
+
+/**
+ * 构建更新crud请求。
+ *
+ * @param protocolTemplateId 协议模板 ID。
+ * @param availableDefinitions 可用定义。
+ * @param id ID。
+ * @param code 编码。
+ */
+private fun buildUpdatedCrudRequest(
+    protocolTemplateId: Long,
+    availableDefinitions: List<site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefinitionDto>,
+    id: Long?,
+    code: String,
+): CodegenContextDetailDto =
+    CodegenContextDetailDto(
+        id = id,
+        code = code,
+        name = "Updated Context",
+        description = "Updated description",
+        enabled = true,
+        protocolTemplateId = protocolTemplateId,
+        externalCOutputRoot = "/Volumes/peer-share/board-fw-v2",
+        generationSettings =
+            CodegenGenerationSettingsDto(
+                serverOutputRoot = "/Users/test/server/generated/jvmMain/kotlin",
+                sharedOutputRoot = "/Users/test/shared/generated/commonMain/kotlin",
+                gatewayOutputRoot = "/Users/test/server/generated/jvmMain/kotlin",
+                apiClientOutputRoot = "/Users/test/api/build/generated/source/controller2api/commonMain/kotlin",
+                apiClientPackageName = "site.addzero.kcloud.plugins.codegencontext.generated.clientv2",
+                springRouteOutputRoot = "/Users/test/server/build/generated/source/spring2ktor/jvmMain/kotlin",
+                cOutputRoot = "/Users/test/peer/Docs/generated/modbus/c",
+                markdownOutputRoot = "/Users/test/peer/Docs/generated/modbus/markdown",
+                tcpDefaults = CodegenTcpGenerationDefaultsDto(host = "10.0.0.9"),
+            ),
+        availableContextDefinitions = availableDefinitions,
+        classes =
+            listOf(
+                CodegenClassDto(
+                    name = "设备读服务",
+                    description = "更新后的读服务。",
+                    sortIndex = 0,
+                    classKind = CodegenClassKind.SERVICE,
+                    className = "DeviceContract",
+                    methods =
+                        listOf(
+                            CodegenMethodDto(
+                                name = "读取更新后的快照",
+                                description = "更新后的读取方法。",
+                                sortIndex = 0,
+                                methodName = "readUpdatedSnapshot",
+                                responseClassName = "UpdatedSnapshot",
+                                bindings =
+                                    listOf(
+                                        binding(
+                                            MODBUS_OPERATION_DEFINITION_CODE,
+                                            "direction" to "READ",
+                                            "functionCode" to "READ_HOLDING_REGISTERS",
+                                            "baseAddress" to "10",
+                                        ),
+                                    ),
+                            ),
+                        ),
+                ),
+                CodegenClassDto(
+                    name = "更新后的板卡快照",
+                    description = "更新后的响应模型。",
+                    sortIndex = 10,
+                    classKind = CodegenClassKind.MODEL,
+                    className = "UpdatedSnapshot",
+                    properties =
+                        listOf(
+                            CodegenPropertyDto(
+                                name = "Updated Uptime",
+                                description = "更新后的运行时长。",
+                                sortIndex = 0,
+                                propertyName = "updatedUptimeMs",
+                                typeName = "Int",
+                                bindings =
+                                    listOf(
+                                        binding(
+                                            MODBUS_FIELD_DEFINITION_CODE,
+                                            "transportType" to "U32_BE",
+                                            "registerOffset" to "0",
+                                            "length" to "1",
+                                        ),
+                                    ),
+                            ),
+                            CodegenPropertyDto(
+                                name = "Voltage",
+                                description = "电压。",
+                                sortIndex = 10,
+                                propertyName = "voltageMv",
+                                typeName = "Int",
+                                bindings =
+                                    listOf(
+                                        binding(
+                                            MODBUS_FIELD_DEFINITION_CODE,
+                                            "transportType" to "U16",
+                                            "registerOffset" to "4",
+                                        ),
+                                    ),
+                            ),
+                        ),
+                ),
+            ),
+    )
+
+/**
+ * 处理代码生成上下文详情数据传输对象。
+ *
+ * @param replacement replacement。
+ */
+private fun CodegenContextDetailDto.replaceServiceClass(
+    replacement: CodegenClassDto,
+): CodegenContextDetailDto =
+    copy(
+        classes =
+            classes.map { codegenClass ->
+                if (codegenClass.classKind == CodegenClassKind.SERVICE) {
+                    replacement
+                } else {
+                    codegenClass
+                }
+            },
+    )
+
+/**
+ * 处理代码生成上下文详情数据传输对象。
+ *
+ * @param className 类名。
+ * @param transform 转换函数。
+ */
+private fun CodegenContextDetailDto.replaceModelClass(
+    className: String,
+    transform: (CodegenClassDto) -> CodegenClassDto,
+): CodegenContextDetailDto =
+    copy(
+        classes =
+            classes.map { codegenClass ->
+                if (codegenClass.className == className) {
+                    transform(codegenClass)
+                } else {
+                    codegenClass
+                }
+            },
+    )
+
+/**
+ * 处理绑定。
+ *
+ * @param definitionCode 定义编码。
+ * @param values 值。
+ */
+private fun binding(
+    definitionCode: String,
+    vararg values: Pair<String, String>,
+): CodegenContextBindingDto =
+    CodegenContextBindingDto(
+        definitionCode = definitionCode,
+        values =
+            values.map { (paramCode, value) ->
+                CodegenContextBindingValueDto(
+                    paramCode = paramCode,
+                    value = value,
+                )
+            },
+    )

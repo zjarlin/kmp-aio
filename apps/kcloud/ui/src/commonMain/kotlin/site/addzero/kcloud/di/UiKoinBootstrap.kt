@@ -1,10 +1,12 @@
 package site.addzero.kcloud.di
 
+import androidx.compose.ui.input.key.Key.Companion.V
 import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.KoinApplication
 import org.koin.core.annotation.Module
 import org.koin.core.context.startKoin
+import org.koin.core.module.Module as KoinModule
 import org.koin.mp.KoinPlatformTools
 import org.koin.plugin.module.dsl.withConfiguration
 
@@ -14,7 +16,8 @@ import org.koin.plugin.module.dsl.withConfiguration
  * 子模块如果需要暴露 provider module，应在自己的模块里提供 public
  * `@Configuration` 入口，而不是要求根应用再手动 include。
  */
-@Module
+@Module(
+)
 @ComponentScan("site.addzero")
 @Configuration
 class KCloudUiModule
@@ -35,3 +38,4 @@ fun initUiKoin() {
         }
     }
 }
+

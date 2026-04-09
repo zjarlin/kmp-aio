@@ -25,10 +25,14 @@ interface ProductDefinitionLabelLink {
     /** 同一产品下标签展示顺序。 */
     val sortIndex: Int
 
-    /** 创建时间，使用 epoch millis。 */
+    /**
+     * 创建时间戳。
+     */
     val createdAt: Long
 
-    /** 最近更新时间，使用 epoch millis。 */
+    /**
+     * 更新时间戳。
+     */
     val updatedAt: Long
 
     /** 关联的产品定义。 */

@@ -1,17 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.file.DirectoryProperty
-import org.gradle.api.file.RegularFileProperty
-import org.gradle.api.tasks.JavaExec
 import org.gradle.api.tasks.Copy
-import org.gradle.api.tasks.Delete
-import org.gradle.api.tasks.InputDirectory
-import org.gradle.api.tasks.InputFile
-import org.gradle.api.tasks.OutputFile
-import org.gradle.api.tasks.TaskAction
-import org.gradle.api.tasks.bundling.Zip
-import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
@@ -26,11 +15,13 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val desktopMainClass = "site.addzero.kcloud.MainKt"
-val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val routeGeneratedSourceDir = layout.buildDirectory.dir("generated/source/route/commonMain/kotlin")
-val routeOwnerModuleDir = routeSharedSourceDir.asFile.absolutePath
+val routeOwnerModuleDir =
+    gradle.gradleUserHomeDir
+        .resolve("addzero/route-owner/${rootProject.name}/apps-kcloud-ui/commonMain/kotlin")
+        .absolutePath
 val routeGeneratedPackageDir = routeGeneratedSourceDir.get().asFile.resolve("site/addzero/generated")
-val routeLegacyGeneratedDir = routeSharedSourceDir.asFile.resolve("site/addzero/generated")
+val routeLegacyGeneratedDir = file(routeOwnerModuleDir).resolve("site/addzero/generated")
 val routeContributorTaskPaths = listOf(
     ":apps:kcloud:plugins:codegen-context:ui:kspCommonMainKotlinMetadata",
     ":apps:kcloud:plugins:host-config:ui:kspCommonMainKotlinMetadata",
@@ -38,7 +29,6 @@ val routeContributorTaskPaths = listOf(
 )
 
 ksp {
-    arg("sharedSourceDir", routeSharedSourceDir.asFile.absolutePath)
     arg("routeGenPkg", "site.addzero.generated")
     arg("routeOwnerModule", routeOwnerModuleDir)
     arg("routeAggregationRole", "owner")
@@ -89,25 +79,6 @@ compose.desktop {
     }
 }
 
-val syncRouteGeneratedSources =
-    tasks.register<Copy>("syncRouteGeneratedSources") {
-        dependsOn("kspCommonMainKotlinMetadata")
-        from(routeLegacyGeneratedDir) {
-            include("RouteKeys.kt")
-            include("RouteTable.kt")
-        }
-        into(routeGeneratedPackageDir)
-    }
-
-val cleanLegacyRouteSnapshot by tasks.registering(Delete::class) {
-    delete(routeLegacyGeneratedDir.resolve("RouteKeys.kt"))
-    delete(routeLegacyGeneratedDir.resolve("RouteTable.kt"))
-}
-
-syncRouteGeneratedSources.configure {
-    finalizedBy(cleanLegacyRouteSnapshot)
-}
-
 tasks.matching { task ->
     task.name in setOf(
         "kspCommonMainKotlinMetadata",
@@ -117,6 +88,16 @@ tasks.matching { task ->
 }.configureEach {
     routeContributorTaskPaths.forEach(::dependsOn)
 }
+
+val syncRouteGeneratedSources =
+    tasks.register<Copy>("syncRouteGeneratedSources") {
+        dependsOn("kspCommonMainKotlinMetadata")
+        from(routeLegacyGeneratedDir) {
+            include("RouteKeys.kt")
+            include("RouteTable.kt")
+        }
+        into(routeGeneratedPackageDir)
+    }
 
 tasks.matching { task ->
     task.name in setOf(

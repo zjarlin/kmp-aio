@@ -15,21 +15,37 @@ import site.addzero.kcloud.plugins.mcuconsole.flash.McuFlashResetRequest
 import site.addzero.kcloud.plugins.mcuconsole.flash.McuFlashStatusResponse
 
 @Single
+/**
+ * 提供mcu烧录远程相关服务。
+ *
+ * @property httpClient http客户端。
+ */
 class McuFlashRemoteService(
     private val httpClient: HttpClient,
 ) {
+    /**
+     * 列出配置档。
+     */
     suspend fun listProfiles(): List<McuFlashProfileSummary> {
         return httpClient.get("/api/mcu/flash/profiles")
             .body<McuFlashProfilesResponse>()
             .items
     }
 
+    /**
+     * 列出探针。
+     */
     suspend fun listProbes(): List<McuFlashProbeSummary> {
         return httpClient.get("/api/mcu/flash/probes")
             .body<McuFlashProbesResponse>()
             .items
     }
 
+    /**
+     * 启动烧录任务。
+     *
+     * @param request 请求参数。
+     */
     suspend fun startFlash(
         request: McuFlashRequest,
     ): McuFlashStatusResponse {
@@ -38,10 +54,18 @@ class McuFlashRemoteService(
         }.body()
     }
 
+    /**
+     * 获取状态。
+     */
     suspend fun getStatus(): McuFlashStatusResponse {
         return httpClient.get("/api/mcu/flash/status").body()
     }
 
+    /**
+     * 处理重置。
+     *
+     * @param request 请求参数。
+     */
     suspend fun reset(
         request: McuFlashResetRequest,
     ): McuFlashStatusResponse {

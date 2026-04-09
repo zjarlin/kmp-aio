@@ -3,6 +3,9 @@ package site.addzero.kcloud.plugins.hostconfig.model.enums
 import kotlinx.serialization.Serializable
 
 @Serializable
+/**
+ * 定义浮点字序枚举。
+ */
 enum class FloatOrder {
     ORDER_4321,
     ORDER_1234,

@@ -45,10 +45,14 @@ interface ProductDefinition {
     /** 同级排序值，越小越靠前。 */
     val sortIndex: Int
 
-    /** 创建时间，使用 epoch millis。 */
+    /**
+     * 创建时间戳。
+     */
     val createdAt: Long
 
-    /** 最近更新时间，使用 epoch millis。 */
+    /**
+     * 更新时间戳。
+     */
     val updatedAt: Long
 
     /** 产品下挂的设备定义列表。 */

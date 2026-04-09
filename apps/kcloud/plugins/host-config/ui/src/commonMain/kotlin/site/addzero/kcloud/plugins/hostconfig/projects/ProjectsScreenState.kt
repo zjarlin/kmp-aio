@@ -6,7 +6,6 @@ import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse
-import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCatalogItemResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
@@ -22,6 +21,32 @@ private val EmptyTagPage = PageResponse<TagResponse>(
     p = 0,
 )
 
+/**
+ * 表示项目界面状态。
+ *
+ * @property loading 加载状态。
+ * @property busy 繁忙状态。
+ * @property errorMessage 错误消息。
+ * @property noticeMessage 提示消息。
+ * @property projects 项目列表。
+ * @property projectTrees 项目树。
+ * @property treeNodes 树nodes。
+ * @property protocolTemplates 协议模板。
+ * @property moduleTemplateCatalog 模块模板目录。
+ * @property deviceTypes 设备类型。
+ * @property registerTypes 寄存器类型。
+ * @property dataTypes 数据类型。
+ * @property selectedProjectId 选中项目 ID。
+ * @property selectedNodeId 选中node ID。
+ * @property tagOffset 标签offset。
+ * @property tagSize 标签size。
+ * @property tagPage 标签分页。
+ * @property selectedTagDetail 选中标签详情。
+ * @property uploadStatus 上传状态。
+ * @property moduleBoardRuntime 模块boardruntime。
+ * @property moduleBoardLoading 模块board加载。
+ * @property moduleBoardErrorMessage 模块board错误消息。
+ */
 data class ProjectsScreenState(
     val loading: Boolean = true,
     val busy: Boolean = false,
@@ -30,7 +55,6 @@ data class ProjectsScreenState(
     val projects: List<ProjectResponse> = emptyList(),
     val projectTrees: List<ProjectTreeResponse> = emptyList(),
     val treeNodes: List<HostConfigTreeNode> = emptyList(),
-    val protocolCatalog: List<ProtocolCatalogItemResponse> = emptyList(),
     val protocolTemplates: List<TemplateOptionResponse> = emptyList(),
     val moduleTemplateCatalog: Map<Long, List<ModuleTemplateOptionResponse>> = emptyMap(),
     val deviceTypes: List<TemplateOptionResponse> = emptyList(),
@@ -93,6 +117,11 @@ data class ProjectsScreenState(
         }
 }
 
+/**
+ * 处理列表。
+ *
+ * @param protocolId 协议 ID。
+ */
 internal fun List<ProjectTreeResponse>.findProtocol(
     protocolId: Long,
 ): ProtocolTreeNode? {
@@ -101,9 +130,19 @@ internal fun List<ProjectTreeResponse>.findProtocol(
         .firstOrNull { protocol -> protocol.id == protocolId }
 }
 
+/**
+ * 处理列表。
+ *
+ * @param moduleId 模块 ID。
+ */
 internal fun List<ProjectTreeResponse>.findModule(
     moduleId: Long,
 ): ModuleTreeNode? {
+    /**
+     * 处理search。
+     *
+     * @param modules 模块。
+     */
     fun search(modules: List<ModuleTreeNode>): ModuleTreeNode? {
         modules.forEach { module ->
             if (module.id == moduleId) {
@@ -120,9 +159,19 @@ internal fun List<ProjectTreeResponse>.findModule(
     }.firstOrNull()
 }
 
+/**
+ * 处理列表。
+ *
+ * @param deviceId 设备 ID。
+ */
 internal fun List<ProjectTreeResponse>.findDevice(
     deviceId: Long,
 ): DeviceTreeNode? {
+    /**
+     * 处理search。
+     *
+     * @param modules 模块。
+     */
     fun search(modules: List<ModuleTreeNode>): DeviceTreeNode? {
         modules.forEach { module ->
             module.devices.firstOrNull { device -> device.id == deviceId }?.let { device ->
@@ -137,4 +186,11 @@ internal fun List<ProjectTreeResponse>.findDevice(
             search(protocol.modules)
         }
     }.firstOrNull()
+}
+
+/**
+ * 处理协议树node。
+ */
+internal fun ProtocolTreeNode.displayName(): String {
+    return protocolTemplateName.takeIf { it.isNotBlank() } ?: name
 }

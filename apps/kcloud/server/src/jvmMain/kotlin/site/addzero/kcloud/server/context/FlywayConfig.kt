@@ -11,10 +11,14 @@ class FlywayConfig : FlywayConfigSpi {
     override val order = 0
 
     override fun plan(): FlywayConfigPlan {
+        if (resolveKCloudServerDbMode() == KCloudServerDbMode.Sqlite) {
+            return FlywayConfigPlan(enabled = false)
+        }
+
         val datasources =
             listOf(
                 FlywayDatasourcePlan(
-                    name = "mysql",
+                    name = KCLOUD_SERVER_DB_MODE_MYSQL,
                     enabled = true,
                     url = serverMysqlJdbcUrl(),
                     user = KCLOUD_SERVER_MYSQL_USER,

@@ -12,7 +12,6 @@ import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceUpdateRequest
-import site.addzero.kcloud.plugins.hostconfig.api.project.LinkExistingProtocolRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModulePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
@@ -40,9 +39,18 @@ import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.ModuleBoardRuntimeSnapshot
 import site.addzero.kcloud.plugins.hostconfig.common.findNode
-import site.addzero.kcloud.plugins.mcuconsole.api.external.DeviceInfoApi
+import site.addzero.kcloud.plugins.mcuconsole.api.external.generated.DeviceInfoApi
 
 @KoinViewModel
+/**
+ * 管理项目界面的状态与交互逻辑。
+ *
+ * @property projectApi 项目API。
+ * @property tagApi 标签API。
+ * @property templateApi 模板API。
+ * @property projectUploadApi 项目上传API。
+ * @property deviceInfoApi 设备infoAPI。
+ */
 class ProjectsViewModel(
     private val projectApi: ProjectApi,
     private val tagApi: TagApi,
@@ -57,12 +65,18 @@ class ProjectsViewModel(
         refresh()
     }
 
+    /**
+     * 刷新当前界面数据。
+     */
     fun refresh() {
         viewModelScope.launch {
             loadPage()
         }
     }
 
+    /**
+     * 处理clear提示。
+     */
     fun clearNotice() {
         screenState = screenState.copy(
             noticeMessage = null,
@@ -70,6 +84,11 @@ class ProjectsViewModel(
         )
     }
 
+    /**
+     * 选择项目。
+     *
+     * @param projectId 项目 ID。
+     */
     fun selectProject(
         projectId: Long,
     ) {
@@ -82,6 +101,11 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 选择node。
+     *
+     * @param nodeId node ID。
+     */
     fun selectNode(
         nodeId: String,
     ) {
@@ -97,6 +121,9 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 加载previous标签分页。
+     */
     fun loadPreviousTagPage() {
         val deviceId = screenState.activeDeviceId ?: return
         if (screenState.tagOffset <= 0) {
@@ -110,6 +137,9 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 加载next标签分页。
+     */
     fun loadNextTagPage() {
         val deviceId = screenState.activeDeviceId ?: return
         if (screenState.tagOffset + screenState.tagSize >= screenState.tagPage.t.toInt()) {
@@ -123,6 +153,11 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 创建项目。
+     *
+     * @param request 请求参数。
+     */
     fun createProject(
         request: ProjectCreateRequest,
     ) {
@@ -136,6 +171,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新项目。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun updateProject(
         projectId: Long,
         request: ProjectUpdateRequest,
@@ -150,6 +191,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新项目位置。
+     *
+     * @param projectId 项目 ID。
+     * @param sortIndex 目标排序序号。
+     */
     fun updateProjectPosition(
         projectId: Long,
         sortIndex: Int,
@@ -167,6 +214,11 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 删除项目。
+     *
+     * @param projectId 项目 ID。
+     */
     fun deleteProject(
         projectId: Long,
     ) {
@@ -180,6 +232,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 创建协议。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun createProtocol(
         projectId: Long,
         request: ProtocolCreateRequest,
@@ -194,6 +252,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新协议。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     * @param request 请求参数。
+     */
     fun updateProtocol(
         projectId: Long,
         protocolId: Long,
@@ -212,20 +277,14 @@ class ProjectsViewModel(
         }
     }
 
-    fun linkProtocol(
-        projectId: Long,
-        request: LinkExistingProtocolRequest,
-    ) {
-        mutate("协议已关联") {
-            val linked = projectApi.linkProtocol(projectId, request)
-            loadPage(
-                preferredProjectId = projectId,
-                preferredNodeId = buildProtocolNodeId(projectId, linked.id),
-                noticeMessage = "协议已关联",
-            )
-        }
-    }
-
+    /**
+     * 移动协议。
+     *
+     * @param protocolId 协议 ID。
+     * @param sourceProjectId 来源项目 ID。
+     * @param targetProjectId 目标项目 ID。
+     * @param sortIndex 目标排序序号。
+     */
     fun moveProtocol(
         protocolId: Long,
         sourceProjectId: Long,
@@ -249,6 +308,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 删除协议。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     */
     fun deleteProtocol(
         projectId: Long,
         protocolId: Long,
@@ -266,6 +331,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 创建模块under协议。
+     *
+     * @param projectId 项目 ID。
+     * @param protocolId 协议 ID。
+     * @param request 请求参数。
+     */
     fun createModuleUnderProtocol(
         projectId: Long,
         protocolId: Long,
@@ -281,6 +353,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 创建模块under项目。
+     *
+     * @param projectId 项目 ID。
+     * @param request 请求参数。
+     */
     fun createModuleUnderProject(
         projectId: Long,
         request: ModuleCreateRequest,
@@ -295,6 +373,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新模块。
+     *
+     * @param projectId 项目 ID。
+     * @param moduleId 模块 ID。
+     * @param request 请求参数。
+     */
     fun updateModule(
         projectId: Long,
         moduleId: Long,
@@ -310,6 +395,14 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 移动模块to协议。
+     *
+     * @param projectId 项目 ID。
+     * @param moduleId 模块 ID。
+     * @param protocolId 协议 ID。
+     * @param sortIndex 目标排序序号。
+     */
     fun moveModuleToProtocol(
         projectId: Long,
         moduleId: Long,
@@ -332,6 +425,14 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 移动模块to项目。
+     *
+     * @param sourceProjectId 来源项目 ID。
+     * @param targetProjectId 目标项目 ID。
+     * @param moduleId 模块 ID。
+     * @param sortIndex 目标排序序号。
+     */
     fun moveModuleToProject(
         sourceProjectId: Long,
         targetProjectId: Long,
@@ -355,6 +456,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 删除模块。
+     *
+     * @param projectId 项目 ID。
+     * @param moduleId 模块 ID。
+     */
     fun deleteModule(
         projectId: Long,
         moduleId: Long,
@@ -369,6 +476,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 创建设备。
+     *
+     * @param projectId 项目 ID。
+     * @param moduleId 模块 ID。
+     * @param request 请求参数。
+     */
     fun createDevice(
         projectId: Long,
         moduleId: Long,
@@ -384,6 +498,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新设备。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     * @param request 请求参数。
+     */
     fun updateDevice(
         projectId: Long,
         deviceId: Long,
@@ -399,6 +520,14 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 移动设备。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     * @param moduleId 模块 ID。
+     * @param sortIndex 目标排序序号。
+     */
     fun moveDevice(
         projectId: Long,
         deviceId: Long,
@@ -421,6 +550,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 删除设备。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     */
     fun deleteDevice(
         projectId: Long,
         deviceId: Long,
@@ -435,6 +570,14 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 创建标签。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     * @param request 请求参数。
+     * @param valueTexts 值文本。
+     */
     fun createTag(
         projectId: Long,
         deviceId: Long,
@@ -455,6 +598,15 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新标签。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     * @param tagId 标签 ID。
+     * @param request 请求参数。
+     * @param valueTexts 值文本。
+     */
     fun updateTag(
         projectId: Long,
         deviceId: Long,
@@ -476,6 +628,14 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 移动标签。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     * @param tagId 标签 ID。
+     * @param sortIndex 目标排序序号。
+     */
     fun moveTag(
         projectId: Long,
         deviceId: Long,
@@ -498,6 +658,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 删除标签。
+     *
+     * @param projectId 项目 ID。
+     * @param deviceId 设备 ID。
+     * @param tagId 标签 ID。
+     */
     fun deleteTag(
         projectId: Long,
         deviceId: Long,
@@ -513,6 +680,9 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 更新上传状态。
+     */
     fun updateUploadStatus() {
         val projectId = screenState.selectedProjectId ?: return
         viewModelScope.launch {
@@ -523,6 +693,11 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 处理submit上传。
+     *
+     * @param request 请求参数。
+     */
     fun submitUpload(
         request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRequest,
     ) {
@@ -536,6 +711,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 处理trigger上传action。
+     *
+     * @param action action。
+     * @param request 请求参数。
+     */
     fun triggerUploadAction(
         action: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteAction,
         request: site.addzero.kcloud.plugins.hostconfig.api.config.ProjectUploadRemoteActionRequest,
@@ -554,6 +735,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 处理mutate。
+     *
+     * @param successMessage success消息。
+     * @param block block。
+     */
     private fun mutate(
         successMessage: String,
         block: suspend () -> Unit,
@@ -582,6 +769,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 加载分页。
+     *
+     * @param preferredProjectId preferred项目 ID。
+     * @param preferredNodeId preferrednode ID。
+     * @param noticeMessage 提示消息。
+     */
     private suspend fun loadPage(
         preferredProjectId: Long? = screenState.selectedProjectId,
         preferredNodeId: String? = screenState.selectedNodeId,
@@ -593,7 +787,6 @@ class ProjectsViewModel(
         )
         runCatching {
             val projects = projectApi.listProjects()
-            val protocolCatalog = projectApi.listProtocols()
             val protocolTemplates = templateApi.listProtocolTemplates()
             val deviceTypes = templateApi.listDeviceTypes()
             val registerTypes = templateApi.listRegisterTypes()
@@ -603,7 +796,6 @@ class ProjectsViewModel(
                 screenState = ProjectsScreenState(
                     loading = false,
                     noticeMessage = noticeMessage,
-                    protocolCatalog = protocolCatalog,
                     protocolTemplates = protocolTemplates,
                     deviceTypes = deviceTypes,
                     registerTypes = registerTypes,
@@ -633,7 +825,6 @@ class ProjectsViewModel(
                 projects = projects,
                 projectTrees = projectTrees,
                 treeNodes = treeNodes,
-                protocolCatalog = protocolCatalog,
                 protocolTemplates = protocolTemplates,
                 moduleTemplateCatalog = moduleTemplateCatalog,
                 deviceTypes = deviceTypes,
@@ -658,6 +849,13 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 处理applyselection。
+     *
+     * @param selectedProjectId 选中项目 ID。
+     * @param selectedNodeId 选中node ID。
+     * @param uploadStatusProjectId 上传状态项目 ID。
+     */
     private suspend fun applySelection(
         selectedProjectId: Long,
         selectedNodeId: String,
@@ -717,6 +915,13 @@ class ProjectsViewModel(
         )
     }
 
+    /**
+     * 加载标签。
+     *
+     * @param deviceId 设备 ID。
+     * @param offset offset。
+     * @param preferredTagId preferred标签 ID。
+     */
     private suspend fun loadTags(
         deviceId: Long,
         offset: Int,
@@ -740,6 +945,11 @@ class ProjectsViewModel(
         )
     }
 
+    /**
+     * 加载模块模板目录。
+     *
+     * @param projectTrees 项目树。
+     */
     private suspend fun loadModuleTemplateCatalog(
         projectTrees: List<ProjectTreeResponse>,
     ): Map<Long, List<ModuleTemplateOptionResponse>> {
@@ -758,6 +968,9 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 处理clear模块板卡runtime。
+     */
     private fun clearModuleBoardRuntime() {
         screenState = screenState.copy(
             moduleBoardRuntime = null,
@@ -766,6 +979,11 @@ class ProjectsViewModel(
         )
     }
 
+    /**
+     * 加载模块板卡runtime。
+     *
+     * @param moduleId 模块 ID。
+     */
     private suspend fun loadModuleBoardRuntime(
         moduleId: Long,
     ) {
@@ -851,6 +1069,11 @@ class ProjectsViewModel(
         )
     }
 
+    /**
+     * 构建树nodes。
+     *
+     * @param projectTrees 项目树。
+     */
     private fun buildTreeNodes(
         projectTrees: List<ProjectTreeResponse>,
     ): List<HostConfigTreeNode> {
@@ -867,6 +1090,11 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 构建协议nodes。
+     *
+     * @param project 项目。
+     */
     private fun buildProtocolNodes(
         project: ProjectTreeResponse,
     ): List<HostConfigTreeNode> {
@@ -877,7 +1105,7 @@ class ProjectsViewModel(
                 projectId = project.id,
                 entityId = protocol.id,
                 parentEntityId = project.id,
-                label = protocol.name,
+                label = protocol.displayName(),
                 caption = protocol.protocolTemplateName,
                 children = buildModuleNodes(
                     projectId = project.id,
@@ -887,6 +1115,12 @@ class ProjectsViewModel(
         }
     }
 
+    /**
+     * 构建模块nodes。
+     *
+     * @param projectId 项目 ID。
+     * @param modules 模块。
+     */
     private fun buildModuleNodes(
         projectId: Long,
         modules: List<ModuleTreeNode>,
@@ -926,32 +1160,79 @@ class ProjectsViewModel(
     }
 
     companion object {
+        /**
+         * 构建项目nodeID。
+         *
+         * @param projectId 项目 ID。
+         */
         fun buildProjectNodeId(projectId: Long): String = "project/$projectId"
 
+        /**
+         * 构建协议nodeID。
+         *
+         * @param projectId 项目 ID。
+         * @param protocolId 协议 ID。
+         */
         fun buildProtocolNodeId(projectId: Long, protocolId: Long): String =
             "protocol/$projectId/$protocolId"
 
+        /**
+         * 构建模块nodeID。
+         *
+         * @param projectId 项目 ID。
+         * @param moduleId 模块 ID。
+         */
         fun buildModuleNodeId(projectId: Long, moduleId: Long): String =
             "module/$projectId/$moduleId"
 
+        /**
+         * 构建设备nodeID。
+         *
+         * @param projectId 项目 ID。
+         * @param deviceId 设备 ID。
+         */
         fun buildDeviceNodeId(projectId: Long, deviceId: Long): String =
             "device/$projectId/$deviceId"
 
+        /**
+         * 构建标签nodeID。
+         *
+         * @param projectId 项目 ID。
+         * @param deviceId 设备 ID。
+         * @param tagId 标签 ID。
+         */
         fun buildTagNodeId(projectId: Long, deviceId: Long, tagId: Long): String =
             "tag/$projectId/$deviceId/$tagId"
     }
 }
 
+/**
+ * 表示模块板卡runtime加载result。
+ *
+ * @property snapshot 快照。
+ * @property errorMessage 错误消息。
+ */
 private data class ModuleBoardRuntimeLoadResult(
     val snapshot: ModuleBoardRuntimeSnapshot?,
     val errorMessage: String?,
 )
 
+/**
+ * 表示runtimepartresult。
+ *
+ * @property value 值。
+ * @property failedLabel failedlabel。
+ */
 private data class RuntimePartResult<T>(
     val value: T?,
     val failedLabel: String?,
 )
 
+/**
+ * 处理主机配置树node。
+ *
+ * @param nodeId node ID。
+ */
 private fun HostConfigTreeNode.findChild(
     nodeId: String,
 ): HostConfigTreeNode? {

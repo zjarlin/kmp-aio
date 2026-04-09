@@ -17,16 +17,25 @@ class DeviceInfoController(
     private val deviceApi: DeviceApi,
 ) {
     @GetMapping("/getDeviceInfo")
+    /**
+     * 获取设备info。
+     */
     suspend fun getDeviceInfo(): DeviceRuntimeInfoRegisters {
         return deviceApi.getDeviceInfo()
     }
 
     @GetMapping("/get24PowerLights")
+    /**
+     * 获取24powerlights。
+     */
     suspend fun get24PowerLights(): Device24PowerLightsRegisters {
         return deviceApi.get24PowerLights()
     }
 
     @GetMapping("/getFlashConfig")
+    /**
+     * 获取烧录配置。
+     */
     suspend fun getFlashConfig(): FlashConfigRegisters {
         return deviceApi.getFlashConfig()
     }

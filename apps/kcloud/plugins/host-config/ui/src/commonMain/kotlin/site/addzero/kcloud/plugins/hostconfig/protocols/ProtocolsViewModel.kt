@@ -10,6 +10,11 @@ import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TemplateApi
 
 @KoinViewModel
+/**
+ * 管理协议界面的状态与交互逻辑。
+ *
+ * @property templateApi 模板API。
+ */
 class ProtocolsViewModel(
     private val templateApi: TemplateApi,
 ) : ViewModel() {
@@ -20,6 +25,9 @@ class ProtocolsViewModel(
         refresh()
     }
 
+    /**
+     * 刷新当前界面数据。
+     */
     fun refresh() {
         viewModelScope.launch {
             screenState = screenState.copy(
@@ -45,6 +53,11 @@ class ProtocolsViewModel(
         }
     }
 
+    /**
+     * 选择协议模板。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
     fun selectProtocolTemplate(
         protocolTemplateId: Long,
     ) {

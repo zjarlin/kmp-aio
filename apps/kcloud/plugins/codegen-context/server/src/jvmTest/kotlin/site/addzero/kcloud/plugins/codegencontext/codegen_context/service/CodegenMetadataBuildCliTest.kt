@@ -8,16 +8,23 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
 
+/**
+ * 验证代码生成metadata构建命令行相关场景。
+ */
 class CodegenMetadataBuildCliTest {
 
     @Test
+    /**
+     * 处理shouldfallbackrequested传输tofirst可用metadata快照。
+     */
     fun shouldFallbackRequestedTransportsToFirstAvailableMetadataSnapshot() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val saved =
                 fixture.service.saveContext(
-                    baseContextRequest(
+                    genericContextRequest(
                         protocolTemplateId = template.id,
+                        availableDefinitions = fixture.service.listContextDefinitions(template.id),
                         code = "CTX_METADATA_BUILD",
                     ),
                 )

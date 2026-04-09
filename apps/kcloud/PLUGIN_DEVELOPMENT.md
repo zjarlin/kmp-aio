@@ -9,6 +9,8 @@ This document is the repo-local source of truth for KCloud plugin structure, rou
   - `shared`
   - `server`
   - `ui`
+- When the plugin exposes frontend-callable HTTP APIs, add an `api` module:
+  - `api`
 - Use neutral, capability-first package roots under `site.addzero.kcloud.plugins.<feature>`.
 - Do not name reusable shells, routes, themes, or workbench helpers with business prefixes when a neutral name is available.
 
@@ -18,6 +20,9 @@ This document is the repo-local source of truth for KCloud plugin structure, rou
 apps/kcloud/plugins/<plugin-key>/
 ├── shared/
 │   └── src/commonMain/kotlin/site/addzero/kcloud/plugins/<feature>/
+├── api/
+│   ├── generated/commonMain/kotlin/site/addzero/kcloud/plugins/<feature>/
+│   └── src/commonMain/kotlin/site/addzero/kcloud/plugins/<feature>/
 ├── server/
 │   ├── src/jvmMain/kotlin/site/addzero/kcloud/plugins/<feature>/
 │   └── src/jvmMain/resources/
@@ -26,6 +31,7 @@ apps/kcloud/plugins/<plugin-key>/
 ```
 
 - `shared` owns DTOs, enums, and other frontend-backend contracts.
+- `api` owns `controller2api` generated Ktorfit interfaces, generated providers, and any API-side source bridges that frontend modules may reuse across plugins.
 - `server` owns controllers, services, schema bootstrap, and plugin-local resources.
 - `ui` owns routed screens, ViewModels, API wiring, and page-local UI helpers.
 
@@ -93,9 +99,9 @@ Repo-specific current convention:
 - `routeGenPkg` is `site.addzero.generated`
 - plugin UI modules use `routeAggregationRole=contributor`
 - the shell owner module `apps:kcloud:ui` uses `routeAggregationRole=owner`
-- `routeOwnerModule` currently still points to the owner module `apps:kcloud:ui` `commonMain` source dir for published processor compatibility
-- the repo then syncs owner-generated route sources into `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin` and compiles from that generated source dir
-- `sharedSourceDir` currently remains pointed at each module `src/commonMain/kotlin`, but generated route files must not be committed there
+- `routeOwnerModule` points to the shared route staging root `~/.gradle/addzero/route-owner/<root-project>/apps-kcloud-ui/commonMain/kotlin`
+- the owner module syncs `RouteKeys.kt` and `RouteTable.kt` from that staging root into `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin` for compilation
+- `sharedSourceDir` is legacy-only and should not be passed by new KCloud plugin modules
 
 Generated outputs:
 
@@ -133,25 +139,25 @@ Flow:
 
 1. Define shared DTOs in the plugin `shared` module.
 2. Define Spring-style controllers in the plugin `server` module.
-3. Let `controller2api` emit Ktorfit interfaces into the plugin `ui` build-generated source tree.
-4. Let the UI module run Ktorfit KSP against those emitted interfaces.
-5. Consume generated APIs from page ViewModels through Koin wiring.
+3. Let `controller2api` emit Ktorfit interfaces into the plugin `api/generated/commonMain/kotlin` tree.
+4. Let the plugin `api` module run Ktorfit KSP against those emitted interfaces.
+5. Consume generated APIs from page ViewModels through the plugin `api` module instead of depending on another plugin's `ui`.
 
 Important repo rules:
 
 - Do not hand-write a parallel set of Ktorfit interfaces for plugin controllers.
 - API file names matter because generated client names derive from controller source names.
-- Emit generated API interfaces into `build/generated/...` and wire that directory into the UI `commonMain` source set explicitly.
+- Emit generated API interfaces into the plugin `api/generated/commonMain/kotlin/...` tree and wire that directory into the `api` module `commonMain` source set explicitly.
 - Generated API package paths must end with `generated`; do not place generated interfaces under handwritten business leaf packages such as `api/external`.
 - When `controller2api` emits both Ktorfit interfaces and a Koin aggregation entry, the generated Koin entry should stay in the same build-generated package and expose a public `@Module + @Configuration` module.
 - Generated Koin providers must inject `Ktorfit` explicitly; do not generate `KoinPlatform.getKoin()` lookups inside the API bridge.
 
 Current `host-config` example:
 
-- Server writes generated interfaces and `ApisModule` into `apps/kcloud/plugins/host-config/ui/build/generated/source/controller2api/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/generated/`
-- UI wires `build/generated/source/controller2api/commonMain/kotlin` into `commonMain`, then lets Ktorfit KSP and Koin KCP process those generated sources
-- ViewModels depend on generated API types from `site.addzero.kcloud.plugins.hostconfig.api.external.generated`
-- `apps/kcloud/ui` 的根扫描模块可以直接发现这类 public generated `@Configuration` 入口，不再依赖手写 bridge 文件
+- Server writes generated interfaces and `ApisModule` into `apps/kcloud/plugins/<plugin-key>/api/generated/commonMain/kotlin/...`
+- Plugin `api` wires `generated/commonMain/kotlin` plus `build/generated/ksp/commonMain/kotlin` into `commonMain`, then lets Ktorfit KSP and Koin KCP process those generated sources
+- Plugin `ui` and cross-plugin frontend callers depend on `project(":apps:kcloud:plugins:<plugin-key>:api")`
+- `apps/kcloud/ui` 的根扫描模块可以直接发现这类 public generated `@Configuration` 入口，页面模块不再持有 controller2api 的生成目录
 
 ## KCloud Frontend Stack
 

@@ -2,6 +2,7 @@ package site.addzero.kcloud.di
 
 import org.koin.core.annotation.KoinApplication
 import org.koin.core.context.startKoin
+import org.koin.core.module.Module as KoinModule
 import org.koin.mp.KoinPlatformTools
 import org.koin.plugin.module.dsl.withConfiguration
 
@@ -22,3 +23,4 @@ fun initDesktopHostKoin() {
         }
     }
 }
+

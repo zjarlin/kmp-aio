@@ -16,6 +16,11 @@ import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.mcuconsole.network.McuFlashRemoteService
 
 @KoinViewModel
+/**
+ * 管理 MCU 烧录界面的状态与交互逻辑。
+ *
+ * @property flashRemoteService 烧录远程服务。
+ */
 class McuFlashViewModel(
     private val flashRemoteService: McuFlashRemoteService,
 ) : ViewModel() {
@@ -28,6 +33,9 @@ class McuFlashViewModel(
         refresh()
     }
 
+    /**
+     * 刷新当前界面数据。
+     */
     fun refresh() {
         viewModelScope.launch {
             loadSnapshot(
@@ -37,6 +45,9 @@ class McuFlashViewModel(
         }
     }
 
+    /**
+     * 刷新探针列表。
+     */
     fun refreshProbes() {
         viewModelScope.launch {
             val previous = screenState
@@ -57,6 +68,9 @@ class McuFlashViewModel(
         }
     }
 
+    /**
+     * 刷新当前任务状态。
+     */
     fun refreshStatus() {
         viewModelScope.launch {
             val previous = screenState
@@ -81,6 +95,11 @@ class McuFlashViewModel(
         }
     }
 
+    /**
+     * 选择配置档。
+     *
+     * @param profileId 配置档 ID。
+     */
     fun selectProfile(
         profileId: String,
     ) {
@@ -100,6 +119,9 @@ class McuFlashViewModel(
         )
     }
 
+    /**
+     * 选择自动探针。
+     */
     fun selectAutoProbe() {
         screenState = screenState.copy(
             useAutoProbeSelection = true,
@@ -108,6 +130,11 @@ class McuFlashViewModel(
         )
     }
 
+    /**
+     * 选择探针。
+     *
+     * @param serialNumber 序列号。
+     */
     fun selectProbe(
         serialNumber: String,
     ) {
@@ -118,6 +145,11 @@ class McuFlashViewModel(
         )
     }
 
+    /**
+     * 更新固件路径。
+     *
+     * @param firmwarePath 固件路径。
+     */
     fun updateFirmwarePath(
         firmwarePath: String,
     ) {
@@ -127,6 +159,11 @@ class McuFlashViewModel(
         )
     }
 
+    /**
+     * 更新起始地址输入值。
+     *
+     * @param startAddressInput 起始地址输入值。
+     */
     fun updateStartAddressInput(
         startAddressInput: String,
     ) {
@@ -136,6 +173,9 @@ class McuFlashViewModel(
         )
     }
 
+    /**
+     * 启动烧录任务。
+     */
     fun startFlash() {
         val request = buildFlashRequest() ?: return
         viewModelScope.launch {
@@ -168,6 +208,9 @@ class McuFlashViewModel(
         }
     }
 
+    /**
+     * 重置目标。
+     */
     fun resetTarget() {
         viewModelScope.launch {
             val previous = screenState
@@ -208,11 +251,20 @@ class McuFlashViewModel(
         }
     }
 
+    /**
+     * 在视图模型销毁时清理后台任务。
+     */
     override fun onCleared() {
         pollingJob?.cancel()
         super.onCleared()
     }
 
+    /**
+     * 并发加载界面初始化快照。
+     *
+     * @param refreshProbes 是否同步刷新探针列表。
+     * @param showLoading 是否显示加载状态。
+     */
     private suspend fun loadSnapshot(
         refreshProbes: Boolean,
         showLoading: Boolean,
@@ -275,6 +327,11 @@ class McuFlashViewModel(
         syncPolling(status)
     }
 
+    /**
+     * 根据任务状态同步轮询协程。
+     *
+     * @param status 当前任务状态。
+     */
     private fun syncPolling(
         status: McuFlashStatusResponse,
     ) {
@@ -310,6 +367,9 @@ class McuFlashViewModel(
         }
     }
 
+    /**
+     * 构建烧录请求。
+     */
     private fun buildFlashRequest(): McuFlashRequest? {
         val current = screenState
         val profile = current.selectedProfile
@@ -349,6 +409,12 @@ class McuFlashViewModel(
         )
     }
 
+    /**
+     * 对齐当前配置档与探针的选中状态。
+     *
+     * @param previous 上一次状态。
+     * @param candidate 候选状态。
+     */
     private fun reconcileSelections(
         previous: McuFlashScreenState,
         candidate: McuFlashScreenState,
@@ -383,6 +449,12 @@ class McuFlashViewModel(
     }
 }
 
+/**
+ * 构建加载失败提示。
+ *
+ * @param profileError 配置档加载异常。
+ * @param statusError 状态加载异常。
+ */
 private fun buildLoadError(
     profileError: Throwable?,
     statusError: Throwable?,
@@ -398,6 +470,12 @@ private fun buildLoadError(
     return parts.takeIf { it.isNotEmpty() }?.joinToString("；")
 }
 
+/**
+ * 构建探针提示消息。
+ *
+ * @param probes 探针列表。
+ * @param error 异常对象。
+ */
 private fun buildProbeMessage(
     probes: List<McuFlashProbeSummary>,
     error: Throwable?,
@@ -411,6 +489,13 @@ private fun buildProbeMessage(
     return "已发现 ${probes.size} 个 ST-Link 探针。"
 }
 
+/**
+ * 构建界面提示消息。
+ *
+ * @param status 当前任务状态。
+ * @param profiles 配置档列表。
+ * @param probes 探针列表。
+ */
 private fun buildNoticeMessage(
     status: McuFlashStatusResponse,
     profiles: List<McuFlashProfileSummary>,
@@ -434,6 +519,11 @@ private fun buildNoticeMessage(
     }
 }
 
+/**
+ * 解析地址输入值。
+ *
+ * @param value 待解析的值。
+ */
 private fun parseAddress(
     value: String,
 ): Long? {
@@ -451,10 +541,18 @@ private fun parseAddress(
     }
 }
 
+/**
+ * 处理long。
+ */
 private fun Long.toHexAddress(): String {
     return "0x${toString(16).uppercase().padStart(8, '0')}"
 }
 
+/**
+ * 提取可读错误消息。
+ *
+ * @param throwable 异常对象。
+ */
 private fun readableMessage(
     throwable: Throwable,
 ): String {

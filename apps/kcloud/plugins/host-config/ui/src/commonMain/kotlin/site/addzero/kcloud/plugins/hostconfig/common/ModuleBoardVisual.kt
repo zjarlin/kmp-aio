@@ -24,12 +24,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
+import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.Device24PowerLightsRegisters
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.DeviceRuntimeInfoRegisters
 import site.addzero.kcloud.plugins.mcuconsole.modbus.device.FlashConfigRegisters
 
+/**
+ * 表示模块板卡模型。
+ *
+ * @property moduleName 模块名称。
+ * @property templateCode 模板编码。
+ * @property templateName 模板名称。
+ * @property family family。
+ * @property channelCount channelcount。
+ * @property deviceCount 设备count。
+ * @property runtime runtime。
+ */
 internal data class ModuleBoardModel(
     val moduleName: String,
     val templateCode: String,
@@ -40,6 +52,13 @@ internal data class ModuleBoardModel(
     val runtime: ModuleBoardRuntimeSnapshot? = null,
 )
 
+/**
+ * 表示模块板卡runtime快照。
+ *
+ * @property deviceInfo 设备info。
+ * @property powerLights powerlights。
+ * @property flashConfig 烧录配置。
+ */
 data class ModuleBoardRuntimeSnapshot(
     val deviceInfo: DeviceRuntimeInfoRegisters? = null,
     val powerLights: Device24PowerLightsRegisters? = null,
@@ -49,6 +68,14 @@ data class ModuleBoardRuntimeSnapshot(
         get() = deviceInfo != null || powerLights != null || flashConfig != null
 }
 
+/**
+ * 表示模块板卡family。
+ *
+ * @property code 编码。
+ * @property title title。
+ * @property caption caption。
+ * @property defaultChannelCount 默认channelcount。
+ */
 internal enum class ModuleBoardFamily(
     val code: String,
     val title: String,
@@ -87,6 +114,20 @@ internal enum class ModuleBoardFamily(
     ),
 }
 
+/**
+ * 表示模块板卡palette。
+ *
+ * @property accent accent。
+ * @property accentSoft accentsoft。
+ * @property surfaceTop surfacetop。
+ * @property surfaceBottom surfacebottom。
+ * @property border border。
+ * @property chip chip。
+ * @property textPrimary 文本primary。
+ * @property textSecondary 文本secondary。
+ * @property lightOn lighton。
+ * @property lightOff lightoff。
+ */
 private data class ModuleBoardPalette(
     val accent: Color,
     val accentSoft: Color,
@@ -100,11 +141,24 @@ private data class ModuleBoardPalette(
     val lightOff: Color,
 )
 
+/**
+ * 表示板卡infoentry。
+ *
+ * @property label label。
+ * @property value 值。
+ */
 private data class BoardInfoEntry(
     val label: String,
     val value: String,
 )
 
+/**
+ * 解析模块板卡模型。
+ *
+ * @param module 模块。
+ * @param moduleTemplates 模块模板。
+ * @param runtime runtime。
+ */
 internal fun resolveModuleBoardModel(
     module: ModuleTreeNode,
     moduleTemplates: List<ModuleTemplateOptionResponse>,
@@ -125,6 +179,11 @@ internal fun resolveModuleBoardModel(
     )
 }
 
+/**
+ * 解析模块板卡family。
+ *
+ * @param templateCode 模板编码。
+ */
 internal fun resolveModuleBoardFamily(
     templateCode: String?,
 ): ModuleBoardFamily {
@@ -139,6 +198,15 @@ internal fun resolveModuleBoardFamily(
 }
 
 @Composable
+/**
+ * 处理主机配置模块板卡。
+ *
+ * @param model 模型。
+ * @param modifier modifier。
+ * @param compact compact。
+ * @param loading 加载。
+ * @param errorMessage 错误消息。
+ */
 internal fun HostConfigModuleBoard(
     model: ModuleBoardModel,
     modifier: Modifier = Modifier,
@@ -176,14 +244,14 @@ internal fun HostConfigModuleBoard(
         )
 
         if (loading) {
-            HostConfigStatusStrip(
+            CupertinoStatusStrip(
                 text = "正在读取在线板卡数据…",
                 tone = palette.accentSoft,
             )
         }
 
         errorMessage?.takeIf { it.isNotBlank() }?.let { message ->
-            HostConfigStatusStrip(
+            CupertinoStatusStrip(
                 text = message,
                 tone = Color(0xFFFFF4E5),
             )
@@ -219,6 +287,13 @@ internal fun HostConfigModuleBoard(
 }
 
 @Composable
+/**
+ * 处理模块板卡hero。
+ *
+ * @param model 模型。
+ * @param palette palette。
+ * @param compact compact。
+ */
 private fun ModuleBoardHero(
     model: ModuleBoardModel,
     palette: ModuleBoardPalette,
@@ -341,6 +416,14 @@ private fun ModuleBoardHero(
 }
 
 @Composable
+/**
+ * 处理模块板卡metric芯片。
+ *
+ * @param title title。
+ * @param value 待解析的值。
+ * @param palette palette。
+ * @param modifier modifier。
+ */
 private fun ModuleBoardMetricChip(
     title: String,
     value: String,
@@ -375,6 +458,14 @@ private fun ModuleBoardMetricChip(
 }
 
 @Composable
+/**
+ * 处理模块板卡infosection。
+ *
+ * @param title title。
+ * @param entries entries。
+ * @param palette palette。
+ * @param compact compact。
+ */
 private fun ModuleBoardInfoSection(
     title: String,
     entries: List<BoardInfoEntry>,
@@ -412,6 +503,14 @@ private fun ModuleBoardInfoSection(
 }
 
 @Composable
+/**
+ * 处理模块板卡infocell。
+ *
+ * @param entry entry。
+ * @param palette palette。
+ * @param compact compact。
+ * @param modifier modifier。
+ */
 private fun ModuleBoardInfoCell(
     entry: BoardInfoEntry,
     palette: ModuleBoardPalette,
@@ -443,6 +542,14 @@ private fun ModuleBoardInfoCell(
 }
 
 @Composable
+/**
+ * 处理模块板卡lightssection。
+ *
+ * @param title title。
+ * @param lights lights。
+ * @param palette palette。
+ * @param compact compact。
+ */
 private fun ModuleBoardLightsSection(
     title: String,
     lights: List<Pair<String, Boolean>>,
@@ -481,6 +588,15 @@ private fun ModuleBoardLightsSection(
 }
 
 @Composable
+/**
+ * 处理模块板卡lightcell。
+ *
+ * @param label label。
+ * @param active active。
+ * @param palette palette。
+ * @param compact compact。
+ * @param modifier modifier。
+ */
 private fun ModuleBoardLightCell(
     label: String,
     active: Boolean,
@@ -523,6 +639,14 @@ private fun ModuleBoardLightCell(
 }
 
 @Composable
+/**
+ * 处理模块板卡section。
+ *
+ * @param title title。
+ * @param palette palette。
+ * @param compact compact。
+ * @param content content。
+ */
 private fun ModuleBoardSection(
     title: String,
     palette: ModuleBoardPalette,
@@ -552,6 +676,9 @@ private fun ModuleBoardSection(
     )
 }
 
+/**
+ * 处理设备runtimeinforegisters。
+ */
 private fun DeviceRuntimeInfoRegisters.toBoardInfoEntries(): List<BoardInfoEntry> {
     return buildList {
         firmwareVersion.takeIf { it.isNotBlank() }?.let { value ->
@@ -568,6 +695,9 @@ private fun DeviceRuntimeInfoRegisters.toBoardInfoEntries(): List<BoardInfoEntry
     }
 }
 
+/**
+ * 处理烧录配置registers。
+ */
 private fun FlashConfigRegisters.toBoardInfoEntries(): List<BoardInfoEntry> {
     return buildList {
         add(BoardInfoEntry("魔术字", magicWord.toHexLabel(width = 8)))
@@ -595,6 +725,9 @@ private fun FlashConfigRegisters.toBoardInfoEntries(): List<BoardInfoEntry> {
     }
 }
 
+/**
+ * 处理设备24powerlightsregisters。
+ */
 private fun Device24PowerLightsRegisters.toPowerLightStates(): List<Pair<String, Boolean>> {
     return listOf(
         "CH1" to light1,
@@ -624,6 +757,9 @@ private fun Device24PowerLightsRegisters.toPowerLightStates(): List<Pair<String,
     )
 }
 
+/**
+ * 处理模块板卡family。
+ */
 private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
     return when (this) {
         ModuleBoardFamily.DI -> ModuleBoardPalette(
@@ -689,6 +825,11 @@ private fun ModuleBoardFamily.palette(): ModuleBoardPalette {
     }
 }
 
+/**
+ * 处理int。
+ *
+ * @param width width。
+ */
 private fun Int.toHexLabel(
     width: Int,
 ): String {
@@ -696,6 +837,9 @@ private fun Int.toHexLabel(
     return "0x${positiveValue.toString(16).uppercase().padStart(width, '0')}"
 }
 
+/**
+ * 处理字节array。
+ */
 private fun ByteArray.toHexBytesLabel(): String? {
     if (isEmpty()) {
         return null

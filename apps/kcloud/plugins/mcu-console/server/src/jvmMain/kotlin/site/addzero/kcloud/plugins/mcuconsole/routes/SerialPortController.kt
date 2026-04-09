@@ -19,12 +19,23 @@ import site.addzero.serial.SerialPortTool
 
 @RestController("/serialPorts")
 @RequestMapping("/mcu-console/router/ports")
+/**
+ * 提供串口端口接口。
+ */
 class SerialPortController {
     @GetMapping("/list")
+    /**
+     * 获取串口端口。
+     */
     fun getSerialPorts(): List<McuSerialPortDescriptor> =
         SerialPortTool.listPorts().map(SerialPortDescriptor::toMcuDescriptor)
 
     @PostMapping("/open")
+    /**
+     * 处理打开。
+     *
+     * @param @RequestBody 请求体。
+     */
     fun open(@RequestBody serialPortConfig: McuSerialPortConfig): List<McuSerialPortDescriptor> {
         SerialPortTool.open(serialPortConfig.toSerialPortConfig()).use { connection ->
             connection.clearBuffers()
@@ -33,6 +44,9 @@ class SerialPortController {
     }
 }
 
+/**
+ * 处理mcu串口端口配置。
+ */
 private fun McuSerialPortConfig.toSerialPortConfig(): SerialPortConfig =
     SerialPortConfig(
         portName = portName,
@@ -46,6 +60,9 @@ private fun McuSerialPortConfig.toSerialPortConfig(): SerialPortConfig =
         openSafetySleepTimeMs = openSafetySleepTimeMs,
     )
 
+/**
+ * 处理串口端口descriptor。
+ */
 private fun SerialPortDescriptor.toMcuDescriptor(): McuSerialPortDescriptor =
     McuSerialPortDescriptor(
         systemPortName = systemPortName,
@@ -59,6 +76,9 @@ private fun SerialPortDescriptor.toMcuDescriptor(): McuSerialPortDescriptor =
         productId = productId,
     )
 
+/**
+ * 处理mcu串口停止位。
+ */
 private fun McuSerialStopBits.toSerialStopBits(): SerialStopBits =
     when (this) {
         McuSerialStopBits.ONE -> SerialStopBits.ONE
@@ -66,6 +86,9 @@ private fun McuSerialStopBits.toSerialStopBits(): SerialStopBits =
         McuSerialStopBits.TWO -> SerialStopBits.TWO
     }
 
+/**
+ * 处理mcu串口校验位。
+ */
 private fun McuSerialParity.toSerialParity(): SerialParity =
     when (this) {
         McuSerialParity.NONE -> SerialParity.NONE
@@ -75,6 +98,9 @@ private fun McuSerialParity.toSerialParity(): SerialParity =
         McuSerialParity.SPACE -> SerialParity.SPACE
     }
 
+/**
+ * 处理mcu串口flow控制。
+ */
 private fun McuSerialFlowControl.toSerialFlowControl(): SerialFlowControl =
     when (this) {
         McuSerialFlowControl.NONE -> SerialFlowControl.NONE

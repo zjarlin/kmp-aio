@@ -7,6 +7,11 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.ProtocolTemplateOp
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
 @Single
+/**
+ * 提供代码生成模板相关服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ */
 class CodegenTemplateService(
     private val sql: KSqlClient,
 ) {
@@ -17,6 +22,9 @@ class CodegenTemplateService(
         )
     }
 
+    /**
+     * 列出协议模板。
+     */
     fun listProtocolTemplates(): List<ProtocolTemplateOptionDto> {
         return sql.createQuery(ProtocolTemplate::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())

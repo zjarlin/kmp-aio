@@ -6,16 +6,27 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:server:generateMcuConsoleContracts"
-val mcuConsoleUiProject = project(":apps:kcloud:plugins:mcu-console:ui")
+val generateMcuConsoleContractsEnabled =
+    providers
+        .gradleProperty("generateMcuConsoleContracts")
+        .map { it.equals("true", ignoreCase = true) }
+        .orElse(false)
+        .get()
+val mcuConsoleApiProject = project(":apps:kcloud:plugins:mcu-console:api")
 
 /** Api生成目录 */
-val generatedApiOutputDirFile =
-    mcuConsoleUiProject
+val generatedApiRootDir =
+    mcuConsoleApiProject
         .layout
         .buildDirectory
-        .dir("generated/ksp/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external")
+        .dir("generated/source/controller2api/commonMain/kotlin")
+val generatedApiPackageRootDirFile =
+    generatedApiRootDir
         .get()
+        .dir("site/addzero/kcloud/plugins/mcuconsole/api/external")
         .asFile
+val generatedApiOutputDirFile =
+    generatedApiPackageRootDirFile.resolve("generated")
 val generatedApiOutputDir = generatedApiOutputDirFile.absolutePath
 
 /** 同构体生成包 */
@@ -35,14 +46,14 @@ val generatedIsoOutputDir =
 val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared").projectDir.resolve("src/commonMain/kotlin").absolutePath
 
 /** 共享前端目录 */
-val sharedComposeSourceDir = mcuConsoleUiProject.projectDir.resolve("src/commonMain/kotlin").absolutePath
+val sharedComposeSourceDir = mcuConsoleApiProject.projectDir.resolve("src/commonMain/kotlin").absolutePath
 
 /** 当前 server 源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
 val generatedContractSourceDir = layout.projectDirectory.dir("generated/jvmMain/kotlin")
 
 ksp {
-    arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external")
+    arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir)
     arg("apiClientAggregatorObjectName", "Apis")
     arg("apiClientAggregatorStyle", "koin")
@@ -87,18 +98,20 @@ tasks.configureEach {
         "jvmSourcesJar",
         "jvmJar",
         -> {
-            dependsOn(generateMcuConsoleContractsTask)
+            if (generateMcuConsoleContractsEnabled) {
+                dependsOn(generateMcuConsoleContractsTask)
+            }
         }
     }
 }
 
 val cleanMcuConsoleGeneratedApis by tasks.registering(Delete::class) {
-    delete(generatedApiOutputDirFile)
+    delete(generatedApiPackageRootDirFile)
 }
 
 tasks.matching { task ->
     task.name == "kspKotlinJvm"
 }.configureEach {
-    outputs.dir(generatedApiOutputDirFile)
+    outputs.dir(generatedApiRootDir)
     dependsOn(cleanMcuConsoleGeneratedApis)
 }

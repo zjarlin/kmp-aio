@@ -12,6 +12,12 @@ import site.addzero.kcloud.plugins.hostconfig.api.external.generated.CloudAccess
 import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectApi
 
 @KoinViewModel
+/**
+ * 管理云接入界面的状态与交互逻辑。
+ *
+ * @property projectApi 项目API。
+ * @property cloudAccessApi 云接入访问API。
+ */
 class CloudViewModel(
     private val projectApi: ProjectApi,
     private val cloudAccessApi: CloudAccessApi,
@@ -23,6 +29,9 @@ class CloudViewModel(
         refresh()
     }
 
+    /**
+     * 处理clear提示。
+     */
     fun clearNotice() {
         screenState = screenState.copy(
             noticeMessage = null,
@@ -30,12 +39,20 @@ class CloudViewModel(
         )
     }
 
+    /**
+     * 刷新当前界面数据。
+     */
     fun refresh() {
         viewModelScope.launch {
             loadPage()
         }
     }
 
+    /**
+     * 选择项目。
+     *
+     * @param projectId 项目 ID。
+     */
     fun selectProject(
         projectId: Long,
     ) {
@@ -44,6 +61,11 @@ class CloudViewModel(
         }
     }
 
+    /**
+     * 保存配置。
+     *
+     * @param request 请求参数。
+     */
     fun saveConfig(
         request: ProjectMqttConfigRequest,
     ) {
@@ -69,6 +91,11 @@ class CloudViewModel(
         }
     }
 
+    /**
+     * 加载分页。
+     *
+     * @param preferredProjectId preferred项目 ID。
+     */
     private suspend fun loadPage(
         preferredProjectId: Long? = screenState.selectedProjectId,
     ) {

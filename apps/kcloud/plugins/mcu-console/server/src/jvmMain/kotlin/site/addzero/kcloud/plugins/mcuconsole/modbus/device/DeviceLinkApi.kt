@@ -4,38 +4,7 @@ import site.addzero.device.protocol.modbus.annotation.ModbusOperation
 import site.addzero.device.protocol.modbus.model.ModbusFunctionCode
 
 /**
- * 心跳接口
- * 板卡链路探活的 Modbus RTU 契约。
- *
- * 这份契约的目的不是表达“串口已建立连接”。
- * Modbus RTU 本身没有 TCP 那种 connect / disconnect 事件，
- * 所以下位机只能通过“最近是否收到主站合法请求”来判断上位机是否在线。
- *
- * 推荐实现约定:
- * 1. 上位机固定周期调用 [probeMasterLink]。
- * 2. 下位机只要收到任意一帧发给本机地址、CRC 正确、功能码合法的请求，
- *    就刷新 `lastMasterSeenAt`。
- * 3. 下位机若超过 [DeviceLinkPollingContract.OFFLINE_TIMEOUT_MS] 仍未刷新，
- *    就判定主站或当前线路失联，可进入备用线路切换流程。
- *
- * 为什么单独约定一个探活接口:
- * - 比反复读取大块设备信息更轻。
- * - 比“定时写心跳寄存器”更简单，不需要额外写状态。
- * - 下位机实际上不必关心主站读的是哪个寄存器，只要有合法请求就算在线；
- *   但上位机固定读同一个廉价地址，便于前后端和固件统一实现。
- *
- * 轮询建议:
- * - 正常轮询周期: [DeviceLinkPollingContract.DEFAULT_POLL_INTERVAL_MS]
- * - 单次请求超时: 300 ~ 800 ms
- * - 连续失败 [DeviceLinkPollingContract.DEFAULT_MAX_CONSECUTIVE_FAILURES_BEFORE_SWITCH] 次后，
- *   上位机可主动切换线路
- * - 下位机超过 [DeviceLinkPollingContract.OFFLINE_TIMEOUT_MS] 未见合法请求后，
- *   也可被动切换线路
- *
- * 不建议做法:
- * - 不要在 while(true) 里无间隔狂发，会把串口和总线占满。
- * - 不要把“收到任意字节”当成在线，至少要校验站号、功能码、CRC。
- * - 不要只靠上位机保存一个布尔连接状态，下位机仍应自己做超时判定。
+ * 定义设备关联API契约。
  */
 interface DeviceLinkApi {
     /**
@@ -66,10 +35,7 @@ interface DeviceLinkApi {
  */
 object DeviceLinkPollingContract {
     /**
-     * 正常保活轮询周期。
-     *
-     * 一般让上位机每 1 秒读一次 [DeviceLinkApi.probeMasterLink] 即可，
-     * 既能较快发现断线，也不至于把总线打满。
+     * 默认POLL间隔毫秒。
      */
     const val DEFAULT_POLL_INTERVAL_MS: Long = 1_000
 

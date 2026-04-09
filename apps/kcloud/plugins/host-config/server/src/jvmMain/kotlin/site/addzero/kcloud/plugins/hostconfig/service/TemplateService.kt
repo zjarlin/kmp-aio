@@ -9,6 +9,11 @@ import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionRespons
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 
 @Single
+/**
+ * 提供模板相关服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ */
 class TemplateService(
     private val sql: KSqlClient,
 ) {
@@ -21,6 +26,9 @@ class TemplateService(
         )
     }
 
+    /**
+     * 列出协议模板。
+     */
     fun listProtocolTemplates(): List<TemplateOptionResponse> {
         return sql.createQuery(ProtocolTemplate::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -38,6 +46,11 @@ class TemplateService(
         }
     }
 
+    /**
+     * 列出模块模板。
+     *
+     * @param protocolTemplateId 协议模板 ID。
+     */
     fun listModuleTemplates(protocolTemplateId: Long): List<ModuleTemplateOptionResponse> {
         return sql.createQuery(ModuleTemplate::class) {
             where(table.protocolTemplate.id eq protocolTemplateId)
@@ -56,6 +69,9 @@ class TemplateService(
         }
     }
 
+    /**
+     * 列出设备类型。
+     */
     fun listDeviceTypes(): List<TemplateOptionResponse> {
         return sql.createQuery(DeviceType::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -71,6 +87,9 @@ class TemplateService(
         }
     }
 
+    /**
+     * 列出register类型。
+     */
     fun listRegisterTypes(): List<TemplateOptionResponse> {
         return sql.createQuery(RegisterType::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -86,6 +105,9 @@ class TemplateService(
         }
     }
 
+    /**
+     * 列出数据类型。
+     */
     fun listDataTypes(): List<TemplateOptionResponse> {
         return sql.createQuery(DataType::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())

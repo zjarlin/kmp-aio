@@ -56,13 +56,9 @@ private const val BUILD_DEVICE_PACKAGE = "site.addzero.kcloud.plugins.mcuconsole
 private val BUILD_SUPPORTED_INTERFACES = setOf("DeviceApi", "DeviceWriteApi")
 
 /**
- * 构建期 metadata 契约生成入口。
+ * 处理main。
  *
- * 统一职责：
- * - 从数据库读取 metadata JSON
- * - 生成 Kotlin 契约到 server/shared
- * - 生成 RTU/TCP/MQTT Kotlin gateway
- * - 生成 C 暴露与 markdown 协议文档
+ * @param args SQL 参数列表。
  */
 fun main(args: Array<String>) {
     val options = BuildCliOptions.parse(args)
@@ -198,6 +194,28 @@ fun main(args: Array<String>) {
     }
 }
 
+/**
+ * 表示构建命令行选项。
+ *
+ * @property driverClass driver类。
+ * @property jdbcUrl JDBC地址。
+ * @property username 用户名。
+ * @property password 密码。
+ * @property query 查询。
+ * @property jsonColumn jsoncolumn。
+ * @property transport 传输。
+ * @property workspaceRoot workspace根目录。
+ * @property serverOutputRoot 服务端输出根目录。
+ * @property sharedOutputRoot 共享输出根目录。
+ * @property gatewayOutputRoot 网关输出根目录。
+ * @property cOutputRoot C 输出根目录。
+ * @property markdownOutputRoot Markdown 输出根目录。
+ * @property springRouteOutputRoot Spring 路由输出根目录。
+ * @property contractPackage contract包。
+ * @property supportedInterfaces supportedinterfaces。
+ * @property skipMissingTransports skipmissing传输。
+ * @property transportDefaults 传输默认。
+ */
 private data class BuildCliOptions(
     val driverClass: String,
     val jdbcUrl: String,
@@ -218,6 +236,9 @@ private data class BuildCliOptions(
     val skipMissingTransports: Boolean,
     val transportDefaults: ModbusTransportDefaults,
 ) {
+    /**
+     * 处理传输。
+     */
     fun transports(): Set<ModbusTransportKind> {
         val transports = ModbusTransportKind.parseConfigured(transport)
         require(transports.isNotEmpty()) {
@@ -226,12 +247,17 @@ private data class BuildCliOptions(
         return transports
     }
 
+    /**
+     * 加载payloads。
+     *
+     * @param transport 传输。
+     */
     fun loadPayloads(
         transport: ModbusTransportKind,
     ): List<String> {
         Class.forName(driverClass)
         val payloads = mutableListOf<String>()
-        DriverManager.getConnection(jdbcUrl, username, password).use { connection ->
+        openConnection().use { connection ->
             val resolvedQuery =
                 query
                     .replace("\${transport}", transport.transportId)
@@ -256,6 +282,19 @@ private data class BuildCliOptions(
         return payloads
     }
 
+    private fun openConnection() =
+        if (username == null && password == null) {
+            DriverManager.getConnection(jdbcUrl)
+        } else {
+            DriverManager.getConnection(jdbcUrl, username, password)
+        }
+
+    /**
+     * 处理decode服务。
+     *
+     * @param payloads 载荷。
+     * @param transport 传输。
+     */
     fun decodeServices(
         payloads: List<String>,
         transport: ModbusTransportKind,
@@ -273,6 +312,11 @@ private data class BuildCliOptions(
             }.distinctBy(ModbusServiceModel::interfaceQualifiedName)
 
     companion object {
+        /**
+         * 处理parse。
+         *
+         * @param args SQL 参数列表。
+         */
         fun parse(
             args: Array<String>,
         ): BuildCliOptions {
@@ -350,6 +394,12 @@ private data class BuildCliOptions(
             )
         }
 
+        /**
+         * 解析optional根目录。
+         *
+         * @param workspaceRoot workspace根目录。
+         * @param rawValue 原始值。
+         */
         private fun resolveOptionalRoot(
             workspaceRoot: Path?,
             rawValue: String?,
@@ -367,6 +417,11 @@ private data class BuildCliOptions(
     }
 }
 
+/**
+ * 构建数据传输对象customizations。
+ *
+ * @param services 服务。
+ */
 private fun buildDtoCustomizations(
     services: List<ModbusServiceModel>,
 ): Map<String, ModbusDtoCustomization> =
@@ -396,6 +451,12 @@ private fun buildDtoCustomizations(
                 )
         }
 
+/**
+ * 处理列表。
+ *
+ * @param sourceTransport 来源传输。
+ * @param targetTransport 目标传输。
+ */
 private fun List<ModbusServiceModel>.deriveForTransport(
     sourceTransport: ModbusTransportKind,
     targetTransport: ModbusTransportKind,
@@ -404,6 +465,12 @@ private fun List<ModbusServiceModel>.deriveForTransport(
         service.deriveForTransport(sourceTransport = sourceTransport, targetTransport = targetTransport)
     }
 
+/**
+ * 处理modbus服务模型。
+ *
+ * @param sourceTransport 来源传输。
+ * @param targetTransport 目标传输。
+ */
 private fun ModbusServiceModel.deriveForTransport(
     sourceTransport: ModbusTransportKind,
     targetTransport: ModbusTransportKind,
@@ -430,6 +497,12 @@ private fun ModbusServiceModel.deriveForTransport(
     )
 }
 
+/**
+ * 处理string。
+ *
+ * @param sourceTransport 来源传输。
+ * @param targetTransport 目标传输。
+ */
 private fun String.rewriteTransportToken(
     sourceTransport: ModbusTransportKind,
     targetTransport: ModbusTransportKind,
@@ -442,6 +515,15 @@ private fun String.rewriteTransportToken(
     return replace(sourceToken, targetToken)
 }
 
+/**
+ * 写入contract产物。
+ *
+ * @param artifacts artifacts。
+ * @param serverOutputRoot 服务端输出根目录。
+ * @param sharedOutputRoot 共享输出根目录。
+ * @param contractPackage contract包。
+ * @param supportedInterfaces supportedinterfaces。
+ */
 private fun writeContractArtifacts(
     artifacts: List<CodegenGeneratedArtifact>,
     serverOutputRoot: Path,
@@ -484,6 +566,12 @@ private fun writeContractArtifacts(
         }
 }
 
+/**
+ * 写入ksp产物。
+ *
+ * @param outputRoot 输出根目录。
+ * @param artifacts artifacts。
+ */
 private fun writeKspArtifacts(
     outputRoot: Path,
     artifacts: List<KspGeneratedArtifact>,
@@ -512,6 +600,12 @@ private fun writeKspArtifacts(
     }
 }
 
+/**
+ * 处理cleanup包dir。
+ *
+ * @param outputRoot 输出根目录。
+ * @param relativePackagePath relative包路径。
+ */
 private fun cleanupPackageDir(
     outputRoot: Path,
     relativePackagePath: String,
@@ -522,6 +616,12 @@ private fun cleanupPackageDir(
     }
 }
 
+/**
+ * 处理cleanupMarkdown产物。
+ *
+ * @param outputRoot 输出根目录。
+ * @param transport 传输。
+ */
 private fun cleanupMarkdownArtifacts(
     outputRoot: Path,
     transport: ModbusTransportKind,
@@ -539,6 +639,12 @@ private fun cleanupMarkdownArtifacts(
         }
 }
 
+/**
+ * 处理safe解析。
+ *
+ * @param root 根目录。
+ * @param relative relative。
+ */
 private fun safeResolve(
     root: Path,
     relative: String,
@@ -551,6 +657,12 @@ private fun safeResolve(
     return target
 }
 
+/**
+ * 写入file。
+ *
+ * @param target 目标。
+ * @param content content。
+ */
 private fun writeFile(
     target: Path,
     content: String,
@@ -565,6 +677,9 @@ private fun writeFile(
     )
 }
 
+/**
+ * 处理modbus传输默认。
+ */
 private fun ModbusTransportDefaults.toKspTransportDefaults(): KspTransportDefaults =
     KspTransportDefaults(
         rtu =
@@ -598,6 +713,9 @@ private fun ModbusTransportDefaults.toKspTransportDefaults(): KspTransportDefaul
             ),
     )
 
+/**
+ * 处理modbus传输类型。
+ */
 private fun ModbusTransportKind.toKspTransportKind(): KspTransportKind =
     when (this) {
         ModbusTransportKind.RTU -> KspTransportKind.RTU
@@ -605,6 +723,9 @@ private fun ModbusTransportKind.toKspTransportKind(): KspTransportKind =
         ModbusTransportKind.MQTT -> KspTransportKind.MQTT
     }
 
+/**
+ * 处理modbus服务模型。
+ */
 private fun ModbusServiceModel.toKspServiceModel(): KspServiceModel =
     KspServiceModel(
         interfacePackage = interfacePackage,
@@ -619,6 +740,9 @@ private fun ModbusServiceModel.toKspServiceModel(): KspServiceModel =
         workflows = workflows.map(ModbusWorkflowModel::toKspWorkflowModel),
     )
 
+/**
+ * 处理modbusworkflow模型。
+ */
 private fun ModbusWorkflowModel.toKspWorkflowModel(): KspWorkflowModel =
     KspWorkflowModel(
         kind = kind.toKspWorkflowKind(),
@@ -635,11 +759,17 @@ private fun ModbusWorkflowModel.toKspWorkflowModel(): KspWorkflowModel =
         resetMethodName = resetMethodName,
     )
 
+/**
+ * 处理modbusworkflow类型。
+ */
 private fun ModbusWorkflowKind.toKspWorkflowKind(): KspWorkflowKind =
     when (this) {
         ModbusWorkflowKind.FLASH_FIRMWARE -> KspWorkflowKind.FLASH_FIRMWARE
     }
 
+/**
+ * 处理modbusoperation模型。
+ */
 private fun ModbusOperationModel.toKspOperationModel(): KspOperationModel =
     KspOperationModel(
         methodName = methodName,
@@ -654,6 +784,9 @@ private fun ModbusOperationModel.toKspOperationModel(): KspOperationModel =
         doc = doc.toKspDocModel(),
     )
 
+/**
+ * 处理modbusparameter模型。
+ */
 private fun ModbusParameterModel.toKspParameterModel(): KspParameterModel =
     KspParameterModel(
         name = name,
@@ -668,6 +801,9 @@ private fun ModbusParameterModel.toKspParameterModel(): KspParameterModel =
         doc = doc,
     )
 
+/**
+ * 处理modbusreturn类型模型。
+ */
 private fun ModbusReturnTypeModel.toKspReturnTypeModel(): KspReturnTypeModel =
     KspReturnTypeModel(
         qualifiedName = qualifiedName,
@@ -681,6 +817,9 @@ private fun ModbusReturnTypeModel.toKspReturnTypeModel(): KspReturnTypeModel =
         properties = properties.map(ModbusPropertyModel::toKspPropertyModel),
     )
 
+/**
+ * 处理modbusreturn类型。
+ */
 private fun ModbusReturnKind.toKspReturnKind(): KspReturnKind =
     when (this) {
         ModbusReturnKind.UNIT -> KspReturnKind.UNIT
@@ -691,6 +830,9 @@ private fun ModbusReturnKind.toKspReturnKind(): KspReturnKind =
         ModbusReturnKind.COMMAND_RESULT -> KspReturnKind.COMMAND_RESULT
     }
 
+/**
+ * 处理modbus属性模型。
+ */
 private fun ModbusPropertyModel.toKspPropertyModel(): KspPropertyModel =
     KspPropertyModel(
         name = name,
@@ -700,6 +842,9 @@ private fun ModbusPropertyModel.toKspPropertyModel(): KspPropertyModel =
         doc = doc,
     )
 
+/**
+ * 处理modbus字段模型。
+ */
 private fun ModbusFieldModel.toKspFieldModel(): KspFieldModel =
     KspFieldModel(
         codecName = codecName,
@@ -709,6 +854,9 @@ private fun ModbusFieldModel.toKspFieldModel(): KspFieldModel =
         registerWidth = registerWidth,
     )
 
+/**
+ * 处理modbus值类型。
+ */
 private fun ModbusValueKind.toKspValueKind(): KspValueKind =
     when (this) {
         ModbusValueKind.BOOLEAN -> KspValueKind.BOOLEAN
@@ -717,6 +865,9 @@ private fun ModbusValueKind.toKspValueKind(): KspValueKind =
         ModbusValueKind.STRING -> KspValueKind.STRING
     }
 
+/**
+ * 处理modbusdoc模型。
+ */
 private fun ModbusDocModel.toKspDocModel(): KspDocModel =
     KspDocModel(
         summary = summary,
@@ -724,6 +875,11 @@ private fun ModbusDocModel.toKspDocModel(): KspDocModel =
         parameterDocs = parameterDocs,
     )
 
+/**
+ * 处理string。
+ *
+ * @param defaultValue 默认值。
+ */
 private fun String?.toBooleanFlag(defaultValue: Boolean): Boolean =
     when (this?.trim()?.lowercase()) {
         null -> defaultValue
@@ -742,6 +898,11 @@ private fun String?.toBooleanFlag(defaultValue: Boolean): Boolean =
         else -> error("Unsupported boolean flag value: $this")
     }
 
+/**
+ * 处理string。
+ *
+ * @param defaultValue 默认值。
+ */
 private fun String?.toIntOrDefault(defaultValue: Int): Int =
     this
         ?.trim()
@@ -749,6 +910,11 @@ private fun String?.toIntOrDefault(defaultValue: Int): Int =
         ?.toIntOrNull()
         ?: defaultValue
 
+/**
+ * 处理string。
+ *
+ * @param defaultValue 默认值。
+ */
 private fun String?.toLongOrDefault(defaultValue: Long): Long =
     this
         ?.trim()

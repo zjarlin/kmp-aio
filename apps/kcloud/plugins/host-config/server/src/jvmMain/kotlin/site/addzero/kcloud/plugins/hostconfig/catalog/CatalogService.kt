@@ -45,14 +45,19 @@ import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.LabelDefiniti
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.ProductDefinition
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.ProductDefinitionLabelLink
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.PropertyDefinition
-import site.addzero.kcloud.plugins.hostconfig.routes.common.ConflictException
-import site.addzero.kcloud.plugins.hostconfig.routes.common.NotFoundException
+import site.addzero.kmp.exp.ConflictException
+import site.addzero.kmp.exp.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
 import site.addzero.kcloud.plugins.hostconfig.service.Fetchers
 
 @Single
+/**
+ * 提供目录相关服务。
+ *
+ * @property sql Jimmer SQL 客户端。
+ */
 class CatalogService(
     private val sql: KSqlClient,
 ) {
@@ -61,6 +66,9 @@ class CatalogService(
         encodeDefaults = true
     }
 
+    /**
+     * 获取快照。
+     */
     fun getSnapshot(): CatalogSnapshotResponse {
         val products = sql.createQuery(ProductDefinition::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -74,14 +82,25 @@ class CatalogService(
         )
     }
 
+    /**
+     * 获取metadata。
+     */
     fun getMetadata(): CatalogMetadataResponse {
         return buildMetadata(loadAllLabels().map { it.toResponse() })
     }
 
+    /**
+     * 列出标签。
+     */
     fun listLabels(): List<LabelDefinitionResponse> {
         return loadAllLabels().map { it.toResponse() }
     }
 
+    /**
+     * 创建标签。
+     *
+     * @param request 请求参数。
+     */
     fun createLabel(request: LabelDefinitionCreateRequest): LabelDefinitionResponse {
         val code = request.code.trim()
         ensureLabelCodeUnique(code, null)
@@ -101,6 +120,12 @@ class CatalogService(
         return loadLabel(label.id).toResponse()
     }
 
+    /**
+     * 更新标签。
+     *
+     * @param labelId label ID。
+     * @param request 请求参数。
+     */
     fun updateLabel(
         labelId: Long,
         request: LabelDefinitionUpdateRequest,
@@ -123,6 +148,11 @@ class CatalogService(
         return loadLabel(labelId).toResponse()
     }
 
+    /**
+     * 删除标签。
+     *
+     * @param labelId label ID。
+     */
     fun deleteLabel(labelId: Long) {
         ensureLabelExists(labelId)
         sql.createDelete(LabelDefinition::class) {
@@ -130,6 +160,11 @@ class CatalogService(
         }.execute()
     }
 
+    /**
+     * 创建product。
+     *
+     * @param request 请求参数。
+     */
     fun createProduct(request: ProductDefinitionCreateRequest): ProductDefinitionTreeResponse {
         val code = request.code.trim()
         ensureProductCodeUnique(code, null)
@@ -153,6 +188,12 @@ class CatalogService(
         return loadProduct(product.id).toTreeResponse()
     }
 
+    /**
+     * 更新product。
+     *
+     * @param productId product ID。
+     * @param request 请求参数。
+     */
     fun updateProduct(
         productId: Long,
         request: ProductDefinitionUpdateRequest,
@@ -179,6 +220,11 @@ class CatalogService(
         return loadProduct(productId).toTreeResponse()
     }
 
+    /**
+     * 删除product。
+     *
+     * @param productId product ID。
+     */
     fun deleteProduct(productId: Long) {
         ensureProductExists(productId)
         sql.createDelete(ProductDefinition::class) {
@@ -186,6 +232,12 @@ class CatalogService(
         }.execute()
     }
 
+    /**
+     * 创建设备定义。
+     *
+     * @param productId product ID。
+     * @param request 请求参数。
+     */
     fun createDeviceDefinition(
         productId: Long,
         request: DeviceDefinitionCreateRequest,
@@ -213,6 +265,12 @@ class CatalogService(
         return loadDeviceDefinition(device.id).toTreeResponse()
     }
 
+    /**
+     * 更新设备定义。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     * @param request 请求参数。
+     */
     fun updateDeviceDefinition(
         deviceDefinitionId: Long,
         request: DeviceDefinitionUpdateRequest,
@@ -239,6 +297,11 @@ class CatalogService(
         return loadDeviceDefinition(deviceDefinitionId).toTreeResponse()
     }
 
+    /**
+     * 删除设备定义。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     */
     fun deleteDeviceDefinition(deviceDefinitionId: Long) {
         ensureDeviceDefinitionExists(deviceDefinitionId)
         sql.createDelete(DeviceDefinition::class) {
@@ -246,6 +309,12 @@ class CatalogService(
         }.execute()
     }
 
+    /**
+     * 创建属性定义。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     * @param request 请求参数。
+     */
     fun createPropertyDefinition(
         deviceDefinitionId: Long,
         request: PropertyDefinitionCreateRequest,
@@ -278,6 +347,12 @@ class CatalogService(
         return loadPropertyDefinition(property.id).toResponse()
     }
 
+    /**
+     * 更新属性定义。
+     *
+     * @param propertyDefinitionId 属性定义 ID。
+     * @param request 请求参数。
+     */
     fun updatePropertyDefinition(
         propertyDefinitionId: Long,
         request: PropertyDefinitionUpdateRequest,
@@ -309,6 +384,11 @@ class CatalogService(
         return loadPropertyDefinition(propertyDefinitionId).toResponse()
     }
 
+    /**
+     * 删除属性定义。
+     *
+     * @param propertyDefinitionId 属性定义 ID。
+     */
     fun deletePropertyDefinition(propertyDefinitionId: Long) {
         ensurePropertyDefinitionExists(propertyDefinitionId)
         sql.createDelete(PropertyDefinition::class) {
@@ -316,6 +396,12 @@ class CatalogService(
         }.execute()
     }
 
+    /**
+     * 创建feature定义。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     * @param request 请求参数。
+     */
     fun createFeatureDefinition(
         deviceDefinitionId: Long,
         request: FeatureDefinitionCreateRequest,
@@ -342,6 +428,12 @@ class CatalogService(
         return loadFeatureDefinition(feature.id).toResponse()
     }
 
+    /**
+     * 更新feature定义。
+     *
+     * @param featureDefinitionId feature定义 ID。
+     * @param request 请求参数。
+     */
     fun updateFeatureDefinition(
         featureDefinitionId: Long,
         request: FeatureDefinitionUpdateRequest,
@@ -367,6 +459,11 @@ class CatalogService(
         return loadFeatureDefinition(featureDefinitionId).toResponse()
     }
 
+    /**
+     * 删除feature定义。
+     *
+     * @param featureDefinitionId feature定义 ID。
+     */
     fun deleteFeatureDefinition(featureDefinitionId: Long) {
         ensureFeatureDefinitionExists(featureDefinitionId)
         sql.createDelete(FeatureDefinition::class) {
@@ -374,6 +471,11 @@ class CatalogService(
         }.execute()
     }
 
+    /**
+     * 列出speciot属性。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     */
     fun listSpecIotProperties(deviceDefinitionId: Long): List<SpecIotPropertyResponse> {
         val deviceDefinition = loadDeviceDefinition(deviceDefinitionId)
         return deviceDefinition.properties
@@ -409,6 +511,11 @@ class CatalogService(
             }
     }
 
+    /**
+     * 构建metadata。
+     *
+     * @param labels labels。
+     */
     private fun buildMetadata(
         labels: List<LabelDefinitionResponse>,
     ): CatalogMetadataResponse {
@@ -587,6 +694,12 @@ class CatalogService(
         )
     }
 
+    /**
+     * 替换product标签。
+     *
+     * @param productId product ID。
+     * @param labelIds label ID 列表。
+     */
     private fun replaceProductLabels(
         productId: Long,
         labelIds: List<Long>,
@@ -610,6 +723,9 @@ class CatalogService(
         }
     }
 
+    /**
+     * 加载all标签。
+     */
     private fun loadAllLabels(): List<LabelDefinition> {
         return sql.createQuery(LabelDefinition::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -617,6 +733,11 @@ class CatalogService(
         }.execute()
     }
 
+    /**
+     * 加载product。
+     *
+     * @param productId product ID。
+     */
     private fun loadProduct(productId: Long): ProductDefinition {
         return sql.createQuery(ProductDefinition::class) {
             where(table.id eq productId)
@@ -624,6 +745,11 @@ class CatalogService(
         }.execute().firstOrNull() ?: throw NotFoundException("Product definition not found")
     }
 
+    /**
+     * 加载设备定义。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     */
     private fun loadDeviceDefinition(deviceDefinitionId: Long): DeviceDefinition {
         return sql.createQuery(DeviceDefinition::class) {
             where(table.id eq deviceDefinitionId)
@@ -631,6 +757,11 @@ class CatalogService(
         }.execute().firstOrNull() ?: throw NotFoundException("Device definition not found")
     }
 
+    /**
+     * 加载属性定义。
+     *
+     * @param propertyDefinitionId 属性定义 ID。
+     */
     private fun loadPropertyDefinition(propertyDefinitionId: Long): PropertyDefinition {
         return sql.createQuery(PropertyDefinition::class) {
             where(table.id eq propertyDefinitionId)
@@ -638,6 +769,11 @@ class CatalogService(
         }.execute().firstOrNull() ?: throw NotFoundException("Property definition not found")
     }
 
+    /**
+     * 加载feature定义。
+     *
+     * @param featureDefinitionId feature定义 ID。
+     */
     private fun loadFeatureDefinition(featureDefinitionId: Long): FeatureDefinition {
         return sql.createQuery(FeatureDefinition::class) {
             where(table.id eq featureDefinitionId)
@@ -645,6 +781,11 @@ class CatalogService(
         }.execute().firstOrNull() ?: throw NotFoundException("Feature definition not found")
     }
 
+    /**
+     * 加载标签。
+     *
+     * @param labelId label ID。
+     */
     private fun loadLabel(labelId: Long): LabelDefinition {
         return sql.createQuery(LabelDefinition::class) {
             where(table.id eq labelId)
@@ -652,6 +793,12 @@ class CatalogService(
         }.execute().firstOrNull() ?: throw NotFoundException("Label definition not found")
     }
 
+    /**
+     * 确保product编码唯一性。
+     *
+     * @param code 编码。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureProductCodeUnique(
         code: String,
         excludeId: Long?,
@@ -667,6 +814,13 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保设备定义编码唯一性。
+     *
+     * @param productId product ID。
+     * @param code 编码。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureDeviceDefinitionCodeUnique(
         productId: Long,
         code: String,
@@ -684,6 +838,13 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保属性identifier唯一性。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     * @param identifier identifier。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensurePropertyIdentifierUnique(
         deviceDefinitionId: Long,
         identifier: String,
@@ -701,6 +862,13 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保featureidentifier唯一性。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     * @param identifier identifier。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureFeatureIdentifierUnique(
         deviceDefinitionId: Long,
         identifier: String,
@@ -718,6 +886,12 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保标签编码唯一性。
+     *
+     * @param code 编码。
+     * @param excludeId 需要排除的对象 ID。
+     */
     private fun ensureLabelCodeUnique(
         code: String,
         excludeId: Long?,
@@ -733,6 +907,11 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保product存在性。
+     *
+     * @param productId product ID。
+     */
     private fun ensureProductExists(productId: Long) {
         val exists = sql.exists(ProductDefinition::class) {
             where(table.id eq productId)
@@ -742,6 +921,11 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保设备定义存在性。
+     *
+     * @param deviceDefinitionId 设备定义 ID。
+     */
     private fun ensureDeviceDefinitionExists(deviceDefinitionId: Long) {
         val exists = sql.exists(DeviceDefinition::class) {
             where(table.id eq deviceDefinitionId)
@@ -751,6 +935,11 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保属性定义存在性。
+     *
+     * @param propertyDefinitionId 属性定义 ID。
+     */
     private fun ensurePropertyDefinitionExists(propertyDefinitionId: Long) {
         val exists = sql.exists(PropertyDefinition::class) {
             where(table.id eq propertyDefinitionId)
@@ -760,6 +949,11 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保feature定义存在性。
+     *
+     * @param featureDefinitionId feature定义 ID。
+     */
     private fun ensureFeatureDefinitionExists(featureDefinitionId: Long) {
         val exists = sql.exists(FeatureDefinition::class) {
             where(table.id eq featureDefinitionId)
@@ -769,6 +963,11 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保标签存在性。
+     *
+     * @param labelId label ID。
+     */
     private fun ensureLabelExists(labelId: Long) {
         val exists = sql.exists(LabelDefinition::class) {
             where(table.id eq labelId)
@@ -778,10 +977,20 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保标签IDexist。
+     *
+     * @param labelIds label ID 列表。
+     */
     private fun ensureLabelIdsExist(labelIds: List<Long>) {
         labelIds.distinct().forEach(::ensureLabelExists)
     }
 
+    /**
+     * 确保设备类型存在性。
+     *
+     * @param deviceTypeId 设备类型 ID。
+     */
     private fun ensureDeviceTypeExists(deviceTypeId: Long) {
         val exists = sql.exists(DeviceType::class) {
             where(table.id eq deviceTypeId)
@@ -791,6 +1000,11 @@ class CatalogService(
         }
     }
 
+    /**
+     * 确保数据类型存在性。
+     *
+     * @param dataTypeId 数据类型 ID。
+     */
     private fun ensureDataTypeExists(dataTypeId: Long) {
         val exists = sql.exists(DataType::class) {
             where(table.id eq dataTypeId)
@@ -800,6 +1014,9 @@ class CatalogService(
         }
     }
 
+    /**
+     * 处理product定义。
+     */
     private fun ProductDefinition.toTreeResponse(): ProductDefinitionTreeResponse {
         return ProductDefinitionTreeResponse(
             id = id,
@@ -821,6 +1038,9 @@ class CatalogService(
         )
     }
 
+    /**
+     * 处理设备定义。
+     */
     private fun DeviceDefinition.toTreeResponse(): DeviceDefinitionTreeResponse {
         return DeviceDefinitionTreeResponse(
             id = id,
@@ -845,6 +1065,9 @@ class CatalogService(
         )
     }
 
+    /**
+     * 处理属性定义。
+     */
     private fun PropertyDefinition.toResponse(): PropertyDefinitionResponse {
         return PropertyDefinitionResponse(
             id = id,
@@ -868,6 +1091,9 @@ class CatalogService(
         )
     }
 
+    /**
+     * 处理feature定义。
+     */
     private fun FeatureDefinition.toResponse(): FeatureDefinitionResponse {
         return FeatureDefinitionResponse(
             id = id,
@@ -884,6 +1110,9 @@ class CatalogService(
         )
     }
 
+    /**
+     * 处理标签定义。
+     */
     private fun LabelDefinition.toResponse(): LabelDefinitionResponse {
         return LabelDefinitionResponse(
             id = id,
@@ -897,6 +1126,11 @@ class CatalogService(
         )
     }
 
+    /**
+     * 处理encodeattributes。
+     *
+     * @param attributes attributes。
+     */
     private fun encodeAttributes(
         attributes: Map<String, String>,
     ): String? {
@@ -917,6 +1151,11 @@ class CatalogService(
         return json.encodeToString(cleaned)
     }
 
+    /**
+     * 处理decodeattributes。
+     *
+     * @param attributesJson attributesjson。
+     */
     private fun decodeAttributes(
         attributesJson: String?,
     ): Map<String, String> {
@@ -930,6 +1169,9 @@ class CatalogService(
         }
     }
 
+    /**
+     * 处理string。
+     */
     private fun String.toIotValueType(): IotValueType {
         return when (uppercase()) {
             "BOOLEAN" -> IotValueType.BOOLEAN
@@ -939,6 +1181,12 @@ class CatalogService(
     }
 }
 
+/**
+ * 获取当前时间戳。
+ */
 private fun now(): Long = System.currentTimeMillis()
 
+/**
+ * 处理string。
+ */
 private fun String?.cleanNullable(): String? = this?.trim()?.takeIf { it.isNotEmpty() }

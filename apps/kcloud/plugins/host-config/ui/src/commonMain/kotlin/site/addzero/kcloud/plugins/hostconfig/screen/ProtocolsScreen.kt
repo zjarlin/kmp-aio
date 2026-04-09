@@ -28,26 +28,30 @@ import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.material3.Icon
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigKeyValueRow
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigPanel
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigSectionTitle
-import site.addzero.kcloud.plugins.hostconfig.common.HostConfigStatusStrip
+import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
+import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
+import site.addzero.cupertino.workbench.components.panel.CupertinoSectionTitle
+import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.protocols.ProtocolsViewModel
 
 @Route(
-    title = "协议模板",
+    value = "字典管理",
+    title = "协议字典",
     routePath = "host-config/protocols",
     icon = "Key",
     order = 10.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "元数据配置",
+            name = "系统管理",
             icon = "SettingsApplications",
             order = -10,
         ),
     ),
 )
 @Composable
+/**
+ * 处理协议界面。
+ */
 fun ProtocolsScreen() {
     val viewModel = koinViewModel<ProtocolsViewModel>()
     val state = viewModel.screenState
@@ -64,15 +68,15 @@ fun ProtocolsScreen() {
             modifier = Modifier
                 .fillMaxHeight()
                 .weight(0.34f),
-            searchPlaceholder = "搜索协议模板",
+            searchPlaceholder = "搜索协议字典",
             getId = { item -> item.id },
             getLabel = { item -> item.name },
             getChildren = { emptyList() },
             getIcon = { Icons.Outlined.SettingsEthernet },
             header = {
-                HostConfigSectionTitle("协议模板目录")
+                CupertinoSectionTitle("协议字典目录")
                 state.errorMessage?.let { message ->
-                    HostConfigStatusStrip(message)
+                    CupertinoStatusStrip(message)
                 }
                 WorkbenchActionButton(
                     text = if (state.loading) "加载中" else "刷新",
@@ -90,43 +94,43 @@ fun ProtocolsScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             val selected = state.selectedProtocolTemplate
-            HostConfigPanel(
-                title = selected?.name ?: "暂无协议模板",
-                subtitle = selected?.description ?: "这里展示内置协议模板以及对应模块目录。",
+            CupertinoPanel(
+                title = selected?.name ?: "暂无协议字典项",
+                subtitle = selected?.description ?: "这里展示系统内置协议字典以及对应模块模板。",
             ) {
-                HostConfigKeyValueRow("模板编码", selected?.code ?: "-")
-                HostConfigKeyValueRow("排序值", selected?.sortIndex?.toString() ?: "-")
-                HostConfigKeyValueRow("模块模板数量", state.moduleTemplates.size.toString())
+                CupertinoKeyValueRow("模板编码", selected?.code ?: "-")
+                CupertinoKeyValueRow("排序值", selected?.sortIndex?.toString() ?: "-")
+                CupertinoKeyValueRow("模块模板数量", state.moduleTemplates.size.toString())
             }
 
-            HostConfigPanel(
+            CupertinoPanel(
                 title = "模块模板清单",
                 subtitle = "当前协议模板下可直接复用的模块类型。",
             ) {
                 if (state.moduleTemplates.isEmpty()) {
-                    HostConfigStatusStrip("当前协议模板还没有模块模板。")
+                    CupertinoStatusStrip("当前协议模板还没有模块模板。")
                 } else {
                     Column(
                         modifier = Modifier.fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         state.moduleTemplates.forEach { module ->
-                            HostConfigPanel(
+                            CupertinoPanel(
                                 title = module.name,
                                 subtitle = module.description,
                             ) {
-                                HostConfigKeyValueRow("模板编码", module.code)
-                                HostConfigKeyValueRow("归属协议模板", module.protocolTemplateId.toString())
-                                HostConfigKeyValueRow("通道数量", module.channelCount?.toString() ?: "-")
+                                CupertinoKeyValueRow("模板编码", module.code)
+                                CupertinoKeyValueRow("归属协议模板", module.protocolTemplateId.toString())
+                                CupertinoKeyValueRow("通道数量", module.channelCount?.toString() ?: "-")
                             }
                         }
                     }
                 }
             }
 
-            HostConfigPanel(
+            CupertinoPanel(
                 title = "使用说明",
-                subtitle = "本页只读，用于在项目页创建协议与模块时选型。",
+                subtitle = "本页只读，用于维护系统协议字典认知，不在工程页创建协议。",
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -137,7 +141,7 @@ fun ProtocolsScreen() {
                         contentDescription = null,
                     )
                     CupertinoText(
-                        text = "协议模板与模块模板都来自插件内置种子数据，不在这里直接编辑。",
+                        text = "这里展示的是系统内置协议模板和模块模板，工程页只应做协议关联，不应承担协议创建入口。",
                         modifier = Modifier.fillMaxWidth(),
                         style = CupertinoTheme.typography.body,
                     )
