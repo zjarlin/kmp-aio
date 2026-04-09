@@ -96,11 +96,9 @@ class CodegenContextViewModel(
         viewModelScope.launch {
             screenState = screenState.copy(saving = true, errorMessage = null, statusMessage = null, generatedFiles = emptyList())
             runCatching {
-                val saved = contextApi.saveContext(screenState.editor.toDto())
-                val contexts = contextApi.listContexts()
+                val saved = persistEditor()
                 screenState = screenState.copy(
                     saving = false,
-                    contexts = contexts,
                     selectedContextId = saved.id,
                     editor = saved.toEditor(),
                     statusMessage = "Context saved.",
@@ -144,13 +142,15 @@ class CodegenContextViewModel(
     }
 
     fun generateSelected() {
-        val selectedId = screenState.selectedContextId ?: return
         viewModelScope.launch {
             screenState = screenState.copy(generating = true, errorMessage = null, statusMessage = null, generatedFiles = emptyList())
             runCatching {
-                val response = contextApi.generateContext(selectedId)
+                val saved = persistEditor()
+                val response = contextApi.generateContext(requireNotNull(saved.id))
                 screenState = screenState.copy(
                     generating = false,
+                    selectedContextId = saved.id,
+                    editor = saved.toEditor(),
                     statusMessage = response.message,
                     generatedFiles = response.generatedFiles,
                 )
@@ -250,6 +250,16 @@ class CodegenContextViewModel(
             )
         }
     }
+
+    private suspend fun persistEditor(): CodegenContextDetailDto {
+        val saved = contextApi.saveContext(screenState.editor.toDto())
+        val contexts = contextApi.listContexts()
+        screenState = screenState.copy(
+            contexts = contexts,
+            selectedContextId = saved.id,
+        )
+        return saved
+    }
 }
 
 private fun CodegenContextDetailDto.toEditor(): CodegenContextEditorState {
@@ -261,6 +271,7 @@ private fun CodegenContextDetailDto.toEditor(): CodegenContextEditorState {
         enabled = enabled,
         consumerTarget = consumerTarget,
         protocolTemplateId = protocolTemplateId,
+        externalCOutputRoot = externalCOutputRoot.orEmpty(),
         schemas =
             schemas.map { schema ->
                 CodegenSchemaEditorState(
@@ -303,6 +314,7 @@ private fun CodegenContextEditorState.toDto(): CodegenContextDetailDto {
         enabled = enabled,
         consumerTarget = consumerTarget,
         protocolTemplateId = protocolTemplateId ?: 0L,
+        externalCOutputRoot = externalCOutputRoot.takeIf { it.isNotBlank() },
         schemas =
             schemas.map { schema ->
                 CodegenSchemaDto(

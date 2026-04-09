@@ -30,6 +30,7 @@ import site.addzero.device.protocol.modbus.codegen.model.ModbusReturnTypeModel
 import site.addzero.device.protocol.modbus.codegen.model.ModbusServiceModel
 import site.addzero.device.protocol.modbus.codegen.model.ModbusTransportKind
 import site.addzero.device.protocol.modbus.codegen.model.ModbusValueKind
+import site.addzero.device.protocol.modbus.ksp.core.ModbusArtifactRenderer
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenFieldDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenSchemaDto
@@ -55,20 +56,20 @@ class CodegenContextContractGenerator(
         val contextId = context.id ?: throw BusinessValidationException("Context id is required for generation.")
         val roots = locateGeneratedRoots()
         val rendered = render(context, roots.workspaceRoot)
-        writeRenderedFiles(rendered, roots)
+        val kotlinFiles = writeRenderedFiles(rendered, roots)
         upsertMetadataSnapshot(context, rendered)
-        val generatedFiles =
-            buildList {
-                add(roots.serverPackageDir.resolve("DeviceApi.kt").toAbsolutePath().normalize().toString())
-                add(roots.serverPackageDir.resolve("DeviceWriteApi.kt").toAbsolutePath().normalize().toString())
-                rendered.registerDtos.keys.sorted().forEach { fileName ->
-                    add(roots.sharedPackageDir.resolve(fileName).toAbsolutePath().normalize().toString())
-                }
+        val externalFiles = writeExternalArtifacts(rendered, context.externalCOutputRoot)
+        val generatedFiles = kotlinFiles + externalFiles
+        val externalMessage =
+            if (externalFiles.isEmpty()) {
+                " External C output skipped."
+            } else {
+                " External C/Markdown artifacts: ${externalFiles.size}."
             }
         return GenerateContractsResponseDto(
             contextId = contextId,
             generatedFiles = generatedFiles,
-            message = "Generated ${generatedFiles.size} contract artifacts for ${context.code}.",
+            message = "Generated ${generatedFiles.size} contract artifacts for ${context.code}.$externalMessage",
         )
     }
 
@@ -96,7 +97,8 @@ class CodegenContextContractGenerator(
             deviceWriteApi = requireArtifact(artifactsByFile, "DeviceWriteApi"),
             registerDtos = registerDtos,
             metadataPayload = ModbusMetadataJsonCodec.encodeServices(services),
-            transportId = context.modbusTransport().transportId,
+            services = services,
+            transport = context.modbusTransport(),
         )
     }
 
@@ -138,8 +140,8 @@ class CodegenContextContractGenerator(
         val workspaceRoot = locateWorkspaceRoot()
         val serverRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin")
         val sharedRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin")
-        val serverPackageDir = safeResolve(serverRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
-        val sharedPackageDir = safeResolve(sharedRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
+        val serverPackageDir = resolveWithinRoot(serverRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
+        val sharedPackageDir = resolveWithinRoot(sharedRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
         return GeneratedRoots(
             workspaceRoot = workspaceRoot,
             serverPackageDir = serverPackageDir,
@@ -164,22 +166,10 @@ class CodegenContextContractGenerator(
         throw BusinessValidationException("Unable to locate the kmp-aio workspace root.")
     }
 
-    private fun safeResolve(
-        root: Path,
-        relative: String,
-    ): Path {
-        val normalizedRoot = root.toAbsolutePath().normalize()
-        val target = normalizedRoot.resolve(relative).normalize()
-        if (!target.startsWith(normalizedRoot)) {
-            throw BusinessValidationException("Refuse to write outside generated roots: $target")
-        }
-        return target
-    }
-
     private fun writeRenderedFiles(
         rendered: RenderedContracts,
         roots: GeneratedRoots,
-    ) {
+    ): List<String> {
         roots.serverPackageDir.createDirectories()
         roots.sharedPackageDir.createDirectories()
         writeFile(roots.serverPackageDir.resolve("DeviceApi.kt"), rendered.deviceApi)
@@ -192,6 +182,51 @@ class CodegenContextContractGenerator(
         rendered.registerDtos.forEach { (fileName, content) ->
             writeFile(roots.sharedPackageDir.resolve(fileName), content)
         }
+        return buildList {
+            add(roots.serverPackageDir.resolve("DeviceApi.kt").toAbsolutePath().normalize().toString())
+            add(roots.serverPackageDir.resolve("DeviceWriteApi.kt").toAbsolutePath().normalize().toString())
+            rendered.registerDtos.keys.sorted().forEach { fileName ->
+                add(roots.sharedPackageDir.resolve(fileName).toAbsolutePath().normalize().toString())
+            }
+        }
+    }
+
+    private fun writeExternalArtifacts(
+        rendered: RenderedContracts,
+        externalCOutputRoot: String?,
+    ): List<String> {
+        val rawOutputRoot = externalCOutputRoot?.trim()?.takeIf(String::isNotBlank) ?: return emptyList()
+        val outputRoot = Path.of(rawOutputRoot).toAbsolutePath().normalize()
+        if (outputRoot.exists() && !outputRoot.isDirectory()) {
+            throw BusinessValidationException("Configured externalCOutputRoot is not a directory: $outputRoot")
+        }
+        val cOutputRoot = resolveWithinRoot(outputRoot, "c")
+        val markdownOutputRoot = resolveWithinRoot(outputRoot, "markdown")
+        val kspServices = rendered.services.toKspServiceModels()
+        val kspTransport = rendered.transport.toArtifactKspTransportKind()
+        val transportDefaults = defaultKspTransportDefaults()
+        cleanupGeneratedPackageDir(cOutputRoot, "generated/modbus/${rendered.transport.transportId}")
+        cleanupGeneratedMarkdownArtifacts(markdownOutputRoot, rendered.transport)
+        val cArtifacts =
+            buildList {
+                kspServices.forEach { service ->
+                    addAll(ModbusArtifactRenderer.renderServiceContractArtifacts(service, transportDefaults))
+                    addAll(
+                        ModbusArtifactRenderer
+                            .renderMarkdownArtifacts(service, transportDefaults)
+                            .filter { artifact -> artifact.extensionName == "c" },
+                    )
+                }
+                addAll(ModbusArtifactRenderer.renderTransportContractArtifacts(kspTransport, kspServices, transportDefaults))
+            }
+        val markdownArtifacts =
+            kspServices.flatMap { service ->
+                ModbusArtifactRenderer
+                    .renderMarkdownArtifacts(service, transportDefaults)
+                    .filter { artifact -> artifact.extensionName == "md" }
+            }
+        return (writeKspArtifactsWithPaths(cOutputRoot, cArtifacts) + writeKspArtifactsWithPaths(markdownOutputRoot, markdownArtifacts))
+            .sorted()
     }
 
     private fun upsertMetadataSnapshot(
@@ -210,7 +245,7 @@ class CodegenContextContractGenerator(
                     """.trimIndent(),
                 ).use { statement ->
                     statement.setString(1, context.consumerTarget.name)
-                    statement.setString(2, rendered.transportId)
+                    statement.setString(2, rendered.transport.transportId)
                     statement.executeUpdate()
                 }
                 val insertSql =
@@ -235,7 +270,7 @@ class CodegenContextContractGenerator(
                     statement.setInt(4, if (context.enabled) 1 else 0)
                     statement.setString(5, context.consumerTarget.name)
                     statement.setString(6, context.protocolTemplateCode.orEmpty())
-                    statement.setString(7, rendered.transportId)
+                    statement.setString(7, rendered.transport.transportId)
                     statement.setInt(8, 1)
                     statement.setString(9, rendered.metadataPayload)
                     statement.setUpdatedAt(10, connection, now)
@@ -271,7 +306,8 @@ internal data class RenderedContracts(
     val deviceWriteApi: String,
     val registerDtos: Map<String, String>,
     val metadataPayload: String,
-    val transportId: String,
+    val services: List<ModbusServiceModel>,
+    val transport: ModbusTransportKind,
 )
 
 internal data class GeneratedRoots(

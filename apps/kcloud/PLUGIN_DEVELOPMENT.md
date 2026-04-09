@@ -93,13 +93,13 @@ Repo-specific current convention:
 - `routeGenPkg` is `site.addzero.generated`
 - plugin UI modules use `routeAggregationRole=contributor`
 - the shell owner module `apps:kcloud:ui` uses `routeAggregationRole=owner`
-- `routeOwnerModule` always points to `apps:kcloud:ui` `commonMain` source dir, not `shared-compose` and not a legacy `composeApp`
-- `sharedSourceDir` is legacy compatibility only and should not be used for new wiring
+- `routeOwnerModule` always points to the owner output source dir `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin`
+- `sharedSourceDir` currently remains pointed at each module `src/commonMain/kotlin` for published processor compatibility, but final aggregated outputs must not be written back there
 
 Generated outputs:
 
-- `apps/kcloud/ui/src/commonMain/kotlin/site/addzero/generated/RouteKeys.kt`
-- `apps/kcloud/ui/src/commonMain/kotlin/site/addzero/generated/RouteTable.kt`
+- `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin/site/addzero/generated/RouteKeys.kt`
+- `apps/kcloud/ui/build/generated/source/route/commonMain/kotlin/site/addzero/generated/RouteTable.kt`
 
 The desktop shell must read route metadata from `RouteKeys.allMeta` and page content from `RouteTable`, instead of maintaining a second hand-written navigation tree.
 

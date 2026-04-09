@@ -18,9 +18,13 @@ val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
 val generateMcuConsoleUiApisTaskPath = ":apps:kcloud:plugins:mcu-console:server:kspKotlinJvm"
 //val addzeroLibJvmVersion: String by project
 val routeOwnerModuleDir =
-    project(":apps:kcloud:ui").extensions.getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>().sourceSets.getByName(
-        "commonMain"
-    ).kotlin.srcDirs.first().absolutePath
+    project(":apps:kcloud:ui")
+        .layout
+        .buildDirectory
+        .dir("generated/source/route/commonMain/kotlin")
+        .get()
+        .asFile
+        .absolutePath
 dependencies{
     kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
 }

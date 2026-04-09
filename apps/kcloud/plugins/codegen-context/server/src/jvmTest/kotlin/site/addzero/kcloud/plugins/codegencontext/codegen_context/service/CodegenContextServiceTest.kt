@@ -29,12 +29,15 @@ class CodegenContextServiceTest {
                     baseContextRequest(
                         protocolTemplateId = template.id,
                         code = "CTX_CRUD",
+                    ).copy(
+                        externalCOutputRoot = "/Volumes/peer-share/board-fw",
                     ),
                 )
 
             assertNotNull(saved.id)
             assertEquals("MODBUS_RTU_CLIENT", saved.protocolTemplateCode)
             assertEquals("ModbusRTUClient", saved.protocolTemplateName)
+            assertEquals("/Volumes/peer-share/board-fw", saved.externalCOutputRoot)
             assertEquals(2, saved.schemas.size)
             assertTrue(saved.schemas.all { schema -> schema.id != null })
             assertTrue(saved.schemas.flatMap { schema -> schema.fields }.all { field -> field.id != null })
@@ -45,6 +48,7 @@ class CodegenContextServiceTest {
                     saved.copy(
                         name = "Updated Context",
                         description = "Updated description",
+                        externalCOutputRoot = "/Volumes/peer-share/board-fw-v2",
                         schemas =
                             listOf(
                                 readSchema.copy(
@@ -76,6 +80,7 @@ class CodegenContextServiceTest {
             assertEquals(1, updated.schemas.size)
             assertEquals("readUpdatedSnapshot", updated.schemas.single().methodName)
             assertEquals(2, updated.schemas.single().fields.size)
+            assertEquals("/Volumes/peer-share/board-fw-v2", updated.externalCOutputRoot)
             assertEquals(
                 listOf("updatedUptimeMs", "voltageMv"),
                 updated.schemas.single().fields.map { it.propertyName },
@@ -211,6 +216,26 @@ class CodegenContextServiceTest {
     }
 
     @Test
+    fun shouldRejectRelativeExternalCOutputRoot() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val error =
+                assertFailsWith<BusinessValidationException> {
+                    fixture.service.saveContext(
+                        baseContextRequest(
+                            protocolTemplateId = template.id,
+                            code = "CTX_RELATIVE_OUTPUT",
+                        ).copy(
+                            externalCOutputRoot = "relative/peer-fw",
+                        ),
+                    )
+                }
+
+            assertContains(error.message.orEmpty(), "externalCOutputRoot must be an absolute path")
+        }
+    }
+
+    @Test
     fun shouldSaveAndGenerateContractsAndReturnGeneratedFileSummary() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
@@ -259,6 +284,41 @@ class CodegenContextServiceTest {
                         }
                     }
                 }
+            } finally {
+                deleteWorkspace(workspaceRoot)
+            }
+        }
+    }
+
+    @Test
+    fun shouldGenerateExternalCAndMarkdownArtifactsWhenConfigured() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val workspaceRoot = createGeneratorWorkspace()
+            val externalOutputRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata")
+            val saved =
+                fixture.service.saveContext(
+                    baseContextRequest(
+                        protocolTemplateId = template.id,
+                        code = "CTX_EXTERNAL_OUTPUT",
+                    ).copy(
+                        externalCOutputRoot = externalOutputRoot.toString(),
+                    ),
+                )
+
+            try {
+                val response =
+                    withRepoRoot(workspaceRoot) {
+                        fixture.service.generateContracts(saved.id!!)
+                    }
+
+                val cDispatch = externalOutputRoot.resolve("c/generated/modbus/rtu/modbus_rtu_dispatch.c")
+                val protocolDocDir = externalOutputRoot.resolve("markdown/generated/modbus/protocols")
+                assertTrue(cDispatch.exists())
+                assertTrue(response.generatedFiles.contains(cDispatch.toString()))
+                assertTrue(response.generatedFiles.any { file -> file.startsWith(externalOutputRoot.toString()) })
+                assertContains(response.message, "External C/Markdown artifacts")
+                assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".rtu.protocol.md") })
             } finally {
                 deleteWorkspace(workspaceRoot)
             }

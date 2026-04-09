@@ -32,6 +32,7 @@ data class CodegenContextEditorState(
     val enabled: Boolean = true,
     val consumerTarget: CodegenConsumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
     val protocolTemplateId: Long? = null,
+    val externalCOutputRoot: String = "",
     val schemas: List<CodegenSchemaEditorState> = emptyList(),
 ) {
     companion object {

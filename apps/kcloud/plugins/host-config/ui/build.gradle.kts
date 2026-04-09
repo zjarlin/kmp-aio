@@ -15,16 +15,13 @@ plugins {
 val libs = versionCatalogs.named("libs")
 val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
 val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
-
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")
-        .extensions
-        .getByType<org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension>()
-        .sourceSets
-        .getByName("commonMain")
-        .kotlin
-        .srcDirs
-        .first()
+        .layout
+        .buildDirectory
+        .dir("generated/source/route/commonMain/kotlin")
+        .get()
+        .asFile
         .absolutePath
 
 val generateHostConfigUiApisTaskPath = ":apps:kcloud:plugins:host-config:server:kspKotlinJvm"

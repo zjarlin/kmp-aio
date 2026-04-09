@@ -26,14 +26,8 @@ plugins {
 val libs = versionCatalogs.named("libs")
 val desktopMainClass = "site.addzero.kcloud.MainKt"
 val routeSharedSourceDir = layout.projectDirectory.dir("src/commonMain/kotlin")
-val routeOwnerModuleDir =
-    kotlin
-        .sourceSets
-        .getByName("commonMain")
-        .kotlin
-        .srcDirs
-        .first()
-        .absolutePath
+val routeGeneratedSourceDir = layout.buildDirectory.dir("generated/source/route/commonMain/kotlin")
+val routeOwnerModuleDir = routeGeneratedSourceDir.get().asFile.absolutePath
 val routeContributorTaskPaths = listOf(
     ":apps:kcloud:plugins:codegen-context:ui:kspCommonMainKotlinMetadata",
     ":apps:kcloud:plugins:host-config:ui:kspCommonMainKotlinMetadata",
@@ -54,19 +48,22 @@ dependencies {
 
 kotlin {
     sourceSets {
-        commonMain.dependencies {
-            implementation(libs.findLibrary("site-addzero-route-core").get())
-            implementation(project(":apps:kcloud:plugins:codegen-context:ui"))
-            implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
-            implementation(project(":apps:kcloud:plugins:host-config:ui"))
-            implementation(libs.findLibrary("compose-cupertino-workbench").get())
-            implementation(libs.findLibrary("scaffold-spi").get())
-            implementation(project(":apps:kcloud:shared"))
-            implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
-            implementation(libs.findLibrary("site-addzero-network-starter").get())
-            implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
-            implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
-//            implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")
+        commonMain {
+            kotlin.srcDir(routeGeneratedSourceDir)
+            dependencies {
+                implementation(libs.findLibrary("site-addzero-route-core").get())
+                implementation(project(":apps:kcloud:plugins:codegen-context:ui"))
+                implementation(project(":apps:kcloud:plugins:mcu-console:ui"))
+                implementation(project(":apps:kcloud:plugins:host-config:ui"))
+                implementation(libs.findLibrary("compose-cupertino-workbench").get())
+                implementation(libs.findLibrary("scaffold-spi").get())
+                implementation(project(":apps:kcloud:shared"))
+                implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
+                implementation(libs.findLibrary("site-addzero-network-starter").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+                implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+//                implementation("site.addzero:compose-native-component-chat:$addzeroLibJvmVersion")
+            }
         }
         jvmMain.dependencies {
 

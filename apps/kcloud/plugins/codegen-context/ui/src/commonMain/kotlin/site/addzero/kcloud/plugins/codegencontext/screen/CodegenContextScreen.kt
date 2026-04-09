@@ -43,14 +43,14 @@ import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenTransportTy
     title = "代码生成上下文",
     routePath = "codegen-context/contexts",
     icon = "Code",
-    order = 20.0,
+    order = 40.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "开发工具",
-            icon = "Code",
-            order = 40,
+            name = "宿主配置",
+            icon = "SettingsApplications",
+            order = 10,
         ),
-        defaultInScene = true,
+        defaultInScene = false,
     ),
 )
 @Composable
@@ -126,7 +126,7 @@ fun CodegenContextScreen() {
 
             CodegenPanel(
                 title = state.editor.name.ifBlank { "未命名 context" },
-                subtitle = "协议感知 schema 上下文，当前只生成 mcu-console Modbus 契约。",
+                subtitle = "协议感知 schema 上下文，当前生成 mcu-console 契约，并可额外把 C/Markdown 输出到外部工程目录。",
                 actions = {
                     WorkbenchActionButton(
                         text = if (state.saving) "保存中" else "保存",
@@ -136,7 +136,7 @@ fun CodegenContextScreen() {
                     WorkbenchActionButton(
                         text = if (state.generating) "生成中" else "生成",
                         onClick = viewModel::generateSelected,
-                        enabled = state.selectedContextId != null && !state.generating,
+                        enabled = state.editor.protocolTemplateId != null && !state.generating && !state.saving,
                         variant = WorkbenchButtonVariant.Secondary,
                     )
                 },
@@ -195,6 +195,13 @@ fun CodegenContextScreen() {
                     },
                     description = selectedProtocolTemplate?.description ?: "协议模板决定 transport 和基础功能码约束。",
                 )
+                CodegenTextField(
+                    label = "外部 C 输出根目录",
+                    value = state.editor.externalCOutputRoot,
+                    onValueChange = { value -> viewModel.updateContext { it.copy(externalCOutputRoot = value) } },
+                    placeholder = "例如 /Volumes/peer-workspace/device-fw/Docs/generated/modbus-metadata",
+                    description = "可选。填写当前机器可访问的绝对路径后，生成按钮会额外写入 C 和 Markdown 产物；如果是别人电脑上的工程，需要先挂载到本机。",
+                )
                 CodegenBooleanField(
                     label = "Enabled",
                     checked = state.editor.enabled,
@@ -203,6 +210,9 @@ fun CodegenContextScreen() {
                 )
                 selectedProtocolTemplate?.let { template ->
                     CodegenStatusStrip("模板代码：${template.code}；模板说明：${template.description ?: "未填写说明"}")
+                }
+                state.editor.externalCOutputRoot.takeIf { it.isNotBlank() }?.let { outputRoot ->
+                    CodegenStatusStrip(outputRoot.externalOutputHint())
                 }
             }
 
@@ -612,3 +622,6 @@ private fun CodegenTransportType.registerWidth(length: Int): Int =
         CodegenTransportType.STRING_UTF8,
         -> length
     }
+
+private fun String.externalOutputHint(): String =
+    "外部产物会写到 $this/c/generated/modbus/<transport> 和 $this/markdown/generated/modbus/protocols。"

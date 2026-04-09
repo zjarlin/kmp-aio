@@ -4,6 +4,8 @@ plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
 }
 
+val libs = versionCatalogs.named("libs")
+
 val hostConfigUiProjectDir = layout.projectDirectory.dir("../ui")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
 val generatedApiRootDir =
@@ -48,6 +50,11 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
             implementation("site.addzero:spec-iot:2026.03.13")
+        }
+        jvmTest.dependencies {
+            implementation(libs.findLibrary("mysql-mysql-connector-java").get())
+            implementation(libs.findLibrary("org-flywaydb-flyway-core").get())
+            implementation(libs.findLibrary("org-flywaydb-flyway-mysql").get())
         }
     }
 }

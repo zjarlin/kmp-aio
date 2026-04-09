@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.codegencontext.codegen_context.model.entity
 
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
+import org.babyfish.jimmer.sql.Column
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
 import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
@@ -19,6 +20,9 @@ interface CodegenContext : BaseEntity, CodegenNamed, ProtocolScoped {
     val enabled: Boolean
 
     val consumerTarget: CodegenConsumerTarget
+
+    @Column(name = "external_c_output_root")
+    val externalCOutputRoot: String?
 
     @OneToMany(mappedBy = "context")
     val schemas: List<CodegenSchema>

@@ -20,6 +20,11 @@ pluginManagement {
                 includeGroupByRegex("site\\.addzero(\\..+)?")
             }
         }
+        maven("https://repo1.maven.org/maven2/") {
+            content {
+                includeGroupByRegex("site\\.addzero(\\..+)?")
+            }
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
@@ -42,6 +47,11 @@ val excludedDirNames = setOf("build", "node_modules")
 dependencyResolutionManagement {
     repositories {
         mavenLocal {
+            content {
+                includeGroupByRegex("site\\.addzero(\\..+)?")
+            }
+        }
+        maven("https://repo1.maven.org/maven2/") {
             content {
                 includeGroupByRegex("site\\.addzero(\\..+)?")
             }

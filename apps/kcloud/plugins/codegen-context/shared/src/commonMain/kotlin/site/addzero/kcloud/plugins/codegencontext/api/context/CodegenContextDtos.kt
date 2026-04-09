@@ -68,6 +68,7 @@ data class CodegenContextDetailDto(
     val protocolTemplateId: Long,
     val protocolTemplateCode: String? = null,
     val protocolTemplateName: String? = null,
+    val externalCOutputRoot: String? = null,
     val schemas: List<CodegenSchemaDto> = emptyList(),
 )
 

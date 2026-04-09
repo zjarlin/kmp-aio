@@ -4,6 +4,8 @@ import java.sql.Connection
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
@@ -81,9 +83,10 @@ class CodegenContextService(
                                 enabled,
                                 consumer_target,
                                 protocol_template_id,
+                                external_c_output_root,
                                 create_time,
                                 update_time
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """.trimIndent(),
                             normalized.code,
                             normalized.name,
@@ -91,6 +94,7 @@ class CodegenContextService(
                             if (normalized.enabled) 1 else 0,
                             CodegenConsumerTarget.MCU_CONSOLE.name,
                             normalized.protocolTemplateId,
+                            normalized.externalCOutputRoot,
                             now,
                             now,
                         )
@@ -107,6 +111,7 @@ class CodegenContextService(
                                 enabled = ?,
                                 consumer_target = ?,
                                 protocol_template_id = ?,
+                                external_c_output_root = ?,
                                 update_time = ?
                             WHERE id = ?
                             """.trimIndent(),
@@ -116,6 +121,7 @@ class CodegenContextService(
                             if (normalized.enabled) 1 else 0,
                             CodegenConsumerTarget.MCU_CONSOLE.name,
                             normalized.protocolTemplateId,
+                            normalized.externalCOutputRoot,
                             now,
                             existingId,
                         )
@@ -331,6 +337,7 @@ class CodegenContextService(
         if (request.consumerTarget != CodegenConsumerTarget.MCU_CONSOLE) {
             throw BusinessValidationException("Only MCU_CONSOLE is supported in V1.")
         }
+        request.externalCOutputRoot?.let(::validateExternalCOutputRoot)
         val duplicateMethods =
             request.schemas.groupBy { it.methodName }.filterValues { schemas -> schemas.size > 1 }.keys
         if (duplicateMethods.isNotEmpty()) {
@@ -338,6 +345,20 @@ class CodegenContextService(
         }
         request.schemas.forEach { schema ->
             validateSchema(schema)
+        }
+    }
+
+    private fun validateExternalCOutputRoot(
+        rawPath: String,
+    ) {
+        val path =
+            try {
+                Path.of(rawPath)
+            } catch (_: InvalidPathException) {
+                throw BusinessValidationException("externalCOutputRoot is not a valid filesystem path.")
+            }
+        if (!path.isAbsolute) {
+            throw BusinessValidationException("externalCOutputRoot must be an absolute path on the current machine.")
         }
     }
 
@@ -578,6 +599,7 @@ class CodegenContextService(
             protocolTemplateId = protocolTemplate.id,
             protocolTemplateCode = protocolTemplate.code,
             protocolTemplateName = protocolTemplate.name,
+            externalCOutputRoot = externalCOutputRoot,
             schemas =
                 schemas.sortedWith(compareBy(CodegenSchema::sortIndex, CodegenSchema::id)).map { schema ->
                     CodegenSchemaDto(
@@ -618,6 +640,7 @@ class CodegenContextService(
             description = description.cleanNullable(),
             enabled = enabled,
             consumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
+            externalCOutputRoot = externalCOutputRoot.cleanNullable(),
             schemas =
                 schemas.map { schema ->
                     schema.copy(
