@@ -1,5 +1,6 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
+import org.gradle.platform.base.internal.DefaultBinaryNamingScheme.component
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
@@ -29,23 +30,23 @@ dependencies {
 }
 
 kotlin {
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation(project(":apps:kcloud:shared"))
-                api(project(":apps:kcloud:plugins:host-config:api"))
-                implementation(project(":apps:kcloud:plugins:host-config:shared"))
-                api(project(":apps:kcloud:plugins:mcu-console:api"))
-                implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
-                implementation(libs.findLibrary("compose-cupertino-workbench").get())
-                implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
-                implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
-                implementation(libs.findLibrary("site-addzero-route-core").get())
-                implementation(libs.findLibrary("site-addzero-network-starter").get())
-                implementation(libs.findLibrary("scaffold-spi").get())
-                implementation(libs.findLibrary("io-github-robinpcrd-cupertino").get())
-                implementation(libs.findLibrary("io-github-robinpcrd-cupertino-icons-extended").get())
-            }
-        }
+
+    dependencies {
+
+        implementation(project(":apps:kcloud:shared"))
+        api(project(":apps:kcloud:plugins:host-config:api"))
+        implementation(project(":apps:kcloud:plugins:host-config:shared"))
+        api(project(":apps:kcloud:plugins:mcu-console:api"))
+        implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
+        implementation(libs.findLibrary("compose-cupertino-workbench").get())
+        implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
+        implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
+        implementation(libs.findLibrary("site-addzero-route-core").get())
+        implementation(libs.findLibrary("site-addzero-network-starter").get())
+        implementation(libs.findLibrary("scaffold-spi").get())
+        implementation(libs.findLibrary("io-github-robinpcrd-cupertino").get())
+        implementation(libs.findLibrary("io-github-robinpcrd-cupertino-icons-extended").get())
+        implementation(libs.findLibrary("site-addzero-compose-native-component-text").get())
     }
+
 }

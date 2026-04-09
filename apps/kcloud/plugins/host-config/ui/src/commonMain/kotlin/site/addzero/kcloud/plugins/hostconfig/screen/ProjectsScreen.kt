@@ -203,6 +203,12 @@ fun ProjectsScreen() {
             viewModel.clearNotice()
             createProject = true
         },
+        onDownloadProject = {
+            viewModel.showNotice("下载工程入口已添加，后续接入 sqlite 导出。")
+        },
+        onImportProject = {
+            viewModel.showNotice("导入工程入口已添加，后续接入本地 sqlite 文件选择。")
+        },
         onRefresh = viewModel::refresh,
         onSelectNode = ::selectNodeFromPage,
         onNodeAction = ::handleNodeAction,

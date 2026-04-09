@@ -67,6 +67,8 @@ internal fun ProjectsWorkbenchContent(
     editingNodeId: String?,
     nodeActionMenu: NodeActionMenuSeed?,
     onCreateProject: () -> Unit,
+    onDownloadProject: () -> Unit,
+    onImportProject: () -> Unit,
     onRefresh: () -> Unit,
     onSelectNode: (String) -> Unit,
     onNodeAction: (HostConfigTreeNode, NodeActionType) -> Unit,
@@ -105,6 +107,16 @@ internal fun ProjectsWorkbenchContent(
                     WorkbenchActionButton(
                         text = "新建工程",
                         onClick = onCreateProject,
+                        variant = WorkbenchButtonVariant.Outline,
+                    )
+                    WorkbenchActionButton(
+                        text = "下载工程",
+                        onClick = onDownloadProject,
+                        variant = WorkbenchButtonVariant.Outline,
+                    )
+                    WorkbenchActionButton(
+                        text = "导入工程",
+                        onClick = onImportProject,
                         variant = WorkbenchButtonVariant.Outline,
                     )
                     WorkbenchActionButton(

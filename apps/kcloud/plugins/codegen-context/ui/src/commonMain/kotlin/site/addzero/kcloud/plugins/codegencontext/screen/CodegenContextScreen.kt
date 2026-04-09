@@ -39,9 +39,9 @@ import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewMode
     order = 40.0,
     placement = RoutePlacement(
         scene = RouteScene(
-            name = "宿主配置",
+            name = "元数据配置",
             icon = "SettingsApplications",
-            order = 10,
+            order = -10,
         ),
         defaultInScene = false,
     ),

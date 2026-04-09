@@ -85,6 +85,18 @@ class ProjectsViewModel(
     }
 
     /**
+     * 显示提示消息。
+     *
+     * @param message 提示消息。
+     */
+    fun showNotice(message: String) {
+        screenState = screenState.copy(
+            noticeMessage = message,
+            errorMessage = null,
+        )
+    }
+
+    /**
      * 选择项目。
      *
      * @param projectId 项目 ID。
