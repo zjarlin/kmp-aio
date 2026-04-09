@@ -44,7 +44,7 @@ import site.addzero.kcloud.plugins.hostconfig.protocols.ProtocolsViewModel
         scene = RouteScene(
             name = "系统管理",
             icon = "SettingsApplications",
-            order = -10,
+            order = Int.MAX_VALUE,
         ),
     ),
 )

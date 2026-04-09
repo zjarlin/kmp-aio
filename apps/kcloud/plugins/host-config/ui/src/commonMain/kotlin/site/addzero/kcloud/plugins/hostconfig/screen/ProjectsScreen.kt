@@ -44,7 +44,6 @@ fun ProjectsScreen() {
     val viewModel = koinViewModel<ProjectsViewModel>()
     val state = viewModel.screenState
     val treeViewModel = rememberTreeViewModel<HostConfigTreeNode>()
-    val currentCreateSpec = resolveCurrentCreateSpec(state)
 
     var createProject by remember { mutableStateOf(false) }
     var linkProtocolSeed by remember { mutableStateOf<LinkProtocolSeed?>(null) }
@@ -160,11 +159,6 @@ fun ProjectsScreen() {
                 createTagSeed = CreateTagSeed(node.projectId, deviceId)
             }
 
-            NodeActionType.EDIT -> {
-                currentNodePanelCollapsed = false
-                editingNodeId = node.id
-            }
-
             NodeActionType.MOVE -> moveSeed = MoveNodeSeed(node)
             NodeActionType.DELETE -> deleteNode(node)
             NodeActionType.UPLOAD_PROJECT -> uploadSeed = UploadSeed(node.projectId)
@@ -202,7 +196,6 @@ fun ProjectsScreen() {
     ProjectsWorkbenchContent(
         state = state,
         treeViewModel = treeViewModel,
-        currentCreateSpec = currentCreateSpec,
         currentNodePanelCollapsed = currentNodePanelCollapsed,
         editingNodeId = editingNodeId,
         nodeActionMenu = nodeActionMenu,

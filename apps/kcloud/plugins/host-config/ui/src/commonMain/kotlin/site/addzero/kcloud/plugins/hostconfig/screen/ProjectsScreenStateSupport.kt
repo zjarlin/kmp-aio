@@ -112,7 +112,6 @@ internal fun resolveNodeActionMenu(
                     enabled = linkableProtocols.isNotEmpty(),
                     note = if (linkableProtocols.isEmpty()) "当前工程已关联全部协议字典" else null,
                 ),
-                NodeActionItem(type = NodeActionType.EDIT, title = "编辑"),
                 NodeActionItem(type = NodeActionType.UPLOAD_PROJECT, title = "上传工程"),
                 NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
             )
@@ -129,7 +128,6 @@ internal fun resolveNodeActionMenu(
                     enabled = hasTemplates,
                     note = if (hasTemplates) null else "当前协议模板下没有模块模板",
                 ),
-                NodeActionItem(type = NodeActionType.EDIT, title = "编辑"),
                 NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
                 NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
             )
@@ -137,20 +135,17 @@ internal fun resolveNodeActionMenu(
 
         HostConfigNodeKind.MODULE -> listOf(
             NodeActionItem(type = NodeActionType.CREATE_DEVICE, title = "新建设备"),
-            NodeActionItem(type = NodeActionType.EDIT, title = "编辑"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
         )
 
         HostConfigNodeKind.DEVICE -> listOf(
             NodeActionItem(type = NodeActionType.CREATE_TAG, title = "新建标签"),
-            NodeActionItem(type = NodeActionType.EDIT, title = "编辑"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
         )
 
         HostConfigNodeKind.TAG -> listOf(
-            NodeActionItem(type = NodeActionType.EDIT, title = "编辑"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
         )
@@ -308,7 +303,6 @@ internal enum class NodeActionType {
     LINK_PROTOCOL,
     CREATE_DEVICE,
     CREATE_TAG,
-    EDIT,
     MOVE,
     DELETE,
     UPLOAD_PROJECT,

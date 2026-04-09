@@ -5,7 +5,6 @@ import com.zaxxer.hikari.HikariDataSource
 import org.babyfish.jimmer.sql.DraftInterceptor
 import org.babyfish.jimmer.sql.dialect.DefaultDialect
 import org.babyfish.jimmer.sql.dialect.Dialect
-import org.babyfish.jimmer.sql.dialect.MySqlDialect
 import org.babyfish.jimmer.sql.dialect.PostgresDialect
 import org.babyfish.jimmer.sql.dialect.SQLiteDialect
 import org.babyfish.jimmer.sql.kt.KSqlClient
@@ -86,22 +85,6 @@ internal fun DatasourceProperties.toDatasource(): DataSource {
             )
         }
 
-        isMySql(jdbcUrl) -> {
-            createHikariDataSource(
-                jdbcUrl = jdbcUrl,
-                username = user,
-                password = password,
-                driverClassName = driverClassName.ifBlank { "com.mysql.cj.jdbc.Driver" },
-                extraProperties = mapOf(
-                    "useUnicode" to "true",
-                    "characterEncoding" to "UTF-8",
-                    "serverTimezone" to "UTC",
-                    "allowPublicKeyRetrieval" to "true",
-                    "useSSL" to "false"
-                )
-            )
-        }
-
         isSqlLite(jdbcUrl) -> {
             createSqliteDataSource(
                 jdbcUrl = jdbcUrl,
@@ -117,15 +100,12 @@ internal fun DatasourceProperties.toDatasource(): DataSource {
 internal fun guessDialect(jdbcUrl: String): Dialect {
     return when {
         isSqlLite(jdbcUrl) -> SQLiteDialect()
-        isMySql(jdbcUrl) -> MySqlDialect()
         isPg(jdbcUrl) -> PostgresDialect()
         else -> DefaultDialect.INSTANCE
     }
 }
 
 internal fun isSqlLite(jdbcUrl: String): Boolean = jdbcUrl.startsWith("jdbc:sqlite:")
-
-internal fun isMySql(jdbcUrl: String): Boolean = jdbcUrl.startsWith("jdbc:mysql:") || jdbcUrl.startsWith("jdbc:mariadb:")
 
 internal fun isPg(jdbcUrl: String): Boolean {
     val startsWith = jdbcUrl.startsWith("jdbc:postgresql:")

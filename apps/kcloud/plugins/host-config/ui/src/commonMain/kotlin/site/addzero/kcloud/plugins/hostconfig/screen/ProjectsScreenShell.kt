@@ -40,7 +40,6 @@ import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
  *
  * @param state 状态。
  * @param treeViewModel 树视图模型。
- * @param currentCreateSpec 当前创建规格。
  * @param currentNodePanelCollapsed 当前nodepanelcollapsed。
  * @param editingNodeId editingnode ID。
  * @param nodeActionMenu nodeactionmenu。
@@ -64,7 +63,6 @@ import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
 internal fun ProjectsWorkbenchContent(
     state: ProjectsScreenState,
     treeViewModel: TreeViewModel<HostConfigTreeNode>,
-    currentCreateSpec: CurrentCreateSpec,
     currentNodePanelCollapsed: Boolean,
     editingNodeId: String?,
     nodeActionMenu: NodeActionMenuSeed?,
@@ -103,32 +101,12 @@ internal fun ProjectsWorkbenchContent(
             header = {
                 state.errorMessage?.let { CupertinoStatusStrip(it) }
                 state.noticeMessage?.let { CupertinoStatusStrip(it) }
-                if (state.errorMessage == null && state.noticeMessage == null && currentCreateSpec.hint != null) {
-                    CupertinoStatusStrip(currentCreateSpec.hint)
-                }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        WorkbenchActionButton(
-                            text = "新建节点",
-                            onClick = {
-                                val node = currentCreateSpec.node ?: return@WorkbenchActionButton
-                                val actionType = currentCreateSpec.actionType ?: return@WorkbenchActionButton
-                                onNodeAction(node, actionType)
-                            },
-                            modifier = Modifier.weight(1f),
-                            variant = WorkbenchButtonVariant.Default,
-                            enabled = currentCreateSpec.enabled,
-                        )
-                        WorkbenchActionButton(
-                            text = "新建工程",
-                            onClick = onCreateProject,
-                            modifier = Modifier.weight(1f),
-                            variant = WorkbenchButtonVariant.Outline,
-                        )
-                    }
+                    WorkbenchActionButton(
+                        text = "新建工程",
+                        onClick = onCreateProject,
+                        variant = WorkbenchButtonVariant.Outline,
+                    )
                     WorkbenchActionButton(
                         text = if (state.loading) "加载中" else "刷新",
                         onClick = onRefresh,
