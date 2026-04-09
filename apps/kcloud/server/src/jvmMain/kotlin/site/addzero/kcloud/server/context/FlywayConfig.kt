@@ -32,6 +32,8 @@ class FlywayConfig : FlywayConfigSpi {
                 baselineVersion = "0",
                 cleanDisabled = true,
                 validateOnMigrate = true,
+                // 兼容早期单体阶段已入库、但已不再随当前代码分发的版本化迁移。
+                ignoreMigrationPatterns = listOf("versioned:missing"),
             ),
             datasources = datasources,
         )

@@ -112,6 +112,7 @@ class FlywayStarter(
                 defaults.validateOnMigrate?.let { validateOnMigrate(it) }
 
                 // 列表配置
+                defaults.ignoreMigrationPatterns?.let { ignoreMigrationPatterns(*it.toTypedArray()) }
                 defaults.schemas?.let { schemas(*it.toTypedArray()) }
                 defaults.sqlMigrationSuffixes?.let { sqlMigrationSuffixes(*it.toTypedArray()) }
                 defaults.placeholders?.let { placeholders(it) }

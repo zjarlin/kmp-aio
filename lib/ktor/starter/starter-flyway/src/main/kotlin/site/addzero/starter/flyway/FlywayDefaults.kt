@@ -23,6 +23,7 @@ data class FlywayDefaults(
     val table: String? = null,
     val target: String? = null,
     val validateOnMigrate: Boolean? = null,
+    val ignoreMigrationPatterns: List<String>? = null,
 ) {
     fun mergeWith(other: FlywayDefaults): FlywayDefaults {
         return FlywayDefaults(
@@ -48,6 +49,7 @@ data class FlywayDefaults(
             table = table ?: other.table,
             target = target ?: other.target,
             validateOnMigrate = validateOnMigrate ?: other.validateOnMigrate,
+            ignoreMigrationPatterns = ignoreMigrationPatterns ?: other.ignoreMigrationPatterns,
         )
     }
 }

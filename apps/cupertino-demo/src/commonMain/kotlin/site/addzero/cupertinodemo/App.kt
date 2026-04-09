@@ -517,12 +517,7 @@ private fun AdaptivePage(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AdaptiveIconButton(onClick = state::showAlert) {
-                CupertinoIcon(
-                    imageVector = AdaptiveIcons.Outlined.Search,
-                    contentDescription = "Search",
-                )
-            }
+            org.koin.compose.koinInject<AdaptivePageAdaptiveIconButtonSpi>().Render(state = state)
             AdaptiveIconToggleButton(
                 checked = state.adaptiveIconSelected,
                 onCheckedChange = state::updateAdaptiveIconSelected,
@@ -544,6 +539,7 @@ private fun AdaptivePage(
         }
     }
 }
+
 
 @Composable
 private fun WorkbenchCard(
@@ -630,5 +626,27 @@ class DefaultAppCupertinoAlertDialogTitleSpi : AppCupertinoAlertDialogTitleSpi {
     @androidx.compose.runtime.Composable
     override fun Render() {
         CupertinoText("脚手架已经换成纯 Cupertino")
+    }
+}
+
+interface AdaptivePageAdaptiveIconButtonSpi {
+    @androidx.compose.runtime.Composable
+    fun Render(
+        state: CupertinoDemoState,
+    )
+}
+
+@org.koin.core.annotation.Single
+class DefaultAdaptivePageAdaptiveIconButtonSpi : AdaptivePageAdaptiveIconButtonSpi {
+    @androidx.compose.runtime.Composable
+    override fun Render(
+        state: CupertinoDemoState,
+    ) {
+            AdaptiveIconButton(onClick = state::showAlert) {
+                CupertinoIcon(
+                    imageVector = AdaptiveIcons.Outlined.Search,
+                    contentDescription = "Search",
+                )
+            }
     }
 }

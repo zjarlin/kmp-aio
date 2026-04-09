@@ -40,16 +40,13 @@ val sharedComposeSourceDir = mcuConsoleUiProject.projectDir.resolve("src/commonM
 /** 当前 server 源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
 val generatedContractSourceDir = layout.projectDirectory.dir("generated/jvmMain/kotlin")
-val generatedApiFiles =
-    listOf(
-        "DeviceInfoApi.kt",
-        "FlashApi.kt",
-        "SerialPortApi.kt",
-    ).map(generatedApiOutputDirFile::resolve)
 
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external")
     arg("apiClientOutputDir", generatedApiOutputDir)
+    arg("apiClientAggregatorObjectName", "Apis")
+    arg("apiClientAggregatorStyle", "koin")
+    arg("apiClientAggregatorOutputDir", generatedApiOutputDir)
     arg("sharedSourceDir", sharedSourceDir)
     arg("sharedComposeSourceDir", sharedComposeSourceDir)
     arg("backendServerSourceDir", backendServerSourceDir)
@@ -102,6 +99,6 @@ val cleanMcuConsoleGeneratedApis by tasks.registering(Delete::class) {
 tasks.matching { task ->
     task.name == "kspKotlinJvm"
 }.configureEach {
-    outputs.files(generatedApiFiles)
+    outputs.dir(generatedApiOutputDirFile)
     dependsOn(cleanMcuConsoleGeneratedApis)
 }

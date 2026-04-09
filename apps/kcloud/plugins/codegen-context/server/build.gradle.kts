@@ -44,17 +44,12 @@ val modbusMetadataQuery =
     LIMIT 1
     """.trimIndent()
 
-val generatedApiFiles =
-    listOf(
-        "CodegenContextApi.kt",
-        "CodegenTemplateApi.kt",
-    ).map { fileName ->
-        generatedApiOutputDir.file(fileName).asFile
-    }
-
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.codegencontext.api.external")
     arg("apiClientOutputDir", generatedApiOutputDir.asFile.absolutePath)
+    arg("apiClientAggregatorObjectName", "Apis")
+    arg("apiClientAggregatorStyle", "koin")
+    arg("apiClientAggregatorOutputDir", generatedApiOutputDir.asFile.absolutePath)
     arg("sharedSourceDir", sharedSourceDir.asFile.absolutePath)
     arg("sharedComposeSourceDir", sharedComposeSourceDir.asFile.absolutePath)
     arg("backendServerSourceDir", backendServerSourceDir.asFile.absolutePath)
@@ -148,6 +143,6 @@ val generateMcuConsoleContracts by tasks.registering(JavaExec::class) {
 tasks.matching { task ->
     task.name == "kspKotlinJvm"
 }.configureEach {
-    outputs.files(generatedApiFiles)
+    outputs.dir(generatedApiOutputDir.asFile)
     dependsOn(cleanCodegenContextGeneratedApis)
 }

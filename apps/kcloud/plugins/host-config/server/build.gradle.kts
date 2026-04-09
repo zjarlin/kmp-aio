@@ -26,24 +26,6 @@ val sharedComposeSourceDir =
 /** 当前 server 源码目录。 */
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
 
-val generatedApiFiles =
-    listOf(
-        "CatalogApi.kt",
-        "CloudAccessApi.kt",
-        "GatewayConfigApi.kt",
-        "ProjectApi.kt",
-        "ProjectUploadApi.kt",
-        "TagApi.kt",
-        "TemplateApi.kt",
-        "ProjectConfigApi.kt",
-    ).map { fileName ->
-        generatedApiOutputDir.file(fileName).asFile
-    } +
-        listOf(
-            generatedApiOutputDir.file("Apis.kt").asFile,
-            generatedApiOutputDir.file("ApisModule.kt").asFile,
-        )
-
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir.asFile.absolutePath)
@@ -77,6 +59,6 @@ val cleanHostConfigGeneratedApis by tasks.registering(Delete::class) {
 tasks.matching { task ->
     task.name == "kspKotlinJvm"
 }.configureEach {
-    outputs.files(generatedApiFiles)
+    outputs.dir(generatedApiOutputDir.asFile)
     dependsOn(cleanHostConfigGeneratedApis)
 }
