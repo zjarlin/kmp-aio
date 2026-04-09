@@ -41,7 +41,6 @@ plugins {
 
 val buildLogicCatalogFile = file("checkouts/build-logic/gradle/libs.versions.toml")
 val buildLogicSettingsFile = file("checkouts/build-logic/settings.gradle.kts")
-val addzeroLibJvmSettingsFile = file("../addzero-lib-jvm/settings.gradle.kts")
 val excludedTopLevelDirs = setOf("build", "checkouts", "kotlin-js-store")
 val excludedDirNames = setOf("build", "node_modules")
 
@@ -72,10 +71,6 @@ dependencyResolutionManagement {
 
 rootProject.name = rootDir.name
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-
-if (addzeroLibJvmSettingsFile.isFile) {
-    includeBuild("../addzero-lib-jvm")
-}
 
 if (!buildLogicSettingsFile.isFile) {
     apply(plugin = "site.addzero.gradle.plugin.addzero-git-dependency")

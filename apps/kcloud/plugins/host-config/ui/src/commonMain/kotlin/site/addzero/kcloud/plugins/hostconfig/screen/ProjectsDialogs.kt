@@ -46,6 +46,8 @@ import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTemplateMetadataResponse
+import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldKey
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.label
@@ -219,6 +221,7 @@ internal fun CreateModuleDialog(
     CupertinoDialog(
         title = "新建模块",
         onDismissRequest = onDismissRequest,
+        width = 900.dp,
         actions = {
             WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
             WorkbenchActionButton(
@@ -257,7 +260,7 @@ internal fun CreateDeviceDialog(
     CupertinoDialog(
         title = "新建设备",
         onDismissRequest = onDismissRequest,
-        width = 860.dp,
+        width = 980.dp,
         actions = {
             WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
             WorkbenchActionButton(
@@ -510,12 +513,13 @@ private class NodeActionDropdownPositionProvider(
  */
 internal fun renderTransportConfigRows(
     transportConfig: ProtocolTransportConfig?,
+    metadata: ProtocolTemplateMetadataResponse? = null,
 ) {
     if (transportConfig == null) {
         CupertinoStatusStrip("当前没有通信参数。")
         return
     }
-    transportConfig.toDisplayRows().forEach { (label, value) ->
+    transportConfig.toDisplayRows(metadata).forEach { (label, value) ->
         CupertinoKeyValueRow(label, value)
     }
 }
@@ -524,6 +528,26 @@ internal fun renderTransportConfigRows(
  * 处理协议传输配置。
  */
 internal fun ProtocolTransportConfig.toDisplayRows(): List<Pair<String, String>> {
+    return toDisplayRows(metadata = null)
+}
+
+/**
+ * 处理协议传输配置。
+ *
+ * @param metadata 协议模板元数据。
+ */
+internal fun ProtocolTransportConfig.toDisplayRows(
+    metadata: ProtocolTemplateMetadataResponse?,
+): List<Pair<String, String>> {
+    val dynamicFields = metadata?.transportForm?.fields.orEmpty()
+    if (dynamicFields.isNotEmpty()) {
+        return buildList {
+            add("传输类型" to transportType.label())
+            dynamicFields.forEach { field ->
+                add(field.label to displayFieldValue(field.key))
+            }
+        }
+    }
     return when (transportType) {
         TransportType.RTU -> listOf(
             "传输类型" to transportType.label(),
@@ -548,6 +572,23 @@ internal fun ProtocolTransportConfig.toDisplayRows(): List<Pair<String, String>>
  * 处理协议传输配置。
  */
 internal fun ProtocolTransportConfig.toSummary(): String {
+    return toSummary(metadata = null)
+}
+
+/**
+ * 处理协议传输配置。
+ *
+ * @param metadata 协议模板元数据。
+ */
+internal fun ProtocolTransportConfig.toSummary(
+    metadata: ProtocolTemplateMetadataResponse?,
+): String {
+    val summaryKeys = metadata?.transportForm?.summaryKeys.orEmpty()
+    if (summaryKeys.isNotEmpty()) {
+        return summaryKeys
+            .map { key -> displayFieldValue(key) }
+            .joinToString(" / ")
+    }
     return when (transportType) {
         TransportType.RTU -> {
             listOf(
@@ -560,6 +601,26 @@ internal fun ProtocolTransportConfig.toSummary(): String {
         TransportType.TCP -> {
             listOf(host.orDash(), tcpPort?.toString() ?: "-").joinToString(":")
         }
+    }
+}
+
+/**
+ * 读取传输配置显示值。
+ *
+ * @param key 字段键。
+ */
+private fun ProtocolTransportConfig.displayFieldValue(
+    key: ProtocolTransportFieldKey,
+): String {
+    return when (key) {
+        ProtocolTransportFieldKey.HOST -> host.orDash()
+        ProtocolTransportFieldKey.TCP_PORT -> tcpPort?.toString() ?: "-"
+        ProtocolTransportFieldKey.PORT_NAME -> portName.orDash()
+        ProtocolTransportFieldKey.BAUD_RATE -> baudRate?.toString() ?: "-"
+        ProtocolTransportFieldKey.DATA_BITS -> dataBits?.toString() ?: "-"
+        ProtocolTransportFieldKey.STOP_BITS -> stopBits?.toString() ?: "-"
+        ProtocolTransportFieldKey.PARITY -> parity?.label() ?: "-"
+        ProtocolTransportFieldKey.RESPONSE_TIMEOUT_MS -> responseTimeoutMs?.toString() ?: "-"
     }
 }
 
@@ -596,6 +657,21 @@ internal fun resolveLinkableProtocolTemplates(
 }
 
 /**
+ * 解析协议模板元数据。
+ *
+ * @param state 状态。
+ * @param protocolTemplateId 协议模板 ID。
+ */
+internal fun resolveProtocolTemplateMetadata(
+    state: ProjectsScreenState,
+    protocolTemplateId: Long,
+): ProtocolTemplateMetadataResponse? {
+    return state.protocolTemplates
+        .firstOrNull { template -> template.id == protocolTemplateId }
+        ?.metadata
+}
+
+/**
  * 解析模块协议candidates。
  *
  * @param state 状态。
@@ -617,7 +693,9 @@ internal fun resolveModuleProtocolCandidates(
             protocolTemplateId = protocol.protocolTemplateId,
             protocolTemplateName = protocol.protocolTemplateName,
             availableTemplateCount = availableTemplates.size,
-            transportSummary = protocol.transportConfig?.toSummary(),
+            transportSummary = protocol.transportConfig?.toSummary(
+                resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId),
+            ),
         )
     }
 }

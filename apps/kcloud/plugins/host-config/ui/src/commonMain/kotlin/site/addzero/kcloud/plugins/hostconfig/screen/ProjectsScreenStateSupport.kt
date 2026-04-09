@@ -23,6 +23,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTemplateMetad
 import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldKey
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.buildTransportConfig
+import site.addzero.kcloud.plugins.hostconfig.api.template.defaultTransportConfig
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2

@@ -91,6 +91,7 @@ kotlin {
             implementation("site.addzero:modbus-ksp-core:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-kotlin-gateway:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-c-contract:$modbusCodegenVersion")
+            implementation("site.addzero:modbus-ksp-keil-sync:$modbusCodegenVersion")
             implementation("site.addzero:modbus-ksp-markdown:$modbusCodegenVersion")
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }

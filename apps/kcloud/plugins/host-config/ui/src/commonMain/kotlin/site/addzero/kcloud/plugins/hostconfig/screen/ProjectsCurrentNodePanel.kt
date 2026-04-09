@@ -149,6 +149,9 @@ internal fun CurrentNodePanel(
             HostConfigNodeKind.PROTOCOL -> {
                 val protocol = state.selectedProtocol
                 val transportConfig = protocol?.transportConfig
+                val templateMetadata = protocol?.let { item ->
+                    resolveProtocolTemplateMetadata(state, item.protocolTemplateId)
+                }
                 HostConfigNodeSummary(
                     title = protocol?.displayName().orDash(),
                     subtitle = protocol?.protocolTemplateCode.orDash(),
@@ -157,7 +160,7 @@ internal fun CurrentNodePanel(
                     metrics = listOf(
                         NodeMetricItem("模块", protocol?.modules?.size?.toString() ?: "0"),
                         NodeMetricItem("轮询", protocol?.pollingIntervalMs?.let { "${it}ms" } ?: "-"),
-                        NodeMetricItem("链路", transportConfig?.toSummary() ?: "未配置"),
+                        NodeMetricItem("链路", transportConfig?.toSummary(templateMetadata) ?: "未配置"),
                     ),
                 )
                 if (isEditing) {
@@ -191,7 +194,7 @@ internal fun CurrentNodePanel(
                     )
                     HostConfigDenseInfoSection(
                         title = "通信参数",
-                        entries = transportConfig?.toDisplayRows().orEmpty(),
+                        entries = transportConfig?.toDisplayRows(templateMetadata).orEmpty(),
                         emptyText = "当前没有通信参数。",
                     )
                 }
@@ -200,6 +203,9 @@ internal fun CurrentNodePanel(
             HostConfigNodeKind.MODULE -> {
                 val module = state.selectedModule
                 val moduleProtocol = state.selectedModuleProtocol
+                val moduleProtocolMetadata = moduleProtocol?.let { protocol ->
+                    resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId)
+                }
                 val boardModel = module?.let { item ->
                     resolveModuleBoardModel(
                         module = item,
@@ -268,7 +274,7 @@ internal fun CurrentNodePanel(
                     )
                     HostConfigDenseInfoSection(
                         title = "继承通信",
-                        entries = moduleProtocol?.transportConfig?.toDisplayRows().orEmpty(),
+                        entries = moduleProtocol?.transportConfig?.toDisplayRows(moduleProtocolMetadata).orEmpty(),
                         emptyText = "当前没有继承到通信参数。",
                     )
                 }

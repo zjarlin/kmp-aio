@@ -7,10 +7,4 @@ object KCloudHostRuntime {
     const val DEFAULT_SERVER_HOST = "127.0.0.1"
     const val DEFAULT_SERVER_PORT = 18080
 
-    fun resolveBaseUrl(
-        host: String = DEFAULT_SERVER_HOST,
-        port: Int = DEFAULT_SERVER_PORT,
-    ): String {
-        return "http://$host:$port/"
-    }
 }

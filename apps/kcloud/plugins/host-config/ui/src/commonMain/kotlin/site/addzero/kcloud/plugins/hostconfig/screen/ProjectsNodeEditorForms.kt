@@ -278,13 +278,15 @@ internal fun ModuleEditorForm(
         CupertinoStatusStrip("当前协议模板下没有可用模块模板。")
         return
     }
-    CupertinoPanel(title = "绑定协议", subtitle = "模块创建后会挂到这个协议实例下。") {
+    CupertinoPanel(title = "接入摘要", subtitle = "模块会挂到当前协议实例下，通信能力继承协议侧配置。") {
         CupertinoKeyValueRow("承载协议", protocolName.orDash())
         CupertinoKeyValueRow("协议字典", protocolTemplateName.orDash())
+        CupertinoKeyValueRow("可选模板数", templates.size.toString())
     }
     CupertinoFormSection(
-        title = "模块信息",
-        subtitle = "模块表单只维护硬件语义、模板归属和排序。",
+        title = "基础配置",
+        subtitle = "先确定模块模板，再补名称与排序，桌面端保持双栏录入。",
+        twoColumnMinWidth = 620.dp,
     ) {
         item { CupertinoTextField("模块名称", draft.name, { onDraftChange(draft.copy(name = it)) }) }
         item {
@@ -296,10 +298,13 @@ internal fun ModuleEditorForm(
             )
         }
         item { CupertinoTextField("排序", draft.sortIndex, { onDraftChange(draft.copy(sortIndex = it)) }) }
+        fullWidth {
+            CupertinoStatusStrip("模块不再单独保存串口、波特率等链路参数，这些运行参数统一跟随所属协议。")
+        }
     }
     CupertinoPanel(
-        title = "提示",
-        subtitle = "模块通信参数已提升到协议层，这里只维护模块模板和排序。",
+        title = "维护说明",
+        subtitle = "创建后如果需要调整通信链路，请回到协议节点修改。",
     ) {
         CupertinoStatusStrip("如果要改串口、波特率、校验位和超时，请编辑所属协议。")
     }
@@ -318,9 +323,20 @@ internal fun DeviceEditorForm(
     draft: DeviceDraft,
     onDraftChange: (DeviceDraft) -> Unit,
 ) {
+    CupertinoPanel(
+        title = "接入摘要",
+        subtitle = "先锁定设备类型和站号，再校准轮询节奏、字节序与批量区间。",
+    ) {
+        CupertinoKeyValueRow(
+            "设备类型",
+            deviceTypes.firstOrNull { option -> option.value == draft.deviceTypeId }?.label.orDash(),
+        )
+        CupertinoKeyValueRow("站号", draft.stationNo.ifBlank { "1" })
+        CupertinoKeyValueRow("当前状态", if (draft.disabled) "已禁用" else "启用")
+    }
     CupertinoFormSection(
         title = "基础信息",
-        subtitle = "设备标识、轮询节奏与启停状态默认放在首屏。",
+        subtitle = "设备标识与主寻址信息保持靠前，便于录入时快速核对。",
         twoColumnMinWidth = 640.dp,
     ) {
         item { CupertinoTextField("设备名称", draft.name, { onDraftChange(draft.copy(name = it)) }) }
@@ -335,22 +351,34 @@ internal fun DeviceEditorForm(
         item { CupertinoTextField("站号", draft.stationNo, { onDraftChange(draft.copy(stationNo = it)) }) }
         item { CupertinoTextField("排序", draft.sortIndex, { onDraftChange(draft.copy(sortIndex = it)) }) }
         item {
-            CupertinoTextField("请求间隔(ms)", draft.requestIntervalMs, { onDraftChange(draft.copy(requestIntervalMs = it)) })
-        }
-        item {
-            CupertinoTextField("写值间隔(ms)", draft.writeIntervalMs, { onDraftChange(draft.copy(writeIntervalMs = it)) })
-        }
-        item {
             CupertinoBooleanField(
                 label = "禁用设备",
                 checked = draft.disabled,
                 onCheckedChange = { checked -> onDraftChange(draft.copy(disabled = checked)) },
             )
         }
+        fullWidth {
+            CupertinoStatusStrip("设备类型决定后续标签建模的默认语义，建议在创建阶段就选准。")
+        }
     }
     CupertinoFormSection(
-        title = "字节序",
-        subtitle = "不同设备协议常会在这里出现字节序差异。",
+        title = "通讯节奏",
+        subtitle = "把轮询与写值节奏放在一组，减少跨区对照。",
+        twoColumnMinWidth = 640.dp,
+    ) {
+        item {
+            CupertinoTextField("请求间隔(ms)", draft.requestIntervalMs, { onDraftChange(draft.copy(requestIntervalMs = it)) })
+        }
+        item {
+            CupertinoTextField("写值间隔(ms)", draft.writeIntervalMs, { onDraftChange(draft.copy(writeIntervalMs = it)) })
+        }
+        fullWidth {
+            CupertinoStatusStrip("请求间隔控制采集频率，写值间隔用于限流下发动作。")
+        }
+    }
+    CupertinoFormSection(
+        title = "字节序与批量读取",
+        subtitle = "字节序和批量区间一起配置，更接近现场调试时的核对方式。",
         twoColumnMinWidth = 640.dp,
     ) {
         item {
@@ -380,16 +408,13 @@ internal fun DeviceEditorForm(
                 allowClear = true,
             )
         }
-    }
-    CupertinoFormSection(
-        title = "批量读取",
-        subtitle = "把模拟量和数字量的起点与长度并排配置，便于核对。",
-        twoColumnMinWidth = 640.dp,
-    ) {
         item { CupertinoTextField("模拟量起点", draft.batchAnalogStart, { onDraftChange(draft.copy(batchAnalogStart = it)) }) }
         item { CupertinoTextField("模拟量长度", draft.batchAnalogLength, { onDraftChange(draft.copy(batchAnalogLength = it)) }) }
         item { CupertinoTextField("数字量起点", draft.batchDigitalStart, { onDraftChange(draft.copy(batchDigitalStart = it)) }) }
         item { CupertinoTextField("数字量长度", draft.batchDigitalLength, { onDraftChange(draft.copy(batchDigitalLength = it)) }) }
+        fullWidth {
+            CupertinoStatusStrip("如果现场设备支持连续寄存器扫描，优先把起点和长度按真实块边界配置。")
+        }
     }
 }
 

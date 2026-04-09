@@ -85,6 +85,7 @@ internal fun NodeChildrenPanel(
                 }
                 CupertinoSectionTitle("协议")
                 projectTree.protocols.forEach { protocol ->
+                    val templateMetadata = resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId)
                     ChildNodeCard(
                         title = protocol.displayName(),
                         subtitle = "${protocol.protocolTemplateName} · ${protocol.protocolTemplateCode}",
@@ -95,7 +96,7 @@ internal fun NodeChildrenPanel(
                         CupertinoKeyValueRow("轮询间隔(ms)", protocol.pollingIntervalMs.toString())
                         CupertinoKeyValueRow("承载模块", protocol.modules.size.toString())
                         CupertinoKeyValueRow("排序", protocol.sortIndex.toString())
-                        renderTransportConfigRows(protocol.transportConfig)
+                        renderTransportConfigRows(protocol.transportConfig, templateMetadata)
                     }
                 }
             }

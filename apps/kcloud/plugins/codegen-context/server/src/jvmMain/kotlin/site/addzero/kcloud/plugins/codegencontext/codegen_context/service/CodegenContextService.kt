@@ -98,7 +98,7 @@ class CodegenContextService(
     fun saveContext(
         request: CodegenContextDetailDto,
     ): CodegenContextDetailDto {
-        val normalized = request.normalized()
+        val normalized = request.normalizeGenericDetail()
         val protocolTemplate = loadProtocolTemplate(normalized.protocolTemplateId)
         ensureSupportedTemplate(protocolTemplate)
         val availableDefinitions = loadContextDefinitions(normalized.protocolTemplateId)
@@ -130,6 +130,15 @@ class CodegenContextService(
                                 spring_route_output_root,
                                 c_output_root,
                                 markdown_output_root,
+                                kotlin_client_transports,
+                                c_expose_transports,
+                                artifact_kinds,
+                                c_output_project_dir,
+                                bridge_impl_path,
+                                keil_uvprojx_path,
+                                keil_target_name,
+                                keil_group_name,
+                                mxproject_path,
                                 rtu_port_path,
                                 rtu_unit_id,
                                 rtu_baud_rate,
@@ -152,7 +161,7 @@ class CodegenContextService(
                                 mqtt_retries,
                                 create_time,
                                 update_time
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """.trimIndent(),
                             normalized.code,
                             normalized.name,
@@ -169,6 +178,15 @@ class CodegenContextService(
                             generationSettings.springRouteOutputRoot,
                             generationSettings.cOutputRoot,
                             generationSettings.markdownOutputRoot,
+                            normalized.kotlinClientTransports,
+                            normalized.cExposeTransports,
+                            normalized.artifactKinds,
+                            normalized.cOutputProjectDir,
+                            normalized.bridgeImplPath,
+                            normalized.keilUvprojxPath,
+                            normalized.keilTargetName,
+                            normalized.keilGroupName,
+                            normalized.mxprojectPath,
                             generationSettings.rtuDefaults.portPath,
                             generationSettings.rtuDefaults.unitId,
                             generationSettings.rtuDefaults.baudRate,
@@ -214,6 +232,15 @@ class CodegenContextService(
                                 spring_route_output_root = ?,
                                 c_output_root = ?,
                                 markdown_output_root = ?,
+                                kotlin_client_transports = ?,
+                                c_expose_transports = ?,
+                                artifact_kinds = ?,
+                                c_output_project_dir = ?,
+                                bridge_impl_path = ?,
+                                keil_uvprojx_path = ?,
+                                keil_target_name = ?,
+                                keil_group_name = ?,
+                                mxproject_path = ?,
                                 rtu_port_path = ?,
                                 rtu_unit_id = ?,
                                 rtu_baud_rate = ?,
@@ -252,6 +279,15 @@ class CodegenContextService(
                             generationSettings.springRouteOutputRoot,
                             generationSettings.cOutputRoot,
                             generationSettings.markdownOutputRoot,
+                            normalized.kotlinClientTransports,
+                            normalized.cExposeTransports,
+                            normalized.artifactKinds,
+                            normalized.cOutputProjectDir,
+                            normalized.bridgeImplPath,
+                            normalized.keilUvprojxPath,
+                            normalized.keilTargetName,
+                            normalized.keilGroupName,
+                            normalized.mxprojectPath,
                             generationSettings.rtuDefaults.portPath,
                             generationSettings.rtuDefaults.unitId,
                             generationSettings.rtuDefaults.baudRate,
@@ -1057,6 +1093,15 @@ class CodegenContextService(
             protocolTemplateCode = protocolTemplate.code,
             protocolTemplateName = protocolTemplate.name,
             externalCOutputRoot = externalCOutputRoot,
+            kotlinClientTransports = kotlinClientTransports,
+            cExposeTransports = cExposeTransports,
+            artifactKinds = artifactKinds,
+            cOutputProjectDir = cOutputProjectDir,
+            bridgeImplPath = bridgeImplPath,
+            keilUvprojxPath = keilUvprojxPath,
+            keilTargetName = keilTargetName,
+            keilGroupName = keilGroupName,
+            mxprojectPath = mxprojectPath,
             generationSettings =
                 CodegenGenerationSettingsDto(
                     serverOutputRoot = serverOutputRoot,

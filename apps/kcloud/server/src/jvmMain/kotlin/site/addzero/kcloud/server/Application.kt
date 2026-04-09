@@ -12,8 +12,12 @@ import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.generat
 import site.addzero.kcloud.plugins.hostconfig.routes.catalog.generated.springktor.registerGeneratedSpringRoutes as registerHostConfigSpringRoutes
 import site.addzero.kcloud.plugins.mcuconsole.routes.generated.springktor.registerGeneratedSpringRoutes as registerMcuConsoleSpringRoutes
 import site.addzero.kcloud.runtime.KCloudHostRuntime
+import site.addzero.kcloud.server.module
+import site.addzero.kcloud.server.runStarters
+import site.addzero.kcloud.server.startServer
 import site.addzero.starter.AppStarter
 import site.addzero.starter.AppStarterTest
+import kotlin.collections.filter
 
 /**
  * Server 入口。
@@ -45,8 +49,11 @@ fun Application.module() {
     initServerKoin()
     runStarters()
     routing {
+        //插件路由
         registerHostConfigSpringRoutes()
+        //插件路由
         registerCodegenContextSpringRoutes()
+        //插件路由
         registerMcuConsoleSpringRoutes()
     }
 }

@@ -3,6 +3,7 @@ package site.addzero.kcloud.plugins.hostconfig.screen
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,15 +18,23 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.TreeViewModel
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.button.WorkbenchIconButton
 import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
+import site.addzero.cupertino.workbench.metrics.WorkbenchMetrics
+import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
 import site.addzero.cupertino.workbench.material3.Icon
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
@@ -86,20 +95,27 @@ internal fun ProjectsWorkbenchContent(
     onNextTagPage: () -> Unit,
     onDismissNodeActionMenu: () -> Unit,
 ) {
+    val compactTreeMetrics = rememberCompactProjectTreeMetrics()
+    var treeQuery by rememberSaveable { mutableStateOf("") }
+    val filteredTreeNodes = remember(state.treeNodes, treeQuery) {
+        state.treeNodes.filterByKeyword(treeQuery)
+    }
+
     Row(
         modifier = Modifier.fillMaxSize().padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         WorkbenchTreeSidebar(
-            items = state.treeNodes,
+            items = filteredTreeNodes,
             selectedId = state.selectedNodeId,
             onNodeClick = { node -> onSelectNode(node.id) },
             onNodeContextMenu = { node ->
                 onSelectNode(node.id)
                 onOpenNodeActionMenu(node)
             },
-            modifier = Modifier.fillMaxHeight().widthIn(min = 280.dp, max = 320.dp),
-            searchPlaceholder = "搜索工程树",
+            modifier = Modifier.fillMaxHeight().widthIn(min = 256.dp, max = 300.dp),
+            metrics = compactTreeMetrics,
+            searchEnabled = false,
             treeViewModel = treeViewModel,
             header = {
                 state.errorMessage?.let { CupertinoStatusStrip(it) }
@@ -113,10 +129,20 @@ internal fun ProjectsWorkbenchContent(
                     onImportProjectSqlite = onImportProjectSqlite,
                     onRefresh = onRefresh,
                 )
+                AddSearchBar(
+                    keyword = treeQuery,
+                    onKeyWordChanged = { query -> treeQuery = query },
+                    onSearch = {},
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = "搜索工程树",
+                    fieldHeight = compactTreeMetrics.searchFieldHeight,
+                    horizontalSpacing = compactTreeMetrics.searchFieldSpacing,
+                    showRefreshButton = !compactTreeMetrics.searchFieldCompactRefreshHidden,
+                )
             },
             getId = { it.id },
             getLabel = { it.label },
-            getCaption = { it.caption },
+            getCaption = { null },
             getChildren = { it.children },
             getIcon = { it.kind.icon() },
             nodeTrailingContent = { node ->
@@ -189,11 +215,11 @@ private fun ProjectsSidebarActionGrid(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             WorkbenchActionButton(
                 text = "新建工程",
@@ -213,7 +239,7 @@ private fun ProjectsSidebarActionGrid(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             WorkbenchActionButton(
                 text = "导入 SQLite",
@@ -232,6 +258,53 @@ private fun ProjectsSidebarActionGrid(
                 enabled = !busy,
             )
         }
+    }
+}
+
+@Composable
+private fun rememberCompactProjectTreeMetrics(): WorkbenchMetrics {
+    val metrics = currentWorkbenchMetrics()
+    return remember(metrics) {
+        metrics.copy(
+            sidebarOuterPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            sidebarPanelInnerPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
+            sidebarSectionGap = 8.dp,
+            sidebarTreePanelPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
+            searchFieldHeight = 42.dp,
+            searchFieldSpacing = 6.dp,
+            treeMetrics = metrics.treeMetrics.copy(
+                rowMinHeight = 36.dp,
+                rowVerticalPadding = 6.dp,
+                rowSpacing = 3.dp,
+                levelIndent = 20.dp,
+                iconSize = 18.dp,
+                expandIconSize = 16.dp,
+                selectedIndicatorHeight = 20.dp,
+            ),
+        )
+    }
+}
+
+private fun List<HostConfigTreeNode>.filterByKeyword(
+    query: String,
+): List<HostConfigTreeNode> {
+    val keyword = query.trim()
+    if (keyword.isBlank()) {
+        return this
+    }
+    return mapNotNull { node -> node.filterByKeyword(keyword) }
+}
+
+private fun HostConfigTreeNode.filterByKeyword(
+    keyword: String,
+): HostConfigTreeNode? {
+    val filteredChildren = children.filterByKeyword(keyword)
+    val matchesCurrentNode = label.contains(keyword, ignoreCase = true) ||
+        (caption?.contains(keyword, ignoreCase = true) == true)
+    return if (matchesCurrentNode || filteredChildren.isNotEmpty()) {
+        copy(children = filteredChildren)
+    } else {
+        null
     }
 }
 

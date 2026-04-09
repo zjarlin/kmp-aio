@@ -227,7 +227,8 @@ fun ProjectsScreen() {
         },
         onSaveProject = { project, draft -> viewModel.updateProject(project.id, draft.toProjectUpdateRequest()) },
         onSaveProtocol = { projectId, protocol, draft ->
-            viewModel.updateProtocol(projectId, protocol.id, draft.toProtocolUpdateRequest(projectId, protocol))
+            val template = state.protocolTemplates.firstOrNull { item -> item.id == protocol.protocolTemplateId }
+            viewModel.updateProtocol(projectId, protocol.id, draft.toProtocolUpdateRequest(projectId, protocol, template))
         },
         onSaveModule = { projectId, module, draft ->
             viewModel.updateModule(projectId, module.id, draft.toModuleUpdateRequest())

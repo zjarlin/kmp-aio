@@ -4,47 +4,33 @@ import java.io.File
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.DatasourcePropertiesSpi
+import site.addzero.kcloud.server.context.KCLOUD_SERVER_LOCAL_DIRECTORY
+import site.addzero.kcloud.server.context.KCLOUD_SERVER_SQLITE_FILE
+import site.addzero.kcloud.server.context.kcloudServerLocalDataDirectory
+import kotlin.collections.listOf
 
-const val KCLOUD_SERVER_DB_MODE_SQLITE: String = "sqlite"
+private val KCLOUD_SERVER_LOCAL_DIRECTORY = File(System.getProperty("user.home"), ".kcloud/local")
 
-private val KCLOUD_SERVER_LOCAL_DIRECTORY =
-    File(
-        System.getProperty("user.home"),
-        ".kcloud/local",
-    )
-
-private val KCLOUD_SERVER_SQLITE_FILE: File =
-    File(
-        KCLOUD_SERVER_LOCAL_DIRECTORY,
-        "kcloud-server.sqlite",
-    )
+private val KCLOUD_SERVER_SQLITE_FILE = File(KCLOUD_SERVER_LOCAL_DIRECTORY, "kcloud-server.sqlite")
 
 fun kcloudServerLocalDataDirectory(): File {
     KCLOUD_SERVER_LOCAL_DIRECTORY.mkdirs()
     return KCLOUD_SERVER_LOCAL_DIRECTORY
 }
 
-fun kcloudServerSqliteFile(): File {
-    val directory = kcloudServerLocalDataDirectory()
-    if (!KCLOUD_SERVER_SQLITE_FILE.parentFile.exists()) {
-        directory.mkdirs()
-    }
-    return KCLOUD_SERVER_SQLITE_FILE
-}
-
-fun serverSqliteJdbcUrl(): String {
-    return "jdbc:sqlite:${kcloudServerSqliteFile().absolutePath}"
-}
-
 @Single
 class JimmerConfig : DatasourcePropertiesSpi {
     override fun datasources(): List<DatasourceProperties> {
+        val directory = kcloudServerLocalDataDirectory()
+        if (!KCLOUD_SERVER_SQLITE_FILE.parentFile.exists()) {
+            directory.mkdirs()
+        }
         return listOf(
             DatasourceProperties(
-                name = KCLOUD_SERVER_DB_MODE_SQLITE,
+                name = "sqlite",
                 enabled = true,
                 default = true,
-                url = serverSqliteJdbcUrl(),
+                url = "jdbc:sqlite:${KCLOUD_SERVER_SQLITE_FILE.absolutePath}",
                 driverClassName = "org.sqlite.JDBC",
             ),
         )

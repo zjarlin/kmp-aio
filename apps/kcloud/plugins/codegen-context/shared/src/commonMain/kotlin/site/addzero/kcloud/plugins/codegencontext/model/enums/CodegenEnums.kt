@@ -62,3 +62,34 @@ enum class CodegenDefinitionSourceKind {
     BUILTIN,
     CUSTOM,
 }
+
+@Serializable
+/**
+ * 定义元数据导出的传输类型枚举。
+ */
+enum class CodegenMetadataTransportKind {
+    RTU,
+    TCP,
+    MQTT,
+}
+
+@Serializable
+/**
+ * 定义元数据导出的产物类型枚举。
+ */
+enum class CodegenMetadataArtifactKind {
+    METADATA_SNAPSHOT,
+    C_SERVICE_CONTRACT,
+    C_TRANSPORT_CONTRACT,
+    MARKDOWN_PROTOCOL,
+}
+
+@Serializable
+/**
+ * 定义元数据预检问题级别枚举。
+ */
+enum class CodegenMetadataIssueSeverity {
+    ERROR,
+    WARNING,
+    INFO,
+}
