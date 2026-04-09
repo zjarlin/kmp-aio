@@ -366,17 +366,17 @@ class CodegenContextServiceTest {
                 assertEquals(3, response.generatedFiles.size)
                 val deviceApi =
                     workspaceRoot.resolve(
-                        "apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin/" +
+                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin/" +
                             "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt",
                     ).readText()
                 val deviceWriteApi =
                     workspaceRoot.resolve(
-                        "apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin/" +
+                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin/" +
                             "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceWriteApi.kt",
                     ).readText()
                 val flashRegisters =
                     workspaceRoot.resolve(
-                        "apps/kcloud/plugins/mcu-console/shared/build/generated/codegen-context/commonMain/kotlin/" +
+                        "apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin/" +
                             "site/addzero/kcloud/plugins/mcuconsole/modbus/device/FlashConfigRegisters.kt",
                     ).readText()
 

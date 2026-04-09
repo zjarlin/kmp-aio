@@ -132,7 +132,7 @@ Flow:
 
 1. Define shared DTOs in the plugin `shared` module.
 2. Define Spring-style controllers in the plugin `server` module.
-3. Let `controller2api` emit Ktorfit interfaces into the plugin `ui` source tree.
+3. Let `controller2api` emit Ktorfit interfaces into the plugin `ui` build-generated source tree.
 4. Let the UI module run Ktorfit KSP against those emitted interfaces.
 5. Consume generated APIs from page ViewModels through Koin wiring.
 
@@ -140,16 +140,17 @@ Important repo rules:
 
 - Do not hand-write a parallel set of Ktorfit interfaces for plugin controllers.
 - API file names matter because generated client names derive from controller source names.
-- Emit generated API interfaces into a real UI source root when the UI module needs Ktorfit KSP to process them.
-- 当 `controller2api` 同时要产 Ktorfit 接口和 Koin 聚合入口时，Ktorfit 接口继续输出到 `src/commonMain`；在当前 `kcloud` 仓库里，Koin 聚合入口先保留 source-controlled bridge，不直接编译旧版 processor 产出的 `build/generated/.../Apis.kt`。
-- `controller2api` 的 `koin` 聚合风格目标仍然是“稳定入口对象 + `@Module + @Configuration` module”；但在当前消费的 `controller2api-processor:2026.04.07` 里，生成模板还残留 `KoinPlatform.getKoin()`，所以 `kcloud` 先用显式注入 `Ktorfit` 的 bridge 模块兜住，等处理器版本升级后再收敛回纯生成。
+- Emit generated API interfaces into `build/generated/...` and wire that directory into the UI `commonMain` source set explicitly.
+- Generated API package paths must end with `generated`; do not place generated interfaces under handwritten business leaf packages such as `api/external`.
+- When `controller2api` emits both Ktorfit interfaces and a Koin aggregation entry, the generated Koin entry should stay in the same build-generated package and expose a public `@Module + @Configuration` module.
+- Generated Koin providers must inject `Ktorfit` explicitly; do not generate `KoinPlatform.getKoin()` lookups inside the API bridge.
 
 Current `host-config` example:
 
-- Server writes generated interfaces into `apps/kcloud/plugins/host-config/ui/src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
-- UI keeps `HostConfigApiClients.kt` and `HostConfigApiClientsKoinModule.kt` in `apps/kcloud/plugins/host-config/ui/src/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/`
-- Those bridge providers must inject `Ktorfit` directly instead of reaching into `KoinPlatform`
-- `apps/kcloud/ui` 的根扫描模块还要显式 `includes = [HostConfigApiClientsKoinModule::class]`，因为这类 provider-only module 不会靠广域扫描自己进根图
+- Server writes generated interfaces and `ApisModule` into `apps/kcloud/plugins/host-config/ui/build/generated/source/controller2api/commonMain/kotlin/site/addzero/kcloud/plugins/hostconfig/api/external/generated/`
+- UI wires `build/generated/source/controller2api/commonMain/kotlin` into `commonMain`, then lets Ktorfit KSP and Koin KCP process those generated sources
+- ViewModels depend on generated API types from `site.addzero.kcloud.plugins.hostconfig.api.external.generated`
+- `apps/kcloud/ui` 的根扫描模块可以直接发现这类 public generated `@Configuration` 入口，不再依赖手写 bridge 文件
 
 ## KCloud Frontend Stack
 

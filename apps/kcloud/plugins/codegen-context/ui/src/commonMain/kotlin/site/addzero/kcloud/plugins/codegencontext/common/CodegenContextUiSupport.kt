@@ -122,6 +122,7 @@ fun CodegenTextField(
     modifier: Modifier = Modifier,
     placeholder: String = "",
     singleLine: Boolean = true,
+    description: String? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -145,6 +146,13 @@ fun CodegenTextField(
                 { CupertinoText(placeholder) }
             },
         )
+        description?.takeIf(String::isNotBlank)?.let { text ->
+            CupertinoText(
+                text = text,
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
     }
 }
 
@@ -198,9 +206,11 @@ fun <T> CodegenSelectionField(
     modifier: Modifier = Modifier,
     placeholder: String = "请选择",
     allowClear: Boolean = false,
+    description: String? = null,
 ) {
     var sheetVisible by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { option -> option.value == selectedValue }?.label.orEmpty()
+    val selectedOption = options.firstOrNull { option -> option.value == selectedValue }
+    val selectedLabel = selectedOption?.label.orEmpty()
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -226,6 +236,20 @@ fun <T> CodegenSelectionField(
                 )
             },
         )
+        selectedOption?.caption?.takeIf(String::isNotBlank)?.let { caption ->
+            CupertinoText(
+                text = caption,
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
+        description?.takeIf(String::isNotBlank)?.let { text ->
+            CupertinoText(
+                text = text,
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+            )
+        }
     }
 
     CupertinoActionSheet(

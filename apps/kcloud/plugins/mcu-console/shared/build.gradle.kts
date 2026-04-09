@@ -8,7 +8,7 @@ plugins {
 val libs = versionCatalogs.named("libs")
 
 val generatedKspSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
-val generatedContractSourceDir = layout.buildDirectory.dir("generated/codegen-context/commonMain/kotlin")
+val generatedContractSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
 val addzeroLibJvmVersion: String by project
 val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:server:generateMcuConsoleContracts"
 

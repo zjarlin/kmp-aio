@@ -137,8 +137,8 @@ internal fun baseContextRequest(
 internal fun createGeneratorWorkspace(): Path {
     val workspaceRoot = Files.createTempDirectory("codegen-context-workspace-")
     workspaceRoot.resolve("settings.gradle.kts").writeText("rootProject.name = \"codegen-context-test\"")
-    workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin").createDirectories()
-    workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/build/generated/codegen-context/commonMain/kotlin").createDirectories()
+    workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin").createDirectories()
+    workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin").createDirectories()
     workspaceRoot.resolve(
         "apps/kcloud/plugins/mcu-console/server/src/jvmMain/kotlin/" +
             "site/addzero/kcloud/plugins/mcuconsole/modbus/device",

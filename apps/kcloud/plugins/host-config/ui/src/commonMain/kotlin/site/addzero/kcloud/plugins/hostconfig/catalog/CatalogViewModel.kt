@@ -17,7 +17,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.catalog.ProductDefinitionCreat
 import site.addzero.kcloud.plugins.hostconfig.api.catalog.ProductDefinitionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.catalog.PropertyDefinitionCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.catalog.PropertyDefinitionUpdateRequest
-import site.addzero.kcloud.plugins.hostconfig.api.external.CatalogApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.CatalogApi
 
 @KoinViewModel
 class CatalogViewModel(

@@ -30,10 +30,10 @@ import site.addzero.kcloud.plugins.hostconfig.api.tag.TagUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagValueTextInput
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
-import site.addzero.kcloud.plugins.hostconfig.api.external.ProjectApi
-import site.addzero.kcloud.plugins.hostconfig.api.external.ProjectUploadApi
-import site.addzero.kcloud.plugins.hostconfig.api.external.TagApi
-import site.addzero.kcloud.plugins.hostconfig.api.external.TemplateApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectUploadApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TagApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TemplateApi
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.findNode

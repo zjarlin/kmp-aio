@@ -9,8 +9,8 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectGatewayPinConfigRequest
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectModbusServerConfigRequest
-import site.addzero.kcloud.plugins.hostconfig.api.external.GatewayConfigApi
-import site.addzero.kcloud.plugins.hostconfig.api.external.ProjectApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.GatewayConfigApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.ProjectApi
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
 @KoinViewModel

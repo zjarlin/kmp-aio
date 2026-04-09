@@ -17,11 +17,15 @@ val sharedComposeSourceDir = codegenContextUiProject.layout.projectDirectory.dir
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
 val mcuConsoleServerGeneratedContractDir =
     rootProject.layout.projectDirectory.dir(
-        "apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin",
+        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin",
     )
 val mcuConsoleSharedGeneratedContractDir =
     rootProject.layout.projectDirectory.dir(
-        "apps/kcloud/plugins/mcu-console/shared/build/generated/codegen-context/commonMain/kotlin",
+        "apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin",
+    )
+val mcuConsoleMetadataOutputDir =
+    rootProject.layout.projectDirectory.dir(
+        "apps/kcloud/plugins/mcu-console/server/generated/modbus-metadata",
     )
 val codegenContextServerJvmJar = tasks.named<Jar>("jvmJar")
 val codegenContextServerJvmRuntimeClasspath = configurations.named("jvmRuntimeClasspath")
@@ -71,6 +75,10 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-statuspages"))
             implementation("site.addzero:modbus-codegen-model:$modbusCodegenVersion")
             implementation("site.addzero:modbus-codegen-core:$modbusCodegenVersion")
+            implementation("site.addzero:modbus-ksp-core:$modbusCodegenVersion")
+            implementation("site.addzero:modbus-ksp-kotlin-gateway:$modbusCodegenVersion")
+            implementation("site.addzero:modbus-ksp-c-contract:$modbusCodegenVersion")
+            implementation("site.addzero:modbus-ksp-markdown:$modbusCodegenVersion")
             implementation(libs.findLibrary("mysql-mysql-connector-java").get())
         }
         jvmTest.dependencies {
@@ -94,9 +102,10 @@ val generateMcuConsoleContracts by tasks.registering(JavaExec::class) {
     inputs.property("jdbcUser", kcloudMysqlUser)
     inputs.property("query", modbusMetadataQuery)
     inputs.property("jsonColumn", "payload")
-    inputs.property("transport", "rtu")
+    inputs.property("transport", "rtu,tcp,mqtt")
     outputs.dir(mcuConsoleServerGeneratedContractDir)
     outputs.dir(mcuConsoleSharedGeneratedContractDir)
+    outputs.dir(mcuConsoleMetadataOutputDir)
     outputs.upToDateWhen { false }
     classpath(
         files(codegenContextServerJvmJar.flatMap { jar -> jar.archiveFile }),
@@ -118,13 +127,21 @@ val generateMcuConsoleContracts by tasks.registering(JavaExec::class) {
         "--json-column",
         "payload",
         "--transport",
-        "rtu",
+        "rtu,tcp,mqtt",
+        "--skip-missing-transports",
+        "true",
         "--workspace-root",
         rootProject.projectDir.absolutePath,
         "--server-output-root",
         mcuConsoleServerGeneratedContractDir.asFile.absolutePath,
         "--shared-output-root",
         mcuConsoleSharedGeneratedContractDir.asFile.absolutePath,
+        "--gateway-output-root",
+        mcuConsoleServerGeneratedContractDir.asFile.absolutePath,
+        "--c-output-root",
+        mcuConsoleMetadataOutputDir.dir("c").asFile.absolutePath,
+        "--markdown-output-root",
+        mcuConsoleMetadataOutputDir.dir("markdown").asFile.absolutePath,
     )
 }
 

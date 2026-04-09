@@ -1,34 +1,42 @@
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server-core")
-    id("site.addzero.ksp.modbus-rtu")
 }
 
 val libs = versionCatalogs.named("libs")
-val kcloudMysqlJdbcUrl = "jdbc:mysql://192.168.31.133:3306/okmy_dics?createDatabaseIfNotExist=true"
-val kcloudMysqlUser = "root"
-val kcloudMysqlPassword = "test123456"
+val generateMcuConsoleContractsTask = ":apps:kcloud:plugins:codegen-context:server:generateMcuConsoleContracts"
 
 /** Api生成目录 */
-val generatedApiOutputDir = project(":apps:kcloud:plugins:mcu-console:ui") .projectDir .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external") .absolutePath
-
-/** 同构体生成目录 */
-val generatedIsoPackage = "site.addzero.kcloud.plugins.mcuconsole"
+val generatedApiOutputDir =
+    project(":apps:kcloud:plugins:mcu-console:ui")
+        .layout
+        .buildDirectory
+        .dir("generated/ksp/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole/api/external")
+        .get()
+        .asFile
+        .absolutePath
 
 /** 同构体生成包 */
-val generatedIsoOutputDir = project(":apps:kcloud:plugins:mcu-console:shared") .projectDir .resolve("generated/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole") .absolutePath
+val generatedIsoPackage = "site.addzero.kcloud.plugins.mcuconsole"
+
+/** 同构体生成目录 */
+val generatedIsoOutputDir =
+    project(":apps:kcloud:plugins:mcu-console:shared")
+        .layout
+        .buildDirectory
+        .dir("generated/ksp/commonMain/kotlin/site/addzero/kcloud/plugins/mcuconsole")
+        .get()
+        .asFile
+        .absolutePath
 
 /** 共享目录 */
-val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared") .projectDir .resolve("src/commonMain/kotlin") .absolutePath
-/** 共享前端目录 */
-val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui") .projectDir .resolve("src/commonMain/kotlin") .absolutePath
-//val generatedJvmRouteSourceDir = layout.buildDirectory.dir("generated/ksp/jvm/jvmMain/kotlin")
+val sharedSourceDir = project(":apps:kcloud:plugins:mcu-console:shared").projectDir.resolve("src/commonMain/kotlin").absolutePath
 
-/** 当前server源码目录 */
+/** 共享前端目录 */
+val sharedComposeSourceDir = project(":apps:kcloud:plugins:mcu-console:ui").projectDir.resolve("src/commonMain/kotlin").absolutePath
+
+/** 当前 server 源码目录 */
 val backendServerSourceDir = projectDir.resolve("src/jvmMain/kotlin").absolutePath
 val generatedContractSourceDir = layout.projectDirectory.dir("generated/jvmMain/kotlin")
-
-//dependencies {
-//}
 
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external")
@@ -51,37 +59,6 @@ ksp {
     arg("mcpPackageName", "site.addzero.kcloud.plugins.mcuconsole.generated.mcp")
 }
 
-modbusRtu {
-    codegenModes.set(listOf("server"))
-    contractPackages.set(
-        listOf(
-            "site.addzero.kcloud.plugins.mcuconsole.modbus.device",
-        ),
-    )
-    metadataProviders.set(listOf("database"))
-    databaseDriverClass.set("com.mysql.cj.jdbc.Driver")
-    databaseJdbcUrl.set(kcloudMysqlJdbcUrl)
-    databaseUsername.set(kcloudMysqlUser)
-    databasePassword.set(kcloudMysqlPassword)
-    databaseQuery.set(
-        """
-        SELECT payload
-        FROM codegen_context_modbus_contract
-        WHERE consumer_target = 'MCU_CONSOLE'
-          AND enabled = 1
-          AND selected = 1
-          AND transport = '${'$'}{transport}'
-        ORDER BY updated_at DESC
-        LIMIT 1
-        """.trimIndent(),
-    )
-    databaseJsonColumn.set("payload")
-}
-
-dependencies {
-    add("kspJvm", libs.findLibrary("mysql-mysql-connector-java").get())
-}
-
 kotlin {
     sourceSets {
         jvmMain {
@@ -94,6 +71,17 @@ kotlin {
                 implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
                 implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
             }
+        }
+    }
+}
+
+tasks.configureEach {
+    when (name) {
+        "compileKotlinJvm",
+        "jvmSourcesJar",
+        "jvmJar",
+        -> {
+            dependsOn(generateMcuConsoleContractsTask)
         }
     }
 }

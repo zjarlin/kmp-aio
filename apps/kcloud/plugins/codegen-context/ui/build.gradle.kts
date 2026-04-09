@@ -12,7 +12,7 @@ plugins {
 }
 
 val libs = versionCatalogs.named("libs")
-val generatedApiSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
+val generatedApiSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
 
 val routeOwnerModuleDir =
     project(":apps:kcloud:ui")

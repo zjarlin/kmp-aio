@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
-import site.addzero.kcloud.plugins.hostconfig.api.external.TemplateApi
+import site.addzero.kcloud.plugins.hostconfig.api.external.generated.TemplateApi
 
 @KoinViewModel
 class ProtocolsViewModel(

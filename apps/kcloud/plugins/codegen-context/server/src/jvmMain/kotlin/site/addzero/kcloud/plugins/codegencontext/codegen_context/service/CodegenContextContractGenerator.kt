@@ -136,10 +136,8 @@ class CodegenContextContractGenerator(
 
     private fun locateGeneratedRoots(): GeneratedRoots {
         val workspaceRoot = locateWorkspaceRoot()
-        val serverRoot =
-            workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/codegen-context/jvmMain/kotlin")
-        val sharedRoot =
-            workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/build/generated/codegen-context/commonMain/kotlin")
+        val serverRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin")
+        val sharedRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin")
         val serverPackageDir = safeResolve(serverRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
         val sharedPackageDir = safeResolve(sharedRoot, "site/addzero/kcloud/plugins/mcuconsole/modbus/device")
         return GeneratedRoots(

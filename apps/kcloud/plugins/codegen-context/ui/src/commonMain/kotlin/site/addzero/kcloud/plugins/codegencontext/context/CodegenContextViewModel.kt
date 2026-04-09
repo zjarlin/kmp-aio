@@ -301,7 +301,7 @@ private fun CodegenContextEditorState.toDto(): CodegenContextDetailDto {
         name = name,
         description = description.takeIf { it.isNotBlank() },
         enabled = enabled,
-        consumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
+        consumerTarget = consumerTarget,
         protocolTemplateId = protocolTemplateId ?: 0L,
         schemas =
             schemas.map { schema ->
