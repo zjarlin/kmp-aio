@@ -37,3 +37,4 @@ out/
 /apps/kcloud/plugins/mcu-console/ui/.idea/gradle.xml
 /apps/kcloud/plugins/mcu-console/ui/.idea/misc.xml
 /apps/kcloud/plugins/mcu-console/ui/.idea/vcs.xml
+/.m2-workspace
