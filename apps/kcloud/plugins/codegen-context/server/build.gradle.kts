@@ -19,8 +19,6 @@ val generatedApiOutputDir =
     generatedApiPackageRootDir.map { root ->
         root.dir("generated")
     }
-val generatedApiBridgeSourceDir =
-    generatedApiPackageRootDir
 val sharedSourceDir = layout.projectDirectory.dir("../shared/src/commonMain/kotlin")
 val sharedComposeSourceDir = codegenContextApiProject.layout.projectDirectory.dir("src/commonMain/kotlin")
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
@@ -59,9 +57,7 @@ val modbusMetadataQuery =
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.codegencontext.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
-    arg("apiClientBridgePackageName", "site.addzero.kcloud.plugins.codegencontext.api.external")
-    arg("apiClientBridgeOutputDir", generatedApiBridgeSourceDir.get().asFile.absolutePath)
-    arg("apiClientBridgeFileName", "CodegenContextApiClients.kt")
+    arg("apiClientAggregatorOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
     arg("sharedSourceDir", sharedSourceDir.asFile.absolutePath)
     arg("sharedComposeSourceDir", sharedComposeSourceDir.asFile.absolutePath)
     arg("backendServerSourceDir", backendServerSourceDir.asFile.absolutePath)

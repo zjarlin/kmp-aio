@@ -17,10 +17,6 @@ val generatedApiOutputDir =
     generatedApiRootDir.map { root ->
         root.dir("site/addzero/kcloud/plugins/hostconfig/api/external/generated")
     }
-val generatedApiBridgeSourceDir =
-    generatedApiRootDir.map { root ->
-        root.dir("site/addzero/kcloud/plugins/hostconfig/api/external")
-    }
 
 /** 共享源码目录。 */
 val sharedSourceDir =
@@ -36,9 +32,7 @@ val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
-    arg("apiClientBridgePackageName", "site.addzero.kcloud.plugins.hostconfig.api.external")
-    arg("apiClientBridgeOutputDir", generatedApiBridgeSourceDir.get().asFile.absolutePath)
-    arg("apiClientBridgeFileName", "HostConfigGeneratedApiClients.kt")
+    arg("apiClientAggregatorOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
     arg("sharedSourceDir", sharedSourceDir.asFile.absolutePath)
     arg("sharedComposeSourceDir", sharedComposeSourceDir.asFile.absolutePath)
     arg("backendServerSourceDir", backendServerSourceDir.asFile.absolutePath)

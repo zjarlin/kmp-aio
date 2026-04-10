@@ -55,8 +55,6 @@ val generatedContractSourceDir = layout.buildDirectory.dir("generated/source/cod
 ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.mcuconsole.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir)
-    arg("apiClientAggregatorObjectName", "Apis")
-    arg("apiClientAggregatorStyle", "koin")
     arg("apiClientAggregatorOutputDir", generatedApiOutputDir)
     arg("sharedSourceDir", sharedSourceDir)
     arg("sharedComposeSourceDir", sharedComposeSourceDir)
