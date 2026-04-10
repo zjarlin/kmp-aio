@@ -8,7 +8,10 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import site.addzero.util.db.SqlExecutor
+import site.addzero.kcloud.jimmer.di.batchUpdate
+import site.addzero.kcloud.jimmer.di.executeUpdate
+import site.addzero.kcloud.jimmer.di.queryIds
+import site.addzero.kcloud.jimmer.di.withTransaction
 import site.addzero.kcloud.plugins.hostconfig.api.common.PageResponse
 import site.addzero.kcloud.plugins.hostconfig.api.tag.ReplaceTagValueTextsRequest
 import site.addzero.kcloud.plugins.hostconfig.api.tag.TagCreateRequest
@@ -26,11 +29,9 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.*
  * 提供标签相关服务。
  *
  * @property sql Jimmer SQL 客户端。
- * @property jdbc 主机配置 JDBC 工具。
  */
 class TagService(
     private val sql: KSqlClient,
-    private val jdbc: SqlExecutor,
 ) {
     /**
      * 获取标签。
@@ -394,7 +395,7 @@ class TagService(
         targetDeviceId: Long,
         sortIndex: Int,
     ) {
-        jdbc.withTransaction {
+        sql.withTransaction {
             if (currentDeviceId == targetDeviceId) {
                 val orderedIds = reorderIds(
                     queryIds(
@@ -411,7 +412,7 @@ class TagService(
                 return@withTransaction
             }
 
-            jdbc.executeUpdate(
+            sql.executeUpdate(
                 "UPDATE host_config_tag SET device_id = ?, updated_at = ? WHERE id = ?",
                 targetDeviceId,
                 now(),
@@ -437,15 +438,15 @@ class TagService(
     private fun executeUpdate(
         sql: String,
         vararg args: Any?,
-    ): Int = jdbc.withTransaction { _ ->
-        jdbc.executeUpdate(sql, *args)
+    ): Int = this.sql.withTransaction { _ ->
+        this.sql.executeUpdate(sql, *args)
     }
 
     private fun queryIds(
         sql: String,
         vararg args: Any?,
-    ): MutableList<Long> = jdbc.withTransaction { _ ->
-        jdbc.queryIds(sql, *args).toMutableList()
+    ): MutableList<Long> = this.sql.withTransaction { _ ->
+        this.sql.queryIds(sql, *args).toMutableList()
     }
 
     /**
@@ -476,8 +477,8 @@ class TagService(
         orderedIds: List<Long>,
     ) {
         val updatedAt = now()
-        jdbc.withTransaction {
-            jdbc.batchUpdate(
+        this.sql.withTransaction {
+            this.sql.batchUpdate(
                 sql,
                 orderedIds.mapIndexed { index, id ->
                     listOf(index, updatedAt, id)

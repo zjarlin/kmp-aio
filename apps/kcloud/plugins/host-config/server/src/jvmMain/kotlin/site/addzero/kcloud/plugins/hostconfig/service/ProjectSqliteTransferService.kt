@@ -6,21 +6,28 @@ import java.nio.file.StandardCopyOption
 import java.sql.Connection
 import java.sql.DriverManager
 import javax.sql.DataSource
+import org.babyfish.jimmer.sql.dialect.SQLiteDialect
+import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.koin.core.annotation.Single
+import site.addzero.kcloud.jimmer.di.query
+import site.addzero.kcloud.jimmer.di.queryCount
+import site.addzero.kcloud.jimmer.di.queryForList
+import site.addzero.kcloud.jimmer.di.toRawKSqlClient
+import site.addzero.kcloud.jimmer.di.withConnection
+import site.addzero.kcloud.jimmer.di.withTransaction
 import site.addzero.kcloud.plugins.hostconfig.api.config.ProjectSqliteFileResponse
 import site.addzero.kmp.exp.BusinessValidationException
 import site.addzero.kmp.exp.NotFoundException
-import site.addzero.util.db.SqlExecutor
 
 private const val HOST_CONFIG_PROJECT_SQLITE_ROOT_PROPERTY =
     "site.addzero.kcloud.hostConfig.projectSqliteRoot"
 
 @Single
 class ProjectSqliteTransferService(
-    private val jdbc: SqlExecutor,
+    private val sql: KSqlClient,
 ) {
     fun exportProjectSqlite(projectId: Long): ProjectSqliteFileResponse {
-        val projectRow = jdbc.queryForList(
+        val projectRow = sql.queryForList(
             "SELECT * FROM host_config_project WHERE id = ?",
             projectId,
         ).firstOrNull() ?: throw NotFoundException("Project not found")
@@ -30,13 +37,13 @@ class ProjectSqliteTransferService(
         recreateFile(targetFile)
         val dataSource = sqliteDataSource(targetFile)
         ensureHostConfigSqliteSchema(dataSource)
-        val sqliteExecutor = SqlExecutor(dataSource)
-        sqliteExecutor.withTransaction { targetConnection ->
+        val sqliteSqlClient = dataSource.toRawKSqlClient(SQLiteDialect())
+        sqliteSqlClient.withTransaction { targetConnection ->
             targetConnection.createStatement().use { statement ->
                 statement.execute("PRAGMA foreign_keys = OFF")
             }
             clearTargetTables(targetConnection)
-            jdbc.withConnection { sourceConnection ->
+            sql.withConnection { sourceConnection ->
                 exportPlans(projectId).forEach { plan ->
                     copyQueryResult(
                         sourceConnection = sourceConnection,
@@ -157,11 +164,11 @@ class ProjectSqliteTransferService(
         sqliteFile: File,
     ) {
         val dataSource = sqliteDataSource(sqliteFile)
-        val sqliteExecutor = SqlExecutor(dataSource)
-        val hasProjectTable = sqliteExecutor.queryCount(
+        val sqliteSqlClient = dataSource.toRawKSqlClient(SQLiteDialect())
+        val hasProjectTable = sqliteSqlClient.queryCount(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'host_config_project'",
         ) > 0
-        val hasProtocolTemplateTable = sqliteExecutor.queryCount(
+        val hasProtocolTemplateTable = sqliteSqlClient.queryCount(
             "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'host_config_protocol_template'",
         ) > 0
         if (!hasProjectTable || !hasProtocolTemplateTable) {
@@ -175,9 +182,9 @@ class ProjectSqliteTransferService(
         projectName: String? = null,
     ): ProjectSqliteFileResponse {
         val dataSource = sqliteDataSource(sqliteFile)
-        val sqliteExecutor = SqlExecutor(dataSource)
-        val summaryText = buildSummaryText(sqliteExecutor)
-        val resolvedProjectName = projectName ?: sqliteExecutor.query(
+        val sqliteSqlClient = dataSource.toRawKSqlClient(SQLiteDialect())
+        val summaryText = buildSummaryText(sqliteSqlClient)
+        val resolvedProjectName = projectName ?: sqliteSqlClient.query(
             "SELECT name FROM host_config_project ORDER BY id ASC LIMIT 1",
             mapper = { resultSet -> resultSet.getString(1) },
         ).firstOrNull()
@@ -193,16 +200,16 @@ class ProjectSqliteTransferService(
     }
 
     private fun buildSummaryText(
-        sqliteExecutor: SqlExecutor,
+        sqliteSqlClient: KSqlClient,
     ): String {
-        val projectCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_project")
-        val productCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_product_definition")
-        val deviceDefinitionCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_device_definition")
-        val propertyCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_property_definition")
-        val featureCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_feature_definition")
-        val moduleCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_module_instance")
-        val deviceCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_device")
-        val tagCount = sqliteExecutor.queryCount("SELECT COUNT(*) FROM host_config_tag")
+        val projectCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_project")
+        val productCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_product_definition")
+        val deviceDefinitionCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_device_definition")
+        val propertyCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_property_definition")
+        val featureCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_feature_definition")
+        val moduleCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_module_instance")
+        val deviceCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_device")
+        val tagCount = sqliteSqlClient.queryCount("SELECT COUNT(*) FROM host_config_tag")
         return "工程 ${projectCount} 个，物模型 ${productCount} 个，设备定义 ${deviceDefinitionCount} 个，属性 ${propertyCount} 个，功能 ${featureCount} 个，模块 ${moduleCount} 个，设备 ${deviceCount} 个，点位 ${tagCount} 个"
     }
 

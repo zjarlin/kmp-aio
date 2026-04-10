@@ -12,17 +12,368 @@ import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.AbstractScalarProvider
 import org.babyfish.jimmer.sql.runtime.ConnectionManager.simpleConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
-import org.koin.core.annotation.ComponentScan
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
-import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteInstantScalarProvider
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteLocalDateTimeScalarProvider
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
 import site.addzero.kcloud.jimmer.spi.DatasourcePropertiesSpi
+import java.sql.Connection
 import java.sql.DriverManager
+import java.sql.PreparedStatement
+import java.sql.ResultSet
 import javax.sql.DataSource
+
+fun <T> KSqlClient.withConnection(
+    block: (Connection) -> T,
+): T {
+    return javaClient.connectionManager.execute(block)
+}
+
+fun <T> KSqlClient.withTransaction(
+    block: (Connection) -> T,
+): T {
+    return transaction {
+        withConnection(block)
+    }
+}
+
+fun KSqlClient.queryForList(
+    sql: String,
+    params: List<Any?> = emptyList(),
+): List<Map<String, Any?>> {
+    return query(sql, params) { resultSet ->
+        resultSet.toRowMap()
+    }
+}
+
+fun KSqlClient.queryForList(
+    sql: String,
+    vararg params: Any?,
+): List<Map<String, Any?>> {
+    return queryForList(sql, params.toList())
+}
+
+fun KSqlClient.queryForList(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+): List<Map<String, Any?>> {
+    return query(connection, sql, params) { resultSet ->
+        resultSet.toRowMap()
+    }
+}
+
+fun KSqlClient.queryForList(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+): List<Map<String, Any?>> {
+    return queryForList(connection, sql, params.toList())
+}
+
+fun <T> KSqlClient.query(
+    sql: String,
+    params: List<Any?> = emptyList(),
+    mapper: (ResultSet) -> T,
+): List<T> {
+    return withConnection { connection ->
+        query(connection, sql, params, mapper)
+    }
+}
+
+fun <T> KSqlClient.query(
+    sql: String,
+    vararg params: Any?,
+    mapper: (ResultSet) -> T,
+): List<T> {
+    return query(sql, params.toList(), mapper)
+}
+
+fun <T> KSqlClient.query(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+    mapper: (ResultSet) -> T,
+): List<T> {
+    prepareStatement(connection, sql, params).use { statement ->
+        statement.executeQuery().use { resultSet ->
+            return buildList {
+                while (resultSet.next()) {
+                    add(mapper(resultSet))
+                }
+            }
+        }
+    }
+}
+
+fun <T> KSqlClient.query(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+    mapper: (ResultSet) -> T,
+): List<T> {
+    return query(connection, sql, params.toList(), mapper)
+}
+
+fun KSqlClient.queryIds(
+    sql: String,
+    params: List<Any?> = emptyList(),
+): MutableList<Long> {
+    return query(sql, params) { resultSet ->
+        resultSet.getLong(1)
+    }.toMutableList()
+}
+
+fun KSqlClient.queryIds(
+    sql: String,
+    vararg params: Any?,
+): MutableList<Long> {
+    return queryIds(sql, params.toList())
+}
+
+fun KSqlClient.queryIds(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+): MutableList<Long> {
+    return query(connection, sql, params) { resultSet ->
+        resultSet.getLong(1)
+    }.toMutableList()
+}
+
+fun KSqlClient.queryIds(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+): MutableList<Long> {
+    return queryIds(connection, sql, params.toList())
+}
+
+fun KSqlClient.queryCount(
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Long {
+    return query(sql, params) { resultSet ->
+        resultSet.getLong(1)
+    }.firstOrNull() ?: 0L
+}
+
+fun KSqlClient.queryCount(
+    sql: String,
+    vararg params: Any?,
+): Long {
+    return queryCount(sql, params.toList())
+}
+
+fun KSqlClient.queryCount(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Long {
+    return query(connection, sql, params) { resultSet ->
+        resultSet.getLong(1)
+    }.firstOrNull() ?: 0L
+}
+
+fun KSqlClient.queryCount(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+): Long {
+    return queryCount(connection, sql, params.toList())
+}
+
+fun KSqlClient.executeUpdate(
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Int {
+    return withConnection { connection ->
+        executeUpdate(connection, sql, params)
+    }
+}
+
+fun KSqlClient.executeUpdate(
+    sql: String,
+    vararg params: Any?,
+): Int {
+    return executeUpdate(sql, params.toList())
+}
+
+fun KSqlClient.executeUpdate(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Int {
+    prepareStatement(connection, sql, params).use { statement ->
+        return statement.executeUpdate()
+    }
+}
+
+fun KSqlClient.executeUpdate(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+): Int {
+    return executeUpdate(connection, sql, params.toList())
+}
+
+fun KSqlClient.update(
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Int {
+    return executeUpdate(sql, params)
+}
+
+fun KSqlClient.update(
+    sql: String,
+    vararg params: Any?,
+): Int {
+    return executeUpdate(sql, params.toList())
+}
+
+fun KSqlClient.update(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Int {
+    return executeUpdate(connection, sql, params)
+}
+
+fun KSqlClient.update(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+): Int {
+    return executeUpdate(connection, sql, params.toList())
+}
+
+fun KSqlClient.batchUpdate(
+    sql: String,
+    batchParams: List<List<Any?>>,
+): IntArray {
+    if (batchParams.isEmpty()) {
+        return intArrayOf()
+    }
+    return withConnection { connection ->
+        batchUpdate(connection, sql, batchParams)
+    }
+}
+
+fun KSqlClient.batchUpdate(
+    connection: Connection,
+    sql: String,
+    batchParams: List<List<Any?>>,
+): IntArray {
+    if (batchParams.isEmpty()) {
+        return intArrayOf()
+    }
+    connection.prepareStatement(sql).use { statement ->
+        batchParams.forEach { params ->
+            statement.clearParameters()
+            statement.bindParams(params)
+            statement.addBatch()
+        }
+        return statement.executeBatch()
+    }
+}
+
+fun KSqlClient.execute(
+    sql: String,
+    params: List<Any?> = emptyList(),
+) {
+    withConnection { connection ->
+        execute(connection, sql, params)
+    }
+}
+
+fun KSqlClient.execute(
+    sql: String,
+    vararg params: Any?,
+) {
+    execute(sql, params.toList())
+}
+
+fun KSqlClient.execute(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+) {
+    prepareStatement(connection, sql, params).use { statement ->
+        statement.execute()
+    }
+}
+
+fun KSqlClient.execute(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+) {
+    execute(connection, sql, params.toList())
+}
+
+fun KSqlClient.insertAndReturnId(
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Long {
+    return withConnection { connection ->
+        insertAndReturnId(connection, sql, params)
+    }
+}
+
+fun KSqlClient.insertAndReturnId(
+    sql: String,
+    vararg params: Any?,
+): Long {
+    return insertAndReturnId(sql, params.toList())
+}
+
+fun KSqlClient.insertAndReturnId(
+    connection: Connection,
+    sql: String,
+    params: List<Any?> = emptyList(),
+): Long {
+    connection.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS).use { statement ->
+        statement.bindParams(params)
+        statement.executeUpdate()
+        statement.generatedKeys.use { generatedKeys ->
+            if (generatedKeys.next()) {
+                return generatedKeys.getLong(1)
+            }
+        }
+    }
+    error("Insert did not return generated id")
+}
+
+fun KSqlClient.insertAndReturnId(
+    connection: Connection,
+    sql: String,
+    vararg params: Any?,
+): Long {
+    return insertAndReturnId(connection, sql, params.toList())
+}
+
+fun KSqlClient.sql(
+    cmd: String,
+    params: List<Any?> = emptyList(),
+): List<Map<String, Any?>> {
+    return queryForList(cmd, params)
+}
+
+fun DataSource.toRawKSqlClient(
+    dialect: Dialect,
+    interceptors: List<DraftInterceptor<*, *>> = emptyList(),
+    scalarProviders: List<AbstractScalarProvider<*, *>> = emptyList(),
+): KSqlClient {
+    return newKSqlClient {
+        setDialect(dialect)
+        interceptors.forEach(::addDraftInterceptor)
+        scalarProviders.forEach(::addScalarProvider)
+        setDatabaseNamingStrategy(LOWER_CASE)
+        setConnectionManager(simpleConnectionManager(this@toRawKSqlClient))
+    }
+}
 
 @Module
 @Configuration
@@ -53,21 +404,13 @@ class JimmerKoinModule {
         interceptors: List<DraftInterceptor<*, *>>,
         scalarProviders: List<AbstractScalarProvider<*, *>>,
     ): List<KSqlClient> {
-        return enabledDatasourceProperties(datasourcePropertiesSpi)
-            .filterNot(DatasourceProperties::default)
+        return enabledDatasourceProperties(datasourcePropertiesSpi).filterNot(DatasourceProperties::default)
             .map { datasource ->
                 datasource.toKsqlClient(
                     interceptors = interceptors,
                     scalarProviders = scalarProviders,
                 )
             }
-    }
-
-    @Single
-    fun sqlExecutor(
-        dataSource: DataSource,
-    ): SqlExecutor {
-        return SqlExecutor(dataSource)
     }
 }
 
@@ -81,8 +424,7 @@ internal fun DatasourceProperties.toDatasource(): DataSource {
                 jdbcUrl = jdbcUrl,
                 username = user,
                 password = password,
-                driverClassName = driverClassName.ifBlank { "org.postgresql.Driver" }
-            )
+                driverClassName = driverClassName.ifBlank { "org.postgresql.Driver" })
         }
 
         isSqlLite(jdbcUrl) -> {
@@ -136,20 +478,19 @@ internal fun createHikariDataSource(
             addDataSourceProperty(key, value)
         }
     }
-    return runCatching { HikariDataSource(config) }
-        .getOrElse { throwable ->
-            throw IllegalStateException(
-                buildString {
-                    append("数据库连接初始化失败: url=")
-                    append(jdbcUrl)
-                    append(", user=")
-                    append(username ?: "<empty>")
-                    append(", driver=")
-                    append(driverClassName)
-                },
-                throwable,
-            )
-        }
+    return runCatching { HikariDataSource(config) }.getOrElse { throwable ->
+        throw IllegalStateException(
+            buildString {
+                append("数据库连接初始化失败: url=")
+                append(jdbcUrl)
+                append(", user=")
+                append(username ?: "<empty>")
+                append(", driver=")
+                append(driverClassName)
+            },
+            throwable,
+        )
+    }
 }
 
 /**
@@ -189,29 +530,51 @@ private fun DatasourceProperties.toKsqlClient(
             provider is SqliteInstantScalarProvider || provider is SqliteLocalDateTimeScalarProvider
         }
     }
-    return newKSqlClient {
-        setDialect(dialect)
-        interceptors.forEach(::addDraftInterceptor)
-        activeScalarProviders.forEach(::addScalarProvider)
-        setDatabaseNamingStrategy(LOWER_CASE)
-        setConnectionManager(simpleConnectionManager(dataSource))
-    }
+    return dataSource.toRawKSqlClient(
+        dialect = dialect,
+        interceptors = interceptors,
+        scalarProviders = activeScalarProviders,
+    )
 }
 
 private fun defaultDatasourceProperties(
     datasourcePropertiesSpi: DatasourcePropertiesSpi,
 ): DatasourceProperties {
     val configured = enabledDatasourceProperties(datasourcePropertiesSpi)
-    return configured.firstOrNull(DatasourceProperties::default)
-        ?: configured.firstOrNull()
-        ?: error("No enabled datasource found, check your DatasourcePropertiesSpi")
+    return configured.firstOrNull(DatasourceProperties::default) ?: configured.firstOrNull()
+    ?: error("No enabled datasource found, check your DatasourcePropertiesSpi")
 }
 
 private fun enabledDatasourceProperties(
     datasourcePropertiesSpi: DatasourcePropertiesSpi,
 ): List<DatasourceProperties> {
-    return datasourcePropertiesSpi.datasources()
-        .filter { datasource ->
-            datasource.enabled && datasource.url.isNotBlank()
-        }
+    return datasourcePropertiesSpi.datasources().filter { datasource ->
+        datasource.enabled && datasource.url.isNotBlank()
+    }
+}
+
+private fun prepareStatement(
+    connection: Connection,
+    sql: String,
+    params: List<Any?>,
+): PreparedStatement {
+    return connection.prepareStatement(sql).apply {
+        bindParams(params)
+    }
+}
+
+private fun PreparedStatement.bindParams(
+    params: List<Any?>,
+) {
+    params.forEachIndexed { index, value ->
+        setObject(index + 1, value)
+    }
+}
+
+private fun ResultSet.toRowMap(): Map<String, Any?> {
+    val row = linkedMapOf<String, Any?>()
+    for (index in 1..metaData.columnCount) {
+        row[metaData.getColumnLabel(index)] = getObject(index)
+    }
+    return row
 }

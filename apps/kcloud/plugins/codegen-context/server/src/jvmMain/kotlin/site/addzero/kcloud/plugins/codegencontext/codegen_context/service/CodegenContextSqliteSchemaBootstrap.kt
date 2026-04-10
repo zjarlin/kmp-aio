@@ -371,13 +371,29 @@ private data class SqliteLegacyTableMigration(
     val insertColumns: String,
     val selectColumns: String,
 ) {
-    fun copySql(): String {
+    fun copySql(
+        connection: Connection,
+    ): String {
+        val legacyColumns = connection.tableColumnNames(legacyTableName)
+        val resolvedColumns =
+            splitSqlExpressionList(insertColumns)
+                .zip(splitSqlExpressionList(selectColumns))
+                .mapNotNull { (insertColumn, selectExpression) ->
+                    resolveLegacyColumnProjection(
+                        insertColumn = insertColumn,
+                        selectExpression = selectExpression,
+                        legacyColumns = legacyColumns,
+                    )
+                }
+        check(resolvedColumns.isNotEmpty()) {
+            "No compatible columns found while migrating $legacyTableName -> $tableName"
+        }
         return """
             INSERT INTO $tableName (
-                $insertColumns
+                ${resolvedColumns.joinToString(",\n                ") { it.first }}
             )
             SELECT
-                $selectColumns
+                ${resolvedColumns.joinToString(",\n                ") { it.second }}
             FROM $legacyTableName
         """.trimIndent()
     }
@@ -410,7 +426,7 @@ private fun migrateLegacyCodegenContextTimestampSchema(
         )
         connection.createStatement().use { statement ->
             migrations.forEach { migration ->
-                statement.execute(migration.copySql())
+                statement.execute(migration.copySql(connection))
             }
             migrations.asReversed().forEach { migration ->
                 statement.execute("DROP TABLE IF EXISTS ${migration.legacyTableName}")
@@ -460,6 +476,100 @@ private fun Connection.tableHasColumn(
         }
     }
     return false
+}
+
+private fun Connection.tableColumnNames(
+    tableName: String,
+): Set<String> {
+    val columnNames = linkedSetOf<String>()
+    createStatement().use { statement ->
+        statement.executeQuery("PRAGMA table_info($tableName)").use { resultSet ->
+            while (resultSet.next()) {
+                columnNames += resultSet.getString("name")
+            }
+        }
+    }
+    return columnNames
+}
+
+private fun resolveLegacyColumnProjection(
+    insertColumn: String,
+    selectExpression: String,
+    legacyColumns: Set<String>,
+): Pair<String, String>? {
+    return when (insertColumn) {
+        "created_at" -> {
+            when {
+                legacyColumns.contains("create_time") -> insertColumn to sqliteEpochMillisExpression("create_time")
+                legacyColumns.contains("created_at") -> insertColumn to "created_at"
+                else -> null
+            }
+        }
+
+        "updated_at" -> {
+            when {
+                legacyColumns.contains("update_time") && legacyColumns.contains("create_time") ->
+                    insertColumn to
+                        "COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})"
+                legacyColumns.contains("updated_at") -> insertColumn to "updated_at"
+                legacyColumns.contains("update_time") -> insertColumn to sqliteEpochMillisExpression("update_time")
+                legacyColumns.contains("create_time") -> insertColumn to sqliteEpochMillisExpression("create_time")
+                else -> null
+            }
+        }
+
+        else -> {
+            if (legacyColumns.contains(insertColumn)) {
+                insertColumn to selectExpression
+            } else {
+                null
+            }
+        }
+    }
+}
+
+private fun splitSqlExpressionList(
+    value: String,
+): List<String> {
+    val result = mutableListOf<String>()
+    val current = StringBuilder()
+    var parenthesesDepth = 0
+    var inSingleQuotedString = false
+    value.forEach { char ->
+        when (char) {
+            '\'' -> {
+                inSingleQuotedString = !inSingleQuotedString
+                current.append(char)
+            }
+
+            '(' -> {
+                if (!inSingleQuotedString) {
+                    parenthesesDepth += 1
+                }
+                current.append(char)
+            }
+
+            ')' -> {
+                if (!inSingleQuotedString && parenthesesDepth > 0) {
+                    parenthesesDepth -= 1
+                }
+                current.append(char)
+            }
+
+            ',' -> {
+                if (!inSingleQuotedString && parenthesesDepth == 0) {
+                    current.toString().trim().takeIf(String::isNotBlank)?.let(result::add)
+                    current.clear()
+                } else {
+                    current.append(char)
+                }
+            }
+
+            else -> current.append(char)
+        }
+    }
+    current.toString().trim().takeIf(String::isNotBlank)?.let(result::add)
+    return result
 }
 
 private fun sqliteEpochMillisExpression(

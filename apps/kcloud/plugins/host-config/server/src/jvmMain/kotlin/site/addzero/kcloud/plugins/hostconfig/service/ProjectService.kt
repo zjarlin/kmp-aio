@@ -8,7 +8,12 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.babyfish.jimmer.sql.kt.ast.expression.ne
 import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
-import site.addzero.util.db.SqlExecutor
+import site.addzero.kcloud.jimmer.di.batchUpdate
+import site.addzero.kcloud.jimmer.di.executeUpdate
+import site.addzero.kcloud.jimmer.di.query
+import site.addzero.kcloud.jimmer.di.queryCount
+import site.addzero.kcloud.jimmer.di.queryIds
+import site.addzero.kcloud.jimmer.di.withTransaction
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
@@ -42,12 +47,10 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
  * 提供项目、协议、模块和设备的主机配置管理服务。
  *
  * @property sql Jimmer SQL 客户端。
- * @property jdbc 主机配置 JDBC 工具。
  */
 @Single
 class ProjectService(
     private val sql: KSqlClient,
-    private val jdbc: SqlExecutor,
 ) {
 
     private companion object {
@@ -1241,15 +1244,15 @@ class ProjectService(
     private fun executeUpdate(
         sql: String,
         vararg args: Any?,
-    ): Int = jdbc.withTransaction { _ ->
-        jdbc.executeUpdate(sql, *args)
+    ): Int = this.sql.withTransaction { _ ->
+        this.sql.executeUpdate(sql, *args)
     }
 
     private fun queryCount(
         sql: String,
         vararg args: Any?,
-    ): Long = jdbc.withTransaction { _ ->
-        jdbc.queryCount(sql, *args)
+    ): Long = this.sql.withTransaction { _ ->
+        this.sql.queryCount(sql, *args)
     }
 
     /**
@@ -1259,16 +1262,16 @@ class ProjectService(
      * @param args SQL 参数列表。
      */
     private fun queryIds(sql: String, vararg args: Any): MutableList<Long> =
-        jdbc.withTransaction { _ ->
-            jdbc.queryIds(sql, *args).toMutableList()
+        this.sql.withTransaction { _ ->
+            this.sql.queryIds(sql, *args).toMutableList()
         }
 
     private fun <T> query(
         sql: String,
         vararg args: Any?,
         mapper: (ResultSet) -> T,
-    ): List<T> = jdbc.withTransaction { _ ->
-        jdbc.query(sql, *args, mapper = mapper)
+    ): List<T> = this.sql.withTransaction { _ ->
+        this.sql.query(sql, *args, mapper = mapper)
     }
 
     /**
@@ -1296,8 +1299,8 @@ class ProjectService(
             return
         }
         val updatedAt = now()
-        jdbc.withTransaction {
-            jdbc.batchUpdate(
+        this.sql.withTransaction {
+            this.sql.batchUpdate(
                 sql,
                 orderedIds.mapIndexed { index, id ->
                     listOf(index, updatedAt, id)

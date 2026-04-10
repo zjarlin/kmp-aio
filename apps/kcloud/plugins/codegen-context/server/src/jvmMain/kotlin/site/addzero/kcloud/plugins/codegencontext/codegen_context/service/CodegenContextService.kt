@@ -8,7 +8,10 @@ import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
 import kotlinx.serialization.json.Json
-import site.addzero.util.db.SqlExecutor
+import site.addzero.kcloud.jimmer.di.insertAndReturnId
+import site.addzero.kcloud.jimmer.di.queryCount
+import site.addzero.kcloud.jimmer.di.update
+import site.addzero.kcloud.jimmer.di.withTransaction
 import site.addzero.kcloud.plugins.codegencontext.api.context.*
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.model.entity.*
 import site.addzero.kmp.exp.BusinessValidationException
@@ -29,12 +32,10 @@ import site.addzero.util.str.toGeneratedTypeName
  * 提供代码生成上下文的查询、保存与生成服务。
  *
  * @property sql Jimmer SQL 客户端。
- * @property jdbc 主机配置 JDBC 工具。
  * @property contractGenerator contractgenerator。
  */
 class CodegenContextService(
     private val sql: KSqlClient,
-    private val jdbc: SqlExecutor,
     private val contractGenerator: CodegenContextContractGenerator,
 ) {
     private companion object {
@@ -131,13 +132,13 @@ class CodegenContextService(
         validate(normalized, availableDefinitions)
         val generationSettings = normalized.generationSettings
         val contextId =
-            jdbc.withTransaction { connection ->
+            sql.withTransaction { connection ->
                 val existingId = normalized.id
                 val now = nowSqlValue()
                 val resolvedId =
                     if (existingId == null) {
                         ensureCodeUnique(connection, normalized.code, null)
-                        jdbc.insertAndReturnId(
+                        sql.insertAndReturnId(
                             connection,
                             """
                             INSERT INTO codegen_context_context (
@@ -239,7 +240,7 @@ class CodegenContextService(
                     } else {
                         ensureContextExists(existingId)
                         ensureCodeUnique(connection, normalized.code, existingId)
-                        jdbc.update(
+                        sql.update(
                             connection,
                             """
                             UPDATE codegen_context_context
@@ -378,8 +379,8 @@ class CodegenContextService(
         contextId: Long,
     ) {
         ensureContextExists(contextId)
-        jdbc.withTransaction { connection ->
-            jdbc.update(connection, "DELETE FROM codegen_context_context WHERE id = ?", contextId)
+        sql.withTransaction { connection ->
+            sql.update(connection, "DELETE FROM codegen_context_context WHERE id = ?", contextId)
         }
     }
 
@@ -433,13 +434,13 @@ class CodegenContextService(
         classes: List<CodegenClassDto>,
         availableDefinitions: List<CodegenContextDefinitionDto>,
     ) {
-        jdbc.update(connection, "DELETE FROM codegen_context_class WHERE context_id = ?", contextId)
+        sql.update(connection, "DELETE FROM codegen_context_class WHERE context_id = ?", contextId)
         if (classes.isEmpty()) {
             return
         }
         classes.sortedBy(CodegenClassDto::sortIndex).forEach { classDto ->
             val classId =
-                jdbc.insertAndReturnId(
+                sql.insertAndReturnId(
                     connection,
                     """
                     INSERT INTO codegen_context_class (
@@ -473,7 +474,7 @@ class CodegenContextService(
             )
             classDto.methods.sortedBy(CodegenMethodDto::sortIndex).forEach { methodDto ->
                 val methodId =
-                    jdbc.insertAndReturnId(
+                    sql.insertAndReturnId(
                         connection,
                         """
                         INSERT INTO codegen_context_method (
@@ -508,7 +509,7 @@ class CodegenContextService(
             }
             classDto.properties.sortedBy(CodegenPropertyDto::sortIndex).forEach { propertyDto ->
                 val propertyId =
-                    jdbc.insertAndReturnId(
+                    sql.insertAndReturnId(
                         connection,
                         """
                         INSERT INTO codegen_context_property (
@@ -569,7 +570,7 @@ class CodegenContextService(
         bindings.sortedBy(CodegenContextBindingDto::sortIndex).forEach { bindingDto ->
             val definition = resolveDefinitionForBinding(protocolTemplateId, availableDefinitions, bindingDto)
             val bindingId =
-                jdbc.insertAndReturnId(
+                sql.insertAndReturnId(
                     connection,
                     """
                     INSERT INTO codegen_context_binding (
@@ -592,7 +593,7 @@ class CodegenContextService(
                 )
             bindingDto.values.forEach { valueDto ->
                 val paramDefinition = resolveParamDefinitionForValue(definition, valueDto)
-                jdbc.insertAndReturnId(
+                sql.insertAndReturnId(
                     connection,
                     """
                     INSERT INTO codegen_context_binding_value (
@@ -1110,13 +1111,13 @@ class CodegenContextService(
     ) {
         val count =
             if (ignoreId == null) {
-                jdbc.queryCount(
+                sql.queryCount(
                     connection,
                     "SELECT COUNT(1) FROM codegen_context_context WHERE code = ?",
                     code,
                 )
             } else {
-                jdbc.queryCount(
+                sql.queryCount(
                     connection,
                     "SELECT COUNT(1) FROM codegen_context_context WHERE code = ? AND id <> ?",
                     code,

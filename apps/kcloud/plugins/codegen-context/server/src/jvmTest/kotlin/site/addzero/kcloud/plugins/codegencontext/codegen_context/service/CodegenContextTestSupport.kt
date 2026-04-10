@@ -13,7 +13,6 @@ import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.newKSqlClient
 import org.babyfish.jimmer.sql.runtime.ConnectionManager.simpleConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
-import site.addzero.util.db.SqlExecutor
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenClassDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextBindingDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextBindingValueDto
@@ -43,9 +42,8 @@ internal class CodegenContextTestFixture : AutoCloseable {
             setDatabaseNamingStrategy(LOWER_CASE)
             setConnectionManager(simpleConnectionManager(dataSource))
         }
-    val jdbc = SqlExecutor(dataSource)
     val generator = CodegenContextContractGenerator(dataSource)
-    val service = CodegenContextService(sql, jdbc, generator)
+    val service = CodegenContextService(sql, generator)
     val templateService = CodegenTemplateService(sql)
 
     init {
