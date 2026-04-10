@@ -24,6 +24,7 @@ import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextWorkbenchTab
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
 import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextSidebarHeaderSpi
 
@@ -80,14 +81,23 @@ fun CodegenContextScreen() {
                 state = state,
                 viewModel = viewModel,
             )
-            DeviceFunctionsPanel(
+            WorkbenchTabsPanel(
                 state = state,
                 viewModel = viewModel,
             )
-            ThingPropertiesPanel(
-                state = state,
-                viewModel = viewModel,
-            )
+            when (state.selectedWorkbenchTab) {
+                CodegenContextWorkbenchTab.DEVICE_FUNCTIONS ->
+                    DeviceFunctionsPanel(
+                        state = state,
+                        viewModel = viewModel,
+                    )
+
+                CodegenContextWorkbenchTab.THING_PROPERTIES ->
+                    ThingPropertiesPanel(
+                        state = state,
+                        viewModel = viewModel,
+                    )
+            }
             ExportWorkbenchPanel(
                 state = state,
                 viewModel = viewModel,

@@ -12,7 +12,7 @@ import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
  * 这里专门承接“取消 + 主动作”这一组页内弹窗操作，
  * 方便宿主后续统一替换按钮文案、主次样式或补二次确认流程。
  */
-interface ProjectsDialogFooterActionsSpi {
+internal interface ProjectsDialogFooterActionsSpi {
     @Composable
     fun Render(
         state: ProjectsDialogFooterActionState,
@@ -27,7 +27,7 @@ interface ProjectsDialogFooterActionsSpi {
  * 如果后续要按宿主场景改成危险确认、三级操作或权限裁剪，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsDialogFooterActionsSpi : ProjectsDialogFooterActionsSpi {
+internal class DefaultProjectsDialogFooterActionsSpi : ProjectsDialogFooterActionsSpi {
     @Composable
     override fun Render(
         state: ProjectsDialogFooterActionState,

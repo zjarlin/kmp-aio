@@ -41,6 +41,11 @@ class SidebarRenderer(
         modifier: Modifier,
     ) {
         val metrics = currentWorkbenchMetrics()
+        val sidebarMetrics = remember(metrics) {
+            metrics.copy(
+                searchFieldHeight = if (metrics.searchFieldHeight < 48.dp) 48.dp else metrics.searchFieldHeight,
+            )
+        }
         val sidebarMode = LocalCupertinoWorkbenchSidebarMode.current
         val selectedSceneId = shellState.selectedSceneId
         val selectedRoute = rememberSelectedRoute(
@@ -76,6 +81,7 @@ class SidebarRenderer(
                     shellState.selectRoute(routePath)
                 },
                 modifier = modifier.fillMaxSize(),
+                metrics = sidebarMetrics,
                 getId = SidebarNode::id,
                 getLabel = SidebarNode::name,
                 getChildren = SidebarNode::children,

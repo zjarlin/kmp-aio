@@ -2,14 +2,21 @@ package site.addzero.kcloud.plugins.codegencontext.screen
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import io.github.robinpcrd.cupertino.CupertinoSegmentedControl
+import io.github.robinpcrd.cupertino.CupertinoSegmentedControlTab
+import io.github.robinpcrd.cupertino.CupertinoText
+import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
 import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
 import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.cupertino.workbench.components.form.CupertinoFormGrid
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextWorkbenchTab
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextScreenState
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenNodeKind
@@ -17,6 +24,32 @@ import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContext
 import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextDeviceFunctionsHeaderSpi
 import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextThingPropertiesHeaderSpi
 import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextThingPropertyItemActionsSpi
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextWorkbenchTabSwitchSpi
+
+@OptIn(ExperimentalCupertinoApi::class)
+@Composable
+internal fun WorkbenchTabsPanel(
+    state: CodegenContextScreenState,
+    viewModel: CodegenContextViewModel,
+) {
+    val tabSwitchSpi = koinInject<CodegenContextWorkbenchTabSwitchSpi>()
+    val tabs =
+        listOf(
+            CodegenContextWorkbenchTab.DEVICE_FUNCTIONS to "设备功能",
+            CodegenContextWorkbenchTab.THING_PROPERTIES to "物模型字段",
+        )
+    CupertinoPanel(
+        title = "建模工作区",
+        subtitle = "设备功能和物模型字段改为显式 tab 展示，一次只聚焦一个维度编辑。",
+    ) {
+        tabSwitchSpi.Render(
+            tabs = tabs,
+            state = state,
+            viewModel = viewModel,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
 
 @Composable
 internal fun DeviceFunctionsPanel(

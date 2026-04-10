@@ -21,6 +21,7 @@ data class CodegenContextScreenState(
     val protocolTemplates: List<ProtocolTemplateOptionDto> = emptyList(),
     val contexts: List<CodegenContextSummaryDto> = emptyList(),
     val selectedContextId: Long? = null,
+    val selectedWorkbenchTab: CodegenContextWorkbenchTab = CodegenContextWorkbenchTab.DEVICE_FUNCTIONS,
     val availableContextDefinitions: List<CodegenContextDefinitionDto> = emptyList(),
     val draft: CodegenMetadataDraftDto = CodegenMetadataDraftDto(),
     val preview: CodegenMetadataPreviewDto? = null,

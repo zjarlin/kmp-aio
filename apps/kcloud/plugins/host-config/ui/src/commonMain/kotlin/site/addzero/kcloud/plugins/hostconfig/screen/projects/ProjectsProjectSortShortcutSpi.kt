@@ -11,7 +11,7 @@ import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
  * 表单字段布局仍保留在 `ProjectEditorForm`，
  * 这里专门承接排序快捷更新动作，方便宿主后续替换为批量排序或权限校验入口。
  */
-interface ProjectsProjectSortShortcutSpi {
+internal interface ProjectsProjectSortShortcutSpi {
     @Composable
     fun Render(
         actions: ProjectsProjectSortShortcutActions,
@@ -25,7 +25,7 @@ interface ProjectsProjectSortShortcutSpi {
  * 如果后续要改成更多快捷动作，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsProjectSortShortcutSpi : ProjectsProjectSortShortcutSpi {
+internal class DefaultProjectsProjectSortShortcutSpi : ProjectsProjectSortShortcutSpi {
     @Composable
     override fun Render(
         actions: ProjectsProjectSortShortcutActions,

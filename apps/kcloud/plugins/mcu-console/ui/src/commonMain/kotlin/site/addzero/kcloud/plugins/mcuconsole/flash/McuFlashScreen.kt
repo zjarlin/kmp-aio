@@ -1,7 +1,16 @@
 package site.addzero.kcloud.plugins.mcuconsole.flash
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -24,6 +33,9 @@ import site.addzero.cupertino.workbench.material3.MaterialTheme
 import site.addzero.cupertino.workbench.material3.Surface
 import site.addzero.cupertino.workbench.material3.Text
 
+/**
+ * 处理mcu烧录界面。
+ */
 @Route(
     value = "开发工具",
     title = "ST-LINK烧录",
@@ -39,9 +51,6 @@ import site.addzero.cupertino.workbench.material3.Text
     ),
 )
 @Composable
-/**
- * 处理mcu烧录界面。
- */
 fun McuFlashScreen() {
     val viewModel = koinViewModel<McuFlashViewModel>()
     val state = viewModel.screenState
@@ -124,13 +133,13 @@ fun McuFlashScreen() {
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录header。
  *
  * @param state 状态。
  * @param viewModel 页面视图模型。
  */
+@Composable
 private fun McuFlashHeader(
     state: McuFlashScreenState,
     viewModel: McuFlashViewModel,
@@ -171,18 +180,19 @@ private fun McuFlashHeader(
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录配置panel。
  *
  * @param state 状态。
  * @param viewModel 页面视图模型。
  */
+@Composable
 private fun McuFlashConfigPanel(
     state: McuFlashScreenState,
     viewModel: McuFlashViewModel,
 ) {
     val configActionsSpi = koinInject<McuFlashConfigActionsSpi>()
+    val selectionCardSpi = koinInject<McuFlashSelectionCardSpi>()
     CupertinoPanel(
         title = "烧录配置",
         subtitle = "配置列表来自后台 `FlashController`，页面只负责选择和触发。",
@@ -194,14 +204,16 @@ private fun McuFlashConfigPanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 state.profiles.forEach { profile ->
-                    McuFlashSelectableCard(
-                        title = profile.title,
-                        caption = buildProfileCaption(profile),
-                        selected = state.selectedProfileId == profile.id,
-                        enabled = !state.running && !state.busy,
-                        onClick = {
-                            viewModel.selectProfile(profile.id)
-                        },
+                    selectionCardSpi.Render(
+                        state = McuFlashSelectionCardState(
+                            title = profile.title,
+                            caption = buildProfileCaption(profile),
+                            selected = state.selectedProfileId == profile.id,
+                            enabled = !state.running && !state.busy,
+                        ),
+                        actions = McuFlashSelectionCardActions(
+                            onSelect = { viewModel.selectProfile(profile.id) },
+                        ),
                     )
                 }
             }
@@ -241,27 +253,32 @@ private fun McuFlashConfigPanel(
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录探针panel。
  *
  * @param state 状态。
  * @param viewModel 页面视图模型。
  */
+@Composable
 private fun McuFlashProbePanel(
     state: McuFlashScreenState,
     viewModel: McuFlashViewModel,
 ) {
+    val selectionCardSpi = koinInject<McuFlashSelectionCardSpi>()
     CupertinoPanel(
         title = "ST-Link 探针",
         subtitle = "手动指定序列号时，后端会把该序列号传给 `StLinkConfig`。",
     ) {
-        McuFlashSelectableCard(
-            title = "自动选择首个可用探针",
-            caption = "适合只连接一个 ST-Link 的场景。",
-            selected = state.useAutoProbeSelection,
-            enabled = !state.running && !state.busy,
-            onClick = viewModel::selectAutoProbe,
+        selectionCardSpi.Render(
+            state = McuFlashSelectionCardState(
+                title = "自动选择首个可用探针",
+                caption = "适合只连接一个 ST-Link 的场景。",
+                selected = state.useAutoProbeSelection,
+                enabled = !state.running && !state.busy,
+            ),
+            actions = McuFlashSelectionCardActions(
+                onSelect = viewModel::selectAutoProbe,
+            ),
         )
         if (state.probes.isEmpty()) {
             McuFlashInlineNotice("未发现可选探针时仍可先填写固件路径，待设备接入后再刷新。")
@@ -271,16 +288,20 @@ private fun McuFlashProbePanel(
             ) {
                 state.probes.forEach { probe ->
                     val serialNumber = probe.serialNumber
-                    McuFlashSelectableCard(
-                        title = probe.displayName(),
-                        caption = buildProbeCaption(probe),
-                        selected = !state.useAutoProbeSelection && serialNumber == state.selectedProbeSerialNumber,
-                        enabled = serialNumber != null && !state.running && !state.busy,
-                        onClick = {
-                            if (serialNumber != null) {
-                                viewModel.selectProbe(serialNumber)
-                            }
-                        },
+                    selectionCardSpi.Render(
+                        state = McuFlashSelectionCardState(
+                            title = probe.displayName(),
+                            caption = buildProbeCaption(probe),
+                            selected = !state.useAutoProbeSelection && serialNumber == state.selectedProbeSerialNumber,
+                            enabled = serialNumber != null && !state.running && !state.busy,
+                        ),
+                        actions = McuFlashSelectionCardActions(
+                            onSelect = {
+                                if (serialNumber != null) {
+                                    viewModel.selectProbe(serialNumber)
+                                }
+                            },
+                        ),
                     )
                 }
             }
@@ -288,12 +309,12 @@ private fun McuFlashProbePanel(
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录状态panel。
  *
  * @param state 状态。
  */
+@Composable
 private fun McuFlashStatusPanel(
     state: McuFlashScreenState,
 ) {
@@ -336,12 +357,12 @@ private fun McuFlashStatusPanel(
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录runtime摘要panel。
  *
  * @param state 状态。
  */
+@Composable
 private fun McuFlashRuntimeSummaryPanel(
     state: McuFlashScreenState,
 ) {
@@ -375,13 +396,13 @@ private fun McuFlashRuntimeSummaryPanel(
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录banner。
  *
  * @param text 文本。
  * @param tone tone。
  */
+@Composable
 private fun McuFlashBanner(
     text: String,
     tone: Color,
@@ -392,12 +413,12 @@ private fun McuFlashBanner(
     )
 }
 
-@Composable
 /**
  * 处理mcu烧录inline提示。
  *
  * @param text 文本。
  */
+@Composable
 private fun McuFlashInlineNotice(
     text: String,
 ) {
@@ -407,76 +428,12 @@ private fun McuFlashInlineNotice(
     )
 }
 
-@Composable
-/**
- * 处理mcu烧录selectablecard。
- *
- * @param title title。
- * @param caption caption。
- * @param selected 选中。
- * @param enabled 启用状态。
- * @param onClick onclick。
- */
-private fun McuFlashSelectableCard(
-    title: String,
-    caption: String,
-    selected: Boolean,
-    enabled: Boolean,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = onClick,
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-        color = if (selected) {
-            MaterialTheme.colorScheme.primaryContainer
-        } else {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f)
-        },
-        contentColor = if (selected) {
-            MaterialTheme.colorScheme.onPrimaryContainer
-        } else {
-            MaterialTheme.colorScheme.onSurface
-        },
-        border = BorderStroke(
-            width = 1.dp,
-            color = if (selected) {
-                MaterialTheme.colorScheme.primary
-            } else {
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.28f)
-            },
-        ),
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Text(
-                text = caption,
-                style = MaterialTheme.typography.bodySmall,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                },
-            )
-        }
-    }
-}
-
-@Composable
 /**
  * 处理mcu烧录状态badge。
  *
  * @param state 状态。
  */
+@Composable
 private fun McuFlashStateBadge(
     state: McuFlashRunState,
 ) {
@@ -493,12 +450,12 @@ private fun McuFlashStateBadge(
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录进度bar。
  *
  * @param progress 当前进度。
  */
+@Composable
 private fun McuFlashProgressBar(
     progress: Float,
 ) {
@@ -536,10 +493,10 @@ private fun McuFlashRunState.label(): String {
     }
 }
 
-@Composable
 /**
  * 处理mcu烧录运行状态。
  */
+@Composable
 private fun McuFlashRunState.tint(): Color {
     return when (this) {
         McuFlashRunState.IDLE -> MaterialTheme.colorScheme.primary

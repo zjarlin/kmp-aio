@@ -23,6 +23,9 @@ import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
 
+/**
+ * 处理项目界面。
+ */
 @Route(
     title = "工程配置",
     routePath = "host-config/projects",
@@ -38,9 +41,6 @@ import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
     ),
 )
 @Composable
-/**
- * 处理项目界面。
- */
 fun ProjectsScreen() {
     val viewModel = koinViewModel<ProjectsViewModel>()
     val state = viewModel.screenState

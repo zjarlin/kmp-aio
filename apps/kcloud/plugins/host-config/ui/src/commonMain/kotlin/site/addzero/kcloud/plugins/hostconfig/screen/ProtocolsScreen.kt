@@ -32,6 +32,9 @@ import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.protocols.ProtocolsViewModel
 
+/**
+ * 处理协议界面。
+ */
 @Route(
     value = "字典管理",
     title = "协议字典",
@@ -47,9 +50,6 @@ import site.addzero.kcloud.plugins.hostconfig.protocols.ProtocolsViewModel
     ),
 )
 @Composable
-/**
- * 处理协议界面。
- */
 fun ProtocolsScreen() {
     val viewModel = koinViewModel<ProtocolsViewModel>()
     val state = viewModel.screenState

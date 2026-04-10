@@ -6,6 +6,9 @@ import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.component.text.TodoText
 
+/**
+ * 处理mcu控制界面。
+ */
 @Route(
     value = "设备会话",
     title = "控制台",
@@ -22,9 +25,6 @@ import site.addzero.component.text.TodoText
     ),
 )
 @Composable
-/**
- * 处理mcu控制界面。
- */
 fun McuControlScreen() {
     TodoText(
         title = "MCU 控制台",

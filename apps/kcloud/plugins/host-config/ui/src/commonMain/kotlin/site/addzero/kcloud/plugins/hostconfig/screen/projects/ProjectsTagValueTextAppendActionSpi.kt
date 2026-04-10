@@ -11,7 +11,7 @@ import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
  * 标签值文本表单布局仍保留在 `TagEditorForm`，
  * 这里专门承接新增映射行动作，方便宿主后续替换为批量导入或模板填充入口。
  */
-interface ProjectsTagValueTextAppendActionSpi {
+internal interface ProjectsTagValueTextAppendActionSpi {
     @Composable
     fun Render(
         actions: ProjectsTagValueTextActions,
@@ -25,7 +25,7 @@ interface ProjectsTagValueTextAppendActionSpi {
  * 如果后续要补更多尾部动作，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsTagValueTextAppendActionSpi : ProjectsTagValueTextAppendActionSpi {
+internal class DefaultProjectsTagValueTextAppendActionSpi : ProjectsTagValueTextAppendActionSpi {
     @Composable
     override fun Render(
         actions: ProjectsTagValueTextActions,

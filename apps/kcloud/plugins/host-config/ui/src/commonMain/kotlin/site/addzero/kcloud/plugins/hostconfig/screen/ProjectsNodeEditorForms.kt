@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
 import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.field.CupertinoSelectionField
@@ -29,8 +29,12 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.PointType
 import site.addzero.kcloud.plugins.hostconfig.common.label
 import site.addzero.kcloud.plugins.hostconfig.common.orDash
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsProjectSortShortcutActions
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsProjectSortShortcutSpi
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsTagValueTextActions
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsTagValueTextAppendActionSpi
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsTagValueTextRemoveActionSpi
 
-@Composable
 /**
  * 处理项目editorform。
  *
@@ -39,12 +43,14 @@ import site.addzero.kcloud.plugins.hostconfig.common.orDash
  * @param showSortShortcut show排序shortcut。
  * @param onUpdateSort on更新排序。
  */
+@Composable
 internal fun ProjectEditorForm(
     draft: ProjectDraft,
     onDraftChange: (ProjectDraft) -> Unit,
     showSortShortcut: Boolean = false,
     onUpdateSort: (() -> Unit)? = null,
 ) {
+    val sortShortcutSpi = koinInject<ProjectsProjectSortShortcutSpi>()
     CupertinoFormSection(
         title = "基础信息",
         subtitle = "工程名称、排序和说明文案默认首屏可见。",
@@ -78,16 +84,15 @@ internal fun ProjectEditorForm(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.End,
         ) {
-            WorkbenchActionButton(
-                text = "仅更新排序",
-                onClick = onUpdateSort,
-                variant = WorkbenchButtonVariant.Secondary,
+            sortShortcutSpi.Render(
+                actions = remember(onUpdateSort) {
+                    ProjectsProjectSortShortcutActions(onUpdateSort = onUpdateSort)
+                },
             )
         }
     }
 }
 
-@Composable
 /**
  * 处理协议editorform。
  *
@@ -96,6 +101,7 @@ internal fun ProjectEditorForm(
  * @param draft draft。
  * @param onDraftChange ondraftchange。
  */
+@Composable
 internal fun ProtocolEditorForm(
     protocolTemplates: List<site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse>,
     existing: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode?,
@@ -257,7 +263,6 @@ private fun ProtocolTransportFieldMetadataResponse.optionLabel(
         ?: rawValue
 }
 
-@Composable
 /**
  * 处理模块editorform。
  *
@@ -267,6 +272,7 @@ private fun ProtocolTransportFieldMetadataResponse.optionLabel(
  * @param draft draft。
  * @param onDraftChange ondraftchange。
  */
+@Composable
 internal fun ModuleEditorForm(
     protocolName: String,
     protocolTemplateName: String,
@@ -310,7 +316,6 @@ internal fun ModuleEditorForm(
     }
 }
 
-@Composable
 /**
  * 处理设备editorform。
  *
@@ -318,6 +323,7 @@ internal fun ModuleEditorForm(
  * @param draft draft。
  * @param onDraftChange ondraftchange。
  */
+@Composable
 internal fun DeviceEditorForm(
     deviceTypes: List<CupertinoOption<Long>>,
     draft: DeviceDraft,
@@ -418,7 +424,6 @@ internal fun DeviceEditorForm(
     }
 }
 
-@Composable
 /**
  * 处理标签editorform。
  *
@@ -427,12 +432,21 @@ internal fun DeviceEditorForm(
  * @param draft draft。
  * @param onDraftChange ondraftchange。
  */
+@Composable
 internal fun TagEditorForm(
     dataTypes: List<CupertinoOption<Long>>,
     registerTypes: List<CupertinoOption<Long>>,
     draft: TagDraft,
     onDraftChange: (TagDraft) -> Unit,
 ) {
+    val removeActionSpi = koinInject<ProjectsTagValueTextRemoveActionSpi>()
+    val appendActionSpi = koinInject<ProjectsTagValueTextAppendActionSpi>()
+    val valueTextActions = remember(draft, onDraftChange) {
+        ProjectsTagValueTextActions(
+            draft = draft,
+            onDraftChange = onDraftChange,
+        )
+    }
     CupertinoFormSection(
         title = "基础信息",
         subtitle = "标签命名、说明和启用状态优先集中展示。",
@@ -549,30 +563,17 @@ internal fun TagEditorForm(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End,
                         ) {
-                            WorkbenchActionButton(
-                                text = "删除映射",
-                                onClick = {
-                                    onDraftChange(
-                                        draft.copy(
-                                            valueTexts = draft.valueTexts.toMutableList().apply {
-                                                removeAt(index)
-                                            },
-                                        ),
-                                    )
-                                },
-                                variant = WorkbenchButtonVariant.Destructive,
+                            removeActionSpi.Render(
+                                index = index,
+                                actions = valueTextActions,
                             )
                         }
                     }
                 }
             }
         }
-        WorkbenchActionButton(
-            text = "新增一行",
-            onClick = {
-                onDraftChange(draft.copy(valueTexts = draft.valueTexts + TagValueTextDraft("", "")))
-            },
-            variant = WorkbenchButtonVariant.Outline,
+        appendActionSpi.Render(
+            actions = valueTextActions,
         )
     }
 }

@@ -2,7 +2,6 @@ package site.addzero.kcloud.plugins.hostconfig.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,10 +33,11 @@ import site.addzero.kcloud.plugins.hostconfig.common.resolveModuleBoardModel
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsInteractiveSurfaceActions
 import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeChildrenPanelActions
 import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeChildrenPanelActionsSpi
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsInteractiveSurfaceSpi
 
-@Composable
 /**
  * 处理nodechildrenpanel。
  *
@@ -46,6 +46,7 @@ import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeChildr
  * @param onPrevTagPage onprev标签分页。
  * @param onNextTagPage onnext标签分页。
  */
+@Composable
 internal fun NodeChildrenPanel(
     state: ProjectsScreenState,
     onSelectNode: (String) -> Unit,
@@ -206,7 +207,6 @@ internal fun NodeChildrenPanel(
     }
 }
 
-@Composable
 /**
  * 处理childnodecard。
  *
@@ -215,26 +215,28 @@ internal fun NodeChildrenPanel(
  * @param onClick onclick。
  * @param content content。
  */
+@Composable
 private fun ChildNodeCard(
     title: String,
     subtitle: String? = null,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .let { modifier ->
-                if (onClick == null) modifier else modifier.clickable(onClick = onClick)
-            },
-    ) {
-        CupertinoPanel(title = title, subtitle = subtitle) {
-            content()
+    val interactiveSurfaceSpi = koinInject<ProjectsInteractiveSurfaceSpi>()
+    interactiveSurfaceSpi.Render(
+        modifier = Modifier.fillMaxWidth(),
+        actions = remember(onClick) {
+            ProjectsInteractiveSurfaceActions(onClick = onClick)
+        },
+    ) { interactiveModifier ->
+        Box(modifier = interactiveModifier) {
+            CupertinoPanel(title = title, subtitle = subtitle) {
+                content()
+            }
         }
     }
 }
 
-@Composable
 /**
  * 处理项目模块rack。
  *
@@ -243,12 +245,14 @@ private fun ChildNodeCard(
  * @param moduleTemplates 模块模板。
  * @param onSelectNode on选择node。
  */
+@Composable
 internal fun ProjectModuleRack(
     projectId: Long?,
     modules: List<site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode>,
     moduleTemplates: List<ModuleTemplateOptionResponse>,
     onSelectNode: (String) -> Unit,
 ) {
+    val interactiveSurfaceSpi = koinInject<ProjectsInteractiveSurfaceSpi>()
     val rackShape = RoundedCornerShape(22.dp)
     Column(
         modifier = Modifier
@@ -307,7 +311,7 @@ internal fun ProjectModuleRack(
                             color = CupertinoTheme.colorScheme.tertiaryLabel,
                         )
                     }
-                    Box(
+                    interactiveSurfaceSpi.Render(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
@@ -317,25 +321,27 @@ internal fun ProjectModuleRack(
                                 color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.28f),
                                 shape = RoundedCornerShape(18.dp),
                             )
-                            .padding(8.dp)
-                            .clickable(
-                                enabled = projectId != null,
-                                onClick = {
-                                    projectId?.let { safeProjectId ->
-                                        onSelectNode(
-                                            ProjectsViewModel.buildModuleNodeId(
-                                                projectId = safeProjectId,
-                                                moduleId = module.id,
-                                            ),
-                                        )
-                                    }
-                                },
-                            ),
-                    ) {
-                        HostConfigModuleBoard(
-                            model = resolveModuleBoardModel(module = module, moduleTemplates = moduleTemplates),
-                            compact = true,
-                        )
+                            .padding(8.dp),
+                        enabled = projectId != null,
+                        actions = ProjectsInteractiveSurfaceActions(
+                            onClick = {
+                                projectId?.let { safeProjectId ->
+                                    onSelectNode(
+                                        ProjectsViewModel.buildModuleNodeId(
+                                            projectId = safeProjectId,
+                                            moduleId = module.id,
+                                        ),
+                                    )
+                                }
+                            },
+                        ),
+                    ) { interactiveModifier ->
+                        Box(modifier = interactiveModifier) {
+                            HostConfigModuleBoard(
+                                model = resolveModuleBoardModel(module = module, moduleTemplates = moduleTemplates),
+                                compact = true,
+                            )
+                        },
                     }
                 }
             }

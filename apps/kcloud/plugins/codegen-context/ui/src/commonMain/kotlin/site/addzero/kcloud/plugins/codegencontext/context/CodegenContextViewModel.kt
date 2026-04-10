@@ -297,6 +297,12 @@ class CodegenContextViewModel(
         }
     }
 
+    fun selectWorkbenchTab(
+        tab: CodegenContextWorkbenchTab,
+    ) {
+        screenState = screenState.copy(selectedWorkbenchTab = tab)
+    }
+
     fun addThingProperty() {
         updateDraft { draft ->
             draft.copy(

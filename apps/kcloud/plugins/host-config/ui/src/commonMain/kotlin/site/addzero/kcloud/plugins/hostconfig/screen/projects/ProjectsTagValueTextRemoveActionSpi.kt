@@ -13,7 +13,7 @@ import site.addzero.kcloud.plugins.hostconfig.screen.TagValueTextDraft
  * 行内字段布局仍保留在 `TagEditorForm`，
  * 这里专门承接单条值文本映射的删除动作，方便宿主后续换成更多行内操作。
  */
-interface ProjectsTagValueTextRemoveActionSpi {
+internal interface ProjectsTagValueTextRemoveActionSpi {
     @Composable
     fun Render(
         index: Int,
@@ -28,7 +28,7 @@ interface ProjectsTagValueTextRemoveActionSpi {
  * 如果后续要补复制、上移下移等行内动作，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsTagValueTextRemoveActionSpi : ProjectsTagValueTextRemoveActionSpi {
+internal class DefaultProjectsTagValueTextRemoveActionSpi : ProjectsTagValueTextRemoveActionSpi {
     @Composable
     override fun Render(
         index: Int,

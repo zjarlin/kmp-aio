@@ -2,7 +2,6 @@ package site.addzero.kcloud.plugins.hostconfig.screen
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,8 +30,7 @@ import androidx.compose.ui.window.PopupProperties
 import io.github.robinpcrd.cupertino.CupertinoSurface
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.components.dialog.CupertinoDialog
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
 import site.addzero.cupertino.workbench.components.field.CupertinoOption
@@ -58,9 +56,13 @@ import site.addzero.kcloud.plugins.hostconfig.projects.displayName
 import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
 import site.addzero.kcloud.plugins.hostconfig.projects.findModule
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsDialogFooterActionState
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsDialogFooterActions
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsDialogFooterActionsSpi
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsInteractiveSurfaceActions
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsInteractiveSurfaceSpi
 import kotlin.math.max
 
-@Composable
 /**
  * 处理创建项目dialog。
  *
@@ -68,21 +70,29 @@ import kotlin.math.max
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun CreateProjectDialog(
     saving: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (ProjectDraft) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var draft by remember { mutableStateOf(ProjectDraft()) }
     CupertinoDialog(
         title = "新建工程",
         onDismissRequest = onDismissRequest,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "保存中" else "保存",
-                onClick = { onSave(draft) },
-                enabled = !saving && draft.canSave(),
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "保存中" else "保存",
+                    confirmEnabled = !saving && draft.canSave(),
+                ),
+                actions = remember(draft, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = { onSave(draft) },
+                    )
+                },
             )
         },
     ) {
@@ -90,7 +100,6 @@ internal fun CreateProjectDialog(
     }
 }
 
-@Composable
 /**
  * 处理关联协议dialog。
  *
@@ -99,23 +108,33 @@ internal fun CreateProjectDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun LinkProtocolDialog(
     options: List<CupertinoOption<Long>>,
     saving: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (Long, Int) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var selectedId by remember(options) { mutableStateOf(options.firstOrNull()?.value) }
     var sortIndex by remember { mutableStateOf("0") }
     CupertinoDialog(
         title = "关联协议字典",
         onDismissRequest = onDismissRequest,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "关联中" else "关联",
-                onClick = { selectedId?.let { onSave(it, sortIndex.toIntOrNull() ?: 0) } },
-                enabled = !saving && selectedId != null,
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "关联中" else "关联",
+                    confirmEnabled = !saving && selectedId != null,
+                ),
+                actions = remember(selectedId, sortIndex, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = {
+                            selectedId?.let { onSave(it, sortIndex.toIntOrNull() ?: 0) }
+                        },
+                    )
+                },
             )
         },
     ) {
@@ -142,7 +161,6 @@ internal fun LinkProtocolDialog(
     }
 }
 
-@Composable
 /**
  * 处理choose协议dialog。
  *
@@ -151,22 +169,30 @@ internal fun LinkProtocolDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun ChooseProtocolDialog(
     seed: ChooseProtocolSeed,
     saving: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (Long) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var selectedProtocolId by remember(seed) { mutableStateOf(seed.candidates.firstOrNull()?.protocolId) }
     CupertinoDialog(
         title = seed.title,
         onDismissRequest = onDismissRequest,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "处理中" else "下一步",
-                onClick = { selectedProtocolId?.let(onSave) },
-                enabled = !saving && selectedProtocolId != null,
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "处理中" else "下一步",
+                    confirmEnabled = !saving && selectedProtocolId != null,
+                ),
+                actions = remember(selectedProtocolId, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = { selectedProtocolId?.let(onSave) },
+                    )
+                },
             )
         },
     ) {
@@ -199,7 +225,6 @@ internal fun ChooseProtocolDialog(
     }
 }
 
-@Composable
 /**
  * 处理创建模块dialog。
  *
@@ -211,6 +236,7 @@ internal fun ChooseProtocolDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun CreateModuleDialog(
     deviceName: String,
     protocolName: String,
@@ -220,17 +246,24 @@ internal fun CreateModuleDialog(
     onDismissRequest: () -> Unit,
     onSave: (ModuleDraft) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var draft by remember(templates) { mutableStateOf(ModuleDraft(moduleTemplateId = templates.firstOrNull()?.value)) }
     CupertinoDialog(
         title = "新建模块",
         onDismissRequest = onDismissRequest,
         width = 900.dp,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "保存中" else "保存",
-                onClick = { onSave(draft) },
-                enabled = !saving && draft.canSave(),
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "保存中" else "保存",
+                    confirmEnabled = !saving && draft.canSave(),
+                ),
+                actions = remember(draft, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = { onSave(draft) },
+                    )
+                },
             )
         },
     ) {
@@ -245,7 +278,6 @@ internal fun CreateModuleDialog(
     }
 }
 
-@Composable
 /**
  * 处理创建设备dialog。
  *
@@ -256,6 +288,7 @@ internal fun CreateModuleDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun CreateDeviceDialog(
     protocolName: String,
     protocolTemplateName: String,
@@ -264,17 +297,24 @@ internal fun CreateDeviceDialog(
     onDismissRequest: () -> Unit,
     onSave: (DeviceDraft) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var draft by remember(deviceTypes) { mutableStateOf(DeviceDraft(deviceTypeId = deviceTypes.firstOrNull()?.value)) }
     CupertinoDialog(
         title = "新建设备",
         onDismissRequest = onDismissRequest,
         width = 980.dp,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "保存中" else "保存",
-                onClick = { onSave(draft) },
-                enabled = !saving && draft.canSave(),
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "保存中" else "保存",
+                    confirmEnabled = !saving && draft.canSave(),
+                ),
+                actions = remember(draft, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = { onSave(draft) },
+                    )
+                },
             )
         },
     ) {
@@ -283,7 +323,6 @@ internal fun CreateDeviceDialog(
     }
 }
 
-@Composable
 /**
  * 处理创建标签dialog。
  *
@@ -293,6 +332,7 @@ internal fun CreateDeviceDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun CreateTagDialog(
     dataTypes: List<CupertinoOption<Long>>,
     registerTypes: List<CupertinoOption<Long>>,
@@ -300,6 +340,7 @@ internal fun CreateTagDialog(
     onDismissRequest: () -> Unit,
     onSave: (TagDraft) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var draft by remember(dataTypes, registerTypes) {
         mutableStateOf(
             TagDraft(
@@ -313,11 +354,17 @@ internal fun CreateTagDialog(
         onDismissRequest = onDismissRequest,
         width = 860.dp,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "保存中" else "保存",
-                onClick = { onSave(draft) },
-                enabled = !saving && draft.canSave(),
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "保存中" else "保存",
+                    confirmEnabled = !saving && draft.canSave(),
+                ),
+                actions = remember(draft, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = { onSave(draft) },
+                    )
+                },
             )
         },
     ) {
@@ -330,7 +377,6 @@ internal fun CreateTagDialog(
     }
 }
 
-@Composable
 /**
  * 处理移动nodedialog。
  *
@@ -340,6 +386,7 @@ internal fun CreateTagDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
+@Composable
 internal fun MoveNodeDialog(
     nodeKind: HostConfigNodeKind,
     options: List<CupertinoOption<String>>,
@@ -347,17 +394,26 @@ internal fun MoveNodeDialog(
     onDismissRequest: () -> Unit,
     onSave: (String, Int) -> Unit,
 ) {
+    val dialogFooterActionsSpi = koinInject<ProjectsDialogFooterActionsSpi>()
     var targetKey by remember(options) { mutableStateOf(options.firstOrNull()?.value) }
     var sortIndex by remember { mutableStateOf("0") }
     CupertinoDialog(
         title = "变更${nodeKind.label()}上级",
         onDismissRequest = onDismissRequest,
         actions = {
-            WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
-            WorkbenchActionButton(
-                text = if (saving) "保存中" else "保存",
-                onClick = { targetKey?.let { onSave(it, sortIndex.toIntOrNull() ?: 0) } },
-                enabled = !saving && targetKey != null,
+            dialogFooterActionsSpi.Render(
+                state = ProjectsDialogFooterActionState(
+                    confirmText = if (saving) "保存中" else "保存",
+                    confirmEnabled = !saving && targetKey != null,
+                ),
+                actions = remember(targetKey, sortIndex, onDismissRequest, onSave) {
+                    ProjectsDialogFooterActions(
+                        onDismiss = onDismissRequest,
+                        onConfirm = {
+                            targetKey?.let { onSave(it, sortIndex.toIntOrNull() ?: 0) }
+                        },
+                    )
+                },
             )
         },
     ) {
@@ -380,7 +436,6 @@ internal fun MoveNodeDialog(
     }
 }
 
-@Composable
 /**
  * 处理nodeactiondropdownmenu。
  *
@@ -388,11 +443,13 @@ internal fun MoveNodeDialog(
  * @param onDismissRequest ondismiss请求。
  * @param onAction onaction。
  */
+@Composable
 internal fun NodeActionDropdownMenu(
     seed: NodeActionMenuSeed,
     onDismissRequest: () -> Unit,
     onAction: (NodeActionType) -> Unit,
 ) {
+    val interactiveSurfaceSpi = koinInject<ProjectsInteractiveSurfaceSpi>()
     val density = LocalDensity.current
     val positionProvider = remember(density) {
         NodeActionDropdownPositionProvider(
@@ -447,27 +504,37 @@ internal fun NodeActionDropdownMenu(
                         item.destructive -> Color(0xFFC83C35)
                         else -> CupertinoTheme.colorScheme.label
                     }
-                    Column(
+                    interactiveSurfaceSpi.Render(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(CupertinoTheme.shapes.medium)
-                            .clickable(enabled = item.enabled) { onAction(item.type) }
                             .background(
-                                if (item.enabled) CupertinoTheme.colorScheme.tertiarySystemGroupedBackground
-                                else CupertinoTheme.colorScheme.secondarySystemGroupedBackground,
+                                if (item.enabled) {
+                                    CupertinoTheme.colorScheme.tertiarySystemGroupedBackground
+                                } else {
+                                    CupertinoTheme.colorScheme.secondarySystemGroupedBackground
+                                },
                             )
                             .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        CupertinoText(text = item.title, color = titleColor)
-                        item.note?.takeIf { it.isNotBlank() }?.let { note ->
-                            CupertinoText(
-                                text = note,
-                                style = CupertinoTheme.typography.footnote,
-                                color = CupertinoTheme.colorScheme.secondaryLabel.copy(
-                                    alpha = if (item.enabled) 1f else 0.7f,
-                                ),
-                            )
+                        enabled = item.enabled,
+                        actions = ProjectsInteractiveSurfaceActions(
+                            onClick = { onAction(item.type) },
+                        ),
+                    ) { interactiveModifier ->
+                        Column(
+                            modifier = interactiveModifier,
+                            verticalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            CupertinoText(text = item.title, color = titleColor)
+                            item.note?.takeIf { it.isNotBlank() }?.let { note ->
+                                CupertinoText(
+                                    text = note,
+                                    style = CupertinoTheme.typography.footnote,
+                                    color = CupertinoTheme.colorScheme.secondaryLabel.copy(
+                                        alpha = if (item.enabled) 1f else 0.7f,
+                                    ),
+                                )
+                            }
                         }
                     }
                 }
@@ -514,12 +581,12 @@ private class NodeActionDropdownPositionProvider(
     }
 }
 
-@Composable
 /**
  * 处理render传输配置rows。
  *
  * @param transportConfig 传输配置。
  */
+@Composable
 internal fun renderTransportConfigRows(
     transportConfig: ProtocolTransportConfig?,
     metadata: ProtocolTemplateMetadataResponse? = null,

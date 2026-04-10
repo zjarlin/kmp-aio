@@ -11,12 +11,12 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.mcuconsole.serial.McuSerialPortDescriptor
 
-@KoinViewModel
 /**
  * 管理 MCU 调试串口日志页面状态。
  *
  * @property remoteService 串口日志远程服务。
  */
+@KoinViewModel
 class McuDebugViewModel(
     private val remoteService: McuDebugRemoteService,
 ) : ViewModel() {

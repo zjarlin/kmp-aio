@@ -13,18 +13,20 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
 import site.addzero.component.text.TodoText
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.material3.MaterialTheme
 import site.addzero.cupertino.workbench.material3.Text
 
+/**
+ * MCU 串口调试日志页面。
+ */
 @Route(
     value = "开发工具",
     title = "调试",
@@ -40,12 +42,11 @@ import site.addzero.cupertino.workbench.material3.Text
     ),
 )
 @Composable
-/**
- * MCU 串口调试日志页面。
- */
 fun McuDebugScreen() {
     val viewModel = koinViewModel<McuDebugViewModel>()
     val state = viewModel.screenState
+    val toolbarActionsSpi = koinInject<McuDebugToolbarActionsSpi>()
+    val portQuickSelectSpi = koinInject<McuDebugPortQuickSelectSpi>()
 
     Column(
         modifier = Modifier
@@ -57,36 +58,21 @@ fun McuDebugScreen() {
         CupertinoPanel(
             title = "MCU 调试日志",
             subtitle = "默认按真实板卡 `/dev/cu.usbserial-2140 + 115200` 连接，日志通过 SSE 持续推到上位机。",
+            actions = {
+                toolbarActionsSpi.Render(
+                    state = state,
+                    viewModel = viewModel,
+                )
+            },
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                WorkbenchActionButton(
-                    text = if (state.streaming) "重新连接" else "开始连接",
-                    onClick = viewModel::startStreaming,
-                    variant = WorkbenchButtonVariant.Default,
-                    enabled = !state.connecting,
-                )
-                WorkbenchActionButton(
-                    text = "停止",
-                    onClick = viewModel::stopStreaming,
-                    variant = WorkbenchButtonVariant.Outline,
-                    enabled = state.streaming || state.connecting,
-                )
-                WorkbenchActionButton(
-                    text = "刷新串口",
-                    onClick = viewModel::refreshPorts,
-                    variant = WorkbenchButtonVariant.Secondary,
-                    enabled = !state.connecting,
-                )
-                WorkbenchActionButton(
-                    text = "清空日志",
-                    onClick = viewModel::clearLogs,
-                    variant = WorkbenchButtonVariant.Secondary,
-                    enabled = state.logs.isNotEmpty(),
-                )
-            }
+            Text(
+                text = when {
+                    state.connecting -> "正在建立串口日志连接。"
+                    state.streaming -> "当前已建立日志流连接。"
+                    else -> "准备连接串口日志流。"
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
 
         CupertinoPanel(
@@ -125,14 +111,10 @@ fun McuDebugScreen() {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     state.ports.forEach { descriptor ->
-                        WorkbenchActionButton(
-                            text = descriptor.systemPortPath.ifBlank { descriptor.systemPortName },
-                            onClick = { viewModel.selectPort(descriptor) },
-                            variant = if (descriptor.systemPortPath == state.portName || descriptor.systemPortName == state.portName) {
-                                WorkbenchButtonVariant.Default
-                            } else {
-                                WorkbenchButtonVariant.Outline
-                            },
+                        portQuickSelectSpi.Render(
+                            state = state,
+                            descriptor = descriptor,
+                            viewModel = viewModel,
                         )
                     }
                 }
@@ -183,10 +165,10 @@ fun McuDebugScreen() {
     }
 }
 
-@Composable
 /**
  * 调试提示面板。
  */
+@Composable
 private fun McuDebugNoticePanel(
     title: String,
     text: String,

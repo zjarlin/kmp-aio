@@ -23,7 +23,6 @@ import site.addzero.kcloud.plugins.hostconfig.common.label
 import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsCurrentNodePanelActions
 import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsCurrentNodePanelActionsSpi
 
-@Composable
 /**
  * 处理当前nodepanel。
  *
@@ -41,6 +40,7 @@ import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsCurrentNod
  * @param onSaveTag on保存标签。
  * @param onToggleCollapsed ontogglecollapsed。
  */
+@Composable
 internal fun CurrentNodePanel(
     state: ProjectsScreenState,
     onSelectNode: (String) -> Unit,
@@ -435,7 +435,6 @@ internal fun CurrentNodePanel(
     }
 }
 
-@Composable
 /**
  * 处理当前nodeinlineeditorbar。
  *
@@ -443,6 +442,7 @@ internal fun CurrentNodePanel(
  * @param enabled 启用状态。
  * @param onSave on保存。
  */
+@Composable
 internal fun CurrentNodeInlineEditorBar(
     saving: Boolean,
     enabled: Boolean,

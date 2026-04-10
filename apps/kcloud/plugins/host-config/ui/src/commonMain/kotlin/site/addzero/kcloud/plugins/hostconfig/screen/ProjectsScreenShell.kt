@@ -38,7 +38,6 @@ import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
 import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeTrailingActionsSpi
 import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsSidebarActionGridSpi
 
-@Composable
 /**
  * 处理项目workbenchcontent。
  *
@@ -64,6 +63,7 @@ import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsSidebarAct
  * @param onNextTagPage onnext标签分页。
  * @param onDismissNodeActionMenu ondismissnodeactionmenu。
  */
+@Composable
 internal fun ProjectsWorkbenchContent(
     state: ProjectsScreenState,
     treeViewModel: TreeViewModel<HostConfigTreeNode>,
@@ -246,8 +246,8 @@ private fun rememberCompactProjectTreeMetrics(): WorkbenchMetrics {
             sidebarPanelInnerPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
             sidebarSectionGap = 6.dp,
             sidebarTreePanelPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
-            searchFieldHeight = 38.dp,
-            searchFieldSpacing = 4.dp,
+            searchFieldHeight = 46.dp,
+            searchFieldSpacing = 6.dp,
             treeMetrics = metrics.treeMetrics.copy(
                 rowMinHeight = 34.dp,
                 rowVerticalPadding = 5.dp,
@@ -284,7 +284,6 @@ private fun HostConfigTreeNode.filterByKeyword(
     }
 }
 
-@Composable
 /**
  * 处理项目dialog主机。
  *
@@ -306,6 +305,7 @@ private fun HostConfigTreeNode.filterByKeyword(
  * @param onDismissMoveNode ondismiss移动node。
  * @param onOpenCreateModule on打开创建模块。
  */
+@Composable
 internal fun ProjectsDialogHost(
     state: ProjectsScreenState,
     viewModel: ProjectsViewModel,

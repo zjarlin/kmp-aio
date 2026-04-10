@@ -15,12 +15,12 @@ import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.mcuconsole.network.McuFlashRemoteService
 
-@KoinViewModel
 /**
  * 管理 MCU 烧录界面的状态与交互逻辑。
  *
  * @property flashRemoteService 烧录远程服务。
  */
+@KoinViewModel
 class McuFlashViewModel(
     private val flashRemoteService: McuFlashRemoteService,
 ) : ViewModel() {
