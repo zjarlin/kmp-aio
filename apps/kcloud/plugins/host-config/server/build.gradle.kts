@@ -9,6 +9,7 @@ val libs = versionCatalogs.named("libs")
 val hostConfigApiProject = project(":apps:kcloud:plugins:host-config:api")
 val hostConfigApiProjectDir = layout.projectDirectory.dir("../api")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
+val hostConfigUiProject = project(":apps:kcloud:plugins:host-config:ui")
 val generatedApiRootDir =
     hostConfigApiProject.layout.buildDirectory.dir("generated/source/controller2api/commonMain/kotlin")
 
@@ -22,9 +23,22 @@ val generatedApiOutputDir =
 val sharedSourceDir =
     hostConfigSharedProjectDir.dir("src/commonMain/kotlin")
 
-/** 前端源码目录。 */
+/** 同构体生成包。 */
+val generatedIsoPackage = "site.addzero.kcloud.plugins.hostconfig.generated.isomorphic"
+
+/** 同构体生成目录。 */
+val generatedIsoOutputDir =
+    hostConfigApiProject
+        .layout
+        .buildDirectory
+        .dir("generated/ksp/commonMain/kotlin")
+
+/** 前端生成源码目录。 */
 val sharedComposeSourceDir =
-    hostConfigApiProjectDir.dir("src/commonMain/kotlin")
+    hostConfigUiProject
+        .layout
+        .buildDirectory
+        .dir("generated/ksp/commonMain/kotlin")
 
 /** 当前 server 源码目录。 */
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
@@ -34,11 +48,23 @@ ksp {
     arg("apiClientOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
     arg("apiClientAggregatorOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
     arg("sharedSourceDir", sharedSourceDir.asFile.absolutePath)
-    arg("sharedComposeSourceDir", sharedComposeSourceDir.asFile.absolutePath)
+    arg("sharedComposeSourceDir", sharedComposeSourceDir.get().asFile.absolutePath)
     arg("backendServerSourceDir", backendServerSourceDir.asFile.absolutePath)
-    arg("entity2Iso.enabled", "false")
-    arg("entity2Form.enabled", "false")
+    arg("isomorphicPkg", generatedIsoPackage)
+    arg("isomorphicGenDir", generatedIsoOutputDir.get().asFile.absolutePath)
+    arg("isomorphicPackageName", generatedIsoPackage)
+    arg("isomorphicClassSuffix", "Iso")
+    arg("isomorphicSerializableEnabled", "true")
+    arg("entity2Iso.enabled", "true")
+    arg("entity2Form.enabled", "true")
     arg("entity2Mcp.enabled", "false")
+    arg("formPackageName", "site.addzero.kcloud.plugins.hostconfig.generated.forms")
+    arg("enumOutputPackage", "site.addzero.kcloud.plugins.hostconfig.model.enums")
+    arg("iso2DataProviderPackage", "site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider")
+}
+
+dependencies {
+    add("kspJvm", libs.findLibrary("site-addzero-controller2iso2dataprovider-processor").get())
 }
 
 kotlin {
@@ -66,6 +92,8 @@ kotlin {
 
 val cleanHostConfigGeneratedApis by tasks.registering(Delete::class) {
     delete(generatedApiRootDir.get().asFile)
+    delete(generatedIsoOutputDir.get().asFile)
+    delete(sharedComposeSourceDir.get().asFile)
 }
 
 tasks.matching { task ->

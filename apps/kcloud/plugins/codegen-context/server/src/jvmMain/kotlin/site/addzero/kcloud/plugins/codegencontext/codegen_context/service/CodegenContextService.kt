@@ -412,10 +412,10 @@ class CodegenContextService(
     ): CodegenMetadataExportResultDto {
         val detail = getContext(contextId)
         val availableDefinitions = loadContextDefinitions(detail.protocolTemplateId)
-        val draft = detail.toMetadataDraft(availableDefinitions)
-        draft.validateDraftOrThrow(availableDefinitions)
-        val normalized = draft.toGenericContextDetail(availableDefinitions).normalizeGenericDetail()
-        return contractGenerator.export(normalized, draft.exportSettings)
+        val exportDraft = detail.toMetadataDraft(availableDefinitions).toModelingWorkbenchExportDraft()
+        exportDraft.validateDraftOrThrow(availableDefinitions)
+        val normalized = exportDraft.toGenericContextDetail(availableDefinitions).normalizeGenericDetail()
+        return contractGenerator.export(normalized, exportDraft.exportSettings)
     }
 
     /**

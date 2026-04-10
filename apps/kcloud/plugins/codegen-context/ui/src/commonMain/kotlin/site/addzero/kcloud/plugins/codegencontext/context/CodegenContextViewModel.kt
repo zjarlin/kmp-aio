@@ -94,7 +94,7 @@ class CodegenContextViewModel(
                         statusMessage = null,
                     )
             }.onFailure { throwable ->
-                screenState = screenState.copy(errorMessage = throwable.message ?: "加载元数据草稿失败。")
+                screenState = screenState.copy(errorMessage = throwable.message ?: "加载建模配置失败。")
             }
         }
     }
@@ -103,7 +103,7 @@ class CodegenContextViewModel(
         viewModelScope.launch {
             val template = screenState.protocolTemplates.firstOrNull()
             val definitions = loadDefinitions(template?.id ?: 0L)
-            screenState =
+                screenState =
                 screenState.copy(
                     selectedContextId = null,
                     availableContextDefinitions = definitions,
@@ -111,7 +111,7 @@ class CodegenContextViewModel(
                     preview = null,
                     exportResult = null,
                     errorMessage = null,
-                    statusMessage = "已创建新的元数据草稿。",
+                    statusMessage = "已创建新的建模配置。",
                 )
         }
     }
@@ -136,14 +136,13 @@ class CodegenContextViewModel(
                         selectedContextId = saved.id,
                         availableContextDefinitions = definitions,
                         draft = saved,
-                        preview = contextApi.previewContext(saved),
-                        statusMessage = "元数据草稿已保存。",
+                        statusMessage = "建模配置已保存。",
                     )
             }.onFailure { throwable ->
                 screenState =
                     screenState.copy(
                         saving = false,
-                        errorMessage = throwable.message ?: "保存元数据草稿失败。",
+                        errorMessage = throwable.message ?: "保存建模配置失败。",
                     )
             }
         }
@@ -195,7 +194,6 @@ class CodegenContextViewModel(
                         selectedContextId = saved.id,
                         availableContextDefinitions = definitions,
                         draft = saved,
-                        preview = contextApi.previewContext(saved),
                         exportResult = exportResult,
                         statusMessage = exportResult.message,
                     )
@@ -236,7 +234,7 @@ class CodegenContextViewModel(
                         draft = nextDraft,
                         preview = null,
                         exportResult = null,
-                        statusMessage = "元数据草稿已删除。",
+                        statusMessage = "建模配置已删除。",
                     )
             }.onFailure { throwable ->
                 screenState =

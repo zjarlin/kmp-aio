@@ -17,6 +17,8 @@ val routeOwnerModuleDir =
     gradle.gradleUserHomeDir
         .resolve("addzero/route-owner/${rootProject.name}/apps-kcloud-ui/commonMain/kotlin")
         .absolutePath
+val generatedKspSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val generateHostConfigUiFormsTaskPath = ":apps:kcloud:plugins:host-config:server:kspKotlinJvm"
 
 ksp {
     arg("routeGenPkg", "site.addzero.generated")
@@ -32,12 +34,13 @@ dependencies {
 kotlin {
 
     dependencies {
-
         api(project(":apps:kcloud:plugins:host-config:api"))
         implementation(project(":apps:kcloud:plugins:host-config:shared"))
         api(project(":apps:kcloud:plugins:mcu-console:api"))
         implementation(project(":apps:kcloud:plugins:mcu-console:shared"))
         implementation(libs.findLibrary("compose-cupertino-workbench").get())
+        implementation(libs.findLibrary("site-addzero-compose-native-component-form").get())
+        implementation(libs.findLibrary("site-addzero-compose-native-component-high-level").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())
         implementation(libs.findLibrary("site-addzero-compose-native-component-tree").get())
         implementation(libs.findLibrary("site-addzero-route-core").get())
@@ -48,4 +51,20 @@ kotlin {
         implementation(libs.findLibrary("site-addzero-compose-native-component-text").get())
     }
 
+    sourceSets {
+        commonMain {
+            kotlin.srcDir(generatedKspSourceDir)
+        }
+    }
+}
+
+tasks.matching { task ->
+    task.name in setOf(
+        "compileCommonMainKotlinMetadata",
+        "compileKotlinJvm",
+        "kspCommonMainKotlinMetadata",
+        "kspKotlinJvm",
+    )
+}.configureEach {
+    dependsOn(generateHostConfigUiFormsTaskPath)
 }

@@ -82,12 +82,12 @@ data class CodegenMetadataMqttDefaultsDraftDto(
  * 表示固件工程同步配置。
  */
 data class CodegenMetadataFirmwareSyncDto(
-    val cOutputProjectDir: String = CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR,
-    val bridgeImplPath: String = CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH,
-    val keilUvprojxPath: String = CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH,
-    val keilTargetName: String = CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME,
-    val keilGroupName: String = CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME,
-    val mxprojectPath: String = CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH,
+    val cOutputProjectDir: String = "",
+    val bridgeImplPath: String = "",
+    val keilUvprojxPath: String = "",
+    val keilTargetName: String = "",
+    val keilGroupName: String = "",
+    val mxprojectPath: String = "",
 )
 
 @Serializable

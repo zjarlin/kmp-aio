@@ -12,12 +12,6 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExp
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataIssueDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH
-import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME
-import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME
-import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH
-import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH
-import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqttDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataResolvedFunctionDto
@@ -209,12 +203,12 @@ internal fun CodegenContextDetailDto.toMetadataDraft(
                 artifactKinds = inferArtifactKinds(),
                 firmwareSync =
                     CodegenMetadataFirmwareSyncDto(
-                        cOutputProjectDir = resolveFirmwareProjectDir().ifBlank { CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR },
-                        bridgeImplPath = bridgeImplPath.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH },
-                        keilUvprojxPath = keilUvprojxPath.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH },
-                        keilTargetName = keilTargetName.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME },
-                        keilGroupName = keilGroupName.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME },
-                        mxprojectPath = mxprojectPath.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH },
+                        cOutputProjectDir = resolveFirmwareProjectDir(),
+                        bridgeImplPath = bridgeImplPath.orEmpty(),
+                        keilUvprojxPath = keilUvprojxPath.orEmpty(),
+                        keilTargetName = keilTargetName.orEmpty(),
+                        keilGroupName = keilGroupName.orEmpty(),
+                        mxprojectPath = mxprojectPath.orEmpty(),
                     ),
             ),
         thingProperties = propertyPool.values.sortedBy(CodegenMetadataThingPropertyDraftDto::sortIndex),
@@ -687,6 +681,21 @@ private fun CodegenContextDetailDto.defaultMetadataTransport(): CodegenMetadataT
         "MODBUS_TCP_CLIENT" -> CodegenMetadataTransportKind.TCP
         else -> CodegenMetadataTransportKind.RTU
     }
+
+internal fun CodegenMetadataDraftDto.toModelingWorkbenchExportDraft(): CodegenMetadataDraftDto =
+    copy(
+        exportSettings =
+            exportSettings.copy(
+                artifactKinds =
+                    setOf(
+                        MetadataArtifactKind.C_SERVICE_CONTRACT,
+                        MetadataArtifactKind.C_TRANSPORT_CONTRACT,
+                        MetadataArtifactKind.MARKDOWN_PROTOCOL,
+                    ),
+                kotlinClientTransports = emptySet(),
+                cExposeTransports = CodegenMetadataTransportKind.entries.toSet(),
+            ),
+    )
 
 private fun String?.parentDirectoryString(): String? {
     val candidate = this.cleanNullable() ?: return null

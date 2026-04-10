@@ -7,9 +7,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -18,10 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
-import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoSectionTitle
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
@@ -54,6 +59,7 @@ internal fun NodeChildrenPanel(
     onNextTagPage: () -> Unit,
 ) {
     val panelActionsSpi = koinInject<ProjectsNodeChildrenPanelActionsSpi>()
+    val interactiveSurfaceSpi = koinInject<ProjectsInteractiveSurfaceSpi>()
     val nodeKind = resolveSelectedNodeKind(state)
     val actions = remember(onPrevTagPage, onNextTagPage) {
         ProjectsNodeChildrenPanelActions(
@@ -80,22 +86,29 @@ internal fun NodeChildrenPanel(
                     CupertinoStatusStrip("当前工程还没有下级节点。")
                     return@CupertinoPanel
                 }
-                CupertinoSectionTitle("协议")
-                projectTree.protocols.forEach { protocol ->
-                    val templateMetadata = resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId)
-                    ChildNodeCard(
-                        title = protocol.displayName(),
-                        subtitle = "${protocol.protocolTemplateName} · ${protocol.protocolTemplateCode}",
-                        onClick = {
-                            onSelectNode(ProjectsViewModel.buildProtocolNodeId(projectTree.id, protocol.id))
-                        },
-                    ) {
-                        CupertinoKeyValueRow("轮询间隔(ms)", protocol.pollingIntervalMs.toString())
-                        CupertinoKeyValueRow("承载设备", protocol.devices.size.toString())
-                        CupertinoKeyValueRow("排序", protocol.sortIndex.toString())
-                        renderTransportConfigRows(protocol.transportConfig, templateMetadata)
-                    }
-                }
+                ChildNodeTableSection(
+                    title = "协议",
+                    columns = listOf("协议", "模板", "轮询(ms)", "设备数", "通信摘要", "排序"),
+                    rows = projectTree.protocols.map { protocol ->
+                        ChildNodeTableRow(
+                            cells = listOf(
+                                protocol.displayName(),
+                                protocol.protocolTemplateName,
+                                protocol.pollingIntervalMs.toString(),
+                                protocol.devices.size.toString(),
+                                protocol.transportConfig
+                                    ?.toSummary(resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId))
+                                    .orEmpty()
+                                    .ifBlank { "-" },
+                                protocol.sortIndex.toString(),
+                            ),
+                            onClick = {
+                                onSelectNode(ProjectsViewModel.buildProtocolNodeId(projectTree.id, protocol.id))
+                            },
+                        )
+                    },
+                    interactiveSurfaceSpi = interactiveSurfaceSpi,
+                )
             }
 
             HostConfigNodeKind.PROTOCOL -> {
@@ -105,33 +118,30 @@ internal fun NodeChildrenPanel(
                     CupertinoStatusStrip("当前协议还没有下级设备。")
                     return@CupertinoPanel
                 }
-                protocol.devices.forEach { device ->
-                    ChildNodeCard(
-                        title = device.name,
-                        subtitle = device.deviceTypeName,
-                        onClick = {
-                            onSelectNode(ProjectsViewModel.buildDeviceNodeId(projectId, device.id))
-                        },
-                    ) {
-                        CupertinoKeyValueRow("模块数量", device.modules.size.toString())
-                        CupertinoKeyValueRow("标签数量", device.tags.size.toString())
-                        CupertinoKeyValueRow("站号", device.stationNo.toString())
-                        CupertinoKeyValueRow("排序", device.sortIndex.toString())
-                    }
-                }
+                ChildNodeTableSection(
+                    title = "设备",
+                    columns = listOf("设备", "类型", "站号", "模块数", "标签数", "排序"),
+                    rows = protocol.devices.map { device ->
+                        ChildNodeTableRow(
+                            cells = listOf(
+                                device.name,
+                                device.deviceTypeName,
+                                device.stationNo.toString(),
+                                device.modules.size.toString(),
+                                device.tags.size.toString(),
+                                device.sortIndex.toString(),
+                            ),
+                            onClick = {
+                                onSelectNode(ProjectsViewModel.buildDeviceNodeId(projectId, device.id))
+                            },
+                        )
+                    },
+                    interactiveSurfaceSpi = interactiveSurfaceSpi,
+                )
             }
 
             HostConfigNodeKind.MODULE -> {
-                val module = state.selectedModule
-                if (module == null) {
-                    CupertinoStatusStrip("当前模块详情尚未加载完成。")
-                    return@CupertinoPanel
-                }
-                CupertinoStatusStrip("标签从模块节点发起创建，保存时会自动归到所属设备。")
-                HostConfigModuleBoard(
-                    model = resolveModuleBoardModel(module = module, moduleTemplates = state.moduleTemplates),
-                    compact = true,
-                )
+                CupertinoStatusStrip("当前模块没有下级节点。标签可从模块操作菜单发起创建。")
             }
 
             HostConfigNodeKind.DEVICE -> {
@@ -146,40 +156,55 @@ internal fun NodeChildrenPanel(
                     CupertinoStatusStrip("当前设备还没有模块和标签。")
                     return@CupertinoPanel
                 }
-                device.modules.forEach { module ->
-                    ChildNodeCard(
-                        title = module.name,
-                        subtitle = "${module.moduleTemplateName} · ${module.moduleTemplateCode}",
-                        onClick = {
-                            onSelectNode(ProjectsViewModel.buildModuleNodeId(projectId, module.id))
-                        },
-                    ) {
-                        HostConfigModuleBoard(
-                            model = resolveModuleBoardModel(module = module, moduleTemplates = state.moduleTemplates),
-                            compact = true,
-                        )
-                        CupertinoKeyValueRow("排序", module.sortIndex.toString())
-                    }
-                }
-                CupertinoKeyValueRow("标签分页", "偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条")
-                state.tagPage.d.forEach { tag ->
-                    ChildNodeCard(
-                        title = tag.name,
-                        subtitle = "${tag.registerTypeName} / ${tag.registerAddress}",
-                        onClick = {
-                            onSelectNode(
-                                ProjectsViewModel.buildTagNodeId(
-                                    projectId = projectId,
-                                    deviceId = deviceId,
-                                    tagId = tag.id,
+                if (device.modules.isNotEmpty()) {
+                    ChildNodeTableSection(
+                        title = "模块",
+                        columns = listOf("模块", "模板", "模板编码", "排序"),
+                        rows = device.modules.map { module ->
+                            ChildNodeTableRow(
+                                cells = listOf(
+                                    module.name,
+                                    module.moduleTemplateName,
+                                    module.moduleTemplateCode,
+                                    module.sortIndex.toString(),
                                 ),
+                                onClick = {
+                                    onSelectNode(ProjectsViewModel.buildModuleNodeId(projectId, module.id))
+                                },
                             )
                         },
-                    ) {
-                        CupertinoKeyValueRow("数据类型", tag.dataTypeName)
-                        CupertinoKeyValueRow("启用", if (tag.enabled) "是" else "否")
-                        CupertinoKeyValueRow("值文本条目", tag.valueTexts.size.toString())
-                    }
+                        interactiveSurfaceSpi = interactiveSurfaceSpi,
+                    )
+                }
+                if (state.tagPage.d.isNotEmpty()) {
+                    ChildNodeTableSection(
+                        title = "标签",
+                        subtitle = "分页偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条",
+                        columns = listOf("点名", "开关", "寄存器类型", "寄存器地址", "数据类型", "BACnet类型", "BACnet地址"),
+                        rows = state.tagPage.d.map { tag ->
+                            ChildNodeTableRow(
+                                cells = listOf(
+                                    tag.name,
+                                    if (tag.enabled) "开" else "关",
+                                    tag.registerTypeName,
+                                    tag.registerAddress.toString(),
+                                    tag.dataTypeName,
+                                    tag.forwardRegisterTypeName ?: "-",
+                                    tag.forwardRegisterAddress?.toString() ?: "-",
+                                ),
+                                onClick = {
+                                    onSelectNode(
+                                        ProjectsViewModel.buildTagNodeId(
+                                            projectId = projectId,
+                                            deviceId = deviceId,
+                                            tagId = tag.id,
+                                        ),
+                                    )
+                                },
+                            )
+                        },
+                        interactiveSurfaceSpi = interactiveSurfaceSpi,
+                    )
                 }
             }
 
@@ -193,13 +218,106 @@ internal fun NodeChildrenPanel(
                     CupertinoStatusStrip("当前标签没有值文本子项。")
                     return@CupertinoPanel
                 }
-                tag.valueTexts.forEach { item ->
-                    ChildNodeCard(
-                        title = item.displayText,
-                        subtitle = "排序 ${item.sortIndex}",
+                ChildNodeTableSection(
+                    title = "值文本",
+                    columns = listOf("显示文本", "原始值", "排序"),
+                    rows = tag.valueTexts.map { item ->
+                        ChildNodeTableRow(
+                            cells = listOf(
+                                item.displayText,
+                                item.rawValue,
+                                item.sortIndex.toString(),
+                            ),
+                        )
+                    },
+                    interactiveSurfaceSpi = interactiveSurfaceSpi,
+                )
+            }
+        }
+    }
+}
+
+private data class ChildNodeTableRow(
+    val cells: List<String>,
+    val onClick: (() -> Unit)? = null,
+)
+
+@Composable
+private fun ChildNodeTableSection(
+    title: String,
+    columns: List<String>,
+    rows: List<ChildNodeTableRow>,
+    interactiveSurfaceSpi: ProjectsInteractiveSurfaceSpi,
+    subtitle: String? = null,
+) {
+    val horizontalScrollState = rememberScrollState()
+    val tableShape = RoundedCornerShape(16.dp)
+    val columnWidth = 156.dp
+
+    CupertinoSectionTitle(title)
+    subtitle?.takeIf { it.isNotBlank() }?.let { text ->
+        CupertinoText(
+            text = text,
+            style = CupertinoTheme.typography.footnote,
+            color = CupertinoTheme.colorScheme.secondaryLabel,
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(horizontalScrollState)
+            .clip(tableShape)
+            .border(
+                width = 1.dp,
+                color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.28f),
+                shape = tableShape,
+            ),
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = columnWidth * columns.size)
+                .background(CupertinoTheme.colorScheme.secondarySystemGroupedBackground),
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CupertinoTheme.colorScheme.tertiarySystemGroupedBackground)
+                    .padding(horizontal = 8.dp, vertical = 10.dp),
+            ) {
+                columns.forEach { column ->
+                    ChildNodeTableCell(
+                        text = column,
+                        width = columnWidth,
+                        emphasis = true,
+                    )
+                }
+            }
+            rows.forEachIndexed { index, row ->
+                interactiveSurfaceSpi.Render(
+                    modifier = Modifier.fillMaxWidth(),
+                    actions = remember(row.onClick) {
+                        ProjectsInteractiveSurfaceActions(onClick = row.onClick)
+                    },
+                ) { interactiveModifier ->
+                    Row(
+                        modifier = interactiveModifier
+                            .fillMaxWidth()
+                            .background(
+                                if (index % 2 == 0) {
+                                    CupertinoTheme.colorScheme.secondarySystemGroupedBackground
+                                } else {
+                                    CupertinoTheme.colorScheme.systemGroupedBackground
+                                },
+                            )
+                            .padding(horizontal = 8.dp, vertical = 10.dp),
                     ) {
-                        CupertinoKeyValueRow("原始值", item.rawValue)
-                        CupertinoKeyValueRow("显示文本", item.displayText)
+                        row.cells.forEach { cell ->
+                            ChildNodeTableCell(
+                                text = cell,
+                                width = columnWidth,
+                            )
+                        }
                     }
                 }
             }
@@ -207,34 +325,27 @@ internal fun NodeChildrenPanel(
     }
 }
 
-/**
- * 处理childnodecard。
- *
- * @param title title。
- * @param subtitle subtitle。
- * @param onClick onclick。
- * @param content content。
- */
 @Composable
-private fun ChildNodeCard(
-    title: String,
-    subtitle: String? = null,
-    onClick: (() -> Unit)? = null,
-    content: @Composable () -> Unit,
+private fun ChildNodeTableCell(
+    text: String,
+    width: Dp,
+    emphasis: Boolean = false,
 ) {
-    val interactiveSurfaceSpi = koinInject<ProjectsInteractiveSurfaceSpi>()
-    interactiveSurfaceSpi.Render(
-        modifier = Modifier.fillMaxWidth(),
-        actions = remember(onClick) {
-            ProjectsInteractiveSurfaceActions(onClick = onClick)
+    CupertinoText(
+        text = text,
+        modifier = Modifier
+            .width(width)
+            .defaultMinSize(minHeight = 24.dp)
+            .padding(horizontal = 8.dp),
+        style = if (emphasis) CupertinoTheme.typography.subhead else CupertinoTheme.typography.body,
+        color = if (emphasis) {
+            CupertinoTheme.colorScheme.label
+        } else {
+            CupertinoTheme.colorScheme.secondaryLabel
         },
-    ) { interactiveModifier ->
-        Box(modifier = interactiveModifier) {
-            CupertinoPanel(title = title, subtitle = subtitle) {
-                content()
-            }
-        }
-    }
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
 }
 
 /**

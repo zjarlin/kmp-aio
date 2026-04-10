@@ -368,7 +368,7 @@ internal fun CurrentNodePanel(
                     subtitle = "${tag.dataTypeName} · ${tag.registerTypeName}",
                     kind = nodeKind,
                     badges = listOf(
-                        if (tag.enabled) "已启用" else "未启用",
+                        if (tag.enabled) "通道已开" else "通道已关",
                         tag.pointType?.label() ?: "未分组",
                     ),
                     metrics = listOf(
@@ -400,12 +400,12 @@ internal fun CurrentNodePanel(
                     HostConfigDenseInfoSection(
                         title = "标签资料",
                         entries = listOf(
-                            "标签名称" to tag.name,
+                            "点名" to tag.name,
                             "描述" to tag.description.orDash(),
                             "数据类型" to tag.dataTypeName,
                             "寄存器类型" to tag.registerTypeName,
                             "寄存器地址" to tag.registerAddress.toString(),
-                            "启用" to if (tag.enabled) "是" else "否",
+                            "通道开关" to if (tag.enabled) "开" else "关",
                             "标签类型" to (tag.pointType?.label() ?: "-"),
                             "排序" to tag.sortIndex.toString(),
                         ),
@@ -417,6 +417,22 @@ internal fun CurrentNodePanel(
                             "异常值" to tag.exceptionValue.orDash(),
                             "防抖(ms)" to (tag.debounceMs?.toString() ?: "-"),
                             "线性转换" to if (tag.scalingEnabled) "已启用" else "未启用",
+                        ),
+                    )
+                    HostConfigDenseInfoSection(
+                        title = "运行态",
+                        entries = listOf(
+                            "值" to "-",
+                            "质量戳" to "-",
+                            "时间戳" to "-",
+                        ),
+                    )
+                    HostConfigDenseInfoSection(
+                        title = "BACnet 映射",
+                        entries = listOf(
+                            "启用 BACnet 映射" to if (tag.forwardEnabled) "是" else "否",
+                            "BACnet寄存器类型" to tag.forwardRegisterTypeName.orDash(),
+                            "BACnet寄存器地址" to (tag.forwardRegisterAddress?.toString() ?: "-"),
                         ),
                     )
                     if (tag.scalingEnabled) {

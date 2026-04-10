@@ -481,6 +481,9 @@ internal data class TagDraft(
     val registerTypeId: Long? = null,
     val registerAddress: String = "1",
     val enabled: Boolean = true,
+    val forwardEnabled: Boolean = false,
+    val forwardRegisterTypeId: Long? = null,
+    val forwardRegisterAddress: String = "",
     val defaultValue: String = "",
     val exceptionValue: String = "",
     val pointType: PointType? = null,
@@ -674,6 +677,9 @@ internal fun TagDraft.toTagCreateRequest(): TagCreateRequest {
         registerTypeId = requireNotNull(registerTypeId),
         registerAddress = registerAddress.toIntOrNull() ?: 0,
         enabled = enabled,
+        forwardEnabled = forwardEnabled,
+        forwardRegisterTypeId = forwardRegisterTypeId,
+        forwardRegisterAddress = forwardRegisterAddress.toIntOrNull(),
         defaultValue = defaultValue.ifBlank { null },
         exceptionValue = exceptionValue.ifBlank { null },
         pointType = pointType,
@@ -685,9 +691,6 @@ internal fun TagDraft.toTagCreateRequest(): TagCreateRequest {
         rawMax = rawMax.ifBlank { null },
         engMin = engMin.ifBlank { null },
         engMax = engMax.ifBlank { null },
-        forwardEnabled = false,
-        forwardRegisterTypeId = null,
-        forwardRegisterAddress = null,
     )
 }
 
@@ -702,6 +705,9 @@ internal fun TagDraft.toTagUpdateRequest(): TagUpdateRequest {
         registerTypeId = requireNotNull(registerTypeId),
         registerAddress = registerAddress.toIntOrNull() ?: 0,
         enabled = enabled,
+        forwardEnabled = forwardEnabled,
+        forwardRegisterTypeId = forwardRegisterTypeId,
+        forwardRegisterAddress = forwardRegisterAddress.toIntOrNull(),
         defaultValue = defaultValue.ifBlank { null },
         exceptionValue = exceptionValue.ifBlank { null },
         pointType = pointType,
@@ -713,9 +719,6 @@ internal fun TagDraft.toTagUpdateRequest(): TagUpdateRequest {
         rawMax = rawMax.ifBlank { null },
         engMin = engMin.ifBlank { null },
         engMax = engMax.ifBlank { null },
-        forwardEnabled = false,
-        forwardRegisterTypeId = null,
-        forwardRegisterAddress = null,
     )
 }
 
@@ -808,6 +811,9 @@ internal fun TagResponse.toTagDraft(): TagDraft {
         registerTypeId = registerTypeId,
         registerAddress = registerAddress.toString(),
         enabled = enabled,
+        forwardEnabled = forwardEnabled,
+        forwardRegisterTypeId = forwardRegisterTypeId,
+        forwardRegisterAddress = forwardRegisterAddress?.toString().orEmpty(),
         defaultValue = defaultValue.orEmpty(),
         exceptionValue = exceptionValue.orEmpty(),
         pointType = pointType,
@@ -864,7 +870,13 @@ internal fun DeviceDraft.canSave(): Boolean {
  * 处理标签draft。
  */
 internal fun TagDraft.canSave(): Boolean {
-    return name.isNotBlank() && dataTypeId != null && registerTypeId != null
+    if (name.isBlank() || dataTypeId == null || registerTypeId == null) {
+        return false
+    }
+    if (!forwardEnabled) {
+        return true
+    }
+    return forwardRegisterTypeId != null && forwardRegisterAddress.toIntOrNull() != null
 }
 
 /**

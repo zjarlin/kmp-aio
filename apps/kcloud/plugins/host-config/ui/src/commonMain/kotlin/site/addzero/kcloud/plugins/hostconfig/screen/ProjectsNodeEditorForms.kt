@@ -449,9 +449,9 @@ internal fun TagEditorForm(
     }
     CupertinoFormSection(
         title = "基础信息",
-        subtitle = "标签命名、说明和启用状态优先集中展示。",
+        subtitle = "点名、通道开关和描述先对齐，录入时更接近现场点位表。",
     ) {
-        item { CupertinoTextField("标签名称", draft.name, { onDraftChange(draft.copy(name = it)) }) }
+        item { CupertinoTextField("点名", draft.name, { onDraftChange(draft.copy(name = it)) }) }
         item { CupertinoTextField("排序", draft.sortIndex, { onDraftChange(draft.copy(sortIndex = it)) }) }
         fullWidth {
             CupertinoTextField(
@@ -463,7 +463,7 @@ internal fun TagEditorForm(
         }
         item {
             CupertinoBooleanField(
-                label = "启用标签",
+                label = "通道开关",
                 checked = draft.enabled,
                 onCheckedChange = { checked -> onDraftChange(draft.copy(enabled = checked)) },
             )
@@ -509,6 +509,44 @@ internal fun TagEditorForm(
         item { CupertinoTextField("防抖时间", draft.debounceMs, { onDraftChange(draft.copy(debounceMs = it)) }) }
         item { CupertinoTextField("默认值", draft.defaultValue, { onDraftChange(draft.copy(defaultValue = it)) }) }
         item { CupertinoTextField("异常值", draft.exceptionValue, { onDraftChange(draft.copy(exceptionValue = it)) }) }
+    }
+
+    CupertinoFormSection(
+        title = "BACnet 映射",
+        subtitle = "沿用当前标签里的 forward 字段，界面统一按 BACnet 寄存器语义展示。",
+    ) {
+        item {
+            CupertinoBooleanField(
+                label = "启用 BACnet 映射",
+                checked = draft.forwardEnabled,
+                onCheckedChange = { checked ->
+                    onDraftChange(
+                        draft.copy(
+                            forwardEnabled = checked,
+                            forwardRegisterTypeId = if (checked) draft.forwardRegisterTypeId else null,
+                            forwardRegisterAddress = if (checked) draft.forwardRegisterAddress else "",
+                        ),
+                    )
+                },
+            )
+        }
+        if (draft.forwardEnabled) {
+            item {
+                CupertinoSelectionField(
+                    label = "BACnet寄存器类型",
+                    options = registerTypes,
+                    selectedValue = draft.forwardRegisterTypeId,
+                    onSelected = { onDraftChange(draft.copy(forwardRegisterTypeId = it)) },
+                )
+            }
+            item {
+                CupertinoTextField(
+                    "BACnet寄存器地址",
+                    draft.forwardRegisterAddress,
+                    { onDraftChange(draft.copy(forwardRegisterAddress = it)) },
+                )
+            }
+        }
     }
 
     if (draft.scalingEnabled) {

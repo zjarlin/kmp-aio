@@ -10,7 +10,7 @@ import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.utils.io.readUTF8Line
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
 import org.koin.core.annotation.Single
 import site.addzero.kcloud.plugins.mcuconsole.serial.McuSerialPortConfig
 import site.addzero.kcloud.plugins.mcuconsole.serial.McuSerialPortDescriptor
@@ -37,7 +37,7 @@ class McuDebugRemoteService(
     fun streamSerialLogs(
         config: McuSerialPortConfig,
     ): Flow<String> =
-        flow {
+        channelFlow {
             httpClient.prepareGet("/mcu-console/router/ports/logs/sse") {
                 parameter("portName", config.portName)
                 parameter("baudRate", config.baudRate)
@@ -51,6 +51,15 @@ class McuDebugRemoteService(
             }.execute { response ->
                 val channel = response.bodyAsChannel()
                 val dataLines = mutableListOf<String>()
+
+                suspend fun flushDataLines() {
+                    if (dataLines.isEmpty()) {
+                        return
+                    }
+                    send(dataLines.joinToString("\n"))
+                    dataLines.clear()
+                }
+
                 while (!channel.isClosedForRead) {
                     val line = channel.readUTF8Line() ?: break
                     when {
@@ -59,16 +68,11 @@ class McuDebugRemoteService(
                         }
 
                         line.isBlank() -> {
-                            if (dataLines.isNotEmpty()) {
-                                emit(dataLines.joinToString("\n"))
-                                dataLines.clear()
-                            }
+                            flushDataLines()
                         }
                     }
                 }
-                if (dataLines.isNotEmpty()) {
-                    emit(dataLines.joinToString("\n"))
-                }
+                flushDataLines()
             }
         }
 }
