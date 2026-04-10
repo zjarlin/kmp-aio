@@ -1,17 +1,17 @@
 package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
 
+import java.nio.file.Path
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenClassDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextBindingDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefinitionDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenGenerationSettingsDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataArtifactKind
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDeviceFunctionDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportPlanDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataIssueDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataIssueSeverity
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqttDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataResolvedFunctionDto
@@ -25,11 +25,9 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenPropertyDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenRtuGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenTcpGenerationDefaultsDto
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenClassKind
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenConsumerTarget
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind as MetadataArtifactKind
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataIssueSeverity as MetadataIssueSeverity
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenNodeKind
 import site.addzero.kmp.exp.BusinessValidationException
 
 private const val PROPERTY_CATALOG_CLASS_NAME = "CodegenPropertyCatalog"
@@ -202,12 +200,12 @@ internal fun CodegenContextDetailDto.toMetadataDraft(
         protocolTemplateName = protocolTemplateName,
         exportSettings =
             generationSettings.toMetadataExportSettings(
-                kotlinClientTransports = kotlinClientTransports.decodeTransportKinds(),
-                cExposeTransports = cExposeTransports.decodeTransportKinds(),
-                artifactKinds = artifactKinds.decodeArtifactKinds(),
+                kotlinClientTransports = inferKotlinClientTransports(),
+                cExposeTransports = inferCExposeTransports(),
+                artifactKinds = inferArtifactKinds(),
                 firmwareSync =
                     CodegenMetadataFirmwareSyncDto(
-                        cOutputProjectDir = cOutputProjectDir.orEmpty(),
+                        cOutputProjectDir = resolveFirmwareProjectDir(),
                         bridgeImplPath = bridgeImplPath.orEmpty().ifBlank { "Core/Src/modbus" },
                         keilUvprojxPath = keilUvprojxPath.orEmpty(),
                         keilTargetName = keilTargetName.orEmpty(),
@@ -635,3 +633,50 @@ private fun Throwable.toIssue(
     )
 
 private fun Int?.orZero(): Int = this ?: 0
+
+private fun CodegenContextDetailDto.inferKotlinClientTransports(): Set<CodegenMetadataTransportKind> =
+    kotlinClientTransports.decodeTransportKinds().ifEmpty { setOf(defaultMetadataTransport()) }
+
+private fun CodegenContextDetailDto.inferCExposeTransports(): Set<CodegenMetadataTransportKind> =
+    cExposeTransports.decodeTransportKinds().ifEmpty {
+        when {
+            hasLegacyExternalOutputs() -> CodegenMetadataTransportKind.entries.toSet()
+            else -> setOf(defaultMetadataTransport())
+        }
+    }
+
+private fun CodegenContextDetailDto.inferArtifactKinds(): Set<MetadataArtifactKind> =
+    artifactKinds.decodeArtifactKinds().ifEmpty {
+        buildSet {
+            add(MetadataArtifactKind.METADATA_SNAPSHOT)
+            if (hasLegacyExternalOutputs()) {
+                add(MetadataArtifactKind.C_SERVICE_CONTRACT)
+                add(MetadataArtifactKind.C_TRANSPORT_CONTRACT)
+                add(MetadataArtifactKind.MARKDOWN_PROTOCOL)
+            }
+        }
+    }
+
+private fun CodegenContextDetailDto.resolveFirmwareProjectDir(): String =
+    cOutputProjectDir.cleanNullable()
+        ?: externalCOutputRoot.cleanNullable()
+        ?: generationSettings.cOutputRoot.parentDirectoryString()
+        ?: generationSettings.markdownOutputRoot.parentDirectoryString()
+        ?: ""
+
+private fun CodegenContextDetailDto.hasLegacyExternalOutputs(): Boolean =
+    externalCOutputRoot.cleanNullable() != null ||
+        generationSettings.cOutputRoot.cleanNullable() != null ||
+        generationSettings.markdownOutputRoot.cleanNullable() != null ||
+        cOutputProjectDir.cleanNullable() != null
+
+private fun CodegenContextDetailDto.defaultMetadataTransport(): CodegenMetadataTransportKind =
+    when (protocolTemplateCode) {
+        "MODBUS_TCP_CLIENT" -> CodegenMetadataTransportKind.TCP
+        else -> CodegenMetadataTransportKind.RTU
+    }
+
+private fun String?.parentDirectoryString(): String? {
+    val candidate = this.cleanNullable() ?: return null
+    return runCatching { Path.of(candidate).parent?.toString() }.getOrNull()
+}
