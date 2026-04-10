@@ -220,7 +220,7 @@ private fun CupertinoFormGridScope.renderProtocolTransportField(
                             ),
                         )
                     },
-                    placeholder = field.placeholder,
+                    placeholder = field.placeholder.orEmpty(),
                 )
             }
         }

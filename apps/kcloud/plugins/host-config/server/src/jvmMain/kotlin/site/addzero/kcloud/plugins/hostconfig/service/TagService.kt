@@ -1,7 +1,6 @@
 package site.addzero.kcloud.plugins.hostconfig.service
 
 import java.math.BigDecimal
-import java.sql.Connection
 import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
@@ -395,11 +394,10 @@ class TagService(
         targetDeviceId: Long,
         sortIndex: Int,
     ) {
-        jdbc.withTransaction { connection ->
+        jdbc.withTransaction {
             if (currentDeviceId == targetDeviceId) {
                 val orderedIds = reorderIds(
                     queryIds(
-                        connection,
                         "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
                         currentDeviceId,
                     ),
@@ -407,51 +405,48 @@ class TagService(
                     sortIndex,
                 )
                 batchUpdateSort(
-                    connection,
                     "UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?",
                     orderedIds,
                 )
                 return@withTransaction
             }
 
-            jdbc.update(
-                connection,
+            jdbc.executeUpdate(
                 "UPDATE host_config_tag SET device_id = ?, updated_at = ? WHERE id = ?",
                 targetDeviceId,
                 now(),
                 tagId,
             )
             val oldIds = queryIds(
-                connection,
                 "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
                 currentDeviceId,
             )
             val newIds = reorderIds(
                 queryIds(
-                    connection,
                     "SELECT id FROM host_config_tag WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
                     targetDeviceId,
                 ),
                 tagId,
                 sortIndex,
             )
-            batchUpdateSort(connection, "UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
-            batchUpdateSort(connection, "UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
+            batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
+            batchUpdateSort("UPDATE host_config_tag SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
         }
     }
 
     private fun executeUpdate(
         sql: String,
         vararg args: Any?,
-    ): Int = jdbc.withTransaction { connection ->
-        jdbc.update(connection, sql, *args)
+    ): Int = jdbc.withTransaction { _ ->
+        jdbc.executeUpdate(sql, *args)
     }
 
     private fun queryIds(
-        connection: Connection,
         sql: String,
         vararg args: Any?,
-    ): MutableList<Long> = jdbc.queryIds(connection, sql, *args).toMutableList()
+    ): MutableList<Long> = jdbc.withTransaction { _ ->
+        jdbc.queryIds(sql, *args).toMutableList()
+    }
 
     /**
      * 按目标位置重排 ID 列表。
@@ -477,18 +472,18 @@ class TagService(
      * @param orderedIds 排序后的 ID 列表。
      */
     private fun batchUpdateSort(
-        connection: Connection,
         sql: String,
         orderedIds: List<Long>,
     ) {
         val updatedAt = now()
-        jdbc.batchUpdate(
-            connection,
-            sql,
-            orderedIds.mapIndexed { index, id ->
-                listOf(index, updatedAt, id)
-            },
-        )
+        jdbc.withTransaction {
+            jdbc.batchUpdate(
+                sql,
+                orderedIds.mapIndexed { index, id ->
+                    listOf(index, updatedAt, id)
+                },
+            )
+        }
     }
 
     /**

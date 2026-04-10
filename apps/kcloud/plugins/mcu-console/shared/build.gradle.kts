@@ -1,3 +1,7 @@
+@file:OptIn(ExperimentalKotlinGradlePluginApi::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-core")
     id("site.addzero.buildlogic.kmp.kmp-json")
@@ -19,14 +23,14 @@ val generateMcuConsoleContractsEnabled =
         .get()
 
 kotlin {
+    dependencies {
+        implementation(libs.findLibrary("modbus-runtime").get())
+    }
     sourceSets {
         commonMain {
-            kotlin.srcDir(generatedKspSourceDir)
-            kotlin.srcDir(generatedContractSourceDir)
             dependencies {
-                implementation(libs.findLibrary("modbus-runtime").get())
-//                implementation(libs.findLibrary("modbus-runtime").get())
-//                implementation(libs.findLibrary("modbus-runtime").get())
+                kotlin.srcDir(generatedKspSourceDir)
+                kotlin.srcDir(generatedContractSourceDir)
             }
         }
     }

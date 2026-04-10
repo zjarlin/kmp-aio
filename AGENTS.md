@@ -15,6 +15,12 @@
 - 发版目标默认是中央仓库发布链路，优先复用 `addzero-lib-jvm` 里现有的 `publish-buddy`、`publishToMavenCentral`、README 和模块布局，不要在 `kmp-aio` 里单独再造一套发布体系。
 - 在迁移任何 `lib/` 模块之前，先确认它已经去掉 app 专属依赖、仓库内部循环依赖和临时兼容层；不能发布的模块先解耦，再迁移，再发布。
 
+## Addzero-lib Root Build Guard
+
+- 严禁改动 `/Users/zjarlin/IdeaProjects/addzero-lib-jvm/settings.gradle.kts`。
+- 严禁改动 `/Users/zjarlin/IdeaProjects/addzero-lib-jvm/build.gradle.kts`。
+- 如果任务看起来需要改这两个根构建文件，必须先停下并说明原因，优先寻找模块级、build-logic、复合构建或其他替代方案；未经用户明确重新授权，不得自行修改。
+
 ## Naming And Navigation Rules
 
 - 在 `apps/kcloud` 及后续可抽库代码中，命名默认技术优先、能力优先，不要再给可复用壳层、主题、脚手架、路由、设计组件起 `KCloud*` 这类业务前缀名。

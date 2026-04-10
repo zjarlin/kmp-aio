@@ -566,95 +566,59 @@ class CodegenContextServiceTest {
 
     @Test
     /**
-     * 处理should保存andgeneratecontractsandreturn生成file摘要。
+     * 处理should通过兼容wrapper返回结构化导出文件摘要。
      */
-    fun shouldSaveAndGenerateContractsAndReturnGeneratedFileSummary() {
+    fun shouldGenerateContractsCompatibilityWrapperAndReturnExportedFileSummary() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
-            val workspaceRoot = createGeneratorWorkspace()
-            val apiClientRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/api/build/generated/source/controller2api/commonMain/kotlin")
-            val springRouteRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/source/spring2ktor/jvmMain/kotlin")
-            val cRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata/c")
-            val markdownRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata/markdown")
-            val saved =
-                fixture.service.saveContext(
-                    genericContextRequest(
-                        protocolTemplateId = template.id,
-                        availableDefinitions = fixture.service.listContextDefinitions(template.id),
-                        code = "CTX_GENERATE",
-                    ).copy(
-                        generationSettings =
-                            CodegenGenerationSettingsDto(
-                                serverOutputRoot =
-                                    workspaceRoot.resolve(
-                                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin",
-                                    ).toString(),
-                                sharedOutputRoot =
-                                    workspaceRoot.resolve(
-                                        "apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin",
-                                    ).toString(),
-                                gatewayOutputRoot =
-                                    workspaceRoot.resolve(
-                                        "apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin",
-                                    ).toString(),
-                                apiClientOutputRoot = apiClientRoot.toString(),
-                                apiClientPackageName = "site.addzero.kcloud.plugins.mcuconsole.api.external.generated",
-                                springRouteOutputRoot = springRouteRoot.toString(),
-                                cOutputRoot = cRoot.toString(),
-                                markdownOutputRoot = markdownRoot.toString(),
-                            ),
-                    ),
-                )
-            val manualContractFile =
-                workspaceRoot.resolve(
-                    "apps/kcloud/plugins/mcu-console/server/src/jvmMain/kotlin/" +
-                        "site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt",
-                )
-            manualContractFile.writeText("manual sentinel")
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val firmwareProjectDir = createGeneratorWorkspace()
 
             try {
-                val response =
-                    withRepoRoot(workspaceRoot) {
-                        fixture.service.generateContracts(saved.id!!)
-                    }
+                val saved =
+                    fixture.service.saveContextDraft(
+                        genericContextRequest(
+                            protocolTemplateId = template.id,
+                            availableDefinitions = definitions,
+                            code = "CTX_GENERATE",
+                        ).copy(
+                            protocolTemplateCode = template.code,
+                            protocolTemplateName = template.name,
+                        ).toMetadataDraft(definitions).copy(
+                            exportSettings =
+                                site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto(
+                                    artifactKinds =
+                                        setOf(
+                                            site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind.METADATA_SNAPSHOT,
+                                            site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind.C_SERVICE_CONTRACT,
+                                            site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind.C_TRANSPORT_CONTRACT,
+                                            site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind.MARKDOWN_PROTOCOL,
+                                        ),
+                                    kotlinClientTransports =
+                                        setOf(
+                                            site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind.RTU,
+                                        ),
+                                    cExposeTransports =
+                                        setOf(
+                                            site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind.TCP,
+                                        ),
+                                    firmwareSync =
+                                        site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto(
+                                            cOutputProjectDir = firmwareProjectDir.toString(),
+                                            bridgeImplPath = "Core/Src/modbus",
+                                        ),
+                                ),
+                        ),
+                    )
+                val response = fixture.service.generateContracts(saved.id!!)
 
                 assertEquals(saved.id, response.contextId)
-                assertTrue(response.generatedFiles.size >= 8)
-                assertContains(response.message, "Generated")
-                assertTrue(response.generatedFiles.all { file -> file.startsWith(workspaceRoot.toString()) })
+                assertContains(response.message, "metadata snapshot")
+                assertTrue(response.generatedFiles.isNotEmpty())
                 assertTrue(response.generatedFiles.all { file -> Path.of(file).exists() })
-                assertTrue(
-                    response.generatedFiles.any { file ->
-                        file.endsWith("/site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceApi.kt")
-                    },
-                )
-                assertTrue(
-                    response.generatedFiles.any { file ->
-                        file.endsWith("/site/addzero/kcloud/plugins/mcuconsole/modbus/device/DeviceWriteApi.kt")
-                    },
-                )
-                assertTrue(
-                    response.generatedFiles.any { file ->
-                        file.endsWith("/site/addzero/kcloud/plugins/mcuconsole/modbus/device/BoardSnapshotRegisters.kt")
-                    },
-                )
-                assertTrue(
-                    response.generatedFiles.any { file ->
-                        file.endsWith("/GeneratedModbusRtuSpringRoutesSource.kt")
-                    },
-                )
-                assertTrue(
-                    response.generatedFiles.any { file ->
-                        file.endsWith("/GeneratedModbusRtuKtorfitClient.kt")
-                    },
-                )
-                assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/rtu/modbus_rtu_dispatch.c") })
                 assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/tcp/modbus_tcp_dispatch.c") })
-                assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/mqtt/modbus_mqtt_dispatch.c") })
-                assertTrue(response.generatedFiles.any { file -> file.endsWith(".rtu.protocol.md") })
                 assertTrue(response.generatedFiles.any { file -> file.endsWith(".tcp.protocol.md") })
-                assertTrue(response.generatedFiles.any { file -> file.endsWith(".mqtt.protocol.md") })
-                assertEquals("manual sentinel", manualContractFile.readText())
+                assertTrue(response.generatedFiles.none { file -> file.endsWith(".kt") })
                 fixture.dataSource.connection.use { connection ->
                     connection.prepareStatement(
                         """
@@ -674,16 +638,16 @@ class CodegenContextServiceTest {
                     }
                 }
             } finally {
-                deleteWorkspace(workspaceRoot)
+                deleteWorkspace(firmwareProjectDir)
             }
         }
     }
 
     @Test
     /**
-     * 处理shouldgenerate外部CandMarkdown产物whenconfigured。
+     * 处理should兼容旧externalC输出配置并迁移为C与Markdown导出。
      */
-    fun shouldGenerateExternalCAndMarkdownArtifactsWhenConfigured() {
+    fun shouldGenerateExternalCAndMarkdownArtifactsWhenLegacyExternalOutputConfigured() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val workspaceRoot = createGeneratorWorkspace()
@@ -716,7 +680,8 @@ class CodegenContextServiceTest {
                 assertTrue(response.generatedFiles.contains(tcpDispatch.toString()))
                 assertTrue(response.generatedFiles.contains(mqttDispatch.toString()))
                 assertTrue(response.generatedFiles.any { file -> file.startsWith(externalOutputRoot.toString()) })
-                assertContains(response.message, "Generated")
+                assertContains(response.message, "外部产物")
+                assertTrue(response.generatedFiles.none { file -> file.endsWith(".kt") })
                 assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".rtu.protocol.md") })
                 assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".tcp.protocol.md") })
                 assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".mqtt.protocol.md") })

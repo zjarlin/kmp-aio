@@ -11,7 +11,6 @@ import site.addzero.util.str.toGeneratedMethodName
 import site.addzero.util.str.toGeneratedPropertyName
 import site.addzero.util.str.toGeneratedTypeName
 
-private const val MODBUS_FIELD_DEFINITION_CODE = "MODBUS_FIELD"
 private const val FIELD_TRANSPORT_TYPE_PARAM = "transportType"
 
 internal fun CodegenContextDetailDto.normalizeGenericDetail(): CodegenContextDetailDto {

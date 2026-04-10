@@ -79,6 +79,19 @@ class CodegenContextService(
     }
 
     /**
+     * 获取元数据草稿。
+     *
+     * @param contextId 上下文 ID。
+     */
+    fun getContextDraft(
+        contextId: Long,
+    ): CodegenMetadataDraftDto {
+        val detail = getContext(contextId)
+        val availableDefinitions = loadContextDefinitions(detail.protocolTemplateId)
+        return detail.toMetadataDraft(availableDefinitions)
+    }
+
+    /**
      * 列出上下文定义。
      *
      * @param protocolTemplateId 协议模板 ID。
@@ -88,6 +101,24 @@ class CodegenContextService(
     ): List<CodegenContextDefinitionDto> {
         ensureSupportedTemplate(loadProtocolTemplate(protocolTemplateId))
         return loadContextDefinitions(protocolTemplateId)
+    }
+
+    /**
+     * 预检元数据草稿。
+     *
+     * @param request 草稿请求。
+     */
+    fun previewContextDraft(
+        request: CodegenMetadataDraftDto,
+    ): CodegenMetadataPreviewDto {
+        val availableDefinitions =
+            if (request.protocolTemplateId > 0L) {
+                ensureSupportedTemplate(loadProtocolTemplate(request.protocolTemplateId))
+                loadContextDefinitions(request.protocolTemplateId)
+            } else {
+                emptyList()
+            }
+        return request.toMetadataPreview(availableDefinitions)
     }
 
     /**
@@ -326,6 +357,24 @@ class CodegenContextService(
     }
 
     /**
+     * 保存元数据草稿。
+     *
+     * @param request 草稿请求。
+     */
+    fun saveContextDraft(
+        request: CodegenMetadataDraftDto,
+    ): CodegenMetadataDraftDto {
+        if (request.protocolTemplateId <= 0L) {
+            request.validateDraftOrThrow(emptyList())
+        }
+        ensureSupportedTemplate(loadProtocolTemplate(request.protocolTemplateId))
+        val availableDefinitions = loadContextDefinitions(request.protocolTemplateId)
+        request.validateDraftOrThrow(availableDefinitions)
+        val saved = saveContext(request.toGenericContextDetail(availableDefinitions))
+        return saved.toMetadataDraft(loadContextDefinitions(saved.protocolTemplateId))
+    }
+
+    /**
      * 删除上下文。
      *
      * @param contextId 上下文 ID。
@@ -347,7 +396,30 @@ class CodegenContextService(
     fun generateContracts(
         contextId: Long,
     ): GenerateContractsResponseDto {
-        return contractGenerator.generate(getContext(contextId))
+        val result = exportContext(contextId)
+        return GenerateContractsResponseDto(
+            contextId = result.contextId,
+            generatedFiles =
+                result.generatedArtifacts.map(CodegenGeneratedArtifactDto::path) +
+                    result.projectSyncResults.mapNotNull(CodegenProjectSyncResultDto::filePath),
+            message = result.message,
+        )
+    }
+
+    /**
+     * 导出元数据上下文。
+     *
+     * @param contextId 上下文 ID。
+     */
+    fun exportContext(
+        contextId: Long,
+    ): CodegenMetadataExportResultDto {
+        val detail = getContext(contextId)
+        val availableDefinitions = loadContextDefinitions(detail.protocolTemplateId)
+        val draft = detail.toMetadataDraft(availableDefinitions)
+        draft.validateDraftOrThrow(availableDefinitions)
+        val normalized = draft.toGenericContextDetail(availableDefinitions).normalizeGenericDetail()
+        return contractGenerator.export(normalized, draft.exportSettings)
     }
 
     /**

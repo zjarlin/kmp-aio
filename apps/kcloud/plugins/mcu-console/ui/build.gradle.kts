@@ -18,7 +18,7 @@ val routeOwnerModuleDir =
         .resolve("addzero/route-owner/${rootProject.name}/apps-kcloud-ui/commonMain/kotlin")
         .absolutePath
 dependencies{
-    kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
 }
 
 ksp {

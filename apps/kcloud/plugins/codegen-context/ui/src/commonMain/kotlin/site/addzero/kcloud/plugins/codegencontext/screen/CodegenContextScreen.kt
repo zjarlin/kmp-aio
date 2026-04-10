@@ -14,10 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DataObject
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -50,18 +46,17 @@ import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewMode
 fun CodegenContextScreen() {
     val viewModel = koinViewModel<CodegenContextViewModel>()
     val state = viewModel.screenState
-    val selectedProtocolTemplate = state.protocolTemplates.firstOrNull { it.id == state.editor.protocolTemplateId }
-    var selectedTab by remember { mutableStateOf(CodegenWorkbenchTab.THING_MODEL) }
+    val selectedProtocolTemplate = state.protocolTemplates.firstOrNull { item -> item.id == state.draft.protocolTemplateId }
 
     Row(modifier = Modifier.fillMaxSize()) {
         WorkbenchTreeSidebar(
             items = state.contexts,
             selectedId = state.selectedContextId,
             onNodeClick = { viewModel.selectContext(it.id) },
-            modifier = Modifier.fillMaxHeight().weight(0.28f),
-            searchPlaceholder = "搜索元数据上下文",
+            modifier = Modifier.fillMaxHeight().weight(0.26f),
+            searchPlaceholder = "搜索元数据草稿",
             getId = { it.id },
-            getLabel = { it.name },
+            getLabel = { it.name.ifBlank { it.code } },
             getChildren = { emptyList() },
             getIcon = { Icons.Outlined.DataObject },
             header = {
@@ -82,49 +77,60 @@ fun CodegenContextScreen() {
         )
 
         Column(
-            modifier = Modifier
-                .weight(0.72f)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+            modifier =
+                Modifier
+                    .weight(0.74f)
+                    .padding(16.dp)
+                    .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             state.errorMessage?.let { CupertinoStatusStrip(text = it, tone = Color(0xFFFFE8E6)) }
-            state.statusMessage?.let { CupertinoStatusStrip(it) }
-            if (state.generatedFiles.isNotEmpty()) {
-                GeneratedFilesPanel(state.generatedFiles)
-            }
-            ContextSummaryPanel(
-                state = state.editor,
-                selectedProtocolTemplate = selectedProtocolTemplate,
+            state.statusMessage?.let { CupertinoStatusStrip(text = it) }
+            ContextDraftPanel(
+                draft = state.draft,
                 protocolTemplates = state.protocolTemplates,
-                viewModel = viewModel,
+                selectedProtocolTemplateDescription = selectedProtocolTemplate?.description,
                 saving = state.saving,
-                generating = state.generating,
+                previewing = state.previewing,
+                exporting = state.exporting,
+                onSelectProtocolTemplate = viewModel::selectProtocolTemplate,
+                onUpdateCode = { value -> viewModel.updateDraft { it.copy(code = value) } },
+                onUpdateName = { value -> viewModel.updateDraft { it.copy(name = value) } },
+                onUpdateDescription = { value -> viewModel.updateDraft { it.copy(description = value) } },
+                onUpdateEnabled = { value -> viewModel.updateDraft { it.copy(enabled = value) } },
+                onSave = viewModel::save,
+                onPreview = viewModel::preview,
+                onExport = viewModel::exportSelected,
             )
-            MetadataOverviewStrip(
-                editor = state.editor,
-                selectedProtocolTemplate = selectedProtocolTemplate,
+            DeviceFunctionsPanel(
+                draft = state.draft,
+                definitions = state.availableContextDefinitions,
+                onAddFunction = viewModel::addDeviceFunction,
+                onRemoveFunction = viewModel::removeDeviceFunction,
+                onUpdateFunction = viewModel::updateDeviceFunction,
+                onToggleFunctionProperty = viewModel::toggleFunctionPropertySelection,
+                onUpdateBinding = viewModel::updateDeviceFunctionBindingValue,
             )
-            WorkbenchTabSwitcher(
-                selectedTab = selectedTab,
-                editor = state.editor,
-                onSelected = { selectedTab = it },
+            ThingPropertiesPanel(
+                draft = state.draft,
+                definitions = state.availableContextDefinitions,
+                onAddProperty = viewModel::addThingProperty,
+                onRemoveProperty = viewModel::removeThingProperty,
+                onUpdateProperty = viewModel::updateThingProperty,
+                onUpdateBinding = viewModel::updateThingPropertyBindingValue,
             )
-            when (selectedTab) {
-                CodegenWorkbenchTab.THING_MODEL -> PropertyPoolPanel(editor = state.editor, viewModel = viewModel)
-                CodegenWorkbenchTab.DEVICE_FUNCTION -> MethodWorkbenchPanel(editor = state.editor, viewModel = viewModel)
-                CodegenWorkbenchTab.CONTEXT -> {
-                    ContextDefinitionsPanel(
-                        definitions = state.editor.availableContextDefinitions,
-                        selectedProtocolTemplate = selectedProtocolTemplate,
-                    )
-                    GenerationSettingsPanel(
-                        state = state.editor.generationSettings,
-                        selectedProtocolTemplate = selectedProtocolTemplate,
-                        viewModel = viewModel,
-                    )
-                }
-            }
+            ExportWorkbenchPanel(
+                draft = state.draft,
+                preview = state.preview,
+                exportResult = state.exportResult,
+                onToggleKotlinTransport = viewModel::toggleKotlinClientTransport,
+                onToggleCTransport = viewModel::toggleCExposeTransport,
+                onToggleArtifactKind = viewModel::toggleArtifactKind,
+                onUpdateFirmwareSync = viewModel::updateFirmwareSync,
+                onUpdateRtuDefaults = viewModel::updateRtuDefaults,
+                onUpdateTcpDefaults = viewModel::updateTcpDefaults,
+                onUpdateMqttDefaults = viewModel::updateMqttDefaults,
+            )
         }
     }
 }

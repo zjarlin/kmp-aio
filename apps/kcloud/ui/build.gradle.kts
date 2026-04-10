@@ -23,9 +23,9 @@ val routeOwnerModuleDir =
 val routeGeneratedPackageDir = routeGeneratedSourceDir.get().asFile.resolve("site/addzero/generated")
 val routeLegacyGeneratedDir = file(routeOwnerModuleDir).resolve("site/addzero/generated")
 val routeContributorTaskPaths = listOf(
-    ":apps:kcloud:plugins:codegen-context:ui:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:host-config:ui:kspCommonMainKotlinMetadata",
-    ":apps:kcloud:plugins:mcu-console:ui:kspCommonMainKotlinMetadata",
+    ":apps:kcloud:plugins:codegen-context:ui:kspKotlinJvm",
+    ":apps:kcloud:plugins:host-config:ui:kspKotlinJvm",
+    ":apps:kcloud:plugins:mcu-console:ui:kspKotlinJvm",
 )
 
 ksp {
@@ -36,7 +36,7 @@ ksp {
 }
 
 dependencies {
-    kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
 }
 
 kotlin {
@@ -79,19 +79,10 @@ compose.desktop {
     }
 }
 
-tasks.matching { task ->
-    task.name in setOf(
-        "kspCommonMainKotlinMetadata",
-        "compileCommonMainKotlinMetadata",
-        "compileKotlinJvm",
-    )
-}.configureEach {
-    routeContributorTaskPaths.forEach(::dependsOn)
-}
-
 val syncRouteGeneratedSources =
     tasks.register<Copy>("syncRouteGeneratedSources") {
-        dependsOn("kspCommonMainKotlinMetadata")
+        dependsOn("kspKotlinJvm")
+        routeContributorTaskPaths.forEach(::dependsOn)
         from(routeLegacyGeneratedDir) {
             include("RouteKeys.kt")
             include("RouteTable.kt")
@@ -101,7 +92,6 @@ val syncRouteGeneratedSources =
 
 tasks.matching { task ->
     task.name in setOf(
-        "kspKotlinJvm",
         "compileCommonMainKotlinMetadata",
         "compileKotlinJvm",
     )

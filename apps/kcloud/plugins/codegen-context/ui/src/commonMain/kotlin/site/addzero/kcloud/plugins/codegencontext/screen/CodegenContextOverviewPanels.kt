@@ -1,17 +1,12 @@
 package site.addzero.kcloud.plugins.codegencontext.screen
 
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import io.github.robinpcrd.cupertino.CupertinoSegmentedControl
-import io.github.robinpcrd.cupertino.CupertinoSegmentedControlTab
-import io.github.robinpcrd.cupertino.CupertinoText
 import site.addzero.cupertino.workbench.button.WorkbenchActionButton
 import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
@@ -22,63 +17,54 @@ import site.addzero.cupertino.workbench.components.form.CupertinoFormGrid
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefinitionDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportResultDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqttDefaultsDraftDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataRtuDefaultsDraftDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataTcpDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.ProtocolTemplateOptionDto
-import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextEditorState
-import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
-import site.addzero.kcloud.plugins.codegencontext.context.CodegenGenerationSettingsEditorState
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataIssueSeverity
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
 
 @Composable
-/**
- * 处理生成文件列表panel。
- *
- * @param generatedFiles 生成文件列表。
- */
-internal fun GeneratedFilesPanel(
-    generatedFiles: List<String>,
-) {
-    CupertinoPanel(
-        title = "生成结果",
-        subtitle = "这次生成实际落盘的文件列表，方便直接核对 Kotlin/C/文档产物。",
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            generatedFiles.forEach { file -> CupertinoStatusStrip(file) }
-        }
-    }
-}
-
-@Composable
-/**
- * 处理上下文摘要panel。
- *
- * @param state 状态。
- * @param selectedProtocolTemplate 选中协议模板。
- * @param protocolTemplates 协议模板。
- * @param viewModel 视图模型。
- * @param saving saving。
- * @param generating generating。
- */
-internal fun ContextSummaryPanel(
-    state: CodegenContextEditorState,
-    selectedProtocolTemplate: ProtocolTemplateOptionDto?,
+internal fun ContextDraftPanel(
+    draft: CodegenMetadataDraftDto,
     protocolTemplates: List<ProtocolTemplateOptionDto>,
-    viewModel: CodegenContextViewModel,
+    selectedProtocolTemplateDescription: String?,
     saving: Boolean,
-    generating: Boolean,
+    previewing: Boolean,
+    exporting: Boolean,
+    onSelectProtocolTemplate: (Long?) -> Unit,
+    onUpdateCode: (String) -> Unit,
+    onUpdateName: (String) -> Unit,
+    onUpdateDescription: (String) -> Unit,
+    onUpdateEnabled: (Boolean) -> Unit,
+    onSave: () -> Unit,
+    onPreview: () -> Unit,
+    onExport: () -> Unit,
 ) {
     CupertinoPanel(
-        title = state.name.ifBlank { "未命名设备元数据上下文" },
-        subtitle = "这里维护设备功能、物模型和协议上下文，再由后台生成 Kotlin、C 和协议文档产物。",
+        title = "基础信息",
+        subtitle = "页面只维护元数据草稿；方法名、属性名、类型推导与导出可行性全部交给后端预检。",
         actions = {
             WorkbenchActionButton(
                 text = if (saving) "保存中" else "保存",
-                onClick = viewModel::save,
-                enabled = !saving,
+                onClick = onSave,
+                enabled = !saving && !previewing && !exporting,
             )
             WorkbenchActionButton(
-                text = if (generating) "生成中" else "生成",
-                onClick = viewModel::generateSelected,
-                enabled = state.protocolTemplateId != null && !saving && !generating,
+                text = if (previewing) "预检中" else "预检",
+                onClick = onPreview,
+                enabled = !saving && !previewing && !exporting,
+                variant = WorkbenchButtonVariant.Outline,
+            )
+            WorkbenchActionButton(
+                text = if (exporting) "导出中" else "导出",
+                onClick = onExport,
+                enabled = !saving && !previewing && !exporting,
                 variant = WorkbenchButtonVariant.Secondary,
             )
         },
@@ -87,329 +73,395 @@ internal fun ContextSummaryPanel(
             item {
                 CupertinoTextField(
                     label = "上下文编码",
-                    value = state.code,
-                    onValueChange = { value -> viewModel.updateContext { it.copy(code = value) } },
+                    value = draft.code,
+                    onValueChange = onUpdateCode,
                     placeholder = "例如 MCU_DEVICE_DEFAULT",
-                    description = "稳定标识一组可生成上下文，建议全局唯一。",
+                    description = "稳定编码，供 metadata snapshot 和导出结果引用。",
                 )
             }
             item {
                 CupertinoTextField(
                     label = "上下文名称",
-                    value = state.name,
-                    onValueChange = { value -> viewModel.updateContext { it.copy(name = value) } },
-                    placeholder = "例如 控制器 Flash 配置",
-                    description = "用于标识当前设备协议场景，也会进入生成日志。",
+                    value = draft.name,
+                    onValueChange = onUpdateName,
+                    placeholder = "例如 控制器寄存器协议",
+                    description = "人可读标题。",
                 )
             }
             item {
                 CupertinoSelectionField(
                     label = "协议模板",
-                    options = protocolTemplates.map { CupertinoOption(it.id, it.name, it.code) },
-                    selectedValue = state.protocolTemplateId,
-                    onSelected = viewModel::selectProtocolTemplate,
+                    options = protocolTemplates.map { option -> CupertinoOption(option.id, option.name, option.code) },
+                    selectedValue = draft.protocolTemplateId.takeIf { id -> id > 0L },
+                    onSelected = onSelectProtocolTemplate,
                     allowClear = true,
-                    description = selectedProtocolTemplate?.description ?: "协议模板决定当前可编辑的上下文定义。",
+                    description = selectedProtocolTemplateDescription ?: "协议模板决定可编辑的 definition 集合。",
                 )
             }
             item {
                 CupertinoBooleanField(
                     label = "启用",
-                    checked = state.enabled,
-                    onCheckedChange = { checked -> viewModel.updateContext { it.copy(enabled = checked) } },
-                    description = "禁用后元数据仍保留，但默认不参与当前生成快照。",
+                    checked = draft.enabled,
+                    onCheckedChange = onUpdateEnabled,
+                    description = "停用后不会作为默认 selected snapshot 使用。",
                 )
             }
             fullWidth {
                 CupertinoTextField(
                     label = "上下文说明",
-                    value = state.description,
-                    onValueChange = { value -> viewModel.updateContext { it.copy(description = value) } },
+                    value = draft.description.orEmpty(),
+                    onValueChange = onUpdateDescription,
                     singleLine = false,
-                    description = "建议写清设备型号、适用协议、功能边界和生成目标。",
-                )
-            }
-            fullWidth {
-                CupertinoTextField(
-                    label = "外部 C 工程根目录",
-                    value = state.externalCOutputRoot,
-                    onValueChange = { value -> viewModel.updateContext { it.copy(externalCOutputRoot = value) } },
-                    placeholder = "/abs/path/to/peer-project",
-                    description = "点“生成”后，可把 C 侧与协议文档产物直接投递到外部工程目录。",
                 )
             }
         }
-        CupertinoStatusStrip("功能实体约定：每个设备功能都按 <MethodName>Request / <MethodName>Response 生成请求与响应模型。")
-        CupertinoStatusStrip("当前物模型字段 ${state.properties.size} 个，设备功能 ${state.methods.size} 个，字段与功能通过穿梭框复用。")
-        selectedProtocolTemplate?.protocolContextHint()?.let { CupertinoStatusStrip(it) }
-        state.externalCOutputRoot.takeIf { it.isNotBlank() }?.let { CupertinoStatusStrip(it.externalOutputHint()) }
+        CupertinoStatusStrip("Kotlin 调用侧只输出 metadata snapshot，Kotlin 源码仍由 addzero-lib-jvm 的 KSP database provider 消费。")
+        CupertinoStatusStrip("C 暴露侧直接导出 C contract、dispatch、Markdown 和工程同步；compose 端不做命名、类型或请求/响应模型拼装。")
     }
 }
 
 @Composable
-internal fun MetadataOverviewStrip(
-    editor: CodegenContextEditorState,
-    selectedProtocolTemplate: ProtocolTemplateOptionDto?,
-) {
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        if (maxWidth >= 1180.dp) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                MetadataMetricPanel(
-                    title = "设备摘要",
-                    subtitle = "当前元数据上下文的协议和输出范围。",
-                    modifier = Modifier.weight(1f),
-                ) {
-                    CupertinoKeyValueRow("协议模板", selectedProtocolTemplate?.name ?: "未选择")
-                    CupertinoKeyValueRow("消费目标", editor.consumerTarget.name)
-                    CupertinoKeyValueRow("启用状态", if (editor.enabled) "启用" else "停用")
-                    CupertinoKeyValueRow("外部 C 工程", editor.externalCOutputRoot.ifBlank { "-" })
-                }
-                MetadataMetricPanel(
-                    title = "物模型",
-                    subtitle = "寄存器、线圈、状态位等字段统一收敛到物模型池。",
-                    modifier = Modifier.weight(1f),
-                ) {
-                    CupertinoKeyValueRow("字段总数", editor.properties.size.toString())
-                    CupertinoKeyValueRow("已配置上下文", editor.configuredPropertyCount().toString())
-                    CupertinoKeyValueRow("已被功能引用", editor.propertyInUseCount().toString())
-                    CupertinoStatusStrip("一个字段可被多个设备功能复用，避免重复录入。")
-                }
-                MetadataMetricPanel(
-                    title = "设备功能",
-                    subtitle = "功能像定义接口一样维护，再绑定物模型字段和协议上下文。",
-                    modifier = Modifier.weight(1f),
-                ) {
-                    CupertinoKeyValueRow("功能总数", editor.methods.size.toString())
-                    CupertinoKeyValueRow("读取功能", editor.readMethodCount().toString())
-                    CupertinoKeyValueRow("写入功能", editor.writeMethodCount().toString())
-                    CupertinoStatusStrip("功能说明支持剪贴板批量导入，保存后自动补齐命名。")
-                }
-            }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                MetadataMetricPanel(
-                    title = "设备摘要",
-                    subtitle = "当前元数据上下文的协议和输出范围。",
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    CupertinoKeyValueRow("协议模板", selectedProtocolTemplate?.name ?: "未选择")
-                    CupertinoKeyValueRow("消费目标", editor.consumerTarget.name)
-                    CupertinoKeyValueRow("启用状态", if (editor.enabled) "启用" else "停用")
-                    CupertinoKeyValueRow("外部 C 工程", editor.externalCOutputRoot.ifBlank { "-" })
-                }
-                MetadataMetricPanel(
-                    title = "物模型",
-                    subtitle = "寄存器、线圈、状态位等字段统一收敛到物模型池。",
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    CupertinoKeyValueRow("字段总数", editor.properties.size.toString())
-                    CupertinoKeyValueRow("已配置上下文", editor.configuredPropertyCount().toString())
-                    CupertinoKeyValueRow("已被功能引用", editor.propertyInUseCount().toString())
-                    CupertinoStatusStrip("一个字段可被多个设备功能复用，避免重复录入。")
-                }
-                MetadataMetricPanel(
-                    title = "设备功能",
-                    subtitle = "功能像定义接口一样维护，再绑定物模型字段和协议上下文。",
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    CupertinoKeyValueRow("功能总数", editor.methods.size.toString())
-                    CupertinoKeyValueRow("读取功能", editor.readMethodCount().toString())
-                    CupertinoKeyValueRow("写入功能", editor.writeMethodCount().toString())
-                    CupertinoStatusStrip("功能说明支持剪贴板批量导入，保存后自动补齐命名。")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun WorkbenchTabSwitcher(
-    selectedTab: CodegenWorkbenchTab,
-    editor: CodegenContextEditorState,
-    onSelected: (CodegenWorkbenchTab) -> Unit,
+internal fun ExportWorkbenchPanel(
+    draft: CodegenMetadataDraftDto,
+    preview: CodegenMetadataPreviewDto?,
+    exportResult: CodegenMetadataExportResultDto?,
+    onToggleKotlinTransport: (CodegenMetadataTransportKind) -> Unit,
+    onToggleCTransport: (CodegenMetadataTransportKind) -> Unit,
+    onToggleArtifactKind: (CodegenMetadataArtifactKind) -> Unit,
+    onUpdateFirmwareSync: (transform: (CodegenMetadataFirmwareSyncDto) -> CodegenMetadataFirmwareSyncDto) -> Unit,
+    onUpdateRtuDefaults: (transform: (CodegenMetadataRtuDefaultsDraftDto) -> CodegenMetadataRtuDefaultsDraftDto) -> Unit,
+    onUpdateTcpDefaults: (transform: (CodegenMetadataTcpDefaultsDraftDto) -> CodegenMetadataTcpDefaultsDraftDto) -> Unit,
+    onUpdateMqttDefaults: (transform: (CodegenMetadataMqttDefaultsDraftDto) -> CodegenMetadataMqttDefaultsDraftDto) -> Unit,
 ) {
     CupertinoPanel(
-        title = "编辑工作台",
-        subtitle = "按设备管理习惯分成物模型、设备功能、上下文与生成配置三个区域。",
+        title = "导出与预检",
+        subtitle = "导出目标、两组 transport 和默认参数都是原始输入；必填项、解析结果和导出计划来自后端 preview。",
     ) {
-        CupertinoSegmentedControl(
-            selectedTabIndex = CodegenWorkbenchTab.entries.indexOf(selectedTab),
-            modifier = Modifier.padding(vertical = 4.dp),
-        ) {
-            CodegenWorkbenchTab.entries.forEach { tab ->
-                CupertinoSegmentedControlTab(
-                    onClick = { onSelected(tab) },
-                    isSelected = tab == selectedTab,
-                ) {
-                    CupertinoText(
-                        when (tab) {
-                            CodegenWorkbenchTab.THING_MODEL -> "${tab.title} ${editor.properties.size}"
-                            CodegenWorkbenchTab.DEVICE_FUNCTION -> "${tab.title} ${editor.methods.size}"
-                            CodegenWorkbenchTab.CONTEXT -> "${tab.title} ${editor.availableContextDefinitions.size}"
-                        },
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            TransportSelectionPanel(
+                title = "Kotlin 调用侧",
+                subtitle = "这里只声明后续 KSP database provider 要消费哪些 transport 的 metadata snapshot。",
+                selectedTransports = draft.exportSettings.kotlinClientTransports,
+                onToggle = onToggleKotlinTransport,
+            )
+            CupertinoStatusStrip("KSP 侧推荐查询：select payload from codegen_context_modbus_contract where selected = 1 and transport = '${'$'}{transport}'。")
+            CupertinoPanel(
+                title = "C 暴露侧",
+                subtitle = "当前页面只负责固件侧合同、dispatch、协议文档和工程同步。",
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    TransportSelectionPanel(
+                        title = "暴露 transport",
+                        subtitle = "选择本次要输出到固件工程的 transport。",
+                        selectedTransports = draft.exportSettings.cExposeTransports,
+                        onToggle = onToggleCTransport,
+                    )
+                    ArtifactSelectionPanel(
+                        selectedArtifactKinds = draft.exportSettings.artifactKinds,
+                        onToggle = onToggleArtifactKind,
+                    )
+                    FirmwareSyncPanel(
+                        firmwareSync = draft.exportSettings.firmwareSync,
+                        onUpdate = onUpdateFirmwareSync,
                     )
                 }
             }
+            TransportDefaultsPanel(
+                rtuDefaults = draft.exportSettings.rtuDefaults,
+                tcpDefaults = draft.exportSettings.tcpDefaults,
+                mqttDefaults = draft.exportSettings.mqttDefaults,
+                onUpdateRtuDefaults = onUpdateRtuDefaults,
+                onUpdateTcpDefaults = onUpdateTcpDefaults,
+                onUpdateMqttDefaults = onUpdateMqttDefaults,
+            )
+            PreviewPanel(preview)
+            ExportResultPanel(exportResult)
         }
-        CupertinoStatusStrip(
-            when (selectedTab) {
-                CodegenWorkbenchTab.THING_MODEL -> "物模型里维护所有可复用字段，再把字段分配给不同设备功能。"
-                CodegenWorkbenchTab.DEVICE_FUNCTION -> "设备功能像 Kotlin 接口方法一样定义，只填中文语义和绑定关系。"
-                CodegenWorkbenchTab.CONTEXT -> "这里集中维护协议上下文定义和代码生成目录、RTU/TCP/MQTT 默认参数。"
-            },
-        )
     }
 }
 
 @Composable
-private fun MetadataMetricPanel(
+private fun TransportSelectionPanel(
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    CupertinoPanel(
-        title = title,
-        subtitle = subtitle,
-        modifier = modifier,
-    ) {
-        content()
-    }
-}
-
-@Composable
-/**
- * 处理生成设置panel。
- *
- * @param state 状态。
- * @param selectedProtocolTemplate 选中协议模板。
- * @param viewModel 视图模型。
- */
-internal fun GenerationSettingsPanel(
-    state: CodegenGenerationSettingsEditorState,
-    selectedProtocolTemplate: ProtocolTemplateOptionDto?,
-    viewModel: CodegenContextViewModel,
-) {
-    CupertinoPanel(
-        title = "生成器参数",
-        subtitle = "这里配置生成器目录和 RTU/TCP/MQTT 默认参数，点击生成时一并带上。",
-    ) {
-        selectedProtocolTemplate?.let { template ->
-            CupertinoStatusStrip("当前主协议模板：${template.name}（${template.code}）")
-        }
-        CupertinoFormGrid {
-            item { CupertinoTextField("服务端输出根目录", state.serverOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(serverOutputRoot = value) } }, placeholder = "留空使用后台默认 build/generated 目录") }
-            item { CupertinoTextField("共享输出根目录", state.sharedOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(sharedOutputRoot = value) } }, placeholder = "留空使用后台默认 build/generated 目录") }
-            item { CupertinoTextField("Gateway 输出根目录", state.gatewayOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(gatewayOutputRoot = value) } }, placeholder = "按需指定 transport gateway 代码目录") }
-            item { CupertinoTextField("API Client 输出根目录", state.apiClientOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(apiClientOutputRoot = value) } }, placeholder = "建议指向 apps/kcloud/plugins/<plugin>/api/build/generated/source/controller2api/commonMain/kotlin") }
-            item { CupertinoTextField("API Client 包名", state.apiClientPackageName, { value -> viewModel.updateGenerationSettings { it.copy(apiClientPackageName = value) } }, placeholder = "建议使用 site.addzero.<plugin>.api.external.generated") }
-            item { CupertinoTextField("Spring Route 输出根目录", state.springRouteOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(springRouteOutputRoot = value) } }, placeholder = "按需指定 route 生成目录") }
-            item { CupertinoTextField("C 代码输出根目录", state.cOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(cOutputRoot = value) } }, placeholder = "/abs/path/to/generated/c") }
-            item { CupertinoTextField("Markdown 输出根目录", state.markdownOutputRoot, { value -> viewModel.updateGenerationSettings { it.copy(markdownOutputRoot = value) } }, placeholder = "/abs/path/to/generated/docs") }
-        }
-        GenerationDefaultsPanel(
-            title = "RTU 默认参数",
-            subtitle = "当协议上下文需要 RTU 相关默认值时，生成器直接取这里。",
-        ) {
-            item { CupertinoTextField("串口路径", state.rtuDefaults.portPath, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(portPath = value)) } }) }
-            item { CupertinoTextField("Unit ID", state.rtuDefaults.unitIdText, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(unitIdText = value)) } }) }
-            item { CupertinoTextField("波特率", state.rtuDefaults.baudRateText, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(baudRateText = value)) } }) }
-            item { CupertinoTextField("数据位", state.rtuDefaults.dataBitsText, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(dataBitsText = value)) } }) }
-            item { CupertinoTextField("停止位", state.rtuDefaults.stopBitsText, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(stopBitsText = value)) } }) }
-            item { CupertinoTextField("校验位", state.rtuDefaults.parity, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(parity = value)) } }) }
-            item { CupertinoTextField("超时(ms)", state.rtuDefaults.timeoutMsText, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(timeoutMsText = value)) } }) }
-            item { CupertinoTextField("重试次数", state.rtuDefaults.retriesText, { value -> viewModel.updateGenerationSettings { it.copy(rtuDefaults = it.rtuDefaults.copy(retriesText = value)) } }) }
-        }
-        GenerationDefaultsPanel(
-            title = "TCP 默认参数",
-            subtitle = "生成 TCP 侧产物时使用。",
-        ) {
-            item { CupertinoTextField("Host", state.tcpDefaults.host, { value -> viewModel.updateGenerationSettings { it.copy(tcpDefaults = it.tcpDefaults.copy(host = value)) } }) }
-            item { CupertinoTextField("Port", state.tcpDefaults.portText, { value -> viewModel.updateGenerationSettings { it.copy(tcpDefaults = it.tcpDefaults.copy(portText = value)) } }) }
-            item { CupertinoTextField("Unit ID", state.tcpDefaults.unitIdText, { value -> viewModel.updateGenerationSettings { it.copy(tcpDefaults = it.tcpDefaults.copy(unitIdText = value)) } }) }
-            item { CupertinoTextField("超时(ms)", state.tcpDefaults.timeoutMsText, { value -> viewModel.updateGenerationSettings { it.copy(tcpDefaults = it.tcpDefaults.copy(timeoutMsText = value)) } }) }
-            item { CupertinoTextField("重试次数", state.tcpDefaults.retriesText, { value -> viewModel.updateGenerationSettings { it.copy(tcpDefaults = it.tcpDefaults.copy(retriesText = value)) } }) }
-        }
-        GenerationDefaultsPanel(
-            title = "MQTT 默认参数",
-            subtitle = "生成 MQTT 侧产物时使用。",
-        ) {
-            item { CupertinoTextField("Broker URL", state.mqttDefaults.brokerUrl, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(brokerUrl = value)) } }) }
-            item { CupertinoTextField("Client ID", state.mqttDefaults.clientId, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(clientId = value)) } }) }
-            item { CupertinoTextField("Request Topic", state.mqttDefaults.requestTopic, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(requestTopic = value)) } }) }
-            item { CupertinoTextField("Response Topic", state.mqttDefaults.responseTopic, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(responseTopic = value)) } }) }
-            item { CupertinoTextField("QoS", state.mqttDefaults.qosText, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(qosText = value)) } }) }
-            item { CupertinoTextField("超时(ms)", state.mqttDefaults.timeoutMsText, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(timeoutMsText = value)) } }) }
-            item { CupertinoTextField("重试次数", state.mqttDefaults.retriesText, { value -> viewModel.updateGenerationSettings { it.copy(mqttDefaults = it.mqttDefaults.copy(retriesText = value)) } }) }
-        }
-    }
-}
-
-@Composable
-/**
- * 处理生成默认panel。
- *
- * @param title title。
- * @param subtitle subtitle。
- * @param content content。
- */
-private fun GenerationDefaultsPanel(
-    title: String,
-    subtitle: String,
-    content: site.addzero.cupertino.workbench.components.form.CupertinoFormGridScope.() -> Unit,
+    selectedTransports: Set<CodegenMetadataTransportKind>,
+    onToggle: (CodegenMetadataTransportKind) -> Unit,
 ) {
     CupertinoPanel(title = title, subtitle = subtitle) {
-        CupertinoFormGrid(content = content)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CodegenMetadataTransportKind.entries.forEach { transport ->
+                CupertinoBooleanField(
+                    label = transport.name,
+                    checked = transport in selectedTransports,
+                    onCheckedChange = { onToggle(transport) },
+                )
+            }
+        }
     }
 }
 
 @Composable
-/**
- * 处理上下文定义panel。
- *
- * @param definitions 定义。
- * @param selectedProtocolTemplate 选中协议模板。
- */
-internal fun ContextDefinitionsPanel(
-    definitions: List<CodegenContextDefinitionDto>,
-    selectedProtocolTemplate: ProtocolTemplateOptionDto?,
+private fun ArtifactSelectionPanel(
+    selectedArtifactKinds: Set<CodegenMetadataArtifactKind>,
+    onToggle: (CodegenMetadataArtifactKind) -> Unit,
 ) {
     CupertinoPanel(
-        title = "上下文定义",
-        subtitle = "这里展示当前协议模板可用的上下文定义。可以把它理解为“注解定义”，方法和物模型字段都会按这里的参数渲染。",
+        title = "导出目标",
+        subtitle = "目标集是多选；不再是单一“生成”动作。",
     ) {
-        if (selectedProtocolTemplate == null) {
-            CupertinoStatusStrip("先选择协议模板，才能加载对应的上下文定义。")
-            return@CupertinoPanel
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            CodegenMetadataArtifactKind.entries.forEach { artifactKind ->
+                CupertinoBooleanField(
+                    label = artifactKind.name,
+                    checked = artifactKind in selectedArtifactKinds,
+                    onCheckedChange = { onToggle(artifactKind) },
+                )
+            }
         }
-        if (definitions.isEmpty()) {
-            CupertinoStatusStrip("当前协议模板还没有任何可用的上下文定义。")
-            return@CupertinoPanel
+    }
+}
+
+@Composable
+private fun FirmwareSyncPanel(
+    firmwareSync: CodegenMetadataFirmwareSyncDto,
+    onUpdate: (transform: (CodegenMetadataFirmwareSyncDto) -> CodegenMetadataFirmwareSyncDto) -> Unit,
+) {
+    CupertinoPanel(
+        title = "固件工程同步",
+        subtitle = "Keil/CubeMX 路径只做透传，后台复用 addzero-lib-jvm 的同步工具。",
+    ) {
+        CupertinoFormGrid {
+            fullWidth {
+                CupertinoTextField(
+                    label = "C 工程根目录",
+                    value = firmwareSync.cOutputProjectDir,
+                    onValueChange = { value -> onUpdate { it.copy(cOutputProjectDir = value) } },
+                    placeholder = "/abs/path/to/firmware-project",
+                )
+            }
+            item {
+                CupertinoTextField(
+                    label = "bridge 实现路径",
+                    value = firmwareSync.bridgeImplPath,
+                    onValueChange = { value -> onUpdate { it.copy(bridgeImplPath = value) } },
+                    placeholder = "Core/Src/modbus",
+                )
+            }
+            item {
+                CupertinoTextField(
+                    label = "Keil uvprojx",
+                    value = firmwareSync.keilUvprojxPath,
+                    onValueChange = { value -> onUpdate { it.copy(keilUvprojxPath = value) } },
+                )
+            }
+            item {
+                CupertinoTextField(
+                    label = "Keil target",
+                    value = firmwareSync.keilTargetName,
+                    onValueChange = { value -> onUpdate { it.copy(keilTargetName = value) } },
+                )
+            }
+            item {
+                CupertinoTextField(
+                    label = "Keil group",
+                    value = firmwareSync.keilGroupName,
+                    onValueChange = { value -> onUpdate { it.copy(keilGroupName = value) } },
+                )
+            }
+            item {
+                CupertinoTextField(
+                    label = "CubeMX mxproject",
+                    value = firmwareSync.mxprojectPath,
+                    onValueChange = { value -> onUpdate { it.copy(mxprojectPath = value) } },
+                )
+            }
         }
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            definitions.forEach { definition ->
-                CupertinoPanel(title = definition.name, subtitle = definition.description ?: definition.code) {
-                    CupertinoStatusStrip(
-                        "作用域：${definition.targetKind.name} · 绑定模式：${definition.bindingTargetMode.name} · 来源：${definition.sourceKind.name}",
-                    )
-                    if (definition.params.isEmpty()) {
-                        CupertinoStatusStrip("该定义没有额外参数。")
-                    } else {
-                        definition.params.forEach { param ->
-                            CupertinoStatusStrip(
-                                buildString {
-                                    append(param.name)
-                                    append("（${param.code}） · ${param.valueType.name}")
-                                    if (param.required) append(" · 必填")
-                                    if (!param.defaultValue.isNullOrBlank()) append(" · 默认值 ${param.defaultValue}")
-                                    if (param.enumOptions.isNotEmpty()) append(" · 选项 ${param.enumOptions.joinToString()}")
-                                },
-                            )
-                        }
+    }
+}
+
+@Composable
+private fun TransportDefaultsPanel(
+    rtuDefaults: CodegenMetadataRtuDefaultsDraftDto,
+    tcpDefaults: CodegenMetadataTcpDefaultsDraftDto,
+    mqttDefaults: CodegenMetadataMqttDefaultsDraftDto,
+    onUpdateRtuDefaults: (transform: (CodegenMetadataRtuDefaultsDraftDto) -> CodegenMetadataRtuDefaultsDraftDto) -> Unit,
+    onUpdateTcpDefaults: (transform: (CodegenMetadataTcpDefaultsDraftDto) -> CodegenMetadataTcpDefaultsDraftDto) -> Unit,
+    onUpdateMqttDefaults: (transform: (CodegenMetadataMqttDefaultsDraftDto) -> CodegenMetadataMqttDefaultsDraftDto) -> Unit,
+) {
+    CupertinoPanel(
+        title = "默认参数",
+        subtitle = "RTU/TCP/MQTT 默认值直接透传给后端，用于渲染 C 导出和 metadata snapshot 说明。",
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            CupertinoPanel(title = "RTU", subtitle = "串口默认参数") {
+                TwoColumnDefaultsForm(
+                    left = {
+                        CupertinoTextField(label = "端口", value = rtuDefaults.portPath, onValueChange = { value -> onUpdateRtuDefaults { it.copy(portPath = value) } })
+                        CupertinoTextField(label = "unitId", value = rtuDefaults.unitId, onValueChange = { value -> onUpdateRtuDefaults { it.copy(unitId = value) } })
+                        CupertinoTextField(label = "baudRate", value = rtuDefaults.baudRate, onValueChange = { value -> onUpdateRtuDefaults { it.copy(baudRate = value) } })
+                        CupertinoTextField(label = "dataBits", value = rtuDefaults.dataBits, onValueChange = { value -> onUpdateRtuDefaults { it.copy(dataBits = value) } })
+                    },
+                    right = {
+                        CupertinoTextField(label = "stopBits", value = rtuDefaults.stopBits, onValueChange = { value -> onUpdateRtuDefaults { it.copy(stopBits = value) } })
+                        CupertinoTextField(label = "parity", value = rtuDefaults.parity, onValueChange = { value -> onUpdateRtuDefaults { it.copy(parity = value) } })
+                        CupertinoTextField(label = "timeoutMs", value = rtuDefaults.timeoutMs, onValueChange = { value -> onUpdateRtuDefaults { it.copy(timeoutMs = value) } })
+                        CupertinoTextField(label = "retries", value = rtuDefaults.retries, onValueChange = { value -> onUpdateRtuDefaults { it.copy(retries = value) } })
+                    },
+                )
+            }
+            CupertinoPanel(title = "TCP", subtitle = "网络默认参数") {
+                TwoColumnDefaultsForm(
+                    left = {
+                        CupertinoTextField(label = "host", value = tcpDefaults.host, onValueChange = { value -> onUpdateTcpDefaults { it.copy(host = value) } })
+                        CupertinoTextField(label = "port", value = tcpDefaults.port, onValueChange = { value -> onUpdateTcpDefaults { it.copy(port = value) } })
+                        CupertinoTextField(label = "unitId", value = tcpDefaults.unitId, onValueChange = { value -> onUpdateTcpDefaults { it.copy(unitId = value) } })
+                    },
+                    right = {
+                        CupertinoTextField(label = "timeoutMs", value = tcpDefaults.timeoutMs, onValueChange = { value -> onUpdateTcpDefaults { it.copy(timeoutMs = value) } })
+                        CupertinoTextField(label = "retries", value = tcpDefaults.retries, onValueChange = { value -> onUpdateTcpDefaults { it.copy(retries = value) } })
+                    },
+                )
+            }
+            CupertinoPanel(title = "MQTT", subtitle = "消息通道默认参数") {
+                CupertinoFormGrid {
+                    item {
+                        CupertinoTextField(label = "brokerUrl", value = mqttDefaults.brokerUrl, onValueChange = { value -> onUpdateMqttDefaults { it.copy(brokerUrl = value) } })
                     }
+                    item {
+                        CupertinoTextField(label = "clientId", value = mqttDefaults.clientId, onValueChange = { value -> onUpdateMqttDefaults { it.copy(clientId = value) } })
+                    }
+                    item {
+                        CupertinoTextField(label = "requestTopic", value = mqttDefaults.requestTopic, onValueChange = { value -> onUpdateMqttDefaults { it.copy(requestTopic = value) } })
+                    }
+                    item {
+                        CupertinoTextField(label = "responseTopic", value = mqttDefaults.responseTopic, onValueChange = { value -> onUpdateMqttDefaults { it.copy(responseTopic = value) } })
+                    }
+                    item {
+                        CupertinoTextField(label = "qos", value = mqttDefaults.qos, onValueChange = { value -> onUpdateMqttDefaults { it.copy(qos = value) } })
+                    }
+                    item {
+                        CupertinoTextField(label = "timeoutMs", value = mqttDefaults.timeoutMs, onValueChange = { value -> onUpdateMqttDefaults { it.copy(timeoutMs = value) } })
+                    }
+                    item {
+                        CupertinoTextField(label = "retries", value = mqttDefaults.retries, onValueChange = { value -> onUpdateMqttDefaults { it.copy(retries = value) } })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TwoColumnDefaultsForm(
+    left: @Composable () -> Unit,
+    right: @Composable () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            left()
+        }
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            right()
+        }
+    }
+}
+
+@Composable
+private fun PreviewPanel(
+    preview: CodegenMetadataPreviewDto?,
+) {
+    CupertinoPanel(
+        title = "预检结果",
+        subtitle = "resolved 名称、类型、导出计划和错误提示全部来自服务端 preview。",
+    ) {
+        if (preview == null) {
+            CupertinoStatusStrip("还没有预检结果。点击“预检”后由后端返回解析结果。")
+            return@CupertinoPanel
+        }
+        if (preview.issues.isEmpty()) {
+            CupertinoStatusStrip("当前预检没有返回错误。")
+        } else {
+            preview.issues.forEach { issue ->
+                val tone =
+                    when (issue.severity) {
+                        CodegenMetadataIssueSeverity.ERROR -> androidx.compose.ui.graphics.Color(0xFFFFE8E6)
+                        CodegenMetadataIssueSeverity.WARNING -> androidx.compose.ui.graphics.Color(0xFFFFF5D6)
+                        CodegenMetadataIssueSeverity.INFO -> androidx.compose.ui.graphics.Color(0xFFEAF4FF)
+                    }
+                CupertinoStatusStrip(text = "${issue.location}: ${issue.message}", tone = tone)
+            }
+        }
+        if (preview.resolvedFunctions.isNotEmpty()) {
+            CupertinoPanel(title = "设备功能解析", subtitle = "方法名、请求/响应模型由后端推导。") {
+                preview.resolvedFunctions.forEach { item ->
+                    CupertinoKeyValueRow(item.name, item.resolvedMethodName ?: "-")
+                    item.requestModelName?.let { value -> CupertinoKeyValueRow("请求模型", value) }
+                    item.responseModelName?.let { value -> CupertinoKeyValueRow("响应模型", value) }
+                    item.layoutSummary?.let { value -> CupertinoStatusStrip(value) }
+                }
+            }
+        }
+        if (preview.resolvedProperties.isNotEmpty()) {
+            CupertinoPanel(title = "物模型字段解析", subtitle = "属性名、类型由后端推导。") {
+                preview.resolvedProperties.forEach { item ->
+                    CupertinoKeyValueRow(item.name, "${item.resolvedPropertyName ?: "-"} : ${item.resolvedTypeName ?: "-"}")
+                    item.layoutSummary?.let { value -> CupertinoStatusStrip(value) }
+                }
+            }
+        }
+        if (preview.exportPlans.isNotEmpty()) {
+            CupertinoPanel(title = "导出计划", subtitle = "按当前多选目标和 transport 生成的计划。") {
+                preview.exportPlans.forEach { item ->
+                    if (item.ready) {
+                        CupertinoStatusStrip(
+                            text = "${item.artifactKind}${item.transport?.let { transport -> " / $transport" } ?: ""} · ${item.summary}",
+                        )
+                    } else {
+                        CupertinoStatusStrip(
+                            text = "${item.artifactKind}${item.transport?.let { transport -> " / $transport" } ?: ""} · ${item.summary}",
+                            tone = androidx.compose.ui.graphics.Color(0xFFFFF5D6),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExportResultPanel(
+    exportResult: CodegenMetadataExportResultDto?,
+) {
+    CupertinoPanel(
+        title = "导出结果",
+        subtitle = "结构化返回 metadata snapshot、外部文件和工程同步结果。",
+    ) {
+        if (exportResult == null) {
+            CupertinoStatusStrip("还没有导出结果。")
+            return@CupertinoPanel
+        }
+        CupertinoStatusStrip(exportResult.message)
+        if (exportResult.metadataSnapshots.isNotEmpty()) {
+            CupertinoPanel(title = "Metadata Snapshot", subtitle = "供 Kotlin/KSP database provider 消费。") {
+                exportResult.metadataSnapshots.forEach { item ->
+                    CupertinoStatusStrip("${item.transport} -> ${item.tableName} · ${item.queryHint}")
+                }
+            }
+        }
+        if (exportResult.generatedArtifacts.isNotEmpty()) {
+            CupertinoPanel(title = "外部产物", subtitle = "已写入固件工程或文档目录的文件。") {
+                exportResult.generatedArtifacts.forEach { item ->
+                    CupertinoStatusStrip("${item.artifactKind}${item.transport?.let { transport -> " / $transport" } ?: ""} · ${item.path}")
+                }
+            }
+        }
+        if (exportResult.projectSyncResults.isNotEmpty()) {
+            CupertinoPanel(title = "工程同步", subtitle = "Keil / CubeMX 同步状态。") {
+                exportResult.projectSyncResults.forEach { item ->
+                    CupertinoStatusStrip("${item.toolId} / ${item.transport} · ${item.message}")
                 }
             }
         }

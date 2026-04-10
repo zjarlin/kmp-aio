@@ -9,9 +9,10 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefinitionDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDetailDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportResultDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextSummaryDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.GenerateContractsResponseDto
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.service.CodegenContextService
 
 @Single
@@ -40,8 +41,8 @@ class CodegenContextController(
      */
     fun getContext(
         @PathVariable("contextId") contextId: Long,
-    ): CodegenContextDetailDto =
-        contextService.getContext(contextId)
+    ): CodegenMetadataDraftDto =
+        contextService.getContextDraft(contextId)
 
     @GetMapping("/protocols/{protocolTemplateId}/definitions")
     /**
@@ -61,9 +62,20 @@ class CodegenContextController(
      * @param @RequestBody 请求体。
      */
     fun saveContext(
-        @RequestBody request: CodegenContextDetailDto,
-    ): CodegenContextDetailDto =
-        contextService.saveContext(request)
+        @RequestBody request: CodegenMetadataDraftDto,
+    ): CodegenMetadataDraftDto =
+        contextService.saveContextDraft(request)
+
+    @PostMapping("/preview")
+    /**
+     * 预检元数据草稿。
+     *
+     * @param @RequestBody 请求体。
+     */
+    fun previewContext(
+        @RequestBody request: CodegenMetadataDraftDto,
+    ): CodegenMetadataPreviewDto =
+        contextService.previewContextDraft(request)
 
     @DeleteMapping("/{contextId}")
     /**
@@ -77,14 +89,14 @@ class CodegenContextController(
         contextService.deleteContext(contextId)
     }
 
-    @PostMapping("/{contextId}/generate")
+    @PostMapping("/{contextId}/export")
     /**
-     * 处理generate上下文。
+     * 导出上下文。
      *
      * @param @PathVariable("contextId") 路径variable上下文ID。
      */
-    fun generateContext(
+    fun exportContext(
         @PathVariable("contextId") contextId: Long,
-    ): GenerateContractsResponseDto =
-        contextService.generateContracts(contextId)
+    ): CodegenMetadataExportResultDto =
+        contextService.exportContext(contextId)
 }

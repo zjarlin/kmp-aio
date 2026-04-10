@@ -53,6 +53,7 @@ import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.common.label
 import site.addzero.kcloud.plugins.hostconfig.common.orDash
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
+import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
 import site.addzero.kcloud.plugins.hostconfig.projects.findModule
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol

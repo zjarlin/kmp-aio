@@ -65,9 +65,9 @@ data class CodegenMetadataFirmwareSyncDto(
  * 表示元数据导出设置。
  */
 data class CodegenMetadataExportSettingsDto(
-    val artifactKinds: Set<CodegenMetadataArtifactKind> = CodegenMetadataArtifactKind.entries.toSet(),
-    val kotlinClientTransports: Set<CodegenMetadataTransportKind> = CodegenMetadataTransportKind.entries.toSet(),
-    val cExposeTransports: Set<CodegenMetadataTransportKind> = CodegenMetadataTransportKind.entries.toSet(),
+    val artifactKinds: Set<CodegenMetadataArtifactKind> = setOf(CodegenMetadataArtifactKind.METADATA_SNAPSHOT),
+    val kotlinClientTransports: Set<CodegenMetadataTransportKind> = emptySet(),
+    val cExposeTransports: Set<CodegenMetadataTransportKind> = emptySet(),
     val firmwareSync: CodegenMetadataFirmwareSyncDto = CodegenMetadataFirmwareSyncDto(),
     val rtuDefaults: CodegenMetadataRtuDefaultsDraftDto = CodegenMetadataRtuDefaultsDraftDto(),
     val tcpDefaults: CodegenMetadataTcpDefaultsDraftDto = CodegenMetadataTcpDefaultsDraftDto(),

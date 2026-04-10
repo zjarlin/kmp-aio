@@ -32,10 +32,10 @@ val mcuConsoleSharedGeneratedContractDir =
     mcuConsoleSharedProject.layout.buildDirectory.dir(
         "generated/source/codegen-context/commonMain/kotlin",
     )
+val defaultMcuConsoleMetadataOutputDir = layout.buildDirectory.dir("generated/modbus-metadata")
 val mcuConsoleMetadataOutputDir =
-    rootProject.layout.projectDirectory.dir(
-        "../t/Docs/generated/modbus-metadata",
-    )
+    providers.gradleProperty("codegenContextMetadataOutputDir").orNull?.let(::File)
+        ?: defaultMcuConsoleMetadataOutputDir.get().asFile
 val codegenContextServerJvmJar = tasks.named<Jar>("jvmJar")
 val codegenContextServerJvmRuntimeClasspath = configurations.named("jvmRuntimeClasspath")
 val defaultCodegenContextSqliteFile =
@@ -84,6 +84,7 @@ kotlin {
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":lib:ktor:starter:starter-spi"))
             implementation(project(":lib:ktor:starter:starter-statuspages"))
+            implementation(libs.findLibrary("com-google-devtools-ksp-symbol-processing-api").get())
             implementation(libs.findLibrary("site-addzero-tool-sql-executor").get())
             implementation(libs.findLibrary("site-addzero-tool-str").get())
             implementation("site.addzero:modbus-codegen-model:$modbusCodegenVersion")
@@ -163,9 +164,9 @@ val generateMcuConsoleContracts by tasks.registering(JavaExec::class) {
             "--gateway-output-root",
             mcuConsoleServerGeneratedContractDir.get().asFile.absolutePath,
             "--c-output-root",
-            mcuConsoleMetadataOutputDir.dir("c").asFile.absolutePath,
+            mcuConsoleMetadataOutputDir.resolve("c").absolutePath,
             "--markdown-output-root",
-            mcuConsoleMetadataOutputDir.dir("markdown").asFile.absolutePath,
+            mcuConsoleMetadataOutputDir.resolve("markdown").absolutePath,
         )
     args(
         cliArgs,

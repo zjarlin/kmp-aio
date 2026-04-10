@@ -38,13 +38,13 @@ import site.addzero.kmp.exp.NotFoundException
 import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
-@Single
 /**
  * 提供项目、协议、模块和设备的主机配置管理服务。
  *
  * @property sql Jimmer SQL 客户端。
  * @property jdbc 主机配置 JDBC 工具。
  */
+@Single
 class ProjectService(
     private val sql: KSqlClient,
     private val jdbc: SqlExecutor,
@@ -634,20 +634,6 @@ class ProjectService(
     }
 
     /**
-     * 确保协议存在性。
-     *
-     * @param protocolId 协议 ID。
-     */
-    private fun ensureProtocolExists(protocolId: Long) {
-        val exists = sql.exists(ProtocolInstance::class) {
-            where(table.id eq protocolId)
-        }
-        if (!exists) {
-            throw NotFoundException("Protocol not found")
-        }
-    }
-
-    /**
      * 确保项目内协议模板关联唯一。
      *
      * @param projectId 项目 ID。
@@ -696,34 +682,6 @@ class ProjectService(
         }
         if (!exists) {
             throw NotFoundException("Device not found")
-        }
-    }
-
-    /**
-     * 确保协议模板存在性。
-     *
-     * @param protocolTemplateId 协议模板 ID。
-     */
-    private fun ensureProtocolTemplateExists(protocolTemplateId: Long) {
-        val exists = sql.exists(ProtocolTemplate::class) {
-            where(table.id eq protocolTemplateId)
-        }
-        if (!exists) {
-            throw NotFoundException("Protocol template not found")
-        }
-    }
-
-    /**
-     * 确保模块模板存在性。
-     *
-     * @param moduleTemplateId 模块模板 ID。
-     */
-    private fun ensureModuleTemplateExists(moduleTemplateId: Long) {
-        val exists = sql.exists(ModuleTemplate::class) {
-            where(table.id eq moduleTemplateId)
-        }
-        if (!exists) {
-            throw NotFoundException("Module template not found")
         }
     }
 
@@ -1284,15 +1242,15 @@ class ProjectService(
     private fun executeUpdate(
         sql: String,
         vararg args: Any?,
-    ): Int = jdbc.withTransaction { connection ->
-        jdbc.update(connection, sql, *args)
+    ): Int = jdbc.withTransaction { _ ->
+        jdbc.executeUpdate(sql, *args)
     }
 
     private fun queryCount(
         sql: String,
         vararg args: Any?,
-    ): Long = jdbc.withTransaction { connection ->
-        jdbc.queryCount(connection, sql, *args)
+    ): Long = jdbc.withTransaction { _ ->
+        jdbc.queryCount(sql, *args)
     }
 
     /**
@@ -1302,16 +1260,16 @@ class ProjectService(
      * @param args SQL 参数列表。
      */
     private fun queryIds(sql: String, vararg args: Any): MutableList<Long> =
-        jdbc.withTransaction { connection ->
-            jdbc.queryIds(connection, sql, *args).toMutableList()
+        jdbc.withTransaction { _ ->
+            jdbc.queryIds(sql, *args).toMutableList()
         }
 
     private fun <T> query(
         sql: String,
         vararg args: Any?,
         mapper: (ResultSet) -> T,
-    ): List<T> = jdbc.withTransaction { connection ->
-        jdbc.query(connection, sql, *args, mapper = mapper)
+    ): List<T> = jdbc.withTransaction { _ ->
+        jdbc.query(sql, *args, mapper = mapper)
     }
 
     /**
@@ -1400,9 +1358,8 @@ class ProjectService(
             return
         }
         val updatedAt = now()
-        jdbc.withTransaction { connection ->
+        jdbc.withTransaction {
             jdbc.batchUpdate(
-                connection,
                 sql,
                 orderedIds.mapIndexed { index, id ->
                     listOf(index, updatedAt, id)

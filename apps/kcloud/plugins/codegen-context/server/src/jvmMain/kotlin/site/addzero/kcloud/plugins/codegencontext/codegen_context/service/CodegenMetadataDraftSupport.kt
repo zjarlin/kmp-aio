@@ -33,8 +33,6 @@ import site.addzero.kmp.exp.BusinessValidationException
 private const val PROPERTY_CATALOG_CLASS_NAME = "CodegenPropertyCatalog"
 private const val SERVICE_CLASS_NAME = "GeneratedDeviceContractService"
 private const val METADATA_TABLE_NAME = "codegen_context_modbus_contract"
-private const val MODBUS_OPERATION_DEFINITION_CODE = "MODBUS_OPERATION"
-private const val MODBUS_FIELD_DEFINITION_CODE = "MODBUS_FIELD"
 private const val METHOD_DIRECTION_PARAM = "direction"
 private const val METHOD_FUNCTION_CODE_PARAM = "functionCode"
 private const val METHOD_BASE_ADDRESS_PARAM = "baseAddress"
@@ -331,6 +329,15 @@ private fun CodegenMetadataDraftDto.validateDraftSelections(): List<CodegenMetad
     if (exportSettings.requiresFirmwareProjectDir() && exportSettings.firmwareSync.cOutputProjectDir.isBlank()) {
         issues += CodegenMetadataIssueDto(MetadataIssueSeverity.ERROR, "cOutputProjectDir", "导出 C/Markdown 时必须填写 C 工程根目录。")
     }
+    exportSettings.firmwareSync.cOutputProjectDir.cleanNullable()?.let { rawPath ->
+        val path = runCatching { Path.of(rawPath) }.getOrNull()
+        when {
+            path == null ->
+                issues += CodegenMetadataIssueDto(MetadataIssueSeverity.ERROR, "cOutputProjectDir", "C 工程根目录不是合法路径。")
+            !path.toFile().exists() ->
+                issues += CodegenMetadataIssueDto(MetadataIssueSeverity.ERROR, "cOutputProjectDir", "C 工程根目录不存在。")
+        }
+    }
     issues += exportSettings.validateDefaultFields()
     return issues
 }
@@ -450,7 +457,7 @@ private fun validateRangeInt(
     }
 }
 
-private fun CodegenMetadataExportSettingsDto.toGenericGenerationSettings(): CodegenGenerationSettingsDto =
+internal fun CodegenMetadataExportSettingsDto.toGenericGenerationSettings(): CodegenGenerationSettingsDto =
     CodegenGenerationSettingsDto(
         rtuDefaults =
             CodegenRtuGenerationDefaultsDto(
@@ -490,9 +497,9 @@ private fun CodegenGenerationSettingsDto.toMetadataExportSettings(
     firmwareSync: CodegenMetadataFirmwareSyncDto,
 ): site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto =
     site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto(
-        artifactKinds = artifactKinds.ifEmpty { MetadataArtifactKind.entries.toSet() },
-        kotlinClientTransports = kotlinClientTransports.ifEmpty { CodegenMetadataTransportKind.entries.toSet() },
-        cExposeTransports = cExposeTransports.ifEmpty { CodegenMetadataTransportKind.entries.toSet() },
+        artifactKinds = artifactKinds.ifEmpty { setOf(MetadataArtifactKind.METADATA_SNAPSHOT) },
+        kotlinClientTransports = kotlinClientTransports,
+        cExposeTransports = cExposeTransports,
         firmwareSync = firmwareSync,
         rtuDefaults =
             CodegenMetadataRtuDefaultsDraftDto(
@@ -641,7 +648,7 @@ private fun CodegenContextDetailDto.inferCExposeTransports(): Set<CodegenMetadat
     cExposeTransports.decodeTransportKinds().ifEmpty {
         when {
             hasLegacyExternalOutputs() -> CodegenMetadataTransportKind.entries.toSet()
-            else -> setOf(defaultMetadataTransport())
+            else -> emptySet()
         }
     }
 
@@ -667,8 +674,7 @@ private fun CodegenContextDetailDto.resolveFirmwareProjectDir(): String =
 private fun CodegenContextDetailDto.hasLegacyExternalOutputs(): Boolean =
     externalCOutputRoot.cleanNullable() != null ||
         generationSettings.cOutputRoot.cleanNullable() != null ||
-        generationSettings.markdownOutputRoot.cleanNullable() != null ||
-        cOutputProjectDir.cleanNullable() != null
+        generationSettings.markdownOutputRoot.cleanNullable() != null
 
 private fun CodegenContextDetailDto.defaultMetadataTransport(): CodegenMetadataTransportKind =
     when (protocolTemplateCode) {

@@ -24,7 +24,7 @@ ksp {
 }
 
 dependencies {
-    kspCommonMainMetadata(libs.findLibrary("site-addzero-route-processor").get())
+    add("kspJvm", libs.findLibrary("site-addzero-route-processor").get())
 }
 
 kotlin {

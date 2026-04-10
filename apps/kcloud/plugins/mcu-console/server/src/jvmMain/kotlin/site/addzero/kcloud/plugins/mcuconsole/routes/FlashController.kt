@@ -24,12 +24,12 @@ import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicReference
 
-@Single
-@RestController
-@RequestMapping("/api/mcu/flash")
 /**
  * 提供烧录接口。
  */
+@Single
+@RestController
+@RequestMapping("/api/mcu/flash")
 class FlashController {
     private val statusRef = AtomicReference(McuFlashStatusResponse())
     private val executor = Executors.newSingleThreadExecutor { runnable ->
@@ -38,18 +38,18 @@ class FlashController {
         }
     }
 
-    @GetMapping("/profiles")
     /**
      * 列出配置档。
      */
+    @GetMapping("/profiles")
     fun listProfiles(): McuFlashProfilesResponse {
         return McuFlashProfilesResponse(items = profiles.map { it.summary })
     }
 
-    @GetMapping("/probes")
     /**
      * 列出探针。
      */
+    @GetMapping("/probes")
     fun listProbes(): McuFlashProbesResponse {
         return McuFlashProbesResponse(
             items = Stm32StLinkProgrammer.listProbes().map { probe ->
@@ -64,12 +64,12 @@ class FlashController {
         )
     }
 
-    @PostMapping("/start")
     /**
      * 启动烧录任务。
      *
      * @param @RequestBody 请求体。
      */
+    @PostMapping("/start")
     fun startFlash(
         @RequestBody request: McuFlashRequest,
     ): McuFlashStatusResponse {
@@ -108,7 +108,9 @@ class FlashController {
                 Stm32StLinkProgrammer(config).use { programmer ->
                     val targetInfo = programmer.connectTarget()
                     require(targetInfo.chipId in profile.summary.supportedChipIds) {
-                        "当前目标 chipId=0x${targetInfo.chipId.toString(16).uppercase()} 不在配置 ${profile.summary.id} 支持列表中"
+                        "当前目标 chipId=0x${
+                            targetInfo.chipId.toString(16).uppercase()
+                        } 不在配置 ${profile.summary.id} 支持列表中"
                     }
                     updateStatus {
                         copy(
@@ -133,8 +135,10 @@ class FlashController {
                     statusRef.set(
                         statusRef.get().copy(
                             state = McuFlashRunState.COMPLETED,
-                            probeDescription = report.targetInfo.probe.productName ?: report.targetInfo.probe.manufacturerName,
-                            probeSerialNumber = report.targetInfo.probe.serialNumber ?: statusRef.get().probeSerialNumber,
+                            probeDescription = report.targetInfo.probe.productName
+                                ?: report.targetInfo.probe.manufacturerName,
+                            probeSerialNumber = report.targetInfo.probe.serialNumber
+                                ?: statusRef.get().probeSerialNumber,
                             targetChipId = report.targetInfo.chipId,
                             targetVoltageMillivolts = report.targetInfo.targetVoltageMillivolts,
                             bytesSent = report.bytesWritten.toLong(),
@@ -164,20 +168,20 @@ class FlashController {
         return initial
     }
 
-    @GetMapping("/status")
     /**
      * 获取状态。
      */
+    @GetMapping("/status")
     fun getStatus(): McuFlashStatusResponse {
         return statusRef.get()
     }
 
-    @PostMapping("/reset")
     /**
      * 处理重置。
      *
      * @param @RequestBody 请求体。
      */
+    @PostMapping("/reset")
     fun reset(
         @RequestBody request: McuFlashResetRequest,
     ): McuFlashStatusResponse {

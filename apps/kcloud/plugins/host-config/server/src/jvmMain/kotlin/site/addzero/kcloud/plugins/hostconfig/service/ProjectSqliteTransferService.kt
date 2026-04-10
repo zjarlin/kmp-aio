@@ -76,8 +76,10 @@ class ProjectSqliteTransferService(
     private fun clearTargetTables(
         connection: Connection,
     ) {
-        exportedTableNames.reversed().forEach { tableName ->
-            jdbc.execute(connection, "DELETE FROM $tableName")
+        connection.createStatement().use { statement ->
+            exportedTableNames.reversed().forEach { tableName ->
+                statement.executeUpdate("DELETE FROM $tableName")
+            }
         }
     }
 
@@ -103,11 +105,15 @@ class ProjectSqliteTransferService(
             append(placeholders)
             append(")")
         }
-        jdbc.batchUpdate(
-            connection = targetConnection,
-            sql = insertSql,
-            batchParams = rows.map { row -> columns.map(row::get) },
-        )
+        targetConnection.prepareStatement(insertSql).use { statement ->
+            rows.forEach { row ->
+                columns.forEachIndexed { index, column ->
+                    statement.setObject(index + 1, row[column])
+                }
+                statement.addBatch()
+            }
+            statement.executeBatch()
+        }
     }
 
     private fun queryRows(
@@ -115,11 +121,22 @@ class ProjectSqliteTransferService(
         sql: String,
         params: List<Any?>,
     ): List<LinkedHashMap<String, Any?>> =
-        jdbc.query(connection, sql, params) { resultSet ->
-            val metaData = resultSet.metaData
-            LinkedHashMap<String, Any?>(metaData.columnCount).apply {
-                for (index in 1..metaData.columnCount) {
-                    put(metaData.getColumnLabel(index), resultSet.getObject(index))
+        connection.prepareStatement(sql).use { statement ->
+            params.forEachIndexed { index, value ->
+                statement.setObject(index + 1, value)
+            }
+            statement.executeQuery().use { resultSet ->
+                buildList {
+                    while (resultSet.next()) {
+                        val metaData = resultSet.metaData
+                        add(
+                            LinkedHashMap<String, Any?>(metaData.columnCount).apply {
+                                for (index in 1..metaData.columnCount) {
+                                    put(metaData.getColumnLabel(index), resultSet.getObject(index))
+                                }
+                            },
+                        )
+                    }
                 }
             }
         }
