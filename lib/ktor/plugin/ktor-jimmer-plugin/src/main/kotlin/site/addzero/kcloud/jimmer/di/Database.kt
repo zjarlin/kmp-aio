@@ -13,6 +13,7 @@ import org.babyfish.jimmer.sql.runtime.AbstractScalarProvider
 import org.babyfish.jimmer.sql.runtime.ConnectionManager.simpleConnectionManager
 import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
 import org.koin.core.annotation.Configuration
+import org.koin.core.annotation.KoinInternalApi
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
 import org.koin.mp.KoinPlatform
@@ -413,6 +414,25 @@ fun DataSource.toRawKSqlClient(
 @Configuration
 //@ComponentScan("site.addzero.kcloud.jimmer")
 class JimmerKoinModule {
+    @Single(createdAtStart = true)
+    fun datasourceRegistry(
+        datasourcePropertiesSpi: DatasourcePropertiesSpi,
+    ): DatasourceRegistry {
+        return DatasourceRegistry(
+            datasourcePropertiesSpi = datasourcePropertiesSpi,
+            interceptors = resolveDraftInterceptors(),
+            scalarProviders = resolveScalarProviders(),
+        )
+    }
+
+    @Single
+    fun dataSourceManager(): DataSourceManager {
+        return DataSourceManager(
+            interceptors = resolveDraftInterceptors(),
+            scalarProviders = resolveScalarProviders(),
+        )
+    }
+
     @Single
     fun dataSource(
         registry: DatasourceRegistry,
@@ -441,7 +461,6 @@ private data class DatasourceRuntime(
     val sqlClient: KSqlClient,
 )
 
-@Single
 class DatasourceRegistry(
     private val datasourcePropertiesSpi: DatasourcePropertiesSpi,
     private val interceptors: List<DraftInterceptor<*, *>>,
@@ -508,7 +527,6 @@ class DatasourceRegistry(
     }
 }
 
-@Single
 class DataSourceManager(
     private val interceptors: List<DraftInterceptor<*, *>>,
     private val scalarProviders: List<AbstractScalarProvider<*, *>>,
@@ -680,6 +698,16 @@ private fun DatasourceProperties.cacheKey(): String {
         user,
         password,
     ).joinToString("|")
+}
+
+@OptIn(KoinInternalApi::class)
+private fun resolveDraftInterceptors(): List<DraftInterceptor<*, *>> {
+    return KoinPlatform.getKoin().scopeRegistry.rootScope.getAll(DraftInterceptor::class)
+}
+
+@OptIn(KoinInternalApi::class)
+private fun resolveScalarProviders(): List<AbstractScalarProvider<*, *>> {
+    return KoinPlatform.getKoin().scopeRegistry.rootScope.getAll(AbstractScalarProvider::class)
 }
 
 private fun prepareStatement(

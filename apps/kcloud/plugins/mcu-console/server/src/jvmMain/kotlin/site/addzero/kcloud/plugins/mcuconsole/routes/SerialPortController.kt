@@ -1,5 +1,6 @@
 package site.addzero.kcloud.plugins.mcuconsole.routes
 
+import org.koin.core.annotation.Single
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -22,6 +23,7 @@ import site.addzero.serial.SerialPortTool
 /**
  * 提供串口端口接口。
  */
+@Single
 class SerialPortController {
     @GetMapping("/list")
     /**
@@ -108,4 +110,3 @@ private fun McuSerialFlowControl.toSerialFlowControl(): SerialFlowControl =
         McuSerialFlowControl.DTR_DSR -> SerialFlowControl.DTR_DSR
         McuSerialFlowControl.XON_XOFF -> SerialFlowControl.XON_XOFF
     }
-

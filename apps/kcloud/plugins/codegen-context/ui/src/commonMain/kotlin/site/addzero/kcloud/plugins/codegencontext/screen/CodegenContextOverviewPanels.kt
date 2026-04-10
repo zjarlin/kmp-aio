@@ -22,6 +22,12 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqt
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataRtuDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataTcpDefaultsDraftDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextScreenState
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind
@@ -210,7 +216,7 @@ private fun FirmwareSyncPanel(
                     label = "C 工程根目录",
                     value = firmwareSync.cOutputProjectDir,
                     onValueChange = { value -> onUpdate { it.copy(cOutputProjectDir = value) } },
-                    placeholder = "/abs/path/to/firmware-project",
+                    placeholder = CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR,
                 )
             }
             item {
@@ -218,7 +224,7 @@ private fun FirmwareSyncPanel(
                     label = "bridge 实现路径",
                     value = firmwareSync.bridgeImplPath,
                     onValueChange = { value -> onUpdate { it.copy(bridgeImplPath = value) } },
-                    placeholder = "Core/Src/modbus",
+                    placeholder = CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH,
                 )
             }
             item {
@@ -226,6 +232,7 @@ private fun FirmwareSyncPanel(
                     label = "Keil uvprojx",
                     value = firmwareSync.keilUvprojxPath,
                     onValueChange = { value -> onUpdate { it.copy(keilUvprojxPath = value) } },
+                    placeholder = CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH,
                 )
             }
             item {
@@ -233,6 +240,7 @@ private fun FirmwareSyncPanel(
                     label = "Keil target",
                     value = firmwareSync.keilTargetName,
                     onValueChange = { value -> onUpdate { it.copy(keilTargetName = value) } },
+                    placeholder = CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME,
                 )
             }
             item {
@@ -240,6 +248,7 @@ private fun FirmwareSyncPanel(
                     label = "Keil group",
                     value = firmwareSync.keilGroupName,
                     onValueChange = { value -> onUpdate { it.copy(keilGroupName = value) } },
+                    placeholder = CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME,
                 )
             }
             item {
@@ -247,6 +256,7 @@ private fun FirmwareSyncPanel(
                     label = "CubeMX mxproject",
                     value = firmwareSync.mxprojectPath,
                     onValueChange = { value -> onUpdate { it.copy(mxprojectPath = value) } },
+                    placeholder = CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH,
                 )
             }
         }

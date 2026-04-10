@@ -1,8 +1,12 @@
+import org.gradle.api.tasks.JavaExec
+
 plugins {
     id("site.addzero.buildlogic.kmp.kmp-ktor-server")
 }
 
+
 val libs = versionCatalogs.named("libs")
+val serverMainClass = "site.addzero.kcloud.server.ApplicationKt"
 
 kotlin {
     sourceSets {
@@ -22,4 +26,8 @@ kotlin {
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
     }
+}
+
+tasks.named<JavaExec>("runJvm") {
+    mainClass.set(serverMainClass)
 }

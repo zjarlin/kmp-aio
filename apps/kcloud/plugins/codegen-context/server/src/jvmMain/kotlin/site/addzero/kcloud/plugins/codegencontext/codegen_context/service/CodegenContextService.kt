@@ -652,7 +652,7 @@ class CodegenContextService(
     ) {
         val path =
             try {
-                Path.of(rawPath)
+                rawPath.toExpandedPath()
             } catch (_: InvalidPathException) {
                 throw BusinessValidationException("externalCOutputRoot is not a valid filesystem path.")
             }
@@ -708,7 +708,7 @@ class CodegenContextService(
     ) {
         val path =
             try {
-                Path.of(rawPath)
+                rawPath.toExpandedPath()
             } catch (_: InvalidPathException) {
                 throw BusinessValidationException("$fieldName is not a valid filesystem path.")
             }

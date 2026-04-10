@@ -4,15 +4,15 @@ import io.ktor.http.ContentType
 import io.ktor.server.response.respondTextWriter
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import site.addzero.serial.SerialFlowControl
 import site.addzero.serial.SerialParity
 import site.addzero.serial.SerialPortConfig
 import site.addzero.serial.SerialPortTool
-import site.addzero.serial.SerialSseStreamConfig
 import site.addzero.serial.SerialStopBits
-import site.addzero.serial.openSseLogFlow
 import kotlin.text.toIntOrNull
-import kotlinx.coroutines.flow.collect
 
 /**
  * 注册 MCU 串口日志 SSE 路由。
@@ -34,16 +34,40 @@ fun Route.registerMcuConsoleSerialStreamingRoutes() {
                 writeTimeoutMs = call.queryParameter("writeTimeoutMs")?.toIntOrNull() ?: 1_000,
                 openSafetySleepTimeMs = call.queryParameter("openSafetySleepTimeMs")?.toIntOrNull() ?: 0,
             )
-        val sseConfig =
-            SerialSseStreamConfig(
-                event = "serial-log",
-                heartbeatIntervalMs = call.queryParameter("heartbeatIntervalMs")?.toLongOrNull() ?: 15_000,
-            )
+        val heartbeatIntervalMs = call.queryParameter("heartbeatIntervalMs")?.toLongOrNull() ?: 15_000
+        val pollIntervalMs = call.queryParameter("pollIntervalMs")?.toLongOrNull() ?: 100
 
         call.respondTextWriter(contentType = ContentType.Text.EventStream) {
-            SerialPortTool.openSseLogFlow(serialConfig, sseConfig).collect { frame ->
-                write(frame)
-                flush()
+            SerialPortTool.open(serialConfig).use { connection ->
+                var lastEmissionTime = System.currentTimeMillis()
+                val pending = StringBuilder()
+                while (currentCoroutineContext().isActive && connection.isOpen) {
+                    val bytes = connection.readAvailable()
+                    if (bytes.isNotEmpty()) {
+                        pending.append(bytes.decodeToString())
+                        val lines = drainCompletedLines(pending)
+                        for (line in lines) {
+                            lastEmissionTime = System.currentTimeMillis()
+                            write(line.toSseFrame())
+                            flush()
+                        }
+                        continue
+                    }
+
+                    if (heartbeatIntervalMs > 0 && System.currentTimeMillis() - lastEmissionTime >= heartbeatIntervalMs) {
+                        lastEmissionTime = System.currentTimeMillis()
+                        write(": keep-alive\n\n")
+                        flush()
+                        continue
+                    }
+
+                    delay(pollIntervalMs)
+                }
+
+                if (pending.isNotEmpty()) {
+                    write(pending.toString().toSseFrame())
+                    flush()
+                }
             }
         }
     }
@@ -97,3 +121,35 @@ private fun String.toSerialFlowControl(): SerialFlowControl =
         "XON_XOFF" -> SerialFlowControl.XON_XOFF
         else -> error("不支持的 flowControl：$this")
     }
+
+/**
+ * 把文本编码成 SSE 帧。
+ */
+private fun String.toSseFrame(): String {
+    val normalized = replace("\r\n", "\n").replace('\r', '\n')
+    return buildString {
+        normalized.split('\n').forEach { line ->
+            append("data: ")
+            append(line)
+            append('\n')
+        }
+        append('\n')
+    }
+}
+
+/**
+ * 从待处理缓冲区提取完整日志行。
+ */
+private fun drainCompletedLines(
+    pending: StringBuilder,
+): List<String> {
+    val lines = mutableListOf<String>()
+    while (true) {
+        val newlineIndex = pending.indexOf("\n")
+        if (newlineIndex < 0) {
+            return lines
+        }
+        lines += pending.substring(0, newlineIndex).removeSuffix("\r")
+        pending.delete(0, newlineIndex + 1)
+    }
+}

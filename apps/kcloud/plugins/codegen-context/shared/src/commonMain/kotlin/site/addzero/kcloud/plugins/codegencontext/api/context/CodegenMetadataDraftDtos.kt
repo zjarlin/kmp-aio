@@ -6,6 +6,36 @@ import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArt
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataIssueSeverity
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
 
+/**
+ * 代码生成上下文示例使用的参考工程根目录。
+ */
+const val CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR = "/Users/zjarlin/IdeaProjects/t"
+
+/**
+ * 代码生成上下文示例使用的 bridge 实现目录。
+ */
+const val CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH = "Core/Src/modbus"
+
+/**
+ * 代码生成上下文示例使用的 Keil 工程路径。
+ */
+const val CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH = "MDK-ARM/test1.uvprojx"
+
+/**
+ * 代码生成上下文示例使用的 Keil Target 名称。
+ */
+const val CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME = "test1"
+
+/**
+ * 代码生成上下文示例使用的 Keil Group 名称。
+ */
+const val CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME = "Core/modbus/rtu/device"
+
+/**
+ * 代码生成上下文示例使用的 CubeMX 工程路径。
+ */
+const val CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH = ".mxproject"
+
 @Serializable
 /**
  * 表示元数据草稿 RTU 默认参数。
@@ -52,12 +82,12 @@ data class CodegenMetadataMqttDefaultsDraftDto(
  * 表示固件工程同步配置。
  */
 data class CodegenMetadataFirmwareSyncDto(
-    val cOutputProjectDir: String = "",
-    val bridgeImplPath: String = "Core/Src/modbus",
-    val keilUvprojxPath: String = "",
-    val keilTargetName: String = "",
-    val keilGroupName: String = "",
-    val mxprojectPath: String = "",
+    val cOutputProjectDir: String = CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR,
+    val bridgeImplPath: String = CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH,
+    val keilUvprojxPath: String = CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH,
+    val keilTargetName: String = CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME,
+    val keilGroupName: String = CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME,
+    val mxprojectPath: String = CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH,
 )
 
 @Serializable

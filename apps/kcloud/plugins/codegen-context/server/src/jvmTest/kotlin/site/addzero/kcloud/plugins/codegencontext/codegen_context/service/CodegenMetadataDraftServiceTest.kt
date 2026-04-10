@@ -6,64 +6,88 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
 
 class CodegenMetadataDraftServiceTest {
 
     @Test
+    fun shouldUseReferenceProjectDefaultsForNewMetadataDraft() {
+        val firmwareSync = CodegenMetadataDraftDto().exportSettings.firmwareSync
+
+        assertEquals(CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR, firmwareSync.cOutputProjectDir)
+        assertEquals(CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH, firmwareSync.bridgeImplPath)
+        assertEquals(CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH, firmwareSync.keilUvprojxPath)
+        assertEquals(CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME, firmwareSync.keilTargetName)
+        assertEquals(CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME, firmwareSync.keilGroupName)
+        assertEquals(CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH, firmwareSync.mxprojectPath)
+    }
+
+    @Test
     fun shouldSaveAndLoadMetadataDraftSelections() {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val definitions = fixture.service.listContextDefinitions(template.id)
-            val saved =
-                fixture.service.saveContextDraft(
-                    genericContextRequest(
-                        protocolTemplateId = template.id,
-                        availableDefinitions = definitions,
-                        code = "CTX_METADATA_DRAFT",
-                    ).copy(
-                        protocolTemplateCode = template.code,
-                        protocolTemplateName = template.name,
-                    ).toMetadataDraft(definitions).copy(
-                        exportSettings =
-                            site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto(
-                                artifactKinds =
-                                    setOf(
-                                        CodegenMetadataArtifactKind.METADATA_SNAPSHOT,
-                                        CodegenMetadataArtifactKind.C_SERVICE_CONTRACT,
-                                    ),
-                                kotlinClientTransports =
-                                    setOf(
-                                        CodegenMetadataTransportKind.RTU,
-                                        CodegenMetadataTransportKind.MQTT,
-                                    ),
-                                cExposeTransports = setOf(CodegenMetadataTransportKind.TCP),
-                                firmwareSync =
-                                    site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto(
-                                        cOutputProjectDir = "/tmp/firmware-project",
-                                        bridgeImplPath = "Core/Src/modbus",
-                                    ),
-                            ),
+            val firmwareProjectDir = Files.createTempDirectory("codegen-metadata-save-")
+            try {
+                val saved =
+                    fixture.service.saveContextDraft(
+                        genericContextRequest(
+                            protocolTemplateId = template.id,
+                            availableDefinitions = definitions,
+                            code = "CTX_METADATA_DRAFT",
+                        ).copy(
+                            protocolTemplateCode = template.code,
+                            protocolTemplateName = template.name,
+                        ).toMetadataDraft(definitions).copy(
+                            exportSettings =
+                                site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto(
+                                    artifactKinds =
+                                        setOf(
+                                            CodegenMetadataArtifactKind.METADATA_SNAPSHOT,
+                                            CodegenMetadataArtifactKind.C_SERVICE_CONTRACT,
+                                        ),
+                                    kotlinClientTransports =
+                                        setOf(
+                                            CodegenMetadataTransportKind.RTU,
+                                            CodegenMetadataTransportKind.MQTT,
+                                        ),
+                                    cExposeTransports = setOf(CodegenMetadataTransportKind.TCP),
+                                    firmwareSync =
+                                        site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto(
+                                            cOutputProjectDir = firmwareProjectDir.toString(),
+                                            bridgeImplPath = "Core/Src/modbus",
+                                        ),
+                                ),
+                        ),
+                    )
+
+                assertNotNull(saved.id)
+                assertEquals(
+                    setOf(CodegenMetadataTransportKind.RTU, CodegenMetadataTransportKind.MQTT),
+                    saved.exportSettings.kotlinClientTransports,
+                )
+                assertEquals(setOf(CodegenMetadataTransportKind.TCP), saved.exportSettings.cExposeTransports)
+                assertEquals(
+                    setOf(
+                        CodegenMetadataArtifactKind.METADATA_SNAPSHOT,
+                        CodegenMetadataArtifactKind.C_SERVICE_CONTRACT,
                     ),
+                    saved.exportSettings.artifactKinds,
                 )
 
-            assertNotNull(saved.id)
-            assertEquals(
-                setOf(CodegenMetadataTransportKind.RTU, CodegenMetadataTransportKind.MQTT),
-                saved.exportSettings.kotlinClientTransports,
-            )
-            assertEquals(setOf(CodegenMetadataTransportKind.TCP), saved.exportSettings.cExposeTransports)
-            assertEquals(
-                setOf(
-                    CodegenMetadataArtifactKind.METADATA_SNAPSHOT,
-                    CodegenMetadataArtifactKind.C_SERVICE_CONTRACT,
-                ),
-                saved.exportSettings.artifactKinds,
-            )
-
-            val reloaded = fixture.service.getContextDraft(saved.id!!)
-            assertEquals(saved.exportSettings, reloaded.exportSettings)
+                val reloaded = fixture.service.getContextDraft(saved.id!!)
+                assertEquals(saved.exportSettings, reloaded.exportSettings)
+            } finally {
+                firmwareProjectDir.toFile().deleteRecursively()
+            }
         }
     }
 
@@ -98,8 +122,9 @@ class CodegenMetadataDraftServiceTest {
         CodegenContextTestFixture().use { fixture ->
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val definitions = fixture.service.listContextDefinitions(template.id)
-            val firmwareProjectDir = Files.createTempDirectory("codegen-metadata-export")
+            val firmwareProjectDir = createHomeScopedTempDirectory("codegen-metadata-export-")
             try {
+                val firmwareProjectDirTokenPath = firmwareProjectDir.toHomeTokenPath("\$HOME")
                 val saved =
                     fixture.service.saveContextDraft(
                         genericContextRequest(
@@ -122,7 +147,7 @@ class CodegenMetadataDraftServiceTest {
                                     cExposeTransports = setOf(CodegenMetadataTransportKind.TCP),
                                     firmwareSync =
                                         site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto(
-                                            cOutputProjectDir = firmwareProjectDir.toString(),
+                                            cOutputProjectDir = firmwareProjectDirTokenPath,
                                             bridgeImplPath = "Core/Src/modbus",
                                         ),
                                 ),

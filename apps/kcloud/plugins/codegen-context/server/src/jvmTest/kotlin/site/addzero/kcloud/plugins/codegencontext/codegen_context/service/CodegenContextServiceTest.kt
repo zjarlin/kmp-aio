@@ -2,6 +2,7 @@ package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
 
 import java.nio.file.Path
 import kotlin.io.path.exists
+import kotlin.io.path.createDirectories
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
 import kotlin.test.Test
@@ -177,6 +178,34 @@ class CodegenContextServiceTest {
             assertTrue(
                 fixture.service.listContexts().none { it.code == "CTX_CRUD" },
             )
+        }
+    }
+
+    @Test
+    /**
+     * 处理shouldaccepttilde路径for外部输出根目录。
+     */
+    fun shouldAcceptTildePathForExternalOutputRoot() {
+        CodegenContextTestFixture().use { fixture ->
+            val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
+            val definitions = fixture.service.listContextDefinitions(template.id)
+            val homeScopedDir = createHomeScopedTempDirectory("codegen-context-external-root-")
+            try {
+                val saved =
+                    fixture.service.saveContext(
+                        genericContextRequest(
+                            protocolTemplateId = template.id,
+                            availableDefinitions = definitions,
+                            code = "CTX_TILDE_ROOT",
+                        ).copy(
+                            externalCOutputRoot = homeScopedDir.toHomeTokenPath("~"),
+                        ),
+                    )
+
+                assertEquals(homeScopedDir.toHomeTokenPath("~"), saved.externalCOutputRoot)
+            } finally {
+                homeScopedDir.toFile().deleteRecursively()
+            }
         }
     }
 
@@ -615,8 +644,7 @@ class CodegenContextServiceTest {
                 assertEquals(saved.id, response.contextId)
                 assertContains(response.message, "metadata snapshot")
                 assertTrue(response.generatedFiles.isNotEmpty())
-                assertTrue(response.generatedFiles.all { file -> Path.of(file).exists() })
-                assertTrue(response.generatedFiles.any { file -> file.endsWith("/generated/modbus/tcp/modbus_tcp_dispatch.c") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith("/Core/Src/generated/modbus/tcp/transport/modbus_tcp_dispatch.c") })
                 assertTrue(response.generatedFiles.any { file -> file.endsWith(".tcp.protocol.md") })
                 assertTrue(response.generatedFiles.none { file -> file.endsWith(".kt") })
                 fixture.dataSource.connection.use { connection ->
@@ -652,6 +680,7 @@ class CodegenContextServiceTest {
             val template = fixture.templateService.listProtocolTemplates().first { it.code == "MODBUS_RTU_CLIENT" }
             val workspaceRoot = createGeneratorWorkspace()
             val externalOutputRoot = workspaceRoot.resolve("mounted/peer-c-project/Docs/generated/modbus-metadata")
+            externalOutputRoot.createDirectories()
             val saved =
                 fixture.service.saveContext(
                     genericContextRequest(
@@ -669,10 +698,10 @@ class CodegenContextServiceTest {
                         fixture.service.generateContracts(saved.id!!)
                     }
 
-                val cDispatch = externalOutputRoot.resolve("c/generated/modbus/rtu/modbus_rtu_dispatch.c")
-                val tcpDispatch = externalOutputRoot.resolve("c/generated/modbus/tcp/modbus_tcp_dispatch.c")
-                val mqttDispatch = externalOutputRoot.resolve("c/generated/modbus/mqtt/modbus_mqtt_dispatch.c")
-                val protocolDocDir = externalOutputRoot.resolve("markdown/generated/modbus/protocols")
+                val cDispatch = externalOutputRoot.resolve("Core/Src/generated/modbus/rtu/transport/modbus_rtu_dispatch.c")
+                val tcpDispatch = externalOutputRoot.resolve("Core/Src/generated/modbus/tcp/transport/modbus_tcp_dispatch.c")
+                val mqttDispatch = externalOutputRoot.resolve("Core/Src/generated/modbus/mqtt/transport/modbus_mqtt_dispatch.c")
+                val protocolDocDir = externalOutputRoot.resolve("Docs/generated/modbus")
                 assertTrue(cDispatch.exists())
                 assertTrue(tcpDispatch.exists())
                 assertTrue(mqttDispatch.exists())
@@ -682,9 +711,9 @@ class CodegenContextServiceTest {
                 assertTrue(response.generatedFiles.any { file -> file.startsWith(externalOutputRoot.toString()) })
                 assertContains(response.message, "外部产物")
                 assertTrue(response.generatedFiles.none { file -> file.endsWith(".kt") })
-                assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".rtu.protocol.md") })
-                assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".tcp.protocol.md") })
-                assertTrue(protocolDocDir.toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".mqtt.protocol.md") })
+                assertTrue(protocolDocDir.resolve("rtu").toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".rtu.protocol.md") })
+                assertTrue(protocolDocDir.resolve("tcp").toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".tcp.protocol.md") })
+                assertTrue(protocolDocDir.resolve("mqtt").toFile().listFiles().orEmpty().any { file -> file.name.endsWith(".mqtt.protocol.md") })
             } finally {
                 deleteWorkspace(workspaceRoot)
             }

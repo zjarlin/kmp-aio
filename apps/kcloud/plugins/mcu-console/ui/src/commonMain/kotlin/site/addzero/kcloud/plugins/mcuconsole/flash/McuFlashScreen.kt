@@ -26,7 +26,7 @@ import site.addzero.cupertino.workbench.material3.Text
 
 @Route(
     value = "开发工具",
-    title = "烧录",
+    title = "ST-LINK烧录",
     routePath = "mcu/flash",
     icon = "Upload",
     order = 10.0,

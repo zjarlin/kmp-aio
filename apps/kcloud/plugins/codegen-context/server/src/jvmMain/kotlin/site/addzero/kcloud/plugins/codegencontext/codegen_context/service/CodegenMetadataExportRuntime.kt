@@ -164,7 +164,7 @@ internal fun runProjectSyncTools(
             transport = transport,
             externalSourceFiles = externalSourceFiles.distinctBy(File::getAbsolutePath),
         )
-    val projectDir = File(firmwareSync.cOutputProjectDir).absoluteFile
+    val projectDir = firmwareSync.cOutputProjectDir.toExpandedPath().toFile().absoluteFile
     return ServiceLoader
         .load(ModbusProjectSyncTool::class.java, ModbusProjectSyncTool::class.java.classLoader)
         .toList()
@@ -202,22 +202,23 @@ private fun buildMetadataExportOptions(
     transport: KspTransportKind,
 ): Map<String, String> =
     buildMap {
+        val firmwareSync = exportSettings.firmwareSync
         put(ModbusKspOptions.TRANSPORTS_OPTION, transport.transportId)
-        put("addzero.modbus.c.output.projectDir", exportSettings.firmwareSync.cOutputProjectDir)
+        put("addzero.modbus.c.output.projectDir", firmwareSync.cOutputProjectDir.expandHomeDirectoryTokens())
         exportSettings.firmwareSync.bridgeImplPath.cleanNullable()?.let { value ->
-            put("addzero.modbus.c.bridgeImpl.path", value)
+            put("addzero.modbus.c.bridgeImpl.path", value.expandHomeDirectoryTokens())
         }
-        exportSettings.firmwareSync.keilUvprojxPath.cleanNullable()?.let { value ->
-            put("addzero.modbus.keil.uvprojx.path", value)
+        firmwareSync.keilUvprojxPath.cleanNullable()?.let { value ->
+            put("addzero.modbus.keil.uvprojx.path", value.expandHomeDirectoryTokens())
         }
-        exportSettings.firmwareSync.keilTargetName.cleanNullable()?.let { value ->
+        firmwareSync.keilTargetName.cleanNullable()?.let { value ->
             put("addzero.modbus.keil.targetName", value)
         }
-        exportSettings.firmwareSync.keilGroupName.cleanNullable()?.let { value ->
+        firmwareSync.keilGroupName.cleanNullable()?.let { value ->
             put("addzero.modbus.keil.groupName", value)
         }
-        exportSettings.firmwareSync.mxprojectPath.cleanNullable()?.let { value ->
-            put("addzero.modbus.mxproject.path", value)
+        firmwareSync.mxprojectPath.cleanNullable()?.let { value ->
+            put("addzero.modbus.mxproject.path", value.expandHomeDirectoryTokens())
         }
         put(ModbusKspOptions.RTU_PORT_PATH_OPTION, exportSettings.rtuDefaults.portPath)
         put(ModbusKspOptions.RTU_UNIT_ID_OPTION, exportSettings.rtuDefaults.unitId)
@@ -260,7 +261,7 @@ private fun resolveConfiguredFile(
     projectDir: File,
     rawPath: String,
 ): File {
-    val configured = File(rawPath)
+    val configured = rawPath.toExpandedPath().toFile()
     return if (configured.isAbsolute) {
         configured
     } else {

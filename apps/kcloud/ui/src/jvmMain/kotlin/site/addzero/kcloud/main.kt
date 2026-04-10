@@ -44,7 +44,7 @@ private fun startServerOrReuseExisting(): ApplicationEngine? {
     return try {
         startServer(wait = false)
     } catch (throwable: Throwable) {
-        if (throwable.hasCause<BindException>()) {
+        if (throwable.hasPortInUseCause()) {
             println(
                 "Embedded server port $EMBEDDED_SERVER_PORT is already in use; " +
                     "reusing the existing backend instance.",
@@ -60,6 +60,21 @@ private inline fun <reified T : Throwable> Throwable.hasCause(): Boolean {
     var current: Throwable? = this
     while (current != null) {
         if (current is T) {
+            return true
+        }
+        current = current.cause
+    }
+    return false
+}
+
+private fun Throwable.hasPortInUseCause(): Boolean {
+    if (hasCause<BindException>()) {
+        return true
+    }
+    var current: Throwable? = this
+    while (current != null) {
+        val message = current.message.orEmpty()
+        if (message.contains("Address already in use", ignoreCase = true)) {
             return true
         }
         current = current.cause

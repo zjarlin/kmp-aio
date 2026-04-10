@@ -876,18 +876,27 @@ class ProjectService(
                         transportConfig = protocol.toTransportConfig(),
                         devices = protocol.devices
                             .sortedWith(compareBy(Device::sortIndex, Device::id))
-                            .map { it.toTreeNode() },
+                            .map { device ->
+                                device.toTreeNode(protocol.id)
+                            },
                     )
                 },
             modules = protocolLinks
                 .sortedWith(compareBy(ProjectProtocol::sortIndex, ProjectProtocol::id))
                 .flatMap { link ->
+                    val protocolId = link.protocol.id
                     link.protocol.devices
                         .sortedWith(compareBy(Device::sortIndex, Device::id))
                         .flatMap { device ->
+                            val deviceId = device.id
                             device.modules
                                 .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
-                                .map { it.toTreeNode() }
+                                .map { module ->
+                                    module.toTreeNode(
+                                        deviceId = deviceId,
+                                        protocolId = protocolId,
+                                    )
+                                }
                         }
                 },
         )
@@ -895,12 +904,15 @@ class ProjectService(
     /**
      * 处理模块instance。
      */
-    private fun ModuleInstance.toTreeNode(): ModuleTreeNode =
+    private fun ModuleInstance.toTreeNode(
+        deviceId: Long,
+        protocolId: Long,
+    ): ModuleTreeNode =
         ModuleTreeNode(
             id = id,
             name = name,
-            deviceId = device.id,
-            protocolId = protocol.id,
+            deviceId = deviceId,
+            protocolId = protocolId,
             sortIndex = sortIndex,
             moduleTemplateId = moduleTemplate.id,
             moduleTemplateCode = moduleTemplate.code,
@@ -910,7 +922,9 @@ class ProjectService(
     /**
      * 处理设备。
      */
-    private fun Device.toTreeNode(): DeviceTreeNode =
+    private fun Device.toTreeNode(
+        protocolId: Long,
+    ): DeviceTreeNode =
         DeviceTreeNode(
             id = id,
             name = name,
@@ -926,13 +940,18 @@ class ProjectService(
             batchDigitalLength = batchDigitalLength,
             disabled = disabled,
             sortIndex = sortIndex,
-            protocolId = protocol.id,
+            protocolId = protocolId,
             deviceTypeId = deviceType.id,
             deviceTypeCode = deviceType.code,
             deviceTypeName = deviceType.name,
             modules = modules
                 .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
-                .map { it.toTreeNode() },
+                .map { module ->
+                    module.toTreeNode(
+                        deviceId = id,
+                        protocolId = protocolId,
+                    )
+                },
             tags = tags
                 .sortedWith(compareBy(Tag::sortIndex, Tag::id))
                 .map {

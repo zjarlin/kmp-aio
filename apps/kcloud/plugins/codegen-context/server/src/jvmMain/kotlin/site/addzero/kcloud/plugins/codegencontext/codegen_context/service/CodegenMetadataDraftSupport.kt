@@ -12,6 +12,12 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExp
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataIssueDto
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH
+import site.addzero.kcloud.plugins.codegencontext.api.context.CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqttDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataResolvedFunctionDto
@@ -203,12 +209,12 @@ internal fun CodegenContextDetailDto.toMetadataDraft(
                 artifactKinds = inferArtifactKinds(),
                 firmwareSync =
                     CodegenMetadataFirmwareSyncDto(
-                        cOutputProjectDir = resolveFirmwareProjectDir(),
-                        bridgeImplPath = bridgeImplPath.orEmpty().ifBlank { "Core/Src/modbus" },
-                        keilUvprojxPath = keilUvprojxPath.orEmpty(),
-                        keilTargetName = keilTargetName.orEmpty(),
-                        keilGroupName = keilGroupName.orEmpty(),
-                        mxprojectPath = mxprojectPath.orEmpty(),
+                        cOutputProjectDir = resolveFirmwareProjectDir().ifBlank { CODEGEN_CONTEXT_REFERENCE_PROJECT_DIR },
+                        bridgeImplPath = bridgeImplPath.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_BRIDGE_IMPL_PATH },
+                        keilUvprojxPath = keilUvprojxPath.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_KEIL_UVPROJX_PATH },
+                        keilTargetName = keilTargetName.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_KEIL_TARGET_NAME },
+                        keilGroupName = keilGroupName.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_KEIL_GROUP_NAME },
+                        mxprojectPath = mxprojectPath.orEmpty().ifBlank { CODEGEN_CONTEXT_REFERENCE_MXPROJECT_PATH },
                     ),
             ),
         thingProperties = propertyPool.values.sortedBy(CodegenMetadataThingPropertyDraftDto::sortIndex),
@@ -330,7 +336,7 @@ private fun CodegenMetadataDraftDto.validateDraftSelections(): List<CodegenMetad
         issues += CodegenMetadataIssueDto(MetadataIssueSeverity.ERROR, "cOutputProjectDir", "导出 C/Markdown 时必须填写 C 工程根目录。")
     }
     exportSettings.firmwareSync.cOutputProjectDir.cleanNullable()?.let { rawPath ->
-        val path = runCatching { Path.of(rawPath) }.getOrNull()
+        val path = runCatching { rawPath.toExpandedPath() }.getOrNull()
         when {
             path == null ->
                 issues += CodegenMetadataIssueDto(MetadataIssueSeverity.ERROR, "cOutputProjectDir", "C 工程根目录不是合法路径。")
@@ -684,5 +690,5 @@ private fun CodegenContextDetailDto.defaultMetadataTransport(): CodegenMetadataT
 
 private fun String?.parentDirectoryString(): String? {
     val candidate = this.cleanNullable() ?: return null
-    return runCatching { Path.of(candidate).parent?.toString() }.getOrNull()
+    return runCatching { candidate.toExpandedPath().parent?.toString() }.getOrNull()
 }

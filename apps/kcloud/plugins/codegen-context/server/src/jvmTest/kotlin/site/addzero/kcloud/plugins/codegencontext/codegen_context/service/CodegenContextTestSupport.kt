@@ -67,6 +67,29 @@ internal class CodegenContextTestFixture : AutoCloseable {
 }
 
 /**
+ * 创建位于家目录下的临时目录。
+ */
+internal fun createHomeScopedTempDirectory(
+    prefix: String,
+): Path {
+    return Files.createTempDirectory(Path.of(System.getProperty("user.home")), prefix)
+}
+
+/**
+ * 转换为以家目录开头的缩写路径。
+ */
+internal fun Path.toHomeTokenPath(
+    token: String,
+): String {
+    val homeDirectory = Path.of(System.getProperty("user.home")).toAbsolutePath().normalize()
+    val normalized = toAbsolutePath().normalize()
+    val relative = homeDirectory.relativize(normalized)
+    val separator = if (relative.nameCount == 0) "" else "/"
+    val suffix = relative.joinToString("/") { segment -> segment.toString() }
+    return token + separator + suffix
+}
+
+/**
  * 处理generic上下文请求。
  *
  * @param protocolTemplateId 协议模板 ID。
@@ -222,6 +245,7 @@ internal fun genericContextRequest(
 internal fun createGeneratorWorkspace(): Path {
     val workspaceRoot = Files.createTempDirectory("codegen-context-workspace-")
     workspaceRoot.resolve("settings.gradle.kts").writeText("rootProject.name = \"codegen-context-test\"")
+    workspaceRoot.resolve(".mxproject").writeText("mxproject")
     workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin").createDirectories()
     workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin").createDirectories()
     workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/build/generated/source/codegen-context/jvmMain/kotlin").createDirectories()

@@ -9,6 +9,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
+import site.addzero.kcloud.plugins.mcuconsole.serial.McuSerialPortDescriptor
 
 @KoinViewModel
 /**

@@ -274,7 +274,7 @@ internal fun resolveWithinRoot(
  * 处理string。
  */
 private fun String.toAbsoluteNormalizedPath(): Path =
-    Path.of(this).toAbsolutePath().normalize()
+    toExpandedPath().toAbsolutePath().normalize()
 
 /**
  * 处理modbus传输类型。

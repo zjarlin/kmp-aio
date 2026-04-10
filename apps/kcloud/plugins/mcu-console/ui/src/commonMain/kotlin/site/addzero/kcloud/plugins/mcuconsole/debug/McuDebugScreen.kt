@@ -65,7 +65,7 @@ fun McuDebugScreen() {
                 WorkbenchActionButton(
                     text = if (state.streaming) "重新连接" else "开始连接",
                     onClick = viewModel::startStreaming,
-                    variant = WorkbenchButtonVariant.Primary,
+                    variant = WorkbenchButtonVariant.Default,
                     enabled = !state.connecting,
                 )
                 WorkbenchActionButton(
@@ -129,7 +129,7 @@ fun McuDebugScreen() {
                             text = descriptor.systemPortPath.ifBlank { descriptor.systemPortName },
                             onClick = { viewModel.selectPort(descriptor) },
                             variant = if (descriptor.systemPortPath == state.portName || descriptor.systemPortName == state.portName) {
-                                WorkbenchButtonVariant.Primary
+                                WorkbenchButtonVariant.Default
                             } else {
                                 WorkbenchButtonVariant.Outline
                             },
