@@ -15,6 +15,7 @@ import org.babyfish.jimmer.sql.runtime.DefaultDatabaseNamingStrategy.LOWER_CASE
 import org.koin.core.annotation.Configuration
 import org.koin.core.annotation.Module
 import org.koin.core.annotation.Single
+import org.koin.mp.KoinPlatform
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteInstantScalarProvider
 import site.addzero.kcloud.jimmer.scalarprovider.sqllite.SqliteLocalDateTimeScalarProvider
 import site.addzero.kcloud.jimmer.spi.DatasourceProperties
@@ -23,6 +24,7 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.PreparedStatement
 import java.sql.ResultSet
+import java.util.concurrent.ConcurrentHashMap
 import javax.sql.DataSource
 
 fun <T> KSqlClient.withConnection(
@@ -361,6 +363,38 @@ fun KSqlClient.sql(
     return queryForList(cmd, params)
 }
 
+fun KSqlClient.useDatasource(
+    name: String,
+): KSqlClient {
+    val registry = KoinPlatform.getKoin().get<DatasourceRegistry>()
+    return registry.sqlClient(name)
+}
+
+fun KSqlClient.useDatasource(
+    properties: DatasourceProperties,
+): KSqlClient {
+    val manager = KoinPlatform.getKoin().get<DataSourceManager>()
+    return manager.getSqlClient(properties)
+}
+
+fun KSqlClient.useTemporaryDatasource(
+    name: String = "dynamic",
+    url: String,
+    driverClassName: String,
+    user: String = "",
+    password: String = "",
+): KSqlClient {
+    return useDatasource(
+        DatasourceProperties(
+            name = name,
+            url = url,
+            driverClassName = driverClassName,
+            user = user,
+            password = password,
+        ),
+    )
+}
+
 fun DataSource.toRawKSqlClient(
     dialect: Dialect,
     interceptors: List<DraftInterceptor<*, *>> = emptyList(),
@@ -381,36 +415,116 @@ fun DataSource.toRawKSqlClient(
 class JimmerKoinModule {
     @Single
     fun dataSource(
-        datasourcePropertiesSpi: DatasourcePropertiesSpi,
+        registry: DatasourceRegistry,
     ): DataSource {
-        return defaultDatasourceProperties(datasourcePropertiesSpi).toDatasource()
+        return registry.defaultDataSource()
     }
 
     @Single
     fun sqlClient(
-        datasourcePropertiesSpi: DatasourcePropertiesSpi,
-        interceptors: List<DraftInterceptor<*, *>>,
-        scalarProviders: List<AbstractScalarProvider<*, *>>,
+        registry: DatasourceRegistry,
     ): KSqlClient {
-        return defaultDatasourceProperties(datasourcePropertiesSpi).toKsqlClient(
-            interceptors = interceptors,
-            scalarProviders = scalarProviders,
-        )
+        return registry.defaultSqlClient()
     }
 
     @Single
     fun sqlClients(
-        datasourcePropertiesSpi: DatasourcePropertiesSpi,
-        interceptors: List<DraftInterceptor<*, *>>,
-        scalarProviders: List<AbstractScalarProvider<*, *>>,
+        registry: DatasourceRegistry,
     ): List<KSqlClient> {
-        return enabledDatasourceProperties(datasourcePropertiesSpi).filterNot(DatasourceProperties::default)
-            .map { datasource ->
-                datasource.toKsqlClient(
-                    interceptors = interceptors,
-                    scalarProviders = scalarProviders,
-                )
-            }
+        return registry.sqlClients()
+    }
+}
+
+private data class DatasourceRuntime(
+    val properties: DatasourceProperties,
+    val dataSource: DataSource,
+    val sqlClient: KSqlClient,
+)
+
+@Single
+class DatasourceRegistry(
+    private val datasourcePropertiesSpi: DatasourcePropertiesSpi,
+    private val interceptors: List<DraftInterceptor<*, *>>,
+    private val scalarProviders: List<AbstractScalarProvider<*, *>>,
+) {
+    private val runtimesByName: LinkedHashMap<String, DatasourceRuntime> = buildRuntimeMap()
+    private val defaultRuntime: DatasourceRuntime = resolveDefaultRuntime(runtimesByName.values.toList())
+
+    fun defaultDataSource(): DataSource {
+        return defaultRuntime.dataSource
+    }
+
+    fun defaultSqlClient(): KSqlClient {
+        return defaultRuntime.sqlClient
+    }
+
+    fun dataSource(name: String): DataSource {
+        return runtime(name).dataSource
+    }
+
+    fun sqlClient(name: String): KSqlClient {
+        return runtime(name).sqlClient
+    }
+
+    fun sqlClients(): List<KSqlClient> {
+        return runtimesByName.values.map(DatasourceRuntime::sqlClient)
+    }
+
+    fun datasourceNames(): List<String> {
+        return runtimesByName.keys.toList()
+    }
+
+    private fun runtime(name: String): DatasourceRuntime {
+        return runtimesByName[name]
+            ?: throw IllegalArgumentException(
+                "Datasource '$name' is not configured. Available: ${runtimesByName.keys.joinToString()}",
+            )
+    }
+
+    private fun buildRuntimeMap(): LinkedHashMap<String, DatasourceRuntime> {
+        val runtimes = linkedMapOf<String, DatasourceRuntime>()
+        enabledDatasourceProperties(datasourcePropertiesSpi).forEach { properties ->
+            val dataSource = properties.toDatasource()
+            val sqlClient = properties.toKsqlClient(
+                dataSource = dataSource,
+                interceptors = interceptors,
+                scalarProviders = scalarProviders,
+            )
+            runtimes[properties.name] = DatasourceRuntime(
+                properties = properties,
+                dataSource = dataSource,
+                sqlClient = sqlClient,
+            )
+        }
+        return runtimes
+    }
+
+    private fun resolveDefaultRuntime(
+        runtimes: List<DatasourceRuntime>,
+    ): DatasourceRuntime {
+        return runtimes.firstOrNull { runtime -> runtime.properties.default }
+            ?: runtimes.firstOrNull()
+            ?: error("No enabled datasource found, check your DatasourcePropertiesSpi")
+    }
+}
+
+@Single
+class DataSourceManager(
+    private val interceptors: List<DraftInterceptor<*, *>>,
+    private val scalarProviders: List<AbstractScalarProvider<*, *>>,
+) {
+    private val cache = ConcurrentHashMap<String, KSqlClient>()
+
+    fun getSqlClient(
+        properties: DatasourceProperties,
+    ): KSqlClient {
+        val cacheKey = properties.cacheKey()
+        return cache.getOrPut(cacheKey) {
+            properties.toKsqlClient(
+                interceptors = interceptors,
+                scalarProviders = scalarProviders,
+            )
+        }
     }
 }
 
@@ -518,12 +632,12 @@ internal fun createSqliteDataSource(jdbcUrl: String, driverClassName: String): D
  * 动态数据源管理器（运行时按 dbType + url 创建临时连接，同样走 SPI）
  */
 private fun DatasourceProperties.toKsqlClient(
+    dataSource: DataSource,
     interceptors: List<DraftInterceptor<*, *>>,
     scalarProviders: List<AbstractScalarProvider<*, *>>,
 ): KSqlClient {
     val jdbcUrl = url.trim()
     val dialect = guessDialect(jdbcUrl)
-    val dataSource = toDatasource()
     val activeScalarProviders = when (dialect) {
         is SQLiteDialect -> scalarProviders
         else -> scalarProviders.filterNot { provider ->
@@ -537,12 +651,15 @@ private fun DatasourceProperties.toKsqlClient(
     )
 }
 
-private fun defaultDatasourceProperties(
-    datasourcePropertiesSpi: DatasourcePropertiesSpi,
-): DatasourceProperties {
-    val configured = enabledDatasourceProperties(datasourcePropertiesSpi)
-    return configured.firstOrNull(DatasourceProperties::default) ?: configured.firstOrNull()
-    ?: error("No enabled datasource found, check your DatasourcePropertiesSpi")
+private fun DatasourceProperties.toKsqlClient(
+    interceptors: List<DraftInterceptor<*, *>>,
+    scalarProviders: List<AbstractScalarProvider<*, *>>,
+): KSqlClient {
+    return toKsqlClient(
+        dataSource = toDatasource(),
+        interceptors = interceptors,
+        scalarProviders = scalarProviders,
+    )
 }
 
 private fun enabledDatasourceProperties(
@@ -551,6 +668,18 @@ private fun enabledDatasourceProperties(
     return datasourcePropertiesSpi.datasources().filter { datasource ->
         datasource.enabled && datasource.url.isNotBlank()
     }
+}
+
+private fun DatasourceProperties.cacheKey(): String {
+    return listOf(
+        name,
+        enabled.toString(),
+        default.toString(),
+        url,
+        driverClassName,
+        user,
+        password,
+    ).joinToString("|")
 }
 
 private fun prepareStatement(

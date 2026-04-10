@@ -71,7 +71,42 @@ installKoin {
 - `site.addzero.kcloud.jimmer.di.DatabaseKt` 里的 `KSqlClient` 扩展
 - `site.addzero.kcloud.jimmer.support.JimmerSqlScriptSupport`
 
-其中 `JimmerSqlScriptSupport` 只适合执行已经明确受控的 SQL 片段，不应用来承担 schema 自动初始化。
+其中 `JimmerSqlScriptSupport` 现在也优先接收 `KSqlClient`，只适合执行已经明确受控的 SQL 片段，不应用来承担 schema 自动初始化。
+
+## Datasource Switching
+
+默认直接注入 `KSqlClient` 即可，它会绑定 `DatasourcePropertiesSpi` 里声明的默认数据源。
+
+如果需要切换到命名数据源，直接在现有 `KSqlClient` 上调用：
+
+```kotlin
+val reportSql = sql.useDatasource("report")
+```
+
+如果需要按运行时 URL 临时创建一个客户端，直接调用：
+
+```kotlin
+val sqliteSql = sql.useTemporaryDatasource(
+    name = "sqlite-export",
+    url = "jdbc:sqlite:/tmp/demo.sqlite",
+    driverClassName = "org.sqlite.JDBC",
+)
+```
+
+也可以直接传完整 `DatasourceProperties`：
+
+```kotlin
+val anotherSql = sql.useDatasource(
+    DatasourceProperties(
+        name = "custom",
+        url = "...",
+        driverClassName = "...",
+    ),
+)
+```
+
+这套做法不是 Spring 那种 `AbstractRoutingDataSource` 式的隐式线程上下文切换，而是显式返回目标 `KSqlClient`。
+对 Ktor/Koin 服务代码来说，这样更直观，也更容易审查和测试。
 
 ## Resource Layout
 
