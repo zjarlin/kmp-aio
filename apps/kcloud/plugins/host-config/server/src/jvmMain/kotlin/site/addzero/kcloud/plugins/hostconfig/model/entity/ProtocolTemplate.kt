@@ -4,14 +4,14 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_protocol_template")
 /**
  * 定义协议模板实体。
  */
-interface ProtocolTemplate : EpochBaseEntity {
+interface ProtocolTemplate : BaseEntity {
 
     @Key
     /**
@@ -39,9 +39,9 @@ interface ProtocolTemplate : EpochBaseEntity {
      */
     val sortIndex: Int
 
-    @OneToMany(mappedBy = "protocolTemplate")
     /**
      * 模块模板。
      */
+    @OneToMany(mappedBy = "protocolTemplate")
     val moduleTemplates: List<ModuleTemplate>
 }

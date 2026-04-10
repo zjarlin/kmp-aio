@@ -4,7 +4,7 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 /**
  * 标签定义实体。
@@ -14,7 +14,7 @@ import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
  */
 @Entity
 @Table(name = "host_config_label_definition")
-interface LabelDefinition : EpochBaseEntity {
+interface LabelDefinition : BaseEntity {
 
     /** 标签业务编码，要求全局唯一。 */
     @Key

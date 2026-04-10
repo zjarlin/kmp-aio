@@ -3,14 +3,14 @@ package site.addzero.kcloud.plugins.hostconfig.model.entity
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_tag_value_text")
 /**
  * 定义标签值text实体。
  */
-interface TagValueText : EpochBaseEntity {
+interface TagValueText : BaseEntity {
 
     /**
      * raw值。

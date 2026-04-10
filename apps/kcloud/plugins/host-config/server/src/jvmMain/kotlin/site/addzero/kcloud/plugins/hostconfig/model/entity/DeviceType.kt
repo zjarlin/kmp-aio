@@ -3,14 +3,14 @@ package site.addzero.kcloud.plugins.hostconfig.model.entity
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_device_type")
 /**
  * 定义设备类型实体。
  */
-interface DeviceType : EpochBaseEntity {
+interface DeviceType : BaseEntity {
 
     @Key
     /**

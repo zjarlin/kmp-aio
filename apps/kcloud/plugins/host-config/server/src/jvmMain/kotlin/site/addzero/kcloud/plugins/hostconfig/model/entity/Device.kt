@@ -4,7 +4,7 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder2
 import site.addzero.kcloud.plugins.hostconfig.model.enums.ByteOrder4
 import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
@@ -14,7 +14,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.FloatOrder
 /**
  * 定义设备实体。
  */
-interface Device : EpochBaseEntity {
+interface Device : BaseEntity {
 
     /**
      * 名称。

@@ -3,7 +3,7 @@ package site.addzero.kcloud.plugins.hostconfig.catalog.model.entity
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 
 /**
@@ -14,7 +14,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
  */
 @Entity
 @Table(name = "host_config_property_definition")
-interface PropertyDefinition : EpochBaseEntity {
+interface PropertyDefinition : BaseEntity {
 
     /** 属性标识符，在所属设备定义内唯一。 */
     val identifier: String

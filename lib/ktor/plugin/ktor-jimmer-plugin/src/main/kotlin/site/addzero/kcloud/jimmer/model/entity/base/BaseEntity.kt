@@ -4,7 +4,7 @@ import org.babyfish.jimmer.sql.MappedSuperclass
 
 @MappedSuperclass
 /**
- * 兼容旧命名的统一实体基类。
+ * 统一实体基类。
  */
-interface BaseEntity : EpochBaseEntity {
+interface BaseEntity : LongId, CreatedAt, UpdatedAt {
 }

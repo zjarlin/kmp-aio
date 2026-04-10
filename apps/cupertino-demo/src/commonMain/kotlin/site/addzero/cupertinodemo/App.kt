@@ -79,6 +79,7 @@ import org.koin.compose.koinInject
 import org.koin.plugin.module.dsl.koinConfiguration
 import androidx.compose.material3.darkColorScheme as materialDarkColorScheme
 import androidx.compose.material3.lightColorScheme as materialLightColorScheme
+import site.addzero.cupertinodemo.adaptive_page.AdaptivePageAdaptiveIconButtonSpi
 
 private val DemoAccent = Color(0xFF0A84FF)
 private const val CupertinoVersion = "3.3.1"
@@ -616,37 +617,27 @@ private fun adaptiveTriStateLabel(state: ToggleableState): String =
         ToggleableState.On -> "On"
     }
 
+/**
+ * 应用级提示弹窗标题插槽。
+ *
+ * 这个示例保留在根文件里，用来说明全局壳层文案也能通过 SPI 接入；
+ * 但页面级的人机交互入口仍然优先落到各自页面包中管理。
+ */
 interface AppCupertinoAlertDialogTitleSpi {
     @androidx.compose.runtime.Composable
     fun Render()
 }
 
+/**
+ * 应用级提示弹窗标题的默认实现。
+ *
+ * 默认仅渲染一段固定标题文案，后续如果宿主要替换成品牌化标题或环境提示，
+ * 只需要替换这一份实现，不用改动弹窗布局。
+ */
 @org.koin.core.annotation.Single
 class DefaultAppCupertinoAlertDialogTitleSpi : AppCupertinoAlertDialogTitleSpi {
     @androidx.compose.runtime.Composable
     override fun Render() {
         CupertinoText("脚手架已经换成纯 Cupertino")
-    }
-}
-
-interface AdaptivePageAdaptiveIconButtonSpi {
-    @androidx.compose.runtime.Composable
-    fun Render(
-        state: CupertinoDemoState,
-    )
-}
-
-@org.koin.core.annotation.Single
-class DefaultAdaptivePageAdaptiveIconButtonSpi : AdaptivePageAdaptiveIconButtonSpi {
-    @androidx.compose.runtime.Composable
-    override fun Render(
-        state: CupertinoDemoState,
-    ) {
-            AdaptiveIconButton(onClick = state::showAlert) {
-                CupertinoIcon(
-                    imageVector = AdaptiveIcons.Outlined.Search,
-                    contentDescription = "Search",
-                )
-            }
     }
 }

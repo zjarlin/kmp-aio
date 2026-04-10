@@ -26,3 +26,16 @@
 - 在 `apps/kcloud` 及后续可抽库代码中，命名默认技术优先、能力优先，不要再给可复用壳层、主题、脚手架、路由、设计组件起 `KCloud*` 这类业务前缀名。
 - 如果一段代码预期未来进入组件库或共享模块，优先使用 `Workbench*`、`Shell*`、`Route*`、`Sidebar*`、`Theme*`、`Overlay*` 这类泛化命名。
 - `nav3/navigation3` 写法默认采用 `NavDisplay(backStack) { key -> when (key) { ... NavEntry(key) { ... } } }` 这种声明式分发风格，不回退到旧的菜单树或额外壳层导航抽象。
+
+## CMP Screen SPI Slot Rules
+
+- 这条规则视为本仓库内的 `cmp skill` 补充约定：Compose 前端里凡是直接承接用户动作的人机交互点，默认都要抽成页面级 `SPI` 插槽接口，并提供 `Koin` 可替换默认实现。
+- 适用范围包括按钮点击、图标按钮、工具栏动作、搜索入口、提交或重置、行内操作、下拉菜单、弹窗触发、确认或取消、空态 CTA、切换与选择回调等；纯展示文本、纯布局容器、静态装饰、单纯排版 helper 不在此列。
+- 页面主布局、`Screen` 骨架、卡片或行列组合函数不要为了 SPI 机械抽离；布局继续留在 `Screen` 文件里，SPI 只负责可替换的人机交互块。
+- 每个页面建立独立包，例如 `user_screen`、`dept_screen`、`adaptive_page`；该包下集中放本页交互 SPI，不要把多个页面的交互点混在同一个通用包里。
+- 一个页面如果有多个交互点，按交互区域或动作语义拆成多个小 SPI，例如 `UserScreenSearchButtonSpi`、`UserScreenCreateActionSpi`、`DeptScreenRowActionsSpi`；不要把整页交互糊成一个巨型 `InteractionSpi`。
+- SPI 接口默认写成 `interface XxxSpi { @Composable fun Render(state: XxxState, ...) }`；入参只保留渲染该交互块所需的最小上下文，优先传页面 state holder 或明确的 state 或 action 切片。
+- 默认实现使用 `@org.koin.core.annotation.Single`，页面内通过 `koinInject<XxxSpi>().Render(...)` 挂载。
+- 每个 SPI 接口和默认实现都必须写中文 KDoc，至少说明交互入口位于哪里、默认行为是什么、为什么要做成 slot、允许替换的边界是什么。
+- 优先抽按钮区、行尾操作区、工具栏操作、弹窗触发器、筛选入口这类局部交互槽位；不要把稳定不变的布局容器、纯展示标题、静态说明文案一起 SPI 化。
+- 当前仓库可参考 `apps/cupertino-demo/src/commonMain/kotlin/site/addzero/cupertinodemo/adaptive_page/AdaptivePageAdaptiveIconButtonSpi.kt` 作为页面级交互 SPI 模板。

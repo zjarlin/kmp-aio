@@ -6,14 +6,14 @@ import org.babyfish.jimmer.sql.ManyToManyView
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.OneToOne
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_project")
 /**
  * 定义项目实体。
  */
-interface Project : EpochBaseEntity {
+interface Project : BaseEntity {
 
     @Key
     /**

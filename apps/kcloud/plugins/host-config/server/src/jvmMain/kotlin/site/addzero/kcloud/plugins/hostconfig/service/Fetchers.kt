@@ -2,6 +2,8 @@ package site.addzero.kcloud.plugins.hostconfig.service
 
 import org.babyfish.jimmer.sql.fetcher.Fetcher
 import org.babyfish.jimmer.sql.kt.fetcher.newFetcher
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.AssetNode
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.AssetNodeLabelLink
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.DeviceDefinition
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.FeatureDefinition
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.LabelDefinition
@@ -253,6 +255,35 @@ object Fetchers {
 
     val labelDefinition: Fetcher<LabelDefinition> = newFetcher(LabelDefinition::class).by {
         allScalarFields()
+    }
+
+    val assetNodeDetail: Fetcher<AssetNode> = newFetcher(AssetNode::class).by {
+        allScalarFields()
+        parent {
+            allScalarFields()
+        }
+        inheritFrom {
+            allScalarFields()
+        }
+        protocolTemplate {
+            allScalarFields()
+        }
+        deviceType {
+            allScalarFields()
+        }
+        dataType {
+            allScalarFields()
+        }
+    }
+
+    val assetNodeLabelLinkDetail: Fetcher<AssetNodeLabelLink> = newFetcher(AssetNodeLabelLink::class).by {
+        allScalarFields()
+        asset {
+            allScalarFields()
+        }
+        label {
+            allScalarFields()
+        }
     }
 
     val productDefinitionLabelLink: Fetcher<ProductDefinitionLabelLink> = newFetcher(ProductDefinitionLabelLink::class).by {

@@ -5,7 +5,7 @@ import org.babyfish.jimmer.sql.ManyToManyView
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
@@ -14,7 +14,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 /**
  * 定义协议instance实体。
  */
-interface ProtocolInstance : EpochBaseEntity {
+interface ProtocolInstance : BaseEntity {
 
     /**
      * 名称。

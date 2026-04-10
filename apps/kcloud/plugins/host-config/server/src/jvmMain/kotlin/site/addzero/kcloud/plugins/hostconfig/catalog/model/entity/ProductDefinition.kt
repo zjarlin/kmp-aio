@@ -4,7 +4,7 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 /**
  * 产品定义实体。
@@ -14,7 +14,7 @@ import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
  */
 @Entity
 @Table(name = "host_config_product_definition")
-interface ProductDefinition : EpochBaseEntity {
+interface ProductDefinition : BaseEntity {
 
     /** 产品业务编码，要求全局唯一。 */
     @Key

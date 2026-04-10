@@ -5,7 +5,7 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.PointType
 
 @Entity
@@ -13,7 +13,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.PointType
 /**
  * 定义标签实体。
  */
-interface Tag : EpochBaseEntity {
+interface Tag : BaseEntity {
 
     /**
      * 名称。

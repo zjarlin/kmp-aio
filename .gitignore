@@ -38,3 +38,6 @@ out/
 /apps/kcloud/plugins/mcu-console/ui/.idea/misc.xml
 /apps/kcloud/plugins/mcu-console/ui/.idea/vcs.xml
 /.m2-workspace
+/apps/cupertino-demo/src/commonMain/kotlin/site/addzero/cupertinodemo/adaptive_page/AdaptivePageAdaptiveIconButtonSpi.kt
+/.gradle-tmp
+

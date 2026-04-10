@@ -3,14 +3,14 @@ package site.addzero.kcloud.plugins.hostconfig.model.entity
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_register_type")
 /**
  * 定义register类型实体。
  */
-interface RegisterType : EpochBaseEntity {
+interface RegisterType : BaseEntity {
 
     @Key
     /**

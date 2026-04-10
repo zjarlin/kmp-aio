@@ -65,6 +65,7 @@ data class CatalogSnapshotResponse(
  * @property vendor vendor。
  * @property category category。
  * @property enabled 是否启用。
+ * @property protocolTemplateId 协议模板 ID。
  * @property sortIndex 排序序号。
  * @property labelIds label ID 列表。
  */
@@ -75,6 +76,7 @@ data class ProductDefinitionCreateRequest(
     val vendor: String? = null,
     val category: String? = null,
     val enabled: Boolean = true,
+    val protocolTemplateId: Long? = null,
     val sortIndex: Int = 0,
     val labelIds: List<Long> = emptyList(),
 )
@@ -89,6 +91,7 @@ data class ProductDefinitionCreateRequest(
  * @property vendor vendor。
  * @property category category。
  * @property enabled 是否启用。
+ * @property protocolTemplateId 协议模板 ID。
  * @property sortIndex 排序序号。
  * @property labelIds label ID 列表。
  */
@@ -99,6 +102,7 @@ data class ProductDefinitionUpdateRequest(
     val vendor: String? = null,
     val category: String? = null,
     val enabled: Boolean = true,
+    val protocolTemplateId: Long? = null,
     val sortIndex: Int = 0,
     val labelIds: List<Long> = emptyList(),
 )
@@ -114,6 +118,9 @@ data class ProductDefinitionUpdateRequest(
  * @property vendor vendor。
  * @property category category。
  * @property enabled 是否启用。
+ * @property protocolTemplateId 协议模板 ID。
+ * @property protocolTemplateCode 协议模板编码。
+ * @property protocolTemplateName 协议模板名称。
  * @property sortIndex 排序序号。
  * @property labels labels。
  * @property devices 设备。
@@ -128,6 +135,9 @@ data class ProductDefinitionTreeResponse(
     val vendor: String?,
     val category: String?,
     val enabled: Boolean,
+    val protocolTemplateId: Long?,
+    val protocolTemplateCode: String?,
+    val protocolTemplateName: String?,
     val sortIndex: Int,
     val labels: List<LabelDefinitionResponse>,
     val devices: List<DeviceDefinitionTreeResponse>,

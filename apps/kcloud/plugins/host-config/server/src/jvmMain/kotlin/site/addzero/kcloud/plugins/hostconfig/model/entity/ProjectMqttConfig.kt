@@ -5,14 +5,14 @@ import org.babyfish.jimmer.sql.Column
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.OneToOne
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_project_mqtt_config")
 /**
  * 表示项目MQTT配置。
  */
-interface ProjectMqttConfig : EpochBaseEntity {
+interface ProjectMqttConfig : BaseEntity {
 
     /**
      * 是否启用。

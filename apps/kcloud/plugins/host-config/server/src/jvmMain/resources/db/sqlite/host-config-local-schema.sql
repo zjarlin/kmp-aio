@@ -149,6 +149,62 @@ CREATE TABLE IF NOT EXISTS host_config_feature_definition (
     FOREIGN KEY (device_definition_id) REFERENCES host_config_device_definition(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS host_config_asset_node (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER,
+    inherit_from_id INTEGER,
+    node_type TEXT NOT NULL,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    vendor TEXT,
+    category TEXT,
+    color_hex TEXT,
+    identifier TEXT,
+    unit TEXT,
+    required INTEGER NOT NULL DEFAULT 0,
+    writable INTEGER NOT NULL DEFAULT 0,
+    telemetry INTEGER NOT NULL DEFAULT 1,
+    nullable INTEGER NOT NULL DEFAULT 1,
+    length INTEGER,
+    supports_telemetry INTEGER NOT NULL DEFAULT 1,
+    supports_control INTEGER NOT NULL DEFAULT 0,
+    attributes_json TEXT,
+    input_schema TEXT,
+    output_schema TEXT,
+    asynchronous INTEGER NOT NULL DEFAULT 0,
+    protocol_template_id INTEGER,
+    device_type_id INTEGER,
+    data_type_id INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (parent_id) REFERENCES host_config_asset_node(id) ON DELETE CASCADE,
+    FOREIGN KEY (inherit_from_id) REFERENCES host_config_asset_node(id) ON DELETE SET NULL,
+    FOREIGN KEY (protocol_template_id) REFERENCES host_config_protocol_template(id) ON DELETE SET NULL,
+    FOREIGN KEY (device_type_id) REFERENCES host_config_device_type(id) ON DELETE SET NULL,
+    FOREIGN KEY (data_type_id) REFERENCES host_config_data_type(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_host_config_asset_node_parent_sort
+    ON host_config_asset_node(parent_id, sort_index, id);
+
+CREATE INDEX IF NOT EXISTS idx_host_config_asset_node_type_parent
+    ON host_config_asset_node(node_type, parent_id, sort_index, id);
+
+CREATE TABLE IF NOT EXISTS host_config_asset_node_label (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER NOT NULL,
+    label_id INTEGER NOT NULL,
+    sort_index INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(asset_id, label_id),
+    FOREIGN KEY (asset_id) REFERENCES host_config_asset_node(id) ON DELETE CASCADE,
+    FOREIGN KEY (label_id) REFERENCES host_config_asset_node(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS host_config_product_definition_label (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id INTEGER NOT NULL,

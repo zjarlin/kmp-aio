@@ -3,7 +3,7 @@ package site.addzero.kcloud.plugins.hostconfig.model.entity
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 
@@ -12,7 +12,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 /**
  * 表示项目modbus服务端配置。
  */
-interface ProjectModbusServerConfig : EpochBaseEntity {
+interface ProjectModbusServerConfig : BaseEntity {
 
     /**
      * 传输类型。

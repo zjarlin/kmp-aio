@@ -4,7 +4,7 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
 
 /**
@@ -15,7 +15,7 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
  */
 @Entity
 @Table(name = "host_config_device_definition")
-interface DeviceDefinition : EpochBaseEntity {
+interface DeviceDefinition : BaseEntity {
 
     /** 设备业务编码，在所属产品内唯一。 */
     val code: String

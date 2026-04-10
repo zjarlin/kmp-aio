@@ -4,14 +4,14 @@ import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.Key
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.Table
-import site.addzero.kcloud.jimmer.model.entity.base.EpochBaseEntity
+import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 
 @Entity
 @Table(name = "host_config_module_template")
 /**
  * 定义模块模板实体。
  */
-interface ModuleTemplate : EpochBaseEntity {
+interface ModuleTemplate : BaseEntity {
 
     @Key
     /**
