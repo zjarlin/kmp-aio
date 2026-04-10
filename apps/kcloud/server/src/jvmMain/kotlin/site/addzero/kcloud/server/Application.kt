@@ -11,7 +11,6 @@ import site.addzero.kcloud.di.initServerKoin
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.routes.generated.springktor.registerGeneratedSpringRoutes as registerCodegenContextSpringRoutes
 import site.addzero.kcloud.plugins.hostconfig.routes.catalog.generated.springktor.registerGeneratedSpringRoutes as registerHostConfigSpringRoutes
 import site.addzero.kcloud.plugins.mcuconsole.routes.generated.springktor.registerGeneratedSpringRoutes as registerMcuConsoleSpringRoutes
-import site.addzero.kcloud.runtime.KCloudHostRuntime
 import site.addzero.kcloud.server.module
 import site.addzero.kcloud.server.runStarters
 import site.addzero.kcloud.server.startServer
@@ -35,7 +34,7 @@ fun startServer(
     val server = embeddedServer(
         factory = Netty,
         host = "0.0.0.0",
-        port = KCloudHostRuntime.DEFAULT_SERVER_PORT,
+        port = 18080,
         module = Application::module,
     ).start(wait = wait)
     val engine = server.engine

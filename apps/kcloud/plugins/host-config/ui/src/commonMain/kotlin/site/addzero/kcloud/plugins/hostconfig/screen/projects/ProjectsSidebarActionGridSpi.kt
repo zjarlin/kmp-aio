@@ -24,7 +24,7 @@ import site.addzero.kcloud.plugins.hostconfig.screen.ProjectsSidebarActions
  * 这里专门承接“新建工程 / 导入导出 SQLite / 刷新”这一组用户动作，
  * 方便宿主后续替换按钮组合、文案或权限策略，而不改页面结构。
  */
-interface ProjectsSidebarActionGridSpi {
+internal interface ProjectsSidebarActionGridSpi {
     @Composable
     fun Render(
         state: ProjectsScreenState,
@@ -39,7 +39,7 @@ interface ProjectsSidebarActionGridSpi {
  * 后续如果要按宿主场景裁剪按钮或接入额外动作，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsSidebarActionGridSpi : ProjectsSidebarActionGridSpi {
+internal class DefaultProjectsSidebarActionGridSpi : ProjectsSidebarActionGridSpi {
     @Composable
     override fun Render(
         state: ProjectsScreenState,

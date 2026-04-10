@@ -24,6 +24,7 @@ kotlin {
 
 tasks.matching { task ->
     task.name in setOf(
+        "kspCommonMainKotlinMetadata",
         "kspKotlinJvm",
         "compileCommonMainKotlinMetadata",
         "compileKotlinJvm",

@@ -90,6 +90,9 @@ kotlin {
                 implementation(libs.findLibrary("org-jetbrains-kotlinx-kotlinx-datetime").get())
             }
         }
+        jvmTest.dependencies{
+            implementation("io.github.jeadyx:kmp-serialport:1.0.0")
+        }
     }
 }
 

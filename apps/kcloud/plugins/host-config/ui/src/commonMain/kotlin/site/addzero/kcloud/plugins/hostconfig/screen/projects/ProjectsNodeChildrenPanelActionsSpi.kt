@@ -13,7 +13,7 @@ import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
  * 面板内容仍保留在 `NodeChildrenPanel`，
  * 这里专门承接设备标签分页这一组翻页动作，避免把页头按钮写死在面板布局里。
  */
-interface ProjectsNodeChildrenPanelActionsSpi {
+internal interface ProjectsNodeChildrenPanelActionsSpi {
     @Composable
     fun Render(
         state: ProjectsScreenState,
@@ -28,7 +28,7 @@ interface ProjectsNodeChildrenPanelActionsSpi {
  * 如果后续要改成页码器、筛选器或快捷跳转，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsNodeChildrenPanelActionsSpi : ProjectsNodeChildrenPanelActionsSpi {
+internal class DefaultProjectsNodeChildrenPanelActionsSpi : ProjectsNodeChildrenPanelActionsSpi {
     @Composable
     override fun Render(
         state: ProjectsScreenState,

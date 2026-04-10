@@ -19,7 +19,7 @@ import site.addzero.kcloud.plugins.hostconfig.screen.NodeActionType
  * 这个 slot 负责节点尾部“更多操作”按钮和动作菜单，
  * 这样页面树仍由 `WorkbenchTreeSidebar` 负责布局，节点级交互则可按宿主替换。
  */
-interface ProjectsNodeTrailingActionsSpi {
+internal interface ProjectsNodeTrailingActionsSpi {
     @Composable
     fun Render(
         node: HostConfigTreeNode,
@@ -38,7 +38,7 @@ interface ProjectsNodeTrailingActionsSpi {
  * 如果后续宿主要改成右键、悬浮动作条或权限裁剪菜单，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsNodeTrailingActionsSpi : ProjectsNodeTrailingActionsSpi {
+internal class DefaultProjectsNodeTrailingActionsSpi : ProjectsNodeTrailingActionsSpi {
     @Composable
     override fun Render(
         node: HostConfigTreeNode,

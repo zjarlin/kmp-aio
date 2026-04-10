@@ -9,8 +9,9 @@ import java.net.BindException
 import site.addzero.kcloud.bootstrap.App
 import site.addzero.kcloud.bootstrap.UiKoinBootstrapMode
 import site.addzero.kcloud.di.initDesktopHostKoin
-import site.addzero.kcloud.runtime.KCloudHostRuntime
 import site.addzero.kcloud.server.startServer
+
+private const val EMBEDDED_SERVER_PORT = 18080
 
 fun main() {
     try {
@@ -45,7 +46,7 @@ private fun startServerOrReuseExisting(): ApplicationEngine? {
     } catch (throwable: Throwable) {
         if (throwable.hasCause<BindException>()) {
             println(
-                "Embedded server port ${KCloudHostRuntime.DEFAULT_SERVER_PORT} is already in use; " +
+                "Embedded server port $EMBEDDED_SERVER_PORT is already in use; " +
                     "reusing the existing backend instance.",
             )
             null

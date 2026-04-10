@@ -13,7 +13,7 @@ import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
  * 这里专门承接“编辑 / 取消编辑 / 折叠”这组页面级动作，
  * 方便宿主后续替换工具区策略，而不改节点详情骨架。
  */
-interface ProjectsCurrentNodePanelActionsSpi {
+internal interface ProjectsCurrentNodePanelActionsSpi {
     @Composable
     fun Render(
         state: ProjectsScreenState,
@@ -30,7 +30,7 @@ interface ProjectsCurrentNodePanelActionsSpi {
  * 如果后续要补权限判断、草稿锁定或更多节点动作，只替换这一实现即可。
  */
 @Single
-class DefaultProjectsCurrentNodePanelActionsSpi : ProjectsCurrentNodePanelActionsSpi {
+internal class DefaultProjectsCurrentNodePanelActionsSpi : ProjectsCurrentNodePanelActionsSpi {
     @Composable
     override fun Render(
         state: ProjectsScreenState,

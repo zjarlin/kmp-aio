@@ -15,86 +15,86 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPre
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextSummaryDto
 import site.addzero.kcloud.plugins.codegencontext.codegen_context.service.CodegenContextService
 
-@Single
-@RestController
-@RequestMapping("/api/codegen-context/v1/contexts")
 /**
  * 提供代码生成上下文接口。
  *
  * @property contextService 上下文服务。
  */
+@Single
+@RestController
+@RequestMapping("/api/codegen-context/v1/contexts")
 class CodegenContextController(
     private val contextService: CodegenContextService,
 ) {
-    @GetMapping
     /**
      * 列出上下文。
      */
+    @GetMapping
     fun listContexts(): List<CodegenContextSummaryDto> =
         contextService.listContexts()
 
-    @GetMapping("/{contextId}")
     /**
      * 获取上下文。
      *
-     * @param @PathVariable("contextId") 路径variable上下文ID。
+     * @param contextId 路径中的上下文 ID。
      */
+    @GetMapping("/{contextId}")
     fun getContext(
         @PathVariable("contextId") contextId: Long,
     ): CodegenMetadataDraftDto =
         contextService.getContextDraft(contextId)
 
-    @GetMapping("/protocols/{protocolTemplateId}/definitions")
     /**
      * 列出上下文定义。
      *
-     * @param @PathVariable("protocolTemplateId") 路径variable协议模板ID。
+     * @param protocolTemplateId 路径中的协议模板 ID。
      */
+    @GetMapping("/protocols/{protocolTemplateId}/definitions")
     fun listContextDefinitions(
         @PathVariable("protocolTemplateId") protocolTemplateId: Long,
     ): List<CodegenContextDefinitionDto> =
         contextService.listContextDefinitions(protocolTemplateId)
 
-    @PostMapping("/save")
     /**
      * 保存上下文。
      *
-     * @param @RequestBody 请求体。
+     * @param request 前端提交的元数据草稿。
      */
+    @PostMapping("/save")
     fun saveContext(
         @RequestBody request: CodegenMetadataDraftDto,
     ): CodegenMetadataDraftDto =
         contextService.saveContextDraft(request)
 
-    @PostMapping("/preview")
     /**
      * 预检元数据草稿。
      *
-     * @param @RequestBody 请求体。
+     * @param request 前端提交的元数据草稿。
      */
+    @PostMapping("/preview")
     fun previewContext(
         @RequestBody request: CodegenMetadataDraftDto,
     ): CodegenMetadataPreviewDto =
         contextService.previewContextDraft(request)
 
-    @DeleteMapping("/{contextId}")
     /**
      * 删除上下文。
      *
-     * @param @PathVariable("contextId") 路径variable上下文ID。
+     * @param contextId 路径中的上下文 ID。
      */
+    @DeleteMapping("/{contextId}")
     fun deleteContext(
         @PathVariable("contextId") contextId: Long,
     ) {
         contextService.deleteContext(contextId)
     }
 
-    @PostMapping("/{contextId}/export")
     /**
      * 导出上下文。
      *
-     * @param @PathVariable("contextId") 路径variable上下文ID。
+     * @param contextId 路径中的上下文 ID。
      */
+    @PostMapping("/{contextId}/export")
     fun exportContext(
         @PathVariable("contextId") contextId: Long,
     ): CodegenMetadataExportResultDto =
