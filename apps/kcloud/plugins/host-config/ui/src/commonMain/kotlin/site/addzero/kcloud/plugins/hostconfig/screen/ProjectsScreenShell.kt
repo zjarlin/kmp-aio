@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme as ComposeMaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.koin.compose.koinInject
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.TreeViewModel
@@ -92,6 +95,7 @@ internal fun ProjectsWorkbenchContent(
     val sidebarActionGridSpi = koinInject<ProjectsSidebarActionGridSpi>()
     val nodeTrailingActionsSpi = koinInject<ProjectsNodeTrailingActionsSpi>()
     val compactTreeMetrics = rememberCompactProjectTreeMetrics()
+    val compactTreeTypography = rememberCompactProjectTreeTypography()
     var treeQuery by rememberSaveable { mutableStateOf("") }
     val filteredTreeNodes = remember(state.treeNodes, treeQuery) {
         state.treeNodes.filterByKeyword(treeQuery)
@@ -101,57 +105,60 @@ internal fun ProjectsWorkbenchContent(
         modifier = Modifier.fillMaxSize().padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        WorkbenchTreeSidebar(
-            items = filteredTreeNodes,
-            selectedId = state.selectedNodeId,
-            onNodeClick = { node -> onSelectNode(node.id) },
-            onNodeContextMenu = { node ->
-                onSelectNode(node.id)
-                onOpenNodeActionMenu(node)
-            },
-            modifier = Modifier.fillMaxHeight().widthIn(min = 240.dp, max = 288.dp),
-            metrics = compactTreeMetrics,
-            searchEnabled = false,
-            treeViewModel = treeViewModel,
-            header = {
-                state.errorMessage?.let { CupertinoStatusStrip(it) }
-                state.noticeMessage?.let { CupertinoStatusStrip(it) }
-                AddSearchBar(
-                    keyword = treeQuery,
-                    onKeyWordChanged = { query -> treeQuery = query },
-                    onSearch = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = "搜索工程树",
-                    fieldHeight = compactTreeMetrics.searchFieldHeight,
-                    horizontalSpacing = compactTreeMetrics.searchFieldSpacing,
-                    showRefreshButton = !compactTreeMetrics.searchFieldCompactRefreshHidden,
-                )
-                sidebarActionGridSpi.Render(
-                    state = state,
-                    actions = rememberProjectsSidebarActions(
-                        onCreateProject = onCreateProject,
-                        onExportProjectSqlite = onExportProjectSqlite,
-                        onImportProjectSqlite = onImportProjectSqlite,
-                        onRefresh = onRefresh,
-                    ),
-                )
-            },
-            getId = { it.id },
-            getLabel = { it.label },
-            getCaption = { null },
-            getChildren = { it.children },
-            getIcon = { it.kind.icon() },
-            nodeTrailingContent = { node ->
-                nodeTrailingActionsSpi.Render(
-                    node = node,
-                    nodeActionMenu = nodeActionMenu,
-                    onSelectNode = onSelectNode,
-                    onOpenNodeActionMenu = onOpenNodeActionMenu,
-                    onDismissNodeActionMenu = onDismissNodeActionMenu,
-                    onNodeAction = onNodeAction,
-                )
-            },
-        )
+        ComposeMaterialTheme(typography = compactTreeTypography) {
+            WorkbenchTreeSidebar(
+                items = filteredTreeNodes,
+                selectedId = state.selectedNodeId,
+                onNodeClick = { node -> onSelectNode(node.id) },
+                onNodeContextMenu = { node ->
+                    onSelectNode(node.id)
+                    onOpenNodeActionMenu(node)
+                },
+                modifier = Modifier.fillMaxHeight().widthIn(min = 240.dp, max = 304.dp),
+                metrics = compactTreeMetrics,
+                searchEnabled = false,
+                treeViewModel = treeViewModel,
+                header = {
+                    state.errorMessage?.let { CupertinoStatusStrip(it) }
+                    state.noticeMessage?.let { CupertinoStatusStrip(it) }
+                    AddSearchBar(
+                        keyword = treeQuery,
+                        onKeyWordChanged = { query -> treeQuery = query },
+                        onSearch = {},
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = "搜索工程树",
+                        fieldHeight = compactTreeMetrics.searchFieldHeight,
+                        horizontalSpacing = compactTreeMetrics.searchFieldSpacing,
+                        showRefreshButton = !compactTreeMetrics.searchFieldCompactRefreshHidden,
+                    )
+                    sidebarActionGridSpi.Render(
+                        state = state,
+                        actions = rememberProjectsSidebarActions(
+                            onCreateProject = onCreateProject,
+                            onExportProjectSqlite = onExportProjectSqlite,
+                            onImportProjectSqlite = onImportProjectSqlite,
+                            onRefresh = onRefresh,
+                        ),
+                    )
+                },
+                getId = { it.id },
+                getLabel = { it.label },
+                getCaption = { null },
+                getChildren = { it.children },
+                getIcon = { it.kind.icon() },
+                nodeTrailingContent = { node ->
+                    nodeTrailingActionsSpi.Render(
+                        node = node,
+                        selected = state.selectedNodeId == node.id,
+                        nodeActionMenu = nodeActionMenu,
+                        onSelectNode = onSelectNode,
+                        onOpenNodeActionMenu = onOpenNodeActionMenu,
+                        onDismissNodeActionMenu = onDismissNodeActionMenu,
+                        onNodeAction = onNodeAction,
+                    )
+                },
+            )
+        }
 
         Column(
             modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -249,13 +256,31 @@ private fun rememberCompactProjectTreeMetrics(): WorkbenchMetrics {
             searchFieldHeight = 46.dp,
             searchFieldSpacing = 6.dp,
             treeMetrics = metrics.treeMetrics.copy(
-                rowMinHeight = 34.dp,
-                rowVerticalPadding = 5.dp,
+                rowMinHeight = 32.dp,
+                rowVerticalPadding = 4.dp,
                 rowSpacing = 2.dp,
-                levelIndent = 18.dp,
-                iconSize = 18.dp,
-                expandIconSize = 16.dp,
-                selectedIndicatorHeight = 18.dp,
+                levelIndent = 16.dp,
+                sideInset = 2.dp,
+                iconSize = 16.dp,
+                expandIconSize = 14.dp,
+                selectedIndicatorHeight = 16.dp,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun rememberCompactProjectTreeTypography(): Typography {
+    val typography = ComposeMaterialTheme.typography
+    return remember(typography) {
+        typography.copy(
+            bodyLarge = typography.bodyLarge.copy(
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+            ),
+            bodySmall = typography.bodySmall.copy(
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
             ),
         )
     }

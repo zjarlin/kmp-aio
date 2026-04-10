@@ -85,9 +85,14 @@ internal fun resolveCurrentCreateSpec(
             )
         }
 
-        HostConfigNodeKind.MODULE,
-        HostConfigNodeKind.TAG,
-        -> CurrentCreateSpec(
+        HostConfigNodeKind.MODULE -> CurrentCreateSpec(
+            node = selectedNode,
+            actionType = NodeActionType.CREATE_TAG,
+            enabled = true,
+            hint = "标签从模块节点发起创建，会自动归到所属设备下。",
+        )
+
+        HostConfigNodeKind.TAG -> CurrentCreateSpec(
             enabled = false,
             hint = "当前节点没有默认的新建动作，请使用节点操作菜单。",
         )
@@ -137,13 +142,13 @@ internal fun resolveNodeActionMenu(
         }
 
         HostConfigNodeKind.MODULE -> listOf(
+            NodeActionItem(type = NodeActionType.CREATE_TAG, title = "新建标签"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
         )
 
         HostConfigNodeKind.DEVICE -> listOf(
             NodeActionItem(type = NodeActionType.CREATE_MODULE, title = "新建模块"),
-            NodeActionItem(type = NodeActionType.CREATE_TAG, title = "新建标签"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
         )

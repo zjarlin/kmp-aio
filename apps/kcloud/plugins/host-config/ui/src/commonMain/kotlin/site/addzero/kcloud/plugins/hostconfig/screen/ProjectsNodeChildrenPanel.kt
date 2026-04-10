@@ -127,7 +127,7 @@ internal fun NodeChildrenPanel(
                     CupertinoStatusStrip("当前模块详情尚未加载完成。")
                     return@CupertinoPanel
                 }
-                CupertinoStatusStrip("模块是设备下的叶子节点，标签继续挂在设备上。")
+                CupertinoStatusStrip("标签从模块节点发起创建，保存时会自动归到所属设备。")
                 HostConfigModuleBoard(
                     model = resolveModuleBoardModel(module = module, moduleTemplates = state.moduleTemplates),
                     compact = true,
@@ -341,7 +341,7 @@ internal fun ProjectModuleRack(
                                 model = resolveModuleBoardModel(module = module, moduleTemplates = moduleTemplates),
                                 compact = true,
                             )
-                        },
+                        }
                     }
                 }
             }

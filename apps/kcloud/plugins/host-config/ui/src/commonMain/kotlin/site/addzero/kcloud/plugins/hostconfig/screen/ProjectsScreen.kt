@@ -22,6 +22,7 @@ import site.addzero.kcloud.plugins.hostconfig.projects.displayName
 import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
+import site.addzero.kcloud.plugins.hostconfig.projects.findModule
 
 /**
  * 处理项目界面。
@@ -185,6 +186,11 @@ fun ProjectsScreen() {
             }
             NodeActionType.CREATE_TAG -> {
                 val deviceId = when (node.kind) {
+                    HostConfigNodeKind.MODULE -> {
+                        val module = state.projectTrees.findModule(node.entityId) ?: return
+                        module.deviceId
+                    }
+
                     HostConfigNodeKind.DEVICE -> node.entityId
                     HostConfigNodeKind.TAG -> node.parentEntityId
                     else -> null

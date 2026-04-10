@@ -23,6 +23,7 @@ internal interface ProjectsNodeTrailingActionsSpi {
     @Composable
     fun Render(
         node: HostConfigTreeNode,
+        selected: Boolean,
         nodeActionMenu: NodeActionMenuSeed?,
         onSelectNode: (String) -> Unit,
         onOpenNodeActionMenu: (HostConfigTreeNode) -> Unit,
@@ -42,31 +43,35 @@ internal class DefaultProjectsNodeTrailingActionsSpi : ProjectsNodeTrailingActio
     @Composable
     override fun Render(
         node: HostConfigTreeNode,
+        selected: Boolean,
         nodeActionMenu: NodeActionMenuSeed?,
         onSelectNode: (String) -> Unit,
         onOpenNodeActionMenu: (HostConfigTreeNode) -> Unit,
         onDismissNodeActionMenu: () -> Unit,
         onNodeAction: (HostConfigTreeNode, NodeActionType) -> Unit,
     ) {
-        Box(contentAlignment = Alignment.TopEnd) {
-            WorkbenchIconButton(
-                onClick = {
-                    onSelectNode(node.id)
-                    onOpenNodeActionMenu(node)
-                },
-                tooltip = "节点操作",
-            ) {
-                Icon(imageVector = Icons.Filled.MoreHoriz, contentDescription = null)
-            }
-            nodeActionMenu?.takeIf { it.node.id == node.id }?.let { seed ->
-                NodeActionDropdownMenu(
-                    seed = seed,
-                    onDismissRequest = onDismissNodeActionMenu,
-                    onAction = { actionType ->
-                        onDismissNodeActionMenu()
-                        onNodeAction(seed.node, actionType)
+        val menuExpanded = nodeActionMenu?.node?.id == node.id
+        if (selected || menuExpanded) {
+            Box(contentAlignment = Alignment.TopEnd) {
+                WorkbenchIconButton(
+                    onClick = {
+                        onSelectNode(node.id)
+                        onOpenNodeActionMenu(node)
                     },
-                )
+                    tooltip = "节点操作",
+                ) {
+                    Icon(imageVector = Icons.Filled.MoreHoriz, contentDescription = null)
+                }
+                nodeActionMenu?.takeIf { it.node.id == node.id }?.let { seed ->
+                    NodeActionDropdownMenu(
+                        seed = seed,
+                        onDismissRequest = onDismissNodeActionMenu,
+                        onAction = { actionType ->
+                            onDismissNodeActionMenu()
+                            onNodeAction(seed.node, actionType)
+                        },
+                    )
+                }
             }
         }
     }

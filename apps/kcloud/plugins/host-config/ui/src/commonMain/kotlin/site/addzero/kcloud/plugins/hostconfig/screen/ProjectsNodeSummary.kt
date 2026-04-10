@@ -34,7 +34,6 @@ internal data class NodeMetricItem(
     val value: String,
 )
 
-@Composable
 /**
  * 处理主机配置node摘要。
  *
@@ -44,6 +43,7 @@ internal data class NodeMetricItem(
  * @param badges badges。
  * @param metrics metrics。
  */
+@Composable
 internal fun HostConfigNodeSummary(
     title: String,
     subtitle: String,
@@ -109,13 +109,13 @@ internal fun HostConfigNodeSummary(
     }
 }
 
-@Composable
 /**
  * 处理主机配置metricrow。
  *
  * @param metrics metrics。
  * @param accent accent。
  */
+@Composable
 private fun HostConfigMetricRow(
     metrics: List<NodeMetricItem>,
     accent: Color,
@@ -143,7 +143,6 @@ private fun HostConfigMetricRow(
     }
 }
 
-@Composable
 /**
  * 处理主机配置metriccard。
  *
@@ -151,6 +150,7 @@ private fun HostConfigMetricRow(
  * @param accent accent。
  * @param modifier modifier。
  */
+@Composable
 private fun HostConfigMetricCard(
     item: NodeMetricItem,
     accent: Color,
@@ -182,7 +182,6 @@ private fun HostConfigMetricCard(
     }
 }
 
-@Composable
 /**
  * 处理主机配置摘要badge。
  *
@@ -190,6 +189,7 @@ private fun HostConfigMetricCard(
  * @param accent accent。
  * @param emphasized emphasized。
  */
+@Composable
 private fun HostConfigSummaryBadge(
     text: String,
     accent: Color,
@@ -217,7 +217,6 @@ private fun HostConfigSummaryBadge(
     }
 }
 
-@Composable
 /**
  * 处理主机配置densesection。
  *
@@ -225,6 +224,7 @@ private fun HostConfigSummaryBadge(
  * @param subtitle subtitle。
  * @param content content。
  */
+@Composable
 internal fun HostConfigDenseSection(
     title: String,
     subtitle: String? = null,
@@ -245,7 +245,6 @@ internal fun HostConfigDenseSection(
     }
 }
 
-@Composable
 /**
  * 处理主机配置denseinfosection。
  *
@@ -255,6 +254,7 @@ internal fun HostConfigDenseSection(
  * @param columns columns。
  * @param emptyText empty文本。
  */
+@Composable
 internal fun HostConfigDenseInfoSection(
     title: String,
     entries: List<Pair<String, String>>,
@@ -271,13 +271,13 @@ internal fun HostConfigDenseInfoSection(
     }
 }
 
-@Composable
 /**
  * 处理主机配置denseinfogrid。
  *
  * @param entries entries。
  * @param columns columns。
  */
+@Composable
 private fun HostConfigDenseInfoGrid(
     entries: List<Pair<String, String>>,
     columns: Int,
@@ -305,7 +305,6 @@ private fun HostConfigDenseInfoGrid(
     }
 }
 
-@Composable
 /**
  * 处理主机配置denseinfocell。
  *
@@ -313,6 +312,7 @@ private fun HostConfigDenseInfoGrid(
  * @param value 待解析的值。
  * @param modifier modifier。
  */
+@Composable
 private fun HostConfigDenseInfoCell(
     label: String,
     value: String,
