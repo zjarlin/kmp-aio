@@ -32,7 +32,6 @@ kotlin {
         commonMain {
             dependencies {
                 implementation(libs.findLibrary("compose-cupertino-workbench").get())
-                implementation(project(":apps:kcloud:shared"))
                 api(project(":apps:kcloud:plugins:codegen-context:api"))
                 implementation(project(":apps:kcloud:plugins:codegen-context:shared"))
                 implementation(libs.findLibrary("compose-cupertino-workbench").get())

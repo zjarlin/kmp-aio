@@ -1,6 +1,6 @@
 @file:OptIn(ExperimentalCupertinoApi::class)
 
-package site.addzero.kcloud.plugins.hostconfig.screen
+package site.addzero.kcloud.plugins.hostconfig.screen.protocols
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,17 +20,15 @@ import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.material3.Icon
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
-import site.addzero.cupertino.workbench.components.panel.CupertinoSectionTitle
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.kcloud.plugins.hostconfig.protocols.ProtocolsViewModel
 
@@ -55,6 +53,7 @@ import site.addzero.kcloud.plugins.hostconfig.protocols.ProtocolsViewModel
 fun ProtocolsScreen() {
     val viewModel = koinViewModel<ProtocolsViewModel>()
     val state = viewModel.screenState
+    val sidebarHeaderSpi = koinInject<ProtocolsSidebarHeaderSpi>()
 
     Row(
         modifier = Modifier.fillMaxSize(),
@@ -74,14 +73,9 @@ fun ProtocolsScreen() {
             getChildren = { emptyList() },
             getIcon = { Icons.Outlined.SettingsEthernet },
             header = {
-                CupertinoSectionTitle("协议字典目录")
-                state.errorMessage?.let { message ->
-                    CupertinoStatusStrip(message)
-                }
-                WorkbenchActionButton(
-                    text = if (state.loading) "加载中" else "刷新",
-                    onClick = viewModel::refresh,
-                    variant = WorkbenchButtonVariant.Outline,
+                sidebarHeaderSpi.Render(
+                    state = state,
+                    viewModel = viewModel,
                 )
             },
         )

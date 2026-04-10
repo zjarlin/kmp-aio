@@ -5,8 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.components.editor.CupertinoEditorSaveBar
 import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
@@ -21,6 +20,8 @@ import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.common.label
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsCurrentNodePanelActions
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsCurrentNodePanelActionsSpi
 
 @Composable
 /**
@@ -55,26 +56,30 @@ internal fun CurrentNodePanel(
     onSaveTag: (Long, Long, site.addzero.kcloud.plugins.hostconfig.api.tag.TagResponse, TagDraft) -> Unit,
     onToggleCollapsed: () -> Unit,
 ) {
+    val panelActionsSpi = koinInject<ProjectsCurrentNodePanelActionsSpi>()
     val selectedNode = state.selectedNode
     val nodeKind = resolveSelectedNodeKind(state)
     val isEditing = !collapsed && selectedNode?.id != null && selectedNode.id == editingNodeId
+    val actions = remember(
+        onStartEditing,
+        onStopEditing,
+        onToggleCollapsed,
+    ) {
+        ProjectsCurrentNodePanelActions(
+            onStartEditing = onStartEditing,
+            onStopEditing = onStopEditing,
+            onToggleCollapsed = onToggleCollapsed,
+        )
+    }
 
     CupertinoPanel(
         title = "当前节点",
         actions = {
-            if (selectedNode != null) {
-                WorkbenchActionButton(
-                    text = if (isEditing) "取消编辑" else "编辑",
-                    onClick = {
-                        if (isEditing) onStopEditing() else onStartEditing(selectedNode.id)
-                    },
-                    variant = WorkbenchButtonVariant.Secondary,
-                )
-            }
-            WorkbenchActionButton(
-                text = if (collapsed) "展开" else "折叠",
-                onClick = onToggleCollapsed,
-                variant = WorkbenchButtonVariant.Outline,
+            panelActionsSpi.Render(
+                state = state,
+                collapsed = collapsed,
+                isEditing = isEditing,
+                actions = actions,
             )
         },
     ) {

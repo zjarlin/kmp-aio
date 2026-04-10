@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
 import org.gradle.api.tasks.Copy
+import org.gradle.declarative.dsl.schema.FqName.Empty.packageName
 import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
@@ -50,7 +51,6 @@ kotlin {
                 implementation(project(":apps:kcloud:plugins:host-config:ui"))
                 implementation(libs.findLibrary("compose-cupertino-workbench").get())
                 implementation(libs.findLibrary("scaffold-spi").get())
-                implementation(project(":apps:kcloud:shared"))
                 implementation(libs.findLibrary("site-addzero-compose-icon-map").get())
                 implementation(libs.findLibrary("site-addzero-network-starter").get())
                 implementation(libs.findLibrary("site-addzero-compose-native-component-searchbar").get())

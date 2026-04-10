@@ -4,35 +4,35 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
 import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.cupertino.workbench.components.form.CupertinoFormGrid
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefinitionDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDeviceFunctionDraftDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataThingPropertyDraftDto
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextScreenState
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenNodeKind
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextDeviceFunctionItemActionsSpi
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextDeviceFunctionsHeaderSpi
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextThingPropertiesHeaderSpi
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextThingPropertyItemActionsSpi
 
 @Composable
 internal fun DeviceFunctionsPanel(
-    draft: CodegenMetadataDraftDto,
-    definitions: List<CodegenContextDefinitionDto>,
-    onAddFunction: () -> Unit,
-    onRemoveFunction: (Int) -> Unit,
-    onUpdateFunction: (Int, (CodegenMetadataDeviceFunctionDraftDto) -> CodegenMetadataDeviceFunctionDraftDto) -> Unit,
-    onToggleFunctionProperty: (Int, String) -> Unit,
-    onUpdateBinding: (Int, String, String, String) -> Unit,
+    state: CodegenContextScreenState,
+    viewModel: CodegenContextViewModel,
 ) {
+    val headerActionsSpi = koinInject<CodegenContextDeviceFunctionsHeaderSpi>()
+    val itemActionsSpi = koinInject<CodegenContextDeviceFunctionItemActionsSpi>()
+    val draft = state.draft
+    val definitions = state.availableContextDefinitions
     val methodDefinitions = definitions.filter { definition -> definition.targetKind == CodegenNodeKind.METHOD }
     CupertinoPanel(
         title = "设备功能",
         subtitle = "这里只维护中文语义、字段绑定和协议上下文；方法名与请求/响应模型统一由后端 preview 决定。",
         actions = {
-            WorkbenchActionButton(text = "新增功能", onClick = onAddFunction)
+            headerActionsSpi.Render(viewModel = viewModel)
         },
     ) {
         if (draft.deviceFunctions.isEmpty()) {
@@ -45,11 +45,7 @@ internal fun DeviceFunctionsPanel(
                     title = function.name.ifBlank { "未命名设备功能" },
                     subtitle = "key=${function.key}",
                     actions = {
-                        WorkbenchActionButton(
-                            text = "删除功能",
-                            onClick = { onRemoveFunction(index) },
-                            variant = WorkbenchButtonVariant.Destructive,
-                        )
+                        itemActionsSpi.Render(index = index, viewModel = viewModel)
                     },
                 ) {
                     CupertinoFormGrid {
@@ -57,7 +53,7 @@ internal fun DeviceFunctionsPanel(
                             CupertinoTextField(
                                 label = "功能名称",
                                 value = function.name,
-                                onValueChange = { value -> onUpdateFunction(index) { it.copy(name = value) } },
+                                onValueChange = { value -> viewModel.updateDeviceFunction(index) { it.copy(name = value) } },
                                 placeholder = "例如 读取 Flash 配置",
                             )
                         }
@@ -65,14 +61,14 @@ internal fun DeviceFunctionsPanel(
                             CupertinoTextField(
                                 label = "排序",
                                 value = function.sortIndex.toString(),
-                                onValueChange = { value -> onUpdateFunction(index) { it.copy(sortIndex = value.toIntOrNull() ?: 0) } },
+                                onValueChange = { value -> viewModel.updateDeviceFunction(index) { it.copy(sortIndex = value.toIntOrNull() ?: 0) } },
                             )
                         }
                         fullWidth {
                             CupertinoTextField(
                                 label = "功能说明",
                                 value = function.description.orEmpty(),
-                                onValueChange = { value -> onUpdateFunction(index) { it.copy(description = value) } },
+                                onValueChange = { value -> viewModel.updateDeviceFunction(index) { it.copy(description = value) } },
                                 singleLine = false,
                             )
                         }
@@ -89,7 +85,7 @@ internal fun DeviceFunctionsPanel(
                                     CupertinoBooleanField(
                                         label = property.name.ifBlank { property.key },
                                         checked = property.key in function.thingPropertyKeys,
-                                        onCheckedChange = { onToggleFunctionProperty(index, property.key) },
+                                        onCheckedChange = { viewModel.toggleFunctionPropertySelection(index, property.key) },
                                         description = property.description,
                                     )
                                 }
@@ -101,7 +97,7 @@ internal fun DeviceFunctionsPanel(
                         definitions = methodDefinitions,
                         bindings = function.bindings,
                         onValueChange = { definitionCode, paramCode, value ->
-                            onUpdateBinding(index, definitionCode, paramCode, value)
+                            viewModel.updateDeviceFunctionBindingValue(index, definitionCode, paramCode, value)
                         },
                     )
                 }
@@ -112,19 +108,19 @@ internal fun DeviceFunctionsPanel(
 
 @Composable
 internal fun ThingPropertiesPanel(
-    draft: CodegenMetadataDraftDto,
-    definitions: List<CodegenContextDefinitionDto>,
-    onAddProperty: () -> Unit,
-    onRemoveProperty: (Int) -> Unit,
-    onUpdateProperty: (Int, (CodegenMetadataThingPropertyDraftDto) -> CodegenMetadataThingPropertyDraftDto) -> Unit,
-    onUpdateBinding: (Int, String, String, String) -> Unit,
+    state: CodegenContextScreenState,
+    viewModel: CodegenContextViewModel,
 ) {
+    val headerActionsSpi = koinInject<CodegenContextThingPropertiesHeaderSpi>()
+    val itemActionsSpi = koinInject<CodegenContextThingPropertyItemActionsSpi>()
+    val draft = state.draft
+    val definitions = state.availableContextDefinitions
     val propertyDefinitions = definitions.filter { definition -> definition.targetKind == CodegenNodeKind.FIELD }
     CupertinoPanel(
         title = "物模型字段",
         subtitle = "字段只维护原始草稿和绑定上下文；属性名、类型推导全部由后端处理。",
         actions = {
-            WorkbenchActionButton(text = "新增字段", onClick = onAddProperty)
+            headerActionsSpi.Render(viewModel = viewModel)
         },
     ) {
         if (draft.thingProperties.isEmpty()) {
@@ -137,11 +133,7 @@ internal fun ThingPropertiesPanel(
                     title = property.name.ifBlank { "未命名物模型字段" },
                     subtitle = "key=${property.key}",
                     actions = {
-                        WorkbenchActionButton(
-                            text = "删除字段",
-                            onClick = { onRemoveProperty(index) },
-                            variant = WorkbenchButtonVariant.Destructive,
-                        )
+                        itemActionsSpi.Render(index = index, viewModel = viewModel)
                     },
                 ) {
                     CupertinoFormGrid {
@@ -149,7 +141,7 @@ internal fun ThingPropertiesPanel(
                             CupertinoTextField(
                                 label = "字段名称",
                                 value = property.name,
-                                onValueChange = { value -> onUpdateProperty(index) { it.copy(name = value) } },
+                                onValueChange = { value -> viewModel.updateThingProperty(index) { it.copy(name = value) } },
                                 placeholder = "例如 设备地址",
                             )
                         }
@@ -157,28 +149,28 @@ internal fun ThingPropertiesPanel(
                             CupertinoTextField(
                                 label = "排序",
                                 value = property.sortIndex.toString(),
-                                onValueChange = { value -> onUpdateProperty(index) { it.copy(sortIndex = value.toIntOrNull() ?: 0) } },
+                                onValueChange = { value -> viewModel.updateThingProperty(index) { it.copy(sortIndex = value.toIntOrNull() ?: 0) } },
                             )
                         }
                         item {
                             CupertinoBooleanField(
                                 label = "可空",
                                 checked = property.nullable,
-                                onCheckedChange = { checked -> onUpdateProperty(index) { it.copy(nullable = checked) } },
+                                onCheckedChange = { checked -> viewModel.updateThingProperty(index) { it.copy(nullable = checked) } },
                             )
                         }
                         item {
                             CupertinoTextField(
                                 label = "默认值字面量",
                                 value = property.defaultLiteral.orEmpty(),
-                                onValueChange = { value -> onUpdateProperty(index) { it.copy(defaultLiteral = value) } },
+                                onValueChange = { value -> viewModel.updateThingProperty(index) { it.copy(defaultLiteral = value) } },
                             )
                         }
                         fullWidth {
                             CupertinoTextField(
                                 label = "字段说明",
                                 value = property.description.orEmpty(),
-                                onValueChange = { value -> onUpdateProperty(index) { it.copy(description = value) } },
+                                onValueChange = { value -> viewModel.updateThingProperty(index) { it.copy(description = value) } },
                                 singleLine = false,
                             )
                         }
@@ -188,7 +180,7 @@ internal fun ThingPropertiesPanel(
                         definitions = propertyDefinitions,
                         bindings = property.bindings,
                         onValueChange = { definitionCode, paramCode, value ->
-                            onUpdateBinding(index, definitionCode, paramCode, value)
+                            viewModel.updateThingPropertyBindingValue(index, definitionCode, paramCode, value)
                         },
                     )
                 }

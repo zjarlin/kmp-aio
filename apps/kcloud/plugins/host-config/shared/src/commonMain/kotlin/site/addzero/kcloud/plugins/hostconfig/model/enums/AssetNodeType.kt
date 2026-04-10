@@ -4,14 +4,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 /**
- * 统一资产树节点类型。
+ * 统一资产主树节点类型。
  *
- * 这里不再把“产品表 / 设备表 / 属性表 / 功能表”拆成多棵树，
- * 而是统一收敛到一棵资产树里，再用节点类型表达语义。
+ * `AssetNode` 只承载产品、设备、模块这三类主节点。
+ * 属性、功能、标签等明细能力继续独立建模，通过 `nodeId` 关联到主树。
  */
 enum class AssetNodeType {
-    ASSET,
-    PROPERTY,
-    SERVICE,
-    LABEL,
+    PRODUCT,
+    DEVICE,
+    MODULE,
 }

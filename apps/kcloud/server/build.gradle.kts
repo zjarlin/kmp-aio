@@ -7,8 +7,6 @@ val libs = versionCatalogs.named("libs")
 kotlin {
     sourceSets {
         jvmMain.dependencies {
-            implementation(project(":apps:kcloud:shared"))
-//            implementation(project(":apps:kcloud:plugins:system:ai-chat:server"))
             implementation(project(":apps:kcloud:plugins:codegen-context:server"))
             implementation(project(":apps:kcloud:plugins:host-config:server"))
             implementation(project(":apps:kcloud:plugins:mcu-console:server"))
@@ -23,8 +21,5 @@ kotlin {
             api(project(":lib:ktor:plugin:ktor-s3-plugin"))
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
-//        jvmTest.dependencies {
-//            implementation(project(":apps:kcloud:plugins:mcu-console"))
-//        }
     }
 }

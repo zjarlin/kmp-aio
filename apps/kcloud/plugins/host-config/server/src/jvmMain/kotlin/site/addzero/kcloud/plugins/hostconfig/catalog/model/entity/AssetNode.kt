@@ -3,21 +3,20 @@ package site.addzero.kcloud.plugins.hostconfig.catalog.model.entity
 import org.babyfish.jimmer.sql.Entity
 import org.babyfish.jimmer.sql.ManyToOne
 import org.babyfish.jimmer.sql.OneToMany
-import org.babyfish.jimmer.sql.Serialized
 import org.babyfish.jimmer.sql.Table
 import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
-import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
+import site.addzero.kcloud.plugins.hostconfig.model.entity.ModuleTemplate
 import site.addzero.kcloud.plugins.hostconfig.model.entity.ProtocolTemplate
 import site.addzero.kcloud.plugins.hostconfig.model.enums.AssetNodeType
 
 @Entity
 @Table(name = "host_config_asset_node")
 /**
- * 统一资产树节点实体。
+ * 统一资产主树节点实体。
  *
- * 这一层承载产品、设备、属性、功能和标签定义，
- * 后续如果要继续往设备实例、模块、事件等能力扩展，也只需要继续往这棵树里加类型。
+ * 这里只承载产品、设备、模块这三类主节点，
+ * 物模型、功能、标签等明细能力都通过独立表围绕 `nodeId` 关联。
  */
 interface AssetNode : BaseEntity {
 
@@ -33,6 +32,8 @@ interface AssetNode : BaseEntity {
     /** 描述。 */
     val description: String?
 
+    /** 是否启用。 */
+    val enabled: Boolean
 
     /** 排序值。 */
     val sortIndex: Int
@@ -40,32 +41,44 @@ interface AssetNode : BaseEntity {
     /** 供应商。 */
     val vendor: String?
 
+    /** 分类。 */
+    val category: String?
 
-    /** 扩展属性 JSON。 */
-//    @Serialized
-    val attributesJson: String?
+    /** 是否支持遥测。 */
+    val supportsTelemetry: Boolean
 
+    /** 是否支持控制。 */
+    val supportsControl: Boolean
+
+    /** 上级节点。 */
     @ManyToOne
-            /** 上级节点。 */
     val parent: AssetNode?
 
+    /** 协议模板，通常用于产品级节点。 */
     @ManyToOne
-            /** 协议模板。 */
     val protocolTemplate: ProtocolTemplate?
 
+    /** 设备类型，通常用于设备级节点。 */
     @ManyToOne
-            /** 设备类型。 */
     val deviceType: DeviceType?
 
+    /** 模块模板，通常用于模块级节点。 */
     @ManyToOne
-            /** 数据类型。 */
-    val dataType: DataType?
+    val moduleTemplate: ModuleTemplate?
 
+    /** 下级节点。 */
     @OneToMany(mappedBy = "parent")
-            /** 下级节点。 */
     val children: List<AssetNode>
 
+    /** 节点标签关联。 */
     @OneToMany(mappedBy = "asset")
-            /** 标签关联。 */
     val labelLinks: List<AssetNodeLabelLink>
+
+    /** 节点属性定义。 */
+    @OneToMany(mappedBy = "node")
+    val properties: List<PropertyDefinition>
+
+    /** 节点功能定义。 */
+    @OneToMany(mappedBy = "node")
+    val features: List<FeatureDefinition>
 }

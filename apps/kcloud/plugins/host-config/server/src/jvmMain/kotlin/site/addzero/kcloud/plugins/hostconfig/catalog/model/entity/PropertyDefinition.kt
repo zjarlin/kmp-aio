@@ -9,14 +9,14 @@ import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
 /**
  * 属性定义实体。
  *
- * 用于描述设备的遥测、状态或可写属性，
+ * 用于描述资产主节点下的遥测、状态或可写属性，
  * 同时为 spec-iot 视图提供底层源数据。
  */
 @Entity
 @Table(name = "host_config_property_definition")
 interface PropertyDefinition : BaseEntity {
 
-    /** 属性标识符，在所属设备定义内唯一。 */
+    /** 属性标识符，在所属主节点内唯一。 */
     val identifier: String
 
     /** 属性显示名称。 */
@@ -49,9 +49,13 @@ interface PropertyDefinition : BaseEntity {
     /** 同级排序值，越小越靠前。 */
     val sortIndex: Int
 
-    /** 所属设备定义。 */
+    /** 兼容旧设备定义关联。 */
     @ManyToOne
-    val deviceDefinition: DeviceDefinition
+    val deviceDefinition: DeviceDefinition?
+
+    /** 所属资产主节点。 */
+    @ManyToOne
+    val node: AssetNode
 
     /** 属性值数据类型。 */
     @ManyToOne

@@ -62,6 +62,9 @@ kotlin {
             implementation(libs.findLibrary("spec-iot").get())
         }
         jvmTest.dependencies {
+            implementation("junit:junit:4.13.2")
+            implementation("io.mockk:mockk:1.13.8")
+            implementation("com.intelligt.modbus:jamod:1.0.0") // 常用modbus库
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
         }
     }

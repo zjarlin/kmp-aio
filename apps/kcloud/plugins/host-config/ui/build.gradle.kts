@@ -33,7 +33,6 @@ kotlin {
 
     dependencies {
 
-        implementation(project(":apps:kcloud:shared"))
         api(project(":apps:kcloud:plugins:host-config:api"))
         implementation(project(":apps:kcloud:plugins:host-config:shared"))
         api(project(":apps:kcloud:plugins:mcu-console:api"))

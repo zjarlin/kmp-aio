@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,12 +22,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoSectionTitle
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
+import org.koin.compose.koinInject
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigModuleBoard
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
@@ -34,6 +34,8 @@ import site.addzero.kcloud.plugins.hostconfig.common.resolveModuleBoardModel
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeChildrenPanelActions
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeChildrenPanelActionsSpi
 
 @Composable
 /**
@@ -50,24 +52,18 @@ internal fun NodeChildrenPanel(
     onPrevTagPage: () -> Unit,
     onNextTagPage: () -> Unit,
 ) {
+    val panelActionsSpi = koinInject<ProjectsNodeChildrenPanelActionsSpi>()
     val nodeKind = resolveSelectedNodeKind(state)
+    val actions = remember(onPrevTagPage, onNextTagPage) {
+        ProjectsNodeChildrenPanelActions(
+            onPrevTagPage = onPrevTagPage,
+            onNextTagPage = onNextTagPage,
+        )
+    }
     CupertinoPanel(
         title = if (nodeKind == HostConfigNodeKind.TAG) "子项信息" else "下级节点",
         actions = {
-            if (nodeKind == HostConfigNodeKind.DEVICE) {
-                WorkbenchActionButton(
-                    text = "上一页",
-                    onClick = onPrevTagPage,
-                    variant = WorkbenchButtonVariant.Outline,
-                    enabled = state.tagOffset > 0,
-                )
-                WorkbenchActionButton(
-                    text = "下一页",
-                    onClick = onNextTagPage,
-                    variant = WorkbenchButtonVariant.Outline,
-                    enabled = state.tagOffset + state.tagSize < state.tagPage.t.toInt(),
-                )
-            }
+            panelActionsSpi.Render(state = state, actions = actions)
         },
     ) {
         when (nodeKind) {

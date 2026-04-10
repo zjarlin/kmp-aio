@@ -16,7 +16,6 @@ kotlin {
             kotlin.srcDir(generatedApiSourceDir)
             kotlin.srcDir(generatedKspSourceDir)
             dependencies {
-                implementation(project(":apps:kcloud:shared"))
                 implementation(project(":apps:kcloud:plugins:host-config:shared"))
             }
         }

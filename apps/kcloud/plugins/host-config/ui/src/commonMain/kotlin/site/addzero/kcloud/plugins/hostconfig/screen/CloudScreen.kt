@@ -1,12 +1,13 @@
 @file:OptIn(ExperimentalCupertinoApi::class)
 
-package site.addzero.kcloud.plugins.hostconfig.screen
+package site.addzero.kcloud.plugins.hostconfig.screen.cloud
 
 import androidx.compose.runtime.Composable
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
+import site.addzero.kcloud.plugins.hostconfig.screen.FeatureUnavailableScreen
 
 @Route(
     title = "云接入",

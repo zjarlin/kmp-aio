@@ -7,8 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
+import org.koin.compose.koinInject
 import site.addzero.cupertino.workbench.components.field.CupertinoBooleanField
 import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.field.CupertinoSelectionField
@@ -17,55 +16,37 @@ import site.addzero.cupertino.workbench.components.form.CupertinoFormGrid
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportResultDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqttDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataRtuDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataTcpDefaultsDraftDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.ProtocolTemplateOptionDto
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextScreenState
+import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataIssueSeverity
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextDraftPanelActionsSpi
 
 @Composable
 internal fun ContextDraftPanel(
-    draft: CodegenMetadataDraftDto,
-    protocolTemplates: List<ProtocolTemplateOptionDto>,
-    selectedProtocolTemplateDescription: String?,
-    saving: Boolean,
-    previewing: Boolean,
-    exporting: Boolean,
-    onSelectProtocolTemplate: (Long?) -> Unit,
-    onUpdateCode: (String) -> Unit,
-    onUpdateName: (String) -> Unit,
-    onUpdateDescription: (String) -> Unit,
-    onUpdateEnabled: (Boolean) -> Unit,
-    onSave: () -> Unit,
-    onPreview: () -> Unit,
-    onExport: () -> Unit,
+    state: CodegenContextScreenState,
+    viewModel: CodegenContextViewModel,
 ) {
+    val draftPanelActionsSpi = koinInject<CodegenContextDraftPanelActionsSpi>()
+    val draft = state.draft
+    val protocolTemplates = state.protocolTemplates
+    val selectedProtocolTemplateDescription = protocolTemplates
+        .firstOrNull { item -> item.id == draft.protocolTemplateId }
+        ?.description
     CupertinoPanel(
         title = "基础信息",
         subtitle = "页面只维护元数据草稿；方法名、属性名、类型推导与导出可行性全部交给后端预检。",
         actions = {
-            WorkbenchActionButton(
-                text = if (saving) "保存中" else "保存",
-                onClick = onSave,
-                enabled = !saving && !previewing && !exporting,
-            )
-            WorkbenchActionButton(
-                text = if (previewing) "预检中" else "预检",
-                onClick = onPreview,
-                enabled = !saving && !previewing && !exporting,
-                variant = WorkbenchButtonVariant.Outline,
-            )
-            WorkbenchActionButton(
-                text = if (exporting) "导出中" else "导出",
-                onClick = onExport,
-                enabled = !saving && !previewing && !exporting,
-                variant = WorkbenchButtonVariant.Secondary,
+            draftPanelActionsSpi.Render(
+                state = state,
+                viewModel = viewModel,
             )
         },
     ) {
@@ -74,7 +55,7 @@ internal fun ContextDraftPanel(
                 CupertinoTextField(
                     label = "上下文编码",
                     value = draft.code,
-                    onValueChange = onUpdateCode,
+                    onValueChange = { value -> viewModel.updateDraft { it.copy(code = value) } },
                     placeholder = "例如 MCU_DEVICE_DEFAULT",
                     description = "稳定编码，供 metadata snapshot 和导出结果引用。",
                 )
@@ -83,7 +64,7 @@ internal fun ContextDraftPanel(
                 CupertinoTextField(
                     label = "上下文名称",
                     value = draft.name,
-                    onValueChange = onUpdateName,
+                    onValueChange = { value -> viewModel.updateDraft { it.copy(name = value) } },
                     placeholder = "例如 控制器寄存器协议",
                     description = "人可读标题。",
                 )
@@ -93,7 +74,7 @@ internal fun ContextDraftPanel(
                     label = "协议模板",
                     options = protocolTemplates.map { option -> CupertinoOption(option.id, option.name, option.code) },
                     selectedValue = draft.protocolTemplateId.takeIf { id -> id > 0L },
-                    onSelected = onSelectProtocolTemplate,
+                    onSelected = viewModel::selectProtocolTemplate,
                     allowClear = true,
                     description = selectedProtocolTemplateDescription ?: "协议模板决定可编辑的 definition 集合。",
                 )
@@ -102,7 +83,7 @@ internal fun ContextDraftPanel(
                 CupertinoBooleanField(
                     label = "启用",
                     checked = draft.enabled,
-                    onCheckedChange = onUpdateEnabled,
+                    onCheckedChange = { value -> viewModel.updateDraft { it.copy(enabled = value) } },
                     description = "停用后不会作为默认 selected snapshot 使用。",
                 )
             }
@@ -110,7 +91,7 @@ internal fun ContextDraftPanel(
                 CupertinoTextField(
                     label = "上下文说明",
                     value = draft.description.orEmpty(),
-                    onValueChange = onUpdateDescription,
+                    onValueChange = { value -> viewModel.updateDraft { it.copy(description = value) } },
                     singleLine = false,
                 )
             }
@@ -122,17 +103,10 @@ internal fun ContextDraftPanel(
 
 @Composable
 internal fun ExportWorkbenchPanel(
-    draft: CodegenMetadataDraftDto,
-    preview: CodegenMetadataPreviewDto?,
-    exportResult: CodegenMetadataExportResultDto?,
-    onToggleKotlinTransport: (CodegenMetadataTransportKind) -> Unit,
-    onToggleCTransport: (CodegenMetadataTransportKind) -> Unit,
-    onToggleArtifactKind: (CodegenMetadataArtifactKind) -> Unit,
-    onUpdateFirmwareSync: (transform: (CodegenMetadataFirmwareSyncDto) -> CodegenMetadataFirmwareSyncDto) -> Unit,
-    onUpdateRtuDefaults: (transform: (CodegenMetadataRtuDefaultsDraftDto) -> CodegenMetadataRtuDefaultsDraftDto) -> Unit,
-    onUpdateTcpDefaults: (transform: (CodegenMetadataTcpDefaultsDraftDto) -> CodegenMetadataTcpDefaultsDraftDto) -> Unit,
-    onUpdateMqttDefaults: (transform: (CodegenMetadataMqttDefaultsDraftDto) -> CodegenMetadataMqttDefaultsDraftDto) -> Unit,
+    state: CodegenContextScreenState,
+    viewModel: CodegenContextViewModel,
 ) {
+    val draft = state.draft
     CupertinoPanel(
         title = "导出与预检",
         subtitle = "导出目标、两组 transport 和默认参数都是原始输入；必填项、解析结果和导出计划来自后端 preview。",
@@ -142,7 +116,7 @@ internal fun ExportWorkbenchPanel(
                 title = "Kotlin 调用侧",
                 subtitle = "这里只声明后续 KSP database provider 要消费哪些 transport 的 metadata snapshot。",
                 selectedTransports = draft.exportSettings.kotlinClientTransports,
-                onToggle = onToggleKotlinTransport,
+                onToggle = viewModel::toggleKotlinClientTransport,
             )
             CupertinoStatusStrip("KSP 侧推荐查询：select payload from codegen_context_modbus_contract where selected = 1 and transport = '${'$'}{transport}'。")
             CupertinoPanel(
@@ -154,15 +128,15 @@ internal fun ExportWorkbenchPanel(
                         title = "暴露 transport",
                         subtitle = "选择本次要输出到固件工程的 transport。",
                         selectedTransports = draft.exportSettings.cExposeTransports,
-                        onToggle = onToggleCTransport,
+                        onToggle = viewModel::toggleCExposeTransport,
                     )
                     ArtifactSelectionPanel(
                         selectedArtifactKinds = draft.exportSettings.artifactKinds,
-                        onToggle = onToggleArtifactKind,
+                        onToggle = viewModel::toggleArtifactKind,
                     )
                     FirmwareSyncPanel(
                         firmwareSync = draft.exportSettings.firmwareSync,
-                        onUpdate = onUpdateFirmwareSync,
+                        onUpdate = viewModel::updateFirmwareSync,
                     )
                 }
             }
@@ -170,12 +144,12 @@ internal fun ExportWorkbenchPanel(
                 rtuDefaults = draft.exportSettings.rtuDefaults,
                 tcpDefaults = draft.exportSettings.tcpDefaults,
                 mqttDefaults = draft.exportSettings.mqttDefaults,
-                onUpdateRtuDefaults = onUpdateRtuDefaults,
-                onUpdateTcpDefaults = onUpdateTcpDefaults,
-                onUpdateMqttDefaults = onUpdateMqttDefaults,
+                onUpdateRtuDefaults = viewModel::updateRtuDefaults,
+                onUpdateTcpDefaults = viewModel::updateTcpDefaults,
+                onUpdateMqttDefaults = viewModel::updateMqttDefaults,
             )
-            PreviewPanel(preview)
-            ExportResultPanel(exportResult)
+            PreviewPanel(state.preview)
+            ExportResultPanel(state.exportResult)
         }
     }
 }

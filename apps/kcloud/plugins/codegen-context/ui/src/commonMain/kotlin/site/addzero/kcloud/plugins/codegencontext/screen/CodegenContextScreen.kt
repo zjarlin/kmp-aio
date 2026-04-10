@@ -12,21 +12,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DataObject
-import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.ExperimentalCupertinoApi
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewModel
+import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextSidebarHeaderSpi
 
 @Route(
     title = "元数据管理",
@@ -46,7 +45,7 @@ import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewMode
 fun CodegenContextScreen() {
     val viewModel = koinViewModel<CodegenContextViewModel>()
     val state = viewModel.screenState
-    val selectedProtocolTemplate = state.protocolTemplates.firstOrNull { item -> item.id == state.draft.protocolTemplateId }
+    val sidebarHeaderSpi = koinInject<CodegenContextSidebarHeaderSpi>()
 
     Row(modifier = Modifier.fillMaxSize()) {
         WorkbenchTreeSidebar(
@@ -60,18 +59,9 @@ fun CodegenContextScreen() {
             getChildren = { emptyList() },
             getIcon = { Icons.Outlined.DataObject },
             header = {
-                WorkbenchActionButton(
-                    text = if (state.loading) "加载中" else "刷新",
-                    onClick = viewModel::refresh,
-                    imageVector = Icons.Outlined.Refresh,
-                    variant = WorkbenchButtonVariant.Outline,
-                )
-                WorkbenchActionButton(text = "新建", onClick = viewModel::newContext)
-                WorkbenchActionButton(
-                    text = "删除",
-                    onClick = viewModel::deleteSelected,
-                    enabled = state.selectedContextId != null && !state.deleting,
-                    variant = WorkbenchButtonVariant.Destructive,
+                sidebarHeaderSpi.Render(
+                    state = state,
+                    viewModel = viewModel,
                 )
             },
         )
@@ -87,49 +77,20 @@ fun CodegenContextScreen() {
             state.errorMessage?.let { CupertinoStatusStrip(text = it, tone = Color(0xFFFFE8E6)) }
             state.statusMessage?.let { CupertinoStatusStrip(text = it) }
             ContextDraftPanel(
-                draft = state.draft,
-                protocolTemplates = state.protocolTemplates,
-                selectedProtocolTemplateDescription = selectedProtocolTemplate?.description,
-                saving = state.saving,
-                previewing = state.previewing,
-                exporting = state.exporting,
-                onSelectProtocolTemplate = viewModel::selectProtocolTemplate,
-                onUpdateCode = { value -> viewModel.updateDraft { it.copy(code = value) } },
-                onUpdateName = { value -> viewModel.updateDraft { it.copy(name = value) } },
-                onUpdateDescription = { value -> viewModel.updateDraft { it.copy(description = value) } },
-                onUpdateEnabled = { value -> viewModel.updateDraft { it.copy(enabled = value) } },
-                onSave = viewModel::save,
-                onPreview = viewModel::preview,
-                onExport = viewModel::exportSelected,
+                state = state,
+                viewModel = viewModel,
             )
             DeviceFunctionsPanel(
-                draft = state.draft,
-                definitions = state.availableContextDefinitions,
-                onAddFunction = viewModel::addDeviceFunction,
-                onRemoveFunction = viewModel::removeDeviceFunction,
-                onUpdateFunction = viewModel::updateDeviceFunction,
-                onToggleFunctionProperty = viewModel::toggleFunctionPropertySelection,
-                onUpdateBinding = viewModel::updateDeviceFunctionBindingValue,
+                state = state,
+                viewModel = viewModel,
             )
             ThingPropertiesPanel(
-                draft = state.draft,
-                definitions = state.availableContextDefinitions,
-                onAddProperty = viewModel::addThingProperty,
-                onRemoveProperty = viewModel::removeThingProperty,
-                onUpdateProperty = viewModel::updateThingProperty,
-                onUpdateBinding = viewModel::updateThingPropertyBindingValue,
+                state = state,
+                viewModel = viewModel,
             )
             ExportWorkbenchPanel(
-                draft = state.draft,
-                preview = state.preview,
-                exportResult = state.exportResult,
-                onToggleKotlinTransport = viewModel::toggleKotlinClientTransport,
-                onToggleCTransport = viewModel::toggleCExposeTransport,
-                onToggleArtifactKind = viewModel::toggleArtifactKind,
-                onUpdateFirmwareSync = viewModel::updateFirmwareSync,
-                onUpdateRtuDefaults = viewModel::updateRtuDefaults,
-                onUpdateTcpDefaults = viewModel::updateTcpDefaults,
-                onUpdateMqttDefaults = viewModel::updateMqttDefaults,
+                state = state,
+                viewModel = viewModel,
             )
         }
     }

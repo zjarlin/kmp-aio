@@ -12,11 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Refresh
-import androidx.compose.material.icons.outlined.Upload
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -26,16 +21,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.koin.compose.koinInject
 import site.addzero.component.search_bar.AddSearchBar
 import site.addzero.component.tree.TreeViewModel
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
-import site.addzero.cupertino.workbench.button.WorkbenchIconButton
-import site.addzero.cupertino.workbench.components.field.CupertinoOption
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
 import site.addzero.cupertino.workbench.metrics.WorkbenchMetrics
 import site.addzero.cupertino.workbench.metrics.currentWorkbenchMetrics
-import site.addzero.cupertino.workbench.material3.Icon
 import site.addzero.cupertino.workbench.sidebar.WorkbenchTreeSidebar
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
@@ -43,6 +34,8 @@ import site.addzero.kcloud.plugins.hostconfig.common.icon
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsNodeTrailingActionsSpi
+import site.addzero.kcloud.plugins.hostconfig.screen.projects.ProjectsSidebarActionGridSpi
 
 @Composable
 /**
@@ -95,6 +88,8 @@ internal fun ProjectsWorkbenchContent(
     onNextTagPage: () -> Unit,
     onDismissNodeActionMenu: () -> Unit,
 ) {
+    val sidebarActionGridSpi = koinInject<ProjectsSidebarActionGridSpi>()
+    val nodeTrailingActionsSpi = koinInject<ProjectsNodeTrailingActionsSpi>()
     val compactTreeMetrics = rememberCompactProjectTreeMetrics()
     var treeQuery by rememberSaveable { mutableStateOf("") }
     val filteredTreeNodes = remember(state.treeNodes, treeQuery) {
@@ -130,14 +125,14 @@ internal fun ProjectsWorkbenchContent(
                     horizontalSpacing = compactTreeMetrics.searchFieldSpacing,
                     showRefreshButton = !compactTreeMetrics.searchFieldCompactRefreshHidden,
                 )
-                ProjectsSidebarActionGrid(
-                    loading = state.loading,
-                    busy = state.busy,
-                    hasSelectedProject = state.selectedProjectId != null,
-                    onCreateProject = onCreateProject,
-                    onExportProjectSqlite = onExportProjectSqlite,
-                    onImportProjectSqlite = onImportProjectSqlite,
-                    onRefresh = onRefresh,
+                sidebarActionGridSpi.Render(
+                    state = state,
+                    actions = rememberProjectsSidebarActions(
+                        onCreateProject = onCreateProject,
+                        onExportProjectSqlite = onExportProjectSqlite,
+                        onImportProjectSqlite = onImportProjectSqlite,
+                        onRefresh = onRefresh,
+                    ),
                 )
             },
             getId = { it.id },
@@ -146,27 +141,14 @@ internal fun ProjectsWorkbenchContent(
             getChildren = { it.children },
             getIcon = { it.kind.icon() },
             nodeTrailingContent = { node ->
-                Box(contentAlignment = Alignment.TopEnd) {
-                    WorkbenchIconButton(
-                        onClick = {
-                            onSelectNode(node.id)
-                            onOpenNodeActionMenu(node)
-                        },
-                        tooltip = "节点操作",
-                    ) {
-                        Icon(imageVector = Icons.Filled.MoreHoriz, contentDescription = null)
-                    }
-                    nodeActionMenu?.takeIf { it.node.id == node.id }?.let { seed ->
-                        NodeActionDropdownMenu(
-                            seed = seed,
-                            onDismissRequest = onDismissNodeActionMenu,
-                            onAction = { actionType ->
-                                onDismissNodeActionMenu()
-                                onNodeAction(seed.node, actionType)
-                            },
-                        )
-                    }
-                }
+                nodeTrailingActionsSpi.Render(
+                    node = node,
+                    nodeActionMenu = nodeActionMenu,
+                    onSelectNode = onSelectNode,
+                    onOpenNodeActionMenu = onOpenNodeActionMenu,
+                    onDismissNodeActionMenu = onDismissNodeActionMenu,
+                    onNodeAction = onNodeAction,
+                )
             },
         )
 
@@ -204,60 +186,53 @@ internal fun ProjectsWorkbenchContent(
 }
 
 @Composable
-private fun ProjectsSidebarActionGrid(
-    loading: Boolean,
-    busy: Boolean,
-    hasSelectedProject: Boolean,
+private fun rememberProjectsSidebarActions(
     onCreateProject: () -> Unit,
     onExportProjectSqlite: () -> Unit,
     onImportProjectSqlite: () -> Unit,
     onRefresh: () -> Unit,
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+): ProjectsSidebarActions {
+    return remember(
+        onCreateProject,
+        onExportProjectSqlite,
+        onImportProjectSqlite,
+        onRefresh,
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            WorkbenchActionButton(
-                text = "新建工程",
-                onClick = onCreateProject,
-                imageVector = Icons.Outlined.Add,
-                modifier = Modifier.weight(1f),
-                variant = WorkbenchButtonVariant.Default,
-                enabled = !busy,
-            )
-            WorkbenchActionButton(
-                text = "导出 SQLite",
-                onClick = onExportProjectSqlite,
-                modifier = Modifier.weight(1f),
-                variant = WorkbenchButtonVariant.Outline,
-                enabled = hasSelectedProject && !busy,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            WorkbenchActionButton(
-                text = "导入 SQLite",
-                onClick = onImportProjectSqlite,
-                imageVector = Icons.Outlined.Upload,
-                modifier = Modifier.weight(1f),
-                variant = WorkbenchButtonVariant.Secondary,
-                enabled = !busy,
-            )
-            WorkbenchActionButton(
-                text = if (loading) "加载中" else "刷新",
-                onClick = onRefresh,
-                imageVector = Icons.Outlined.Refresh,
-                modifier = Modifier.weight(1f),
-                variant = WorkbenchButtonVariant.Ghost,
-                enabled = !busy,
-            )
-        }
+        ProjectsSidebarActions(
+            onCreateProject = onCreateProject,
+            onExportProjectSqlite = onExportProjectSqlite,
+            onImportProjectSqlite = onImportProjectSqlite,
+            onRefresh = onRefresh,
+        )
+    }
+}
+
+/**
+ * Projects 左侧操作区的动作桥接。
+ *
+ * 这些动作仍然来自页面根函数管理的本地 UI 状态或平台能力，
+ * 暂时先集中成一个动作对象，避免继续把多条 lambda 平铺传给 slot。
+ */
+internal class ProjectsSidebarActions(
+    private val onCreateProject: () -> Unit,
+    private val onExportProjectSqlite: () -> Unit,
+    private val onImportProjectSqlite: () -> Unit,
+    private val onRefresh: () -> Unit,
+) {
+    fun createProject() {
+        onCreateProject()
+    }
+
+    fun exportProjectSqlite() {
+        onExportProjectSqlite()
+    }
+
+    fun importProjectSqlite() {
+        onImportProjectSqlite()
+    }
+
+    fun refresh() {
+        onRefresh()
     }
 }
 

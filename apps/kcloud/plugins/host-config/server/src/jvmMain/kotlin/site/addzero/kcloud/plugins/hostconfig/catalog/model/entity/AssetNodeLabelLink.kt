@@ -8,7 +8,7 @@ import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 @Entity
 @Table(name = "host_config_asset_node_label")
 /**
- * 统一资产树节点与标签节点关联。
+ * 资产主节点与标签定义关联。
  */
 interface AssetNodeLabelLink : BaseEntity {
 
@@ -20,6 +20,6 @@ interface AssetNodeLabelLink : BaseEntity {
     val asset: AssetNode
 
     @ManyToOne
-    /** 标签节点。 */
-    val label: AssetNode
+    /** 标签定义。 */
+    val label: LabelDefinition
 }

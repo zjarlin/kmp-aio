@@ -238,6 +238,9 @@ object Fetchers {
 
     val propertyDefinitionDetail: Fetcher<PropertyDefinition> = newFetcher(PropertyDefinition::class).by {
         allScalarFields()
+        node {
+            allScalarFields()
+        }
         deviceDefinition {
             allScalarFields()
         }
@@ -248,6 +251,9 @@ object Fetchers {
 
     val featureDefinitionDetail: Fetcher<FeatureDefinition> = newFetcher(FeatureDefinition::class).by {
         allScalarFields()
+        node {
+            allScalarFields()
+        }
         deviceDefinition {
             allScalarFields()
         }
@@ -262,16 +268,13 @@ object Fetchers {
         parent {
             allScalarFields()
         }
-        inheritFrom {
-            allScalarFields()
-        }
         protocolTemplate {
             allScalarFields()
         }
         deviceType {
             allScalarFields()
         }
-        dataType {
+        moduleTemplate {
             allScalarFields()
         }
     }

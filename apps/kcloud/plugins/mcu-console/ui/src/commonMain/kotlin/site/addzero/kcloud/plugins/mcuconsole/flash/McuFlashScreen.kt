@@ -10,12 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import site.addzero.annotation.Route
 import site.addzero.annotation.RoutePlacement
 import site.addzero.annotation.RouteScene
-import site.addzero.cupertino.workbench.button.WorkbenchActionButton
-import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.field.CupertinoTextField
 import site.addzero.cupertino.workbench.components.panel.CupertinoKeyValueRow
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
@@ -56,9 +55,7 @@ fun McuFlashScreen() {
     ) {
         McuFlashHeader(
             state = state,
-            onRefreshAll = viewModel::refresh,
-            onRefreshProbes = viewModel::refreshProbes,
-            onRefreshStatus = viewModel::refreshStatus,
+            viewModel = viewModel,
         )
         state.errorMessage?.let { message ->
             McuFlashBanner(
@@ -92,16 +89,11 @@ fun McuFlashScreen() {
                     ) {
                         McuFlashConfigPanel(
                             state = state,
-                            onProfileSelected = viewModel::selectProfile,
-                            onFirmwarePathChanged = viewModel::updateFirmwarePath,
-                            onStartAddressChanged = viewModel::updateStartAddressInput,
-                            onStartFlash = viewModel::startFlash,
-                            onReset = viewModel::resetTarget,
+                            viewModel = viewModel,
                         )
                         McuFlashProbePanel(
                             state = state,
-                            onSelectAuto = viewModel::selectAutoProbe,
-                            onProbeSelected = viewModel::selectProbe,
+                            viewModel = viewModel,
                         )
                     }
                     Column(
@@ -118,16 +110,11 @@ fun McuFlashScreen() {
                 ) {
                     McuFlashConfigPanel(
                         state = state,
-                        onProfileSelected = viewModel::selectProfile,
-                        onFirmwarePathChanged = viewModel::updateFirmwarePath,
-                        onStartAddressChanged = viewModel::updateStartAddressInput,
-                        onStartFlash = viewModel::startFlash,
-                        onReset = viewModel::resetTarget,
+                        viewModel = viewModel,
                     )
                     McuFlashProbePanel(
                         state = state,
-                        onSelectAuto = viewModel::selectAutoProbe,
-                        onProbeSelected = viewModel::selectProbe,
+                        viewModel = viewModel,
                     )
                     McuFlashStatusPanel(state)
                     McuFlashRuntimeSummaryPanel(state)
@@ -142,37 +129,20 @@ fun McuFlashScreen() {
  * 处理mcu烧录header。
  *
  * @param state 状态。
- * @param onRefreshAll on刷新all。
- * @param onRefreshProbes on刷新探针。
- * @param onRefreshStatus on刷新状态。
+ * @param viewModel 页面视图模型。
  */
 private fun McuFlashHeader(
     state: McuFlashScreenState,
-    onRefreshAll: () -> Unit,
-    onRefreshProbes: () -> Unit,
-    onRefreshStatus: () -> Unit,
+    viewModel: McuFlashViewModel,
 ) {
+    val headerActionsSpi = koinInject<McuFlashHeaderActionsSpi>()
     CupertinoPanel(
         title = "MCU 烧录",
         subtitle = "通过 ST-Link SWD 选择探针、填写固件路径并发起烧录。",
         actions = {
-            WorkbenchActionButton(
-                text = if (state.loading) "加载中" else "刷新页面",
-                onClick = onRefreshAll,
-                variant = WorkbenchButtonVariant.Outline,
-                enabled = !state.busy,
-            )
-            WorkbenchActionButton(
-                text = "刷新探针",
-                onClick = onRefreshProbes,
-                variant = WorkbenchButtonVariant.Secondary,
-                enabled = !state.busy,
-            )
-            WorkbenchActionButton(
-                text = "刷新状态",
-                onClick = onRefreshStatus,
-                variant = WorkbenchButtonVariant.Secondary,
-                enabled = !state.loading && !state.busy,
+            headerActionsSpi.Render(
+                state = state,
+                viewModel = viewModel,
             )
         },
     ) {
@@ -206,20 +176,13 @@ private fun McuFlashHeader(
  * 处理mcu烧录配置panel。
  *
  * @param state 状态。
- * @param onProfileSelected on配置档选中。
- * @param onFirmwarePathChanged on固件路径changed。
- * @param onStartAddressChanged on起始地址changed。
- * @param onStartFlash on开始烧录。
- * @param onReset on重置。
+ * @param viewModel 页面视图模型。
  */
 private fun McuFlashConfigPanel(
     state: McuFlashScreenState,
-    onProfileSelected: (String) -> Unit,
-    onFirmwarePathChanged: (String) -> Unit,
-    onStartAddressChanged: (String) -> Unit,
-    onStartFlash: () -> Unit,
-    onReset: () -> Unit,
+    viewModel: McuFlashViewModel,
 ) {
+    val configActionsSpi = koinInject<McuFlashConfigActionsSpi>()
     CupertinoPanel(
         title = "烧录配置",
         subtitle = "配置列表来自后台 `FlashController`，页面只负责选择和触发。",
@@ -237,7 +200,7 @@ private fun McuFlashConfigPanel(
                         selected = state.selectedProfileId == profile.id,
                         enabled = !state.running && !state.busy,
                         onClick = {
-                            onProfileSelected(profile.id)
+                            viewModel.selectProfile(profile.id)
                         },
                     )
                 }
@@ -247,7 +210,7 @@ private fun McuFlashConfigPanel(
         CupertinoTextField(
             label = "固件路径",
             value = state.firmwarePath,
-            onValueChange = onFirmwarePathChanged,
+            onValueChange = viewModel::updateFirmwarePath,
             modifier = Modifier.fillMaxWidth(),
             placeholder = state.selectedProfile?.artifactHint ?: "例如 /tmp/firmware.bin",
             description = "当前直接填写本机固件文件路径，后端会按 ST-Link 流程读取并烧录。",
@@ -257,7 +220,7 @@ private fun McuFlashConfigPanel(
         CupertinoTextField(
             label = "起始地址",
             value = state.startAddressInput,
-            onValueChange = onStartAddressChanged,
+            onValueChange = viewModel::updateStartAddressInput,
             modifier = Modifier.fillMaxWidth(),
             placeholder = state.selectedProfile?.defaultStartAddress?.toHexAddress() ?: "0x08000000",
             description = "留空时使用当前配置默认地址，支持 `0x08000000` 或十进制。",
@@ -268,19 +231,12 @@ private fun McuFlashConfigPanel(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            WorkbenchActionButton(
-                text = if (state.busy) "提交中" else "开始烧录",
-                onClick = onStartFlash,
-                enabled = !state.loading && !state.busy && !state.running && state.selectedProfile != null,
-                modifier = Modifier.weight(1f),
-            )
-            WorkbenchActionButton(
-                text = "发送复位",
-                onClick = onReset,
-                variant = WorkbenchButtonVariant.Outline,
-                enabled = !state.loading && !state.busy && !state.running,
-                modifier = Modifier.weight(1f),
-            )
+            with(configActionsSpi) {
+                Render(
+                    state = state,
+                    viewModel = viewModel,
+                )
+            }
         }
     }
 }
@@ -290,13 +246,11 @@ private fun McuFlashConfigPanel(
  * 处理mcu烧录探针panel。
  *
  * @param state 状态。
- * @param onSelectAuto on选择自动。
- * @param onProbeSelected on探针选中。
+ * @param viewModel 页面视图模型。
  */
 private fun McuFlashProbePanel(
     state: McuFlashScreenState,
-    onSelectAuto: () -> Unit,
-    onProbeSelected: (String) -> Unit,
+    viewModel: McuFlashViewModel,
 ) {
     CupertinoPanel(
         title = "ST-Link 探针",
@@ -307,7 +261,7 @@ private fun McuFlashProbePanel(
             caption = "适合只连接一个 ST-Link 的场景。",
             selected = state.useAutoProbeSelection,
             enabled = !state.running && !state.busy,
-            onClick = onSelectAuto,
+            onClick = viewModel::selectAutoProbe,
         )
         if (state.probes.isEmpty()) {
             McuFlashInlineNotice("未发现可选探针时仍可先填写固件路径，待设备接入后再刷新。")
@@ -324,7 +278,7 @@ private fun McuFlashProbePanel(
                         enabled = serialNumber != null && !state.running && !state.busy,
                         onClick = {
                             if (serialNumber != null) {
-                                onProbeSelected(serialNumber)
+                                viewModel.selectProbe(serialNumber)
                             }
                         },
                     )
@@ -419,29 +373,6 @@ private fun McuFlashRuntimeSummaryPanel(
             CupertinoKeyValueRow(label, value)
         }
     }
-}
-
-@Composable
-/**
- * 处理mcu烧录panel。
- *
- * @param title title。
- * @param subtitle subtitle。
- * @param actions actions。
- * @param content content。
- */
-private fun McuFlashPanel(
-    title: String,
-    subtitle: String? = null,
-    actions: @Composable RowScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    CupertinoPanel(
-        title = title,
-        subtitle = subtitle,
-        actions = actions,
-        content = content,
-    )
 }
 
 @Composable

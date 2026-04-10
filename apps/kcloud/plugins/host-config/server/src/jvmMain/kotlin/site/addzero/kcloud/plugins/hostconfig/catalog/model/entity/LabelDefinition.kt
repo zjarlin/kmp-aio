@@ -9,7 +9,7 @@ import site.addzero.kcloud.jimmer.model.entity.base.BaseEntity
 /**
  * 标签定义实体。
  *
- * 标签用于给产品目录做语义分类，
+ * 标签用于给资产主树做语义分类，
  * 例如行业、协议能力、交付形态等维度。
  */
 @Entity

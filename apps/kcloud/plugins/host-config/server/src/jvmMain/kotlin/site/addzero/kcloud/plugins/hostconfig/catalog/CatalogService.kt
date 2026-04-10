@@ -7,6 +7,7 @@ import org.babyfish.jimmer.sql.ast.mutation.SaveMode
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
+import org.babyfish.jimmer.sql.kt.exists
 import org.koin.core.annotation.Single
 import site.addzero.biz.spec.iot.IotPropertySpec
 import site.addzero.biz.spec.iot.IotValueType
@@ -37,10 +38,20 @@ import site.addzero.kcloud.plugins.hostconfig.api.catalog.PropertyDefinitionResp
 import site.addzero.kcloud.plugins.hostconfig.api.catalog.PropertyDefinitionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.catalog.SpecIotPropertyResponse
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.AssetNode
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.AssetNodeDraft
 import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.AssetNodeLabelLink
-import site.addzero.kcloud.plugins.hostconfig.model.entity.DataType
-import site.addzero.kcloud.plugins.hostconfig.model.entity.DeviceType
-import site.addzero.kcloud.plugins.hostconfig.model.entity.ProtocolTemplate
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.FeatureDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.FeatureDefinitionDraft
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.LabelDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.PropertyDefinition
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.PropertyDefinitionDraft
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.asset
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.id
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.node
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.nodeType
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.parent
+import site.addzero.kcloud.plugins.hostconfig.catalog.model.entity.sortIndex
+import site.addzero.kcloud.plugins.hostconfig.model.entity.*
 import site.addzero.kcloud.plugins.hostconfig.model.enums.AssetNodeType
 import site.addzero.kcloud.plugins.hostconfig.service.Fetchers
 import site.addzero.kmp.exp.ConflictException
@@ -48,13 +59,10 @@ import site.addzero.kmp.exp.NotFoundException
 
 @Single
 /**
- * 提供统一资产树目录服务。
+ * 统一资产主树目录服务。
  *
- * 这里不再依赖“产品定义 / 设备定义 / 属性定义 / 功能定义”多表树结构，
- * 而是统一落到 `host_config_asset_node` 这棵树里。
- * 对外接口先保持兼容，避免前端和 controller2api 一次性大爆炸。
- *
- * @property sql Jimmer SQL 客户端。
+ * `AssetNode` 只承载产品、设备、模块三类主节点；
+ * 标签、属性、功能继续独立建模，并通过 `nodeId` 围绕主树关联。
  */
 class CatalogService(
     private val sql: KSqlClient,
@@ -64,228 +72,140 @@ class CatalogService(
         encodeDefaults = true
     }
 
-    /**
-     * 获取快照。
-     */
     fun getSnapshot(): CatalogSnapshotResponse {
+        val labels = listLabels()
         val graph = loadCatalogGraph()
-        val labels = graph.labelNodes().map { it.toLabelResponse() }
         return CatalogSnapshotResponse(
-            products = graph.rootAssets().map { product -> product.toProductResponse(graph) },
+            products = graph.rootProducts().map { product -> product.toProductResponse(graph) },
             labels = labels,
             metadata = buildMetadata(labels),
         )
     }
 
-    /**
-     * 获取 metadata。
-     */
-    fun getMetadata(): CatalogMetadataResponse {
-        return buildMetadata(listLabels())
-    }
+    fun getMetadata(): CatalogMetadataResponse =
+        buildMetadata(listLabels())
 
-    /**
-     * 列出标签。
-     */
     fun listLabels(): List<LabelDefinitionResponse> {
-        return loadCatalogGraph()
-            .labelNodes()
-            .map { label -> label.toLabelResponse() }
+        return sql.createQuery(LabelDefinition::class) {
+            orderBy(table.sortIndex.asc(), table.id.asc())
+            select(table.fetch(Fetchers.labelDefinition))
+        }.execute().map { label ->
+            label.toLabelResponse()
+        }
     }
 
-    /**
-     * 创建标签。
-     *
-     * @param request 请求参数。
-     */
     fun createLabel(request: LabelDefinitionCreateRequest): LabelDefinitionResponse {
         val code = request.code.trim()
         ensureLabelCodeUnique(code, excludeId = null)
         val now = now()
-        val entity = AssetNode {
-            nodeType = AssetNodeType.LABEL
-            this.code = code
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.colorHex = request.colorHex.cleanNullable()
-            this.enabled = true
-            this.sortIndex = request.sortIndex
-            this.required = false
-            this.writable = false
-            this.telemetry = false
-            this.nullable = true
-            this.supportsTelemetry = true
-            this.supportsControl = false
-            this.asynchronous = false
-            this.createdAt = now
-            this.updatedAt = now
-        }
-        val label = sql.saveCommand(entity) {
+        val label = sql.saveCommand(
+            LabelDefinition {
+                this.code = code
+                this.name = request.name.trim()
+                this.description = request.description.cleanNullable()
+                this.colorHex = request.colorHex.cleanNullable()
+                this.sortIndex = request.sortIndex
+                this.createdAt = now
+                this.updatedAt = now
+            },
+        ) {
             setMode(SaveMode.INSERT_ONLY)
         }.execute().modifiedEntity
-        return loadLabelNode(label.id).toLabelResponse()
+        return loadLabel(label.id).toLabelResponse()
     }
 
-    /**
-     * 更新标签。
-     *
-     * @param labelId 标签 ID。
-     * @param request 请求参数。
-     */
     fun updateLabel(
         labelId: Long,
         request: LabelDefinitionUpdateRequest,
     ): LabelDefinitionResponse {
-        val current = loadLabelNode(labelId)
+        val current = loadLabel(labelId)
         val code = request.code.trim()
         ensureLabelCodeUnique(code, excludeId = labelId)
-        val entity = AssetNode {
-            id = labelId
-            nodeType = current.nodeType
-            this.code = code
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.colorHex = request.colorHex.cleanNullable()
-            this.enabled = current.enabled
-            this.sortIndex = request.sortIndex
-            this.vendor = current.vendor
-            this.category = current.category
-            this.identifier = current.identifier
-            this.unit = current.unit
-            this.required = current.required
-            this.writable = current.writable
-            this.telemetry = current.telemetry
-            this.nullable = current.nullable
-            this.length = current.length
-            this.supportsTelemetry = current.supportsTelemetry
-            this.supportsControl = current.supportsControl
-            this.attributesJson = current.attributesJson
-            this.inputSchema = current.inputSchema
-            this.outputSchema = current.outputSchema
-            this.asynchronous = current.asynchronous
-            this.parentId = current.parent?.id
-            this.inheritFromId = current.inheritFrom?.id
-            this.protocolTemplateId = current.protocolTemplate?.id
-            this.deviceTypeId = current.deviceType?.id
-            this.dataTypeId = current.dataType?.id
-            this.createdAt = current.createdAt
-            this.updatedAt = now()
-        }
-        sql.saveCommand(entity) {
+        sql.saveCommand(
+            LabelDefinition {
+                id = labelId
+                this.code = code
+                this.name = request.name.trim()
+                this.description = request.description.cleanNullable()
+                this.colorHex = request.colorHex.cleanNullable()
+                this.sortIndex = request.sortIndex
+                this.createdAt = current.createdAt
+                this.updatedAt = now()
+            },
+        ) {
             setMode(SaveMode.UPDATE_ONLY)
         }.execute()
-        return loadLabelNode(labelId).toLabelResponse()
+        return loadLabel(labelId).toLabelResponse()
     }
 
-    /**
-     * 删除标签。
-     *
-     * @param labelId 标签 ID。
-     */
     fun deleteLabel(labelId: Long) {
-        loadLabelNode(labelId)
-        sql.createDelete(AssetNode::class) {
+        loadLabel(labelId)
+        sql.createDelete(LabelDefinition::class) {
             where(table.id eq labelId)
         }.execute()
     }
 
-    /**
-     * 创建产品。
-     *
-     * @param request 请求参数。
-     */
     fun createProduct(request: ProductDefinitionCreateRequest): ProductDefinitionTreeResponse {
         val code = request.code.trim()
         ensureProductCodeUnique(code, excludeId = null)
         ensureLabelIdsExist(request.labelIds)
         request.protocolTemplateId?.let(::ensureProtocolTemplateExists)
         val now = now()
-        val entity = AssetNode {
-            nodeType = AssetNodeType.ASSET
-            this.code = code
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.vendor = request.vendor.cleanNullable()
-            this.category = request.category.cleanNullable()
-            this.enabled = request.enabled
-            this.sortIndex = request.sortIndex
-            this.protocolTemplateId = request.protocolTemplateId
-            this.required = false
-            this.writable = false
-            this.telemetry = false
-            this.nullable = true
-            this.supportsTelemetry = true
-            this.supportsControl = false
-            this.asynchronous = false
-            this.createdAt = now
-            this.updatedAt = now
-        }
-        val product = sql.saveCommand(entity) {
+        val product = sql.saveCommand(
+            AssetNode {
+                applyProductFields(
+                    code = code,
+                    name = request.name.trim(),
+                    description = request.description.cleanNullable(),
+                    enabled = request.enabled,
+                    sortIndex = request.sortIndex,
+                    vendor = request.vendor.cleanNullable(),
+                    category = request.category.cleanNullable(),
+                    protocolTemplateId = request.protocolTemplateId,
+                )
+                this.createdAt = now
+                this.updatedAt = now
+            },
+        ) {
             setMode(SaveMode.INSERT_ONLY)
         }.execute().modifiedEntity
         replaceAssetLabels(product.id, request.labelIds)
         return loadProductResponse(product.id)
     }
 
-    /**
-     * 更新产品。
-     *
-     * @param productId 产品 ID。
-     * @param request 请求参数。
-     */
     fun updateProduct(
         productId: Long,
         request: ProductDefinitionUpdateRequest,
     ): ProductDefinitionTreeResponse {
-        val current = loadProductNode(productId)
+        loadProductNode(productId)
         val code = request.code.trim()
         ensureProductCodeUnique(code, excludeId = productId)
         ensureLabelIdsExist(request.labelIds)
         request.protocolTemplateId?.let(::ensureProtocolTemplateExists)
-        val entity = AssetNode {
-            id = productId
-            nodeType = current.nodeType
-            this.code = code
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.vendor = request.vendor.cleanNullable()
-            this.category = request.category.cleanNullable()
-            this.enabled = request.enabled
-            this.sortIndex = request.sortIndex
-            this.protocolTemplateId = request.protocolTemplateId
-            this.required = current.required
-            this.writable = current.writable
-            this.telemetry = current.telemetry
-            this.nullable = current.nullable
-            this.length = current.length
-            this.supportsTelemetry = current.supportsTelemetry
-            this.supportsControl = current.supportsControl
-            this.attributesJson = current.attributesJson
-            this.inputSchema = current.inputSchema
-            this.outputSchema = current.outputSchema
-            this.asynchronous = current.asynchronous
-            this.colorHex = current.colorHex
-            this.identifier = current.identifier
-            this.unit = current.unit
-            this.parentId = null
-            this.inheritFromId = current.inheritFrom?.id
-            this.deviceTypeId = current.deviceType?.id
-            this.dataTypeId = current.dataType?.id
-            this.createdAt = current.createdAt
-            this.updatedAt = now()
-        }
-        sql.saveCommand(entity) {
+        val current = loadAssetNode(productId)
+        sql.saveCommand(
+            AssetNode {
+                id = productId
+                applyProductFields(
+                    code = code,
+                    name = request.name.trim(),
+                    description = request.description.cleanNullable(),
+                    enabled = request.enabled,
+                    sortIndex = request.sortIndex,
+                    vendor = request.vendor.cleanNullable(),
+                    category = request.category.cleanNullable(),
+                    protocolTemplateId = request.protocolTemplateId,
+                )
+                this.createdAt = current.createdAt
+                this.updatedAt = now()
+            },
+        ) {
             setMode(SaveMode.UPDATE_ONLY)
         }.execute()
         replaceAssetLabels(productId, request.labelIds)
         return loadProductResponse(productId)
     }
 
-    /**
-     * 删除产品。
-     *
-     * @param productId 产品 ID。
-     */
     fun deleteProduct(productId: Long) {
         loadProductNode(productId)
         sql.createDelete(AssetNode::class) {
@@ -293,104 +213,71 @@ class CatalogService(
         }.execute()
     }
 
-    /**
-     * 创建设备定义。
-     *
-     * @param productId 产品 ID。
-     * @param request 请求参数。
-     */
     fun createDeviceDefinition(
         productId: Long,
         request: DeviceDefinitionCreateRequest,
     ): DeviceDefinitionTreeResponse {
         loadProductNode(productId)
-        request.deviceTypeId?.let(::ensureDeviceTypeExists)
         val code = request.code.trim()
         ensureDeviceDefinitionCodeUnique(productId, code, excludeId = null)
+        request.deviceTypeId?.let(::ensureDeviceTypeExists)
         val now = now()
-        val entity = AssetNode {
-            nodeType = AssetNodeType.ASSET
-            parentId = productId
-            this.code = code
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.enabled = true
-            this.sortIndex = request.sortIndex
-            this.deviceTypeId = request.deviceTypeId
-            this.required = false
-            this.writable = false
-            this.telemetry = false
-            this.nullable = true
-            this.supportsTelemetry = request.supportsTelemetry
-            this.supportsControl = request.supportsControl
-            this.asynchronous = false
-            this.createdAt = now
-            this.updatedAt = now
-        }
-        val device = sql.saveCommand(entity) {
+        val device = sql.saveCommand(
+            AssetNode {
+                parentId = productId
+                nodeType = AssetNodeType.DEVICE
+                this.code = code
+                this.name = request.name.trim()
+                this.description = request.description.cleanNullable()
+                this.enabled = true
+                this.sortIndex = request.sortIndex
+                this.supportsTelemetry = request.supportsTelemetry
+                this.supportsControl = request.supportsControl
+                this.deviceTypeId = request.deviceTypeId
+                this.createdAt = now
+                this.updatedAt = now
+            },
+        ) {
             setMode(SaveMode.INSERT_ONLY)
         }.execute().modifiedEntity
         return loadDeviceResponse(device.id)
     }
 
-    /**
-     * 更新设备定义。
-     *
-     * @param deviceDefinitionId 设备定义 ID。
-     * @param request 请求参数。
-     */
     fun updateDeviceDefinition(
         deviceDefinitionId: Long,
         request: DeviceDefinitionUpdateRequest,
     ): DeviceDefinitionTreeResponse {
         val current = loadDeviceNode(deviceDefinitionId)
         val productId = current.parent?.id ?: throw NotFoundException("Device definition not found")
-        request.deviceTypeId?.let(::ensureDeviceTypeExists)
         val code = request.code.trim()
         ensureDeviceDefinitionCodeUnique(productId, code, excludeId = deviceDefinitionId)
-        val entity = AssetNode {
-            id = deviceDefinitionId
-            nodeType = current.nodeType
-            parentId = productId
-            this.code = code
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.enabled = current.enabled
-            this.sortIndex = request.sortIndex
-            this.deviceTypeId = request.deviceTypeId
-            this.required = current.required
-            this.writable = current.writable
-            this.telemetry = current.telemetry
-            this.nullable = current.nullable
-            this.length = current.length
-            this.supportsTelemetry = request.supportsTelemetry
-            this.supportsControl = request.supportsControl
-            this.attributesJson = current.attributesJson
-            this.inputSchema = current.inputSchema
-            this.outputSchema = current.outputSchema
-            this.asynchronous = current.asynchronous
-            this.vendor = current.vendor
-            this.category = current.category
-            this.colorHex = current.colorHex
-            this.identifier = current.identifier
-            this.unit = current.unit
-            this.inheritFromId = current.inheritFrom?.id
-            this.protocolTemplateId = current.protocolTemplate?.id
-            this.dataTypeId = current.dataType?.id
-            this.createdAt = current.createdAt
-            this.updatedAt = now()
-        }
-        sql.saveCommand(entity) {
+        request.deviceTypeId?.let(::ensureDeviceTypeExists)
+        sql.saveCommand(
+            AssetNode {
+                id = deviceDefinitionId
+                parentId = productId
+                nodeType = AssetNodeType.DEVICE
+                this.code = code
+                this.name = request.name.trim()
+                this.description = request.description.cleanNullable()
+                this.enabled = current.enabled
+                this.sortIndex = request.sortIndex
+                this.vendor = current.vendor
+                this.category = current.category
+                this.supportsTelemetry = request.supportsTelemetry
+                this.supportsControl = request.supportsControl
+                this.protocolTemplateId = current.protocolTemplate?.id
+                this.deviceTypeId = request.deviceTypeId
+                this.moduleTemplateId = current.moduleTemplate?.id
+                this.createdAt = current.createdAt
+                this.updatedAt = now()
+            },
+        ) {
             setMode(SaveMode.UPDATE_ONLY)
         }.execute()
         return loadDeviceResponse(deviceDefinitionId)
     }
 
-    /**
-     * 删除设备定义。
-     *
-     * @param deviceDefinitionId 设备定义 ID。
-     */
     fun deleteDeviceDefinition(deviceDefinitionId: Long) {
         loadDeviceNode(deviceDefinitionId)
         sql.createDelete(AssetNode::class) {
@@ -398,12 +285,6 @@ class CatalogService(
         }.execute()
     }
 
-    /**
-     * 创建属性定义。
-     *
-     * @param deviceDefinitionId 设备定义 ID。
-     * @param request 请求参数。
-     */
     fun createPropertyDefinition(
         deviceDefinitionId: Long,
         request: PropertyDefinitionCreateRequest,
@@ -413,106 +294,77 @@ class CatalogService(
         val identifier = request.identifier.trim()
         ensurePropertyIdentifierUnique(deviceDefinitionId, identifier, excludeId = null)
         val now = now()
-        val entity = AssetNode {
-            nodeType = AssetNodeType.PROPERTY
-            parentId = deviceDefinitionId
-            code = identifier
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.identifier = identifier
-            this.dataTypeId = request.dataTypeId
-            this.unit = request.unit.cleanNullable()
-            this.enabled = true
-            this.sortIndex = request.sortIndex
-            this.required = request.required
-            this.writable = request.writable
-            this.telemetry = request.telemetry
-            this.nullable = request.nullable
-            this.length = request.length
-            this.supportsTelemetry = true
-            this.supportsControl = false
-            this.attributesJson = encodeAttributes(request.attributes)
-            this.asynchronous = false
-            this.createdAt = now
-            this.updatedAt = now
-        }
-        val property = sql.saveCommand(entity) {
+        val property = sql.saveCommand(
+            PropertyDefinition {
+                applyPropertyFields(
+                    nodeId = deviceDefinitionId,
+                    deviceDefinitionId = null,
+                    identifier = identifier,
+                    name = request.name.trim(),
+                    description = request.description.cleanNullable(),
+                    dataTypeId = request.dataTypeId,
+                    unit = request.unit.cleanNullable(),
+                    required = request.required,
+                    writable = request.writable,
+                    telemetry = request.telemetry,
+                    nullable = request.nullable,
+                    length = request.length,
+                    attributesJson = encodeAttributes(request.attributes),
+                    sortIndex = request.sortIndex,
+                )
+                this.createdAt = now
+                this.updatedAt = now
+            },
+        ) {
             setMode(SaveMode.INSERT_ONLY)
         }.execute().modifiedEntity
-        return loadPropertyNode(property.id).toPropertyResponse()
+        return loadPropertyDefinition(property.id).toPropertyResponse()
     }
 
-    /**
-     * 更新属性定义。
-     *
-     * @param propertyDefinitionId 属性定义 ID。
-     * @param request 请求参数。
-     */
     fun updatePropertyDefinition(
         propertyDefinitionId: Long,
         request: PropertyDefinitionUpdateRequest,
     ): PropertyDefinitionResponse {
-        val current = loadPropertyNode(propertyDefinitionId)
-        val deviceDefinitionId = current.parent?.id ?: throw NotFoundException("Property definition not found")
-        ensureDataTypeExists(request.dataTypeId)
+        val current = loadPropertyDefinition(propertyDefinitionId)
+        val nodeId = current.node.id
         val identifier = request.identifier.trim()
-        ensurePropertyIdentifierUnique(deviceDefinitionId, identifier, excludeId = propertyDefinitionId)
-        val entity = AssetNode {
-            id = propertyDefinitionId
-            nodeType = current.nodeType
-            parentId = deviceDefinitionId
-            code = identifier
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.identifier = identifier
-            this.dataTypeId = request.dataTypeId
-            this.unit = request.unit.cleanNullable()
-            this.enabled = current.enabled
-            this.sortIndex = request.sortIndex
-            this.required = request.required
-            this.writable = request.writable
-            this.telemetry = request.telemetry
-            this.nullable = request.nullable
-            this.length = request.length
-            this.supportsTelemetry = current.supportsTelemetry
-            this.supportsControl = current.supportsControl
-            this.attributesJson = encodeAttributes(request.attributes)
-            this.asynchronous = current.asynchronous
-            this.vendor = current.vendor
-            this.category = current.category
-            this.colorHex = current.colorHex
-            this.inputSchema = current.inputSchema
-            this.outputSchema = current.outputSchema
-            this.inheritFromId = current.inheritFrom?.id
-            this.protocolTemplateId = current.protocolTemplate?.id
-            this.deviceTypeId = current.deviceType?.id
-            this.createdAt = current.createdAt
-            this.updatedAt = now()
-        }
-        sql.saveCommand(entity) {
+        ensurePropertyIdentifierUnique(nodeId, identifier, excludeId = propertyDefinitionId)
+        ensureDataTypeExists(request.dataTypeId)
+        sql.saveCommand(
+            PropertyDefinition {
+                id = propertyDefinitionId
+                applyPropertyFields(
+                    nodeId = nodeId,
+                    deviceDefinitionId = current.deviceDefinition?.id,
+                    identifier = identifier,
+                    name = request.name.trim(),
+                    description = request.description.cleanNullable(),
+                    dataTypeId = request.dataTypeId,
+                    unit = request.unit.cleanNullable(),
+                    required = request.required,
+                    writable = request.writable,
+                    telemetry = request.telemetry,
+                    nullable = request.nullable,
+                    length = request.length,
+                    attributesJson = encodeAttributes(request.attributes),
+                    sortIndex = request.sortIndex,
+                )
+                this.createdAt = current.createdAt
+                this.updatedAt = now()
+            },
+        ) {
             setMode(SaveMode.UPDATE_ONLY)
         }.execute()
-        return loadPropertyNode(propertyDefinitionId).toPropertyResponse()
+        return loadPropertyDefinition(propertyDefinitionId).toPropertyResponse()
     }
 
-    /**
-     * 删除属性定义。
-     *
-     * @param propertyDefinitionId 属性定义 ID。
-     */
     fun deletePropertyDefinition(propertyDefinitionId: Long) {
-        loadPropertyNode(propertyDefinitionId)
-        sql.createDelete(AssetNode::class) {
+        loadPropertyDefinition(propertyDefinitionId)
+        sql.createDelete(PropertyDefinition::class) {
             where(table.id eq propertyDefinitionId)
         }.execute()
     }
 
-    /**
-     * 创建功能定义。
-     *
-     * @param deviceDefinitionId 设备定义 ID。
-     * @param request 请求参数。
-     */
     fun createFeatureDefinition(
         deviceDefinitionId: Long,
         request: FeatureDefinitionCreateRequest,
@@ -521,109 +373,73 @@ class CatalogService(
         val identifier = request.identifier.trim()
         ensureFeatureIdentifierUnique(deviceDefinitionId, identifier, excludeId = null)
         val now = now()
-        val entity = AssetNode {
-            nodeType = AssetNodeType.SERVICE
-            parentId = deviceDefinitionId
-            code = identifier
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.identifier = identifier
-            this.enabled = true
-            this.sortIndex = request.sortIndex
-            this.required = false
-            this.writable = false
-            this.telemetry = false
-            this.nullable = true
-            this.supportsTelemetry = true
-            this.supportsControl = false
-            this.inputSchema = request.inputSchema.cleanNullable()
-            this.outputSchema = request.outputSchema.cleanNullable()
-            this.asynchronous = request.asynchronous
-            this.createdAt = now
-            this.updatedAt = now
-        }
-        val feature = sql.saveCommand(entity) {
+        val feature = sql.saveCommand(
+            FeatureDefinition {
+                applyFeatureFields(
+                    nodeId = deviceDefinitionId,
+                    deviceDefinitionId = null,
+                    identifier = identifier,
+                    name = request.name.trim(),
+                    description = request.description.cleanNullable(),
+                    inputSchema = request.inputSchema.cleanNullable(),
+                    outputSchema = request.outputSchema.cleanNullable(),
+                    asynchronous = request.asynchronous,
+                    sortIndex = request.sortIndex,
+                )
+                this.createdAt = now
+                this.updatedAt = now
+            },
+        ) {
             setMode(SaveMode.INSERT_ONLY)
         }.execute().modifiedEntity
-        return loadFeatureNode(feature.id).toFeatureResponse()
+        return loadFeatureDefinition(feature.id).toFeatureResponse()
     }
 
-    /**
-     * 更新功能定义。
-     *
-     * @param featureDefinitionId 功能定义 ID。
-     * @param request 请求参数。
-     */
     fun updateFeatureDefinition(
         featureDefinitionId: Long,
         request: FeatureDefinitionUpdateRequest,
     ): FeatureDefinitionResponse {
-        val current = loadFeatureNode(featureDefinitionId)
-        val deviceDefinitionId = current.parent?.id ?: throw NotFoundException("Feature definition not found")
+        val current = loadFeatureDefinition(featureDefinitionId)
+        val nodeId = current.node.id
         val identifier = request.identifier.trim()
-        ensureFeatureIdentifierUnique(deviceDefinitionId, identifier, excludeId = featureDefinitionId)
-        val entity = AssetNode {
-            id = featureDefinitionId
-            nodeType = current.nodeType
-            parentId = deviceDefinitionId
-            code = identifier
-            this.name = request.name.trim()
-            this.description = request.description.cleanNullable()
-            this.identifier = identifier
-            this.enabled = current.enabled
-            this.sortIndex = request.sortIndex
-            this.required = current.required
-            this.writable = current.writable
-            this.telemetry = current.telemetry
-            this.nullable = current.nullable
-            this.length = current.length
-            this.supportsTelemetry = current.supportsTelemetry
-            this.supportsControl = current.supportsControl
-            this.attributesJson = current.attributesJson
-            this.inputSchema = request.inputSchema.cleanNullable()
-            this.outputSchema = request.outputSchema.cleanNullable()
-            this.asynchronous = request.asynchronous
-            this.vendor = current.vendor
-            this.category = current.category
-            this.colorHex = current.colorHex
-            this.unit = current.unit
-            this.inheritFromId = current.inheritFrom?.id
-            this.protocolTemplateId = current.protocolTemplate?.id
-            this.deviceTypeId = current.deviceType?.id
-            this.dataTypeId = current.dataType?.id
-            this.createdAt = current.createdAt
-            this.updatedAt = now()
-        }
-        sql.saveCommand(entity) {
+        ensureFeatureIdentifierUnique(nodeId, identifier, excludeId = featureDefinitionId)
+        sql.saveCommand(
+            FeatureDefinition {
+                id = featureDefinitionId
+                applyFeatureFields(
+                    nodeId = nodeId,
+                    deviceDefinitionId = current.deviceDefinition?.id,
+                    identifier = identifier,
+                    name = request.name.trim(),
+                    description = request.description.cleanNullable(),
+                    inputSchema = request.inputSchema.cleanNullable(),
+                    outputSchema = request.outputSchema.cleanNullable(),
+                    asynchronous = request.asynchronous,
+                    sortIndex = request.sortIndex,
+                )
+                this.createdAt = current.createdAt
+                this.updatedAt = now()
+            },
+        ) {
             setMode(SaveMode.UPDATE_ONLY)
         }.execute()
-        return loadFeatureNode(featureDefinitionId).toFeatureResponse()
+        return loadFeatureDefinition(featureDefinitionId).toFeatureResponse()
     }
 
-    /**
-     * 删除功能定义。
-     *
-     * @param featureDefinitionId 功能定义 ID。
-     */
     fun deleteFeatureDefinition(featureDefinitionId: Long) {
-        loadFeatureNode(featureDefinitionId)
-        sql.createDelete(AssetNode::class) {
+        loadFeatureDefinition(featureDefinitionId)
+        sql.createDelete(FeatureDefinition::class) {
             where(table.id eq featureDefinitionId)
         }.execute()
     }
 
-    /**
-     * 列出 spec-iot 属性。
-     *
-     * @param deviceDefinitionId 设备定义 ID。
-     */
     fun listSpecIotProperties(deviceDefinitionId: Long): List<SpecIotPropertyResponse> {
         val device = loadDeviceNode(deviceDefinitionId)
         val graph = loadCatalogGraph()
-        return graph.propertyNodes(device.id).map { property ->
-            val dataType = property.dataType ?: throw NotFoundException("Data type not found")
+        return graph.mergedProperties(device.id).map { property ->
+            val dataType = property.dataType
             val spec = IotPropertySpec.builder()
-                .identifier(property.identifier ?: property.code)
+                .identifier(property.identifier)
                 .name(property.name)
                 .description(property.description)
                 .unit(property.unit)
@@ -652,11 +468,6 @@ class CatalogService(
         }
     }
 
-    /**
-     * 构建 metadata。
-     *
-     * @param labels 标签定义。
-     */
     private fun buildMetadata(
         labels: List<LabelDefinitionResponse>,
     ): CatalogMetadataResponse {
@@ -694,14 +505,14 @@ class CatalogService(
             entities = listOf(
                 CatalogEntityMetadataResponse(
                     entityType = CatalogEntityType.PRODUCT,
-                    title = "资产模型",
-                    subtitle = "统一资产树里的根节点，用来承载型号、协议模板、标签和设备定义。",
+                    title = "产品节点",
+                    subtitle = "资产主树的根节点，承载产品级协议、标签和设备子节点。",
                     formFields = listOf(
-                        CatalogFieldMetadataResponse("code", "模型编码", CatalogFieldWidgetType.TEXT, required = true),
-                        CatalogFieldMetadataResponse("name", "模型名称", CatalogFieldWidgetType.TEXT, required = true),
-                        CatalogFieldMetadataResponse("description", "模型描述", CatalogFieldWidgetType.TEXTAREA),
+                        CatalogFieldMetadataResponse("code", "产品编码", CatalogFieldWidgetType.TEXT, required = true),
+                        CatalogFieldMetadataResponse("name", "产品名称", CatalogFieldWidgetType.TEXT, required = true),
+                        CatalogFieldMetadataResponse("description", "产品描述", CatalogFieldWidgetType.TEXTAREA),
                         CatalogFieldMetadataResponse("vendor", "供应商", CatalogFieldWidgetType.TEXT),
-                        CatalogFieldMetadataResponse("category", "模型分类", CatalogFieldWidgetType.TEXT),
+                        CatalogFieldMetadataResponse("category", "产品分类", CatalogFieldWidgetType.TEXT),
                         CatalogFieldMetadataResponse(
                             key = "protocolTemplateId",
                             label = "协议模板",
@@ -718,10 +529,10 @@ class CatalogService(
                         ),
                     ),
                     detailFields = listOf(
-                        CatalogDetailFieldMetadataResponse("code", "模型编码", CatalogValueRenderType.CODE),
-                        CatalogDetailFieldMetadataResponse("name", "模型名称"),
+                        CatalogDetailFieldMetadataResponse("code", "产品编码", CatalogValueRenderType.CODE),
+                        CatalogDetailFieldMetadataResponse("name", "产品名称"),
                         CatalogDetailFieldMetadataResponse("vendor", "供应商"),
-                        CatalogDetailFieldMetadataResponse("category", "模型分类"),
+                        CatalogDetailFieldMetadataResponse("category", "产品分类"),
                         CatalogDetailFieldMetadataResponse("protocolTemplateName", "协议模板"),
                         CatalogDetailFieldMetadataResponse("enabled", "启用状态", CatalogValueRenderType.BOOLEAN),
                         CatalogDetailFieldMetadataResponse("labels", "标签", CatalogValueRenderType.TAGS),
@@ -730,8 +541,8 @@ class CatalogService(
                 ),
                 CatalogEntityMetadataResponse(
                     entityType = CatalogEntityType.DEVICE,
-                    title = "设备定义",
-                    subtitle = "资产模型下的设备类节点，绑定设备类型与能力特征。",
+                    title = "设备节点",
+                    subtitle = "产品节点下的设备主节点，负责挂接设备类型、属性和功能。",
                     formFields = listOf(
                         CatalogFieldMetadataResponse("code", "设备编码", CatalogFieldWidgetType.TEXT, required = true),
                         CatalogFieldMetadataResponse("name", "设备名称", CatalogFieldWidgetType.TEXT, required = true),
@@ -758,7 +569,7 @@ class CatalogService(
                 CatalogEntityMetadataResponse(
                     entityType = CatalogEntityType.PROPERTY,
                     title = "属性定义",
-                    subtitle = "资产树里的属性节点，描述遥测、状态与控制字段。",
+                    subtitle = "属性定义独立存储，通过 nodeId 挂到主树节点，当前界面先挂到设备节点。",
                     formFields = listOf(
                         CatalogFieldMetadataResponse("identifier", "属性标识", CatalogFieldWidgetType.TEXT, required = true),
                         CatalogFieldMetadataResponse("name", "属性名称", CatalogFieldWidgetType.TEXT, required = true),
@@ -793,7 +604,7 @@ class CatalogService(
                 CatalogEntityMetadataResponse(
                     entityType = CatalogEntityType.FEATURE,
                     title = "功能定义",
-                    subtitle = "资产树里的功能节点，描述可调用动作及输入输出结构。",
+                    subtitle = "功能定义独立存储，通过 nodeId 挂到主树节点，当前界面先挂到设备节点。",
                     formFields = listOf(
                         CatalogFieldMetadataResponse("identifier", "功能标识", CatalogFieldWidgetType.TEXT, required = true),
                         CatalogFieldMetadataResponse("name", "功能名称", CatalogFieldWidgetType.TEXT, required = true),
@@ -813,7 +624,7 @@ class CatalogService(
                 CatalogEntityMetadataResponse(
                     entityType = CatalogEntityType.LABEL,
                     title = "标签定义",
-                    subtitle = "统一资产树里的标签节点，可关联到任意资产模型。",
+                    subtitle = "独立标签字典，可关联到产品、设备或模块节点。",
                     formFields = listOf(
                         CatalogFieldMetadataResponse("code", "标签编码", CatalogFieldWidgetType.TEXT, required = true),
                         CatalogFieldMetadataResponse("name", "标签名称", CatalogFieldWidgetType.TEXT, required = true),
@@ -856,9 +667,6 @@ class CatalogService(
         )
     }
 
-    /**
-     * 加载统一目录图。
-     */
     private fun loadCatalogGraph(): CatalogGraph {
         val nodes = sql.createQuery(AssetNode::class) {
             orderBy(table.sortIndex.asc(), table.id.asc())
@@ -868,15 +676,22 @@ class CatalogService(
             orderBy(table.sortIndex.asc(), table.id.asc())
             select(table.fetch(Fetchers.assetNodeLabelLinkDetail))
         }.execute()
-        return CatalogGraph(nodes, labelLinks)
+        val properties = sql.createQuery(PropertyDefinition::class) {
+            orderBy(table.sortIndex.asc(), table.id.asc())
+            select(table.fetch(Fetchers.propertyDefinitionDetail))
+        }.execute()
+        val features = sql.createQuery(FeatureDefinition::class) {
+            orderBy(table.sortIndex.asc(), table.id.asc())
+            select(table.fetch(Fetchers.featureDefinitionDetail))
+        }.execute()
+        return CatalogGraph(
+            nodes = nodes,
+            labelLinks = labelLinks,
+            properties = properties,
+            features = features,
+        )
     }
 
-    /**
-     * 替换资产标签。
-     *
-     * @param assetId 资产节点 ID。
-     * @param labelIds 标签节点 ID 列表。
-     */
     private fun replaceAssetLabels(
         assetId: Long,
         labelIds: List<Long>,
@@ -900,11 +715,6 @@ class CatalogService(
         }
     }
 
-    /**
-     * 加载产品响应。
-     *
-     * @param productId 产品节点 ID。
-     */
     private fun loadProductResponse(productId: Long): ProductDefinitionTreeResponse {
         val graph = loadCatalogGraph()
         val product = graph.requireNode(productId)
@@ -912,11 +722,6 @@ class CatalogService(
         return product.toProductResponse(graph)
     }
 
-    /**
-     * 加载设备响应。
-     *
-     * @param deviceDefinitionId 设备节点 ID。
-     */
     private fun loadDeviceResponse(deviceDefinitionId: Long): DeviceDefinitionTreeResponse {
         val graph = loadCatalogGraph()
         val device = graph.requireNode(deviceDefinitionId)
@@ -924,66 +729,18 @@ class CatalogService(
         return device.toDeviceResponse(graph)
     }
 
-    /**
-     * 加载产品节点。
-     *
-     * @param productId 产品节点 ID。
-     */
     private fun loadProductNode(productId: Long): AssetNode {
         val product = loadAssetNode(productId)
         ensureProductNode(product)
         return product
     }
 
-    /**
-     * 加载设备节点。
-     *
-     * @param deviceDefinitionId 设备节点 ID。
-     */
     private fun loadDeviceNode(deviceDefinitionId: Long): AssetNode {
         val device = loadAssetNode(deviceDefinitionId)
         ensureDeviceNode(device)
         return device
     }
 
-    /**
-     * 加载属性节点。
-     *
-     * @param propertyDefinitionId 属性节点 ID。
-     */
-    private fun loadPropertyNode(propertyDefinitionId: Long): AssetNode {
-        val property = loadAssetNode(propertyDefinitionId)
-        ensurePropertyNode(property)
-        return property
-    }
-
-    /**
-     * 加载功能节点。
-     *
-     * @param featureDefinitionId 功能节点 ID。
-     */
-    private fun loadFeatureNode(featureDefinitionId: Long): AssetNode {
-        val feature = loadAssetNode(featureDefinitionId)
-        ensureServiceNode(feature)
-        return feature
-    }
-
-    /**
-     * 加载标签节点。
-     *
-     * @param labelId 标签节点 ID。
-     */
-    private fun loadLabelNode(labelId: Long): AssetNode {
-        val label = loadAssetNode(labelId)
-        ensureLabelNode(label)
-        return label
-    }
-
-    /**
-     * 加载资产节点。
-     *
-     * @param nodeId 节点 ID。
-     */
     private fun loadAssetNode(nodeId: Long): AssetNode {
         return sql.createQuery(AssetNode::class) {
             where(table.id eq nodeId)
@@ -991,118 +748,109 @@ class CatalogService(
         }.execute().firstOrNull() ?: throw NotFoundException("Asset node not found")
     }
 
-    /**
-     * 确保产品编码唯一。
-     *
-     * @param code 编码。
-     * @param excludeId 需要排除的节点 ID。
-     */
+    private fun loadLabel(labelId: Long): LabelDefinition {
+        return sql.createQuery(LabelDefinition::class) {
+            where(table.id eq labelId)
+            select(table.fetch(Fetchers.labelDefinition))
+        }.execute().firstOrNull() ?: throw NotFoundException("Label definition not found")
+    }
+
+    private fun loadPropertyDefinition(propertyDefinitionId: Long): PropertyDefinition {
+        return sql.createQuery(PropertyDefinition::class) {
+            where(table.id eq propertyDefinitionId)
+            select(table.fetch(Fetchers.propertyDefinitionDetail))
+        }.execute().firstOrNull() ?: throw NotFoundException("Property definition not found")
+    }
+
+    private fun loadFeatureDefinition(featureDefinitionId: Long): FeatureDefinition {
+        return sql.createQuery(FeatureDefinition::class) {
+            where(table.id eq featureDefinitionId)
+            select(table.fetch(Fetchers.featureDefinitionDetail))
+        }.execute().firstOrNull() ?: throw NotFoundException("Feature definition not found")
+    }
+
     private fun ensureProductCodeUnique(
         code: String,
         excludeId: Long?,
     ) {
-        val exists = loadCatalogGraph()
-            .rootAssets()
-            .any { asset -> asset.code == code && asset.id != excludeId }
+        val exists = sql.createQuery(AssetNode::class) {
+            where(table.nodeType eq AssetNodeType.PRODUCT)
+            select(table.fetch(Fetchers.assetNodeDetail))
+        }.execute().any { node ->
+            node.code == code && node.id != excludeId
+        }
         if (exists) {
             throw ConflictException("Product definition code already exists")
         }
     }
 
-    /**
-     * 确保设备定义编码唯一。
-     *
-     * @param productId 产品节点 ID。
-     * @param code 编码。
-     * @param excludeId 需要排除的节点 ID。
-     */
     private fun ensureDeviceDefinitionCodeUnique(
         productId: Long,
         code: String,
         excludeId: Long?,
     ) {
-        val exists = loadCatalogGraph()
-            .childAssetNodes(productId)
-            .any { asset -> asset.code == code && asset.id != excludeId }
+        val exists = sql.createQuery(AssetNode::class) {
+            where(table.nodeType eq AssetNodeType.DEVICE)
+            where(table.parent.id eq productId)
+            select(table.fetch(Fetchers.assetNodeDetail))
+        }.execute().any { node ->
+            node.code == code && node.id != excludeId
+        }
         if (exists) {
             throw ConflictException("Device definition code already exists")
         }
     }
 
-    /**
-     * 确保属性标识唯一。
-     *
-     * @param deviceDefinitionId 设备节点 ID。
-     * @param identifier 标识。
-     * @param excludeId 需要排除的节点 ID。
-     */
     private fun ensurePropertyIdentifierUnique(
-        deviceDefinitionId: Long,
+        nodeId: Long,
         identifier: String,
         excludeId: Long?,
     ) {
-        val exists = loadCatalogGraph()
-            .propertyNodes(deviceDefinitionId)
-            .any { property -> (property.identifier ?: property.code) == identifier && property.id != excludeId }
+        val exists = sql.createQuery(PropertyDefinition::class) {
+            where(table.node.id eq nodeId)
+            select(table.fetch(Fetchers.propertyDefinitionDetail))
+        }.execute().any { property ->
+            property.identifier == identifier && property.id != excludeId
+        }
         if (exists) {
             throw ConflictException("Property identifier already exists")
         }
     }
 
-    /**
-     * 确保功能标识唯一。
-     *
-     * @param deviceDefinitionId 设备节点 ID。
-     * @param identifier 标识。
-     * @param excludeId 需要排除的节点 ID。
-     */
     private fun ensureFeatureIdentifierUnique(
-        deviceDefinitionId: Long,
+        nodeId: Long,
         identifier: String,
         excludeId: Long?,
     ) {
-        val exists = loadCatalogGraph()
-            .serviceNodes(deviceDefinitionId)
-            .any { service -> (service.identifier ?: service.code) == identifier && service.id != excludeId }
+        val exists = sql.createQuery(FeatureDefinition::class) {
+            where(table.node.id eq nodeId)
+            select(table.fetch(Fetchers.featureDefinitionDetail))
+        }.execute().any { feature ->
+            feature.identifier == identifier && feature.id != excludeId
+        }
         if (exists) {
             throw ConflictException("Feature identifier already exists")
         }
     }
 
-    /**
-     * 确保标签编码唯一。
-     *
-     * @param code 编码。
-     * @param excludeId 需要排除的节点 ID。
-     */
     private fun ensureLabelCodeUnique(
         code: String,
         excludeId: Long?,
     ) {
-        val exists = loadCatalogGraph()
-            .labelNodes()
-            .any { label -> label.code == code && label.id != excludeId }
+        val exists = sql.createQuery(LabelDefinition::class) {
+            select(table.fetch(Fetchers.labelDefinition))
+        }.execute().any { label ->
+            label.code == code && label.id != excludeId
+        }
         if (exists) {
             throw ConflictException("Label definition code already exists")
         }
     }
 
-    /**
-     * 确保标签节点都存在。
-     *
-     * @param labelIds 标签节点 ID 列表。
-     */
     private fun ensureLabelIdsExist(labelIds: List<Long>) {
-        labelIds.distinct().forEach { labelId ->
-            loadLabelNode(labelId)
-        }
+        labelIds.distinct().forEach(::loadLabel)
     }
 
-    /**
-     * 确保设备类型存在。
-     *
-     * @param deviceTypeId 设备类型 ID。
-     */
     private fun ensureDeviceTypeExists(deviceTypeId: Long) {
         val exists = sql.exists(DeviceType::class) {
             where(table.id eq deviceTypeId)
@@ -1112,11 +860,6 @@ class CatalogService(
         }
     }
 
-    /**
-     * 确保数据类型存在。
-     *
-     * @param dataTypeId 数据类型 ID。
-     */
     private fun ensureDataTypeExists(dataTypeId: Long) {
         val exists = sql.exists(DataType::class) {
             where(table.id eq dataTypeId)
@@ -1126,11 +869,6 @@ class CatalogService(
         }
     }
 
-    /**
-     * 确保协议模板存在。
-     *
-     * @param protocolTemplateId 协议模板 ID。
-     */
     private fun ensureProtocolTemplateExists(protocolTemplateId: Long) {
         val exists = sql.exists(ProtocolTemplate::class) {
             where(table.id eq protocolTemplateId)
@@ -1140,66 +878,18 @@ class CatalogService(
         }
     }
 
-    /**
-     * 确保节点是产品节点。
-     *
-     * @param node 节点。
-     */
     private fun ensureProductNode(node: AssetNode) {
-        if (node.nodeType != AssetNodeType.ASSET || node.parent != null) {
+        if (node.nodeType != AssetNodeType.PRODUCT || node.parent != null) {
             throw NotFoundException("Product definition not found")
         }
     }
 
-    /**
-     * 确保节点是设备节点。
-     *
-     * @param node 节点。
-     */
     private fun ensureDeviceNode(node: AssetNode) {
-        if (node.nodeType != AssetNodeType.ASSET || node.parent == null) {
+        if (node.nodeType != AssetNodeType.DEVICE || node.parent == null) {
             throw NotFoundException("Device definition not found")
         }
     }
 
-    /**
-     * 确保节点是属性节点。
-     *
-     * @param node 节点。
-     */
-    private fun ensurePropertyNode(node: AssetNode) {
-        if (node.nodeType != AssetNodeType.PROPERTY) {
-            throw NotFoundException("Property definition not found")
-        }
-    }
-
-    /**
-     * 确保节点是功能节点。
-     *
-     * @param node 节点。
-     */
-    private fun ensureServiceNode(node: AssetNode) {
-        if (node.nodeType != AssetNodeType.SERVICE) {
-            throw NotFoundException("Feature definition not found")
-        }
-    }
-
-    /**
-     * 确保节点是标签节点。
-     *
-     * @param node 节点。
-     */
-    private fun ensureLabelNode(node: AssetNode) {
-        if (node.nodeType != AssetNodeType.LABEL) {
-            throw NotFoundException("Label definition not found")
-        }
-    }
-
-    /**
-     * 编码扩展属性。
-     *
-     * @param attributes 扩展属性。
-     */
     private fun encodeAttributes(
         attributes: Map<String, String>,
     ): String? {
@@ -1220,11 +910,6 @@ class CatalogService(
         return json.encodeToString(cleaned)
     }
 
-    /**
-     * 解码扩展属性。
-     *
-     * @param attributesJson 扩展属性 JSON。
-     */
     private fun decodeAttributes(
         attributesJson: String?,
     ): Map<String, String> {
@@ -1238,9 +923,6 @@ class CatalogService(
         }
     }
 
-    /**
-     * 转成 IoT 属性值类型。
-     */
     private fun String.toIotValueType(): IotValueType {
         return when (uppercase()) {
             "BOOLEAN" -> IotValueType.BOOLEAN
@@ -1249,61 +931,99 @@ class CatalogService(
         }
     }
 
-    /**
-     * 目录图。
-     */
     private data class CatalogGraph(
         val nodes: List<AssetNode>,
         val labelLinks: List<AssetNodeLabelLink>,
+        val properties: List<PropertyDefinition>,
+        val features: List<FeatureDefinition>,
     ) {
         private val nodesById = nodes.associateBy { node -> node.id }
         private val childrenByParentId = nodes.groupBy { node -> node.parent?.id }
         private val labelLinksByAssetId = labelLinks.groupBy { link -> link.asset.id }
+        private val propertiesByNodeId = properties.groupBy { property -> property.node.id }
+        private val featuresByNodeId = features.groupBy { feature -> feature.node.id }
 
         fun requireNode(nodeId: Long): AssetNode {
             return nodesById[nodeId] ?: throw NotFoundException("Asset node not found")
         }
 
-        fun rootAssets(): List<AssetNode> {
+        fun rootProducts(): List<AssetNode> {
             return childrenByParentId[null].orEmpty()
-                .filter { node -> node.nodeType == AssetNodeType.ASSET }
-                .sortedByCatalogOrder()
+                .filter { node -> node.nodeType == AssetNodeType.PRODUCT }
+                .sortedAssetNodesByCatalogOrder()
         }
 
-        fun labelNodes(): List<AssetNode> {
-            return childrenByParentId[null].orEmpty()
-                .filter { node -> node.nodeType == AssetNodeType.LABEL }
-                .sortedByCatalogOrder()
-        }
-
-        fun childAssetNodes(parentId: Long): List<AssetNode> {
+        fun childDevices(parentId: Long): List<AssetNode> {
             return childrenByParentId[parentId].orEmpty()
-                .filter { node -> node.nodeType == AssetNodeType.ASSET }
-                .sortedByCatalogOrder()
+                .filter { node -> node.nodeType == AssetNodeType.DEVICE }
+                .sortedAssetNodesByCatalogOrder()
         }
 
-        fun propertyNodes(parentId: Long): List<AssetNode> {
-            return childrenByParentId[parentId].orEmpty()
-                .filter { node -> node.nodeType == AssetNodeType.PROPERTY }
-                .sortedByCatalogOrder()
+        fun mergedLabels(nodeId: Long): List<LabelDefinition> {
+            val merged = linkedMapOf<Long, LabelDefinition>()
+            ancestorChain(nodeId).forEach { node ->
+                labelLinksByAssetId[node.id].orEmpty()
+                    .sortedWith(compareBy(AssetNodeLabelLink::sortIndex, AssetNodeLabelLink::id))
+                    .forEach { link ->
+                        if (merged.containsKey(link.label.id)) {
+                            merged.remove(link.label.id)
+                        }
+                        merged[link.label.id] = link.label
+                    }
+            }
+            return merged.values.toList()
         }
 
-        fun serviceNodes(parentId: Long): List<AssetNode> {
-            return childrenByParentId[parentId].orEmpty()
-                .filter { node -> node.nodeType == AssetNodeType.SERVICE }
-                .sortedByCatalogOrder()
+        fun mergedProperties(nodeId: Long): List<PropertyDefinition> {
+            return mergeInheritedByKey(
+                nodeId = nodeId,
+                itemsByNodeId = propertiesByNodeId,
+                sortItems = { sortedPropertiesByCatalogOrder() },
+                keySelector = PropertyDefinition::identifier,
+            )
         }
 
-        fun labelsOf(assetId: Long): List<AssetNode> {
-            return labelLinksByAssetId[assetId].orEmpty()
-                .sortedWith(compareBy(AssetNodeLabelLink::sortIndex, AssetNodeLabelLink::id))
-                .map { link -> requireNode(link.label.id) }
+        fun mergedFeatures(nodeId: Long): List<FeatureDefinition> {
+            return mergeInheritedByKey(
+                nodeId = nodeId,
+                itemsByNodeId = featuresByNodeId,
+                sortItems = { sortedFeaturesByCatalogOrder() },
+                keySelector = FeatureDefinition::identifier,
+            )
+        }
+
+        private fun ancestorChain(nodeId: Long): List<AssetNode> {
+            val chain = mutableListOf<AssetNode>()
+            var current: AssetNode? = requireNode(nodeId)
+            while (current != null) {
+                chain += current
+                current = current.parent?.let { parent -> requireNode(parent.id) }
+            }
+            return chain.asReversed()
+        }
+
+        private fun <T, K> mergeInheritedByKey(
+            nodeId: Long,
+            itemsByNodeId: Map<Long, List<T>>,
+            sortItems: List<T>.() -> List<T>,
+            keySelector: (T) -> K,
+        ): List<T> {
+            val merged = linkedMapOf<K, T>()
+            ancestorChain(nodeId).forEach { node ->
+                itemsByNodeId[node.id].orEmpty()
+                    .sortItems()
+                    .forEach { item ->
+                        val key = keySelector(item)
+                        if (merged.containsKey(key)) {
+                            merged.remove(key)
+                        }
+                        merged[key] = item
+                    }
+            }
+            return merged.values.toList()
         }
     }
 
-    /**
-     * 处理产品响应。
-     */
     private fun AssetNode.toProductResponse(
         graph: CatalogGraph,
     ): ProductDefinitionTreeResponse {
@@ -1319,16 +1039,13 @@ class CatalogService(
             protocolTemplateCode = protocolTemplate?.code,
             protocolTemplateName = protocolTemplate?.name,
             sortIndex = sortIndex,
-            labels = graph.labelsOf(id).map { label -> label.toLabelResponse() },
-            devices = graph.childAssetNodes(id).map { device -> device.toDeviceResponse(graph) },
+            labels = graph.mergedLabels(id).map { label -> label.toLabelResponse() },
+            devices = graph.childDevices(id).map { device -> device.toDeviceResponse(graph) },
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
     }
 
-    /**
-     * 处理设备响应。
-     */
     private fun AssetNode.toDeviceResponse(
         graph: CatalogGraph,
     ): DeviceDefinitionTreeResponse {
@@ -1344,27 +1061,23 @@ class CatalogService(
             supportsTelemetry = supportsTelemetry,
             supportsControl = supportsControl,
             sortIndex = sortIndex,
-            properties = graph.propertyNodes(id).map { property -> property.toPropertyResponse() },
-            features = graph.serviceNodes(id).map { service -> service.toFeatureResponse() },
+            properties = graph.mergedProperties(id).map { property -> property.toPropertyResponse() },
+            features = graph.mergedFeatures(id).map { feature -> feature.toFeatureResponse() },
             createdAt = createdAt,
             updatedAt = updatedAt,
         )
     }
 
-    /**
-     * 处理属性响应。
-     */
-    private fun AssetNode.toPropertyResponse(): PropertyDefinitionResponse {
-        val resolvedDataType = dataType ?: throw NotFoundException("Data type not found")
+    private fun PropertyDefinition.toPropertyResponse(): PropertyDefinitionResponse {
         return PropertyDefinitionResponse(
             id = id,
-            deviceDefinitionId = parent?.id ?: 0L,
-            identifier = identifier ?: code,
+            deviceDefinitionId = node.id,
+            identifier = identifier,
             name = name,
             description = description,
-            dataTypeId = resolvedDataType.id,
-            dataTypeCode = resolvedDataType.code,
-            dataTypeName = resolvedDataType.name,
+            dataTypeId = dataType.id,
+            dataTypeCode = dataType.code,
+            dataTypeName = dataType.name,
             unit = unit,
             required = required,
             writable = writable,
@@ -1378,14 +1091,11 @@ class CatalogService(
         )
     }
 
-    /**
-     * 处理功能响应。
-     */
-    private fun AssetNode.toFeatureResponse(): FeatureDefinitionResponse {
+    private fun FeatureDefinition.toFeatureResponse(): FeatureDefinitionResponse {
         return FeatureDefinitionResponse(
             id = id,
-            deviceDefinitionId = parent?.id ?: 0L,
-            identifier = identifier ?: code,
+            deviceDefinitionId = node.id,
+            identifier = identifier,
             name = name,
             description = description,
             inputSchema = inputSchema,
@@ -1397,10 +1107,7 @@ class CatalogService(
         )
     }
 
-    /**
-     * 处理标签响应。
-     */
-    private fun AssetNode.toLabelResponse(): LabelDefinitionResponse {
+    private fun LabelDefinition.toLabelResponse(): LabelDefinitionResponse {
         return LabelDefinitionResponse(
             id = id,
             code = code,
@@ -1412,21 +1119,94 @@ class CatalogService(
             updatedAt = updatedAt,
         )
     }
-
-    /**
-     * 按目录顺序排序。
-     */
-    private fun List<AssetNode>.sortedByCatalogOrder(): List<AssetNode> {
-        return sortedWith(compareBy(AssetNode::sortIndex, AssetNode::id))
-    }
 }
 
-/**
- * 获取当前时间戳。
- */
+private fun List<AssetNode>.sortedAssetNodesByCatalogOrder(): List<AssetNode> =
+    sortedWith(compareBy(AssetNode::sortIndex, AssetNode::id))
+
+private fun List<PropertyDefinition>.sortedPropertiesByCatalogOrder(): List<PropertyDefinition> =
+    sortedWith(compareBy(PropertyDefinition::sortIndex, PropertyDefinition::id))
+
+private fun List<FeatureDefinition>.sortedFeaturesByCatalogOrder(): List<FeatureDefinition> =
+    sortedWith(compareBy(FeatureDefinition::sortIndex, FeatureDefinition::id))
+
+private fun AssetNodeDraft.applyProductFields(
+    code: String,
+    name: String,
+    description: String?,
+    enabled: Boolean,
+    sortIndex: Int,
+    vendor: String?,
+    category: String?,
+    protocolTemplateId: Long?,
+) {
+    nodeType = AssetNodeType.PRODUCT
+    this.code = code
+    this.name = name
+    this.description = description
+    this.enabled = enabled
+    this.sortIndex = sortIndex
+    this.vendor = vendor
+    this.category = category
+    supportsTelemetry = false
+    supportsControl = false
+    this.protocolTemplateId = protocolTemplateId
+}
+
+private fun PropertyDefinitionDraft.applyPropertyFields(
+    nodeId: Long,
+    deviceDefinitionId: Long?,
+    identifier: String,
+    name: String,
+    description: String?,
+    dataTypeId: Long,
+    unit: String?,
+    required: Boolean,
+    writable: Boolean,
+    telemetry: Boolean,
+    nullable: Boolean,
+    length: Int?,
+    attributesJson: String?,
+    sortIndex: Int,
+) {
+    this.deviceDefinitionId = deviceDefinitionId
+    this.nodeId = nodeId
+    this.identifier = identifier
+    this.name = name
+    this.description = description
+    this.dataTypeId = dataTypeId
+    this.unit = unit
+    this.required = required
+    this.writable = writable
+    this.telemetry = telemetry
+    this.nullable = nullable
+    this.length = length
+    this.attributesJson = attributesJson
+    this.sortIndex = sortIndex
+}
+
+private fun FeatureDefinitionDraft.applyFeatureFields(
+    nodeId: Long,
+    deviceDefinitionId: Long?,
+    identifier: String,
+    name: String,
+    description: String?,
+    inputSchema: String?,
+    outputSchema: String?,
+    asynchronous: Boolean,
+    sortIndex: Int,
+) {
+    this.deviceDefinitionId = deviceDefinitionId
+    this.nodeId = nodeId
+    this.identifier = identifier
+    this.name = name
+    this.description = description
+    this.inputSchema = inputSchema
+    this.outputSchema = outputSchema
+    this.asynchronous = asynchronous
+    this.sortIndex = sortIndex
+}
+
 private fun now(): Long = System.currentTimeMillis()
 
-/**
- * 清洗可空字符串。
- */
 private fun String?.cleanNullable(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
