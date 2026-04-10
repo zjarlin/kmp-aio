@@ -91,7 +91,7 @@ interface ProtocolInstance : EpochBaseEntity {
 
     @OneToMany(mappedBy = "protocol")
     /**
-     * 模块。
+     * 设备。
      */
-    val modules: List<ModuleInstance>
+    val devices: List<Device>
 }

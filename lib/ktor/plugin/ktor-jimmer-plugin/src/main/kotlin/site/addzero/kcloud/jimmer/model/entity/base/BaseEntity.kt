@@ -3,5 +3,8 @@ package site.addzero.kcloud.jimmer.model.entity.base
 import org.babyfish.jimmer.sql.MappedSuperclass
 
 @MappedSuperclass
-interface BaseEntity : LongId, CreatedTime, UpdateTime {
+/**
+ * 兼容旧命名的统一实体基类。
+ */
+interface BaseEntity : EpochBaseEntity {
 }

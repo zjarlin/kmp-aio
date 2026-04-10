@@ -377,10 +377,9 @@ class ProjectSqliteTransferService(
                 sql = """
                     SELECT d.*
                     FROM host_config_device d
-                    INNER JOIN host_config_module_instance mi ON mi.id = d.module_id
-                    INNER JOIN host_config_project_protocol pp ON pp.protocol_id = mi.protocol_id
+                    INNER JOIN host_config_project_protocol pp ON pp.protocol_id = d.protocol_id
                     WHERE pp.project_id = ?
-                    ORDER BY pp.sort_index ASC, mi.sort_index ASC, d.sort_index ASC, d.id ASC
+                    ORDER BY pp.sort_index ASC, d.sort_index ASC, d.id ASC
                 """.trimIndent(),
                 params = listOf(projectId),
             ),
@@ -390,10 +389,9 @@ class ProjectSqliteTransferService(
                     SELECT t.*
                     FROM host_config_tag t
                     INNER JOIN host_config_device d ON d.id = t.device_id
-                    INNER JOIN host_config_module_instance mi ON mi.id = d.module_id
-                    INNER JOIN host_config_project_protocol pp ON pp.protocol_id = mi.protocol_id
+                    INNER JOIN host_config_project_protocol pp ON pp.protocol_id = d.protocol_id
                     WHERE pp.project_id = ?
-                    ORDER BY pp.sort_index ASC, mi.sort_index ASC, d.sort_index ASC, t.sort_index ASC, t.id ASC
+                    ORDER BY pp.sort_index ASC, d.sort_index ASC, t.sort_index ASC, t.id ASC
                 """.trimIndent(),
                 params = listOf(projectId),
             ),
@@ -404,8 +402,7 @@ class ProjectSqliteTransferService(
                     FROM host_config_tag_value_text tvt
                     INNER JOIN host_config_tag t ON t.id = tvt.tag_id
                     INNER JOIN host_config_device d ON d.id = t.device_id
-                    INNER JOIN host_config_module_instance mi ON mi.id = d.module_id
-                    INNER JOIN host_config_project_protocol pp ON pp.protocol_id = mi.protocol_id
+                    INNER JOIN host_config_project_protocol pp ON pp.protocol_id = d.protocol_id
                     WHERE pp.project_id = ?
                     ORDER BY tvt.tag_id ASC, tvt.sort_index ASC, tvt.id ASC
                 """.trimIndent(),

@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS mcu_device_profile (
     device_key TEXT NOT NULL,
     manufacturer TEXT,
     remark TEXT,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(device_key)
 );

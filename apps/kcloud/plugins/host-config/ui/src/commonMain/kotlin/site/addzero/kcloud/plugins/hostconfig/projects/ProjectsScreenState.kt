@@ -108,6 +108,7 @@ data class ProjectsScreenState(
             val node = selectedNode ?: return null
             return when (node.kind) {
                 HostConfigNodeKind.DEVICE -> node.entityId
+                HostConfigNodeKind.MODULE -> node.parentEntityId
                 HostConfigNodeKind.TAG -> node.parentEntityId
                 else -> null
             }
@@ -135,25 +136,11 @@ internal fun List<ProjectTreeResponse>.findProtocol(
 internal fun List<ProjectTreeResponse>.findModule(
     moduleId: Long,
 ): ModuleTreeNode? {
-    /**
-     * 处理search。
-     *
-     * @param modules 模块。
-     */
-    fun search(modules: List<ModuleTreeNode>): ModuleTreeNode? {
-        modules.forEach { module ->
-            if (module.id == moduleId) {
-                return module
-            }
-        }
-        return null
-    }
-
-    return asSequence().mapNotNull { project ->
-        search(project.modules) ?: project.protocols.firstNotNullOfOrNull { protocol ->
-            search(protocol.modules)
-        }
-    }.firstOrNull()
+    return asSequence()
+        .flatMap { project -> project.protocols.asSequence() }
+        .flatMap { protocol -> protocol.devices.asSequence() }
+        .flatMap { device -> device.modules.asSequence() }
+        .firstOrNull { module -> module.id == moduleId }
 }
 
 /**
@@ -164,24 +151,11 @@ internal fun List<ProjectTreeResponse>.findModule(
 internal fun List<ProjectTreeResponse>.findDevice(
     deviceId: Long,
 ): DeviceTreeNode? {
-    /**
-     * 处理search。
-     *
-     * @param modules 模块。
-     */
-    fun search(modules: List<ModuleTreeNode>): DeviceTreeNode? {
-        modules.forEach { module ->
-            module.devices.firstOrNull { device -> device.id == deviceId }?.let { device ->
-                return device
-            }
-        }
-        return null
-    }
-
     return asSequence().mapNotNull { project ->
-        search(project.modules) ?: project.protocols.firstNotNullOfOrNull { protocol ->
-            search(protocol.modules)
-        }
+        project.protocols
+            .asSequence()
+            .flatMap { protocol -> protocol.devices.asSequence() }
+            .firstOrNull { device -> device.id == deviceId }
     }.firstOrNull()
 }
 

@@ -39,22 +39,22 @@ object Fetchers {
                 protocolTemplate {
                     allScalarFields()
                 }
-                modules {
+                devices {
                     allScalarFields()
-                    protocol {
+                    deviceType {
                         allScalarFields()
                     }
-                    moduleTemplate {
+                    modules {
                         allScalarFields()
+                        protocol {
+                            allScalarFields()
+                        }
+                        moduleTemplate {
+                            allScalarFields()
+                        }
                     }
-                    devices {
+                    tags {
                         allScalarFields()
-                        deviceType {
-                            allScalarFields()
-                        }
-                        tags {
-                            allScalarFields()
-                        }
                     }
                 }
             }
@@ -87,6 +87,15 @@ object Fetchers {
 
     val moduleScalar: Fetcher<ModuleInstance> = newFetcher(ModuleInstance::class).by {
         allScalarFields()
+        device {
+            allScalarFields()
+            protocol {
+                allScalarFields()
+                protocolTemplate {
+                    allScalarFields()
+                }
+            }
+        }
         protocol {
             allScalarFields()
             protocolTemplate {
@@ -103,7 +112,13 @@ object Fetchers {
 
     val deviceScalar: Fetcher<Device> = newFetcher(Device::class).by {
         allScalarFields()
-        module {
+        protocol {
+            allScalarFields()
+            protocolTemplate {
+                allScalarFields()
+            }
+        }
+        modules {
             allScalarFields()
         }
         deviceType {

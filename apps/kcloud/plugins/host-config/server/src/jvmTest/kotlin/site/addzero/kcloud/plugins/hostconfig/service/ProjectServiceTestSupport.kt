@@ -13,6 +13,8 @@ import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
+import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceCreateRequest
+import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolCreateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolResponse
 import site.addzero.util.db.SqlExecutor
@@ -82,19 +84,41 @@ internal class ProjectServiceTestFixture : AutoCloseable {
     /**
      * 创建模块。
      *
-     * @param protocolId 协议 ID。
+     * @param deviceId 设备 ID。
      * @param name 名称。
      */
     fun createModule(
-        protocolId: Long,
+        deviceId: Long,
         name: String,
     ): ModuleResponse {
         return service.createModule(
-            protocolId = protocolId,
+            deviceId = deviceId,
             request =
                 ModuleCreateRequest(
                     name = name,
                     moduleTemplateId = 1,
+                    sortIndex = 0,
+                ),
+        )
+    }
+
+    /**
+     * 创建设备。
+     *
+     * @param protocolId 协议 ID。
+     * @param name 名称。
+     */
+    fun createDevice(
+        protocolId: Long,
+        name: String,
+    ): DeviceResponse {
+        return service.createDevice(
+            protocolId = protocolId,
+            request =
+                DeviceCreateRequest(
+                    name = name,
+                    deviceTypeId = 1,
+                    stationNo = 1,
                     sortIndex = 0,
                 ),
         )

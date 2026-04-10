@@ -25,19 +25,22 @@ interface ModuleInstance : EpochBaseEntity {
 
     @ManyToOne
     /**
-     * 协议。
-     */
-    val protocol: ProtocolInstance
-
-    @ManyToOne
-    /**
      * 模块模板。
      */
     val moduleTemplate: ModuleTemplate
 
-    @OneToMany(mappedBy = "module")
+    @ManyToOne
     /**
      * 设备。
      */
-    val devices: List<Device>
+    val device: Device
+
+    @ManyToOne
+    /**
+     * 协议。
+     *
+     * 这里保留协议外键，作为模块归属设备后的冗余上下文，
+     * 便于历史数据迁移、跨表导出以及协议模板一致性校验。
+     */
+    val protocol: ProtocolInstance
 }

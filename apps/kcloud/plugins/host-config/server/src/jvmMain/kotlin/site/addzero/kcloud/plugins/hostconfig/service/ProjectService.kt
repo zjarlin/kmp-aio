@@ -327,21 +327,22 @@ class ProjectService(
     /**
      * 创建模块。
      *
-     * @param protocolId 协议 ID。
+     * @param deviceId 设备 ID。
      * @param request 请求参数。
      */
-    fun createModule(protocolId: Long, request: ModuleCreateRequest): ModuleResponse {
-        val protocol = loadProtocol(protocolId)
+    fun createModule(deviceId: Long, request: ModuleCreateRequest): ModuleResponse {
+        val device = loadDevice(deviceId)
         val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
         ensureModuleTemplateMatchesProtocol(
-            protocolTemplateId = protocol.protocolTemplate.id,
+            protocolTemplateId = device.protocol.protocolTemplate.id,
             moduleTemplate = moduleTemplate,
         )
         val name = request.name.trim()
-        ensureModuleNameUnique(protocolId, name, null)
+        ensureModuleNameUnique(deviceId, name, null)
         val now = now()
         val entity = ModuleInstance {
-            this.protocolId = protocolId
+            this.deviceId = deviceId
+            this.protocolId = device.protocol.id
             this.moduleTemplateId = request.moduleTemplateId
             this.name = name
             this.sortIndex = request.sortIndex
@@ -355,19 +356,6 @@ class ProjectService(
     }
 
     /**
-     * 创建项目模块。
-     *
-     * @param projectId 项目 ID。
-     * @param request 请求参数。
-     */
-    fun createProjectModule(projectId: Long, request: ModuleCreateRequest): ModuleResponse {
-        ensureProjectExists(projectId)
-        val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
-        val protocolId = resolveProjectProtocolId(projectId, moduleTemplate.protocolTemplate.id)
-        return createModule(protocolId, request)
-    }
-
-    /**
      * 更新模块。
      *
      * @param moduleId 模块 ID。
@@ -377,13 +365,14 @@ class ProjectService(
         val current = loadModule(moduleId)
         val moduleTemplate = loadModuleTemplate(request.moduleTemplateId)
         ensureModuleTemplateMatchesProtocol(
-            protocolTemplateId = current.protocol.protocolTemplate.id,
+            protocolTemplateId = current.device.protocol.protocolTemplate.id,
             moduleTemplate = moduleTemplate,
         )
         val name = request.name.trim()
-        ensureModuleNameUnique(current.protocol.id, name, moduleId)
+        ensureModuleNameUnique(current.device.id, name, moduleId)
         val entity = ModuleInstance {
             id = moduleId
+            deviceId = current.device.id
             protocolId = current.protocol.id
             moduleTemplateId = request.moduleTemplateId
             this.name = name
@@ -404,35 +393,20 @@ class ProjectService(
      */
     fun updateModulePosition(moduleId: Long, request: ModulePositionUpdateRequest): ModuleResponse {
         val current = loadModule(moduleId)
-        when {
-            request.protocolId != null -> {
-                val targetProtocolId = request.protocolId!!
-                val targetProtocol = loadProtocol(targetProtocolId)
-                ensureModuleTemplateMatchesProtocol(
-                    protocolTemplateId = targetProtocol.protocolTemplate.id,
-                    moduleTemplate = current.moduleTemplate,
-                )
-                ensureModuleNameUnique(targetProtocolId, current.name, moduleId)
-                moveModule(moduleId, current.protocol.id, targetProtocolId, request.sortIndex)
-            }
-
-            request.projectId != null -> {
-                val targetProjectId = request.projectId!!
-                ensureProjectExists(targetProjectId)
-                val targetProtocolId = resolveProjectProtocolId(targetProjectId, current.moduleTemplate.protocolTemplate.id)
-                ensureModuleNameUnique(targetProtocolId, current.name, moduleId)
-                moveModuleInProjectTree(
-                    moduleId = moduleId,
-                    currentProtocolId = current.protocol.id,
-                    targetProtocolId = targetProtocolId,
-                    sourceProjectId = request.sourceProjectId ?: resolveProjectIdByProtocol(current.protocol.id),
-                    targetProjectId = targetProjectId,
-                    sortIndex = request.sortIndex,
-                )
-            }
-
-            else -> throw ConflictException("Target protocol or project is required")
-        }
+        val targetDevice = loadDevice(request.deviceId)
+        ensureModuleTemplateMatchesProtocol(
+            protocolTemplateId = targetDevice.protocol.protocolTemplate.id,
+            moduleTemplate = current.moduleTemplate,
+        )
+        ensureModuleNameUnique(targetDevice.id, current.name, moduleId)
+        moveModule(
+            moduleId = moduleId,
+            currentDeviceId = current.device.id,
+            targetDeviceId = targetDevice.id,
+            currentProtocolId = current.protocol.id,
+            targetProtocolId = targetDevice.protocol.id,
+            sortIndex = request.sortIndex,
+        )
         return loadModule(moduleId).toResponse()
     }
 
@@ -449,17 +423,17 @@ class ProjectService(
     /**
      * 创建设备。
      *
-     * @param moduleId 模块 ID。
+     * @param protocolId 协议 ID。
      * @param request 请求参数。
      */
-    fun createDevice(moduleId: Long, request: DeviceCreateRequest): DeviceResponse {
-        ensureModuleExists(moduleId)
+    fun createDevice(protocolId: Long, request: DeviceCreateRequest): DeviceResponse {
+        loadProtocol(protocolId)
         ensureDeviceTypeExists(request.deviceTypeId)
         val name = request.name.trim()
-        ensureDeviceNameUnique(moduleId, name, null)
+        ensureDeviceNameUnique(protocolId, name, null)
         val now = now()
         val entity = Device {
-            this.moduleId = moduleId
+            this.protocolId = protocolId
             this.deviceTypeId = request.deviceTypeId
             this.name = name
             this.stationNo = request.stationNo
@@ -493,10 +467,10 @@ class ProjectService(
         val current = loadDevice(deviceId)
         ensureDeviceTypeExists(request.deviceTypeId)
         val name = request.name.trim()
-        ensureDeviceNameUnique(current.module.id, name, deviceId)
+        ensureDeviceNameUnique(current.protocol.id, name, deviceId)
         val entity = Device {
             id = deviceId
-            moduleId = current.module.id
+            protocolId = current.protocol.id
             deviceTypeId = request.deviceTypeId
             this.name = name
             this.stationNo = request.stationNo
@@ -527,9 +501,13 @@ class ProjectService(
      */
     fun updateDevicePosition(deviceId: Long, request: DevicePositionUpdateRequest): DeviceResponse {
         val current = loadDevice(deviceId)
-        ensureModuleExists(request.moduleId)
-        ensureDeviceNameUnique(request.moduleId, current.name, deviceId)
-        moveDevice(deviceId, current.module.id, request.moduleId, request.sortIndex)
+        val targetProtocol = loadProtocol(request.protocolId)
+        ensureDeviceModulesMatchProtocol(
+            deviceId = deviceId,
+            targetProtocolTemplateId = targetProtocol.protocolTemplate.id,
+        )
+        ensureDeviceNameUnique(request.protocolId, current.name, deviceId)
+        moveDevice(deviceId, current.protocol.id, request.protocolId, request.sortIndex)
         return loadDevice(deviceId).toResponse()
     }
 
@@ -586,9 +564,9 @@ class ProjectService(
      * @param name 名称。
      * @param excludeId 需要排除的对象 ID。
      */
-    private fun ensureModuleNameUnique(protocolId: Long, name: String, excludeId: Long?) {
+    private fun ensureModuleNameUnique(deviceId: Long, name: String, excludeId: Long?) {
         val exists = sql.exists(ModuleInstance::class) {
-            where(table.protocol.id eq protocolId)
+            where(table.device.id eq deviceId)
             where(table.name eq name)
             if (excludeId != null) {
                 where(table.id ne excludeId)
@@ -606,9 +584,9 @@ class ProjectService(
      * @param name 名称。
      * @param excludeId 需要排除的对象 ID。
      */
-    private fun ensureDeviceNameUnique(moduleId: Long, name: String, excludeId: Long?) {
+    private fun ensureDeviceNameUnique(protocolId: Long, name: String, excludeId: Long?) {
         val exists = sql.exists(Device::class) {
-            where(table.module.id eq moduleId)
+            where(table.protocol.id eq protocolId)
             where(table.name eq name)
             if (excludeId != null) {
                 where(table.id ne excludeId)
@@ -841,6 +819,7 @@ class ProjectService(
         ModuleResponse(
             id = id,
             name = name,
+            deviceId = device.id,
             protocolId = protocol.id,
             sortIndex = sortIndex,
             moduleTemplateId = moduleTemplate.id,
@@ -865,6 +844,7 @@ class ProjectService(
             batchDigitalLength = batchDigitalLength,
             disabled = disabled,
             sortIndex = sortIndex,
+            protocolId = protocol.id,
             deviceTypeId = deviceType.id,
         )
 
@@ -891,17 +871,21 @@ class ProjectService(
                         protocolTemplateCode = protocol.protocolTemplate.code,
                         protocolTemplateName = protocol.protocolTemplate.name,
                         transportConfig = protocol.toTransportConfig(),
-                        modules = protocol.modules
-                            .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
+                        devices = protocol.devices
+                            .sortedWith(compareBy(Device::sortIndex, Device::id))
                             .map { it.toTreeNode() },
                     )
                 },
             modules = protocolLinks
                 .sortedWith(compareBy(ProjectProtocol::sortIndex, ProjectProtocol::id))
                 .flatMap { link ->
-                    link.protocol.modules
-                        .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
-                        .map { it.toTreeNode() }
+                    link.protocol.devices
+                        .sortedWith(compareBy(Device::sortIndex, Device::id))
+                        .flatMap { device ->
+                            device.modules
+                                .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
+                                .map { it.toTreeNode() }
+                        }
                 },
         )
 
@@ -912,14 +896,12 @@ class ProjectService(
         ModuleTreeNode(
             id = id,
             name = name,
+            deviceId = device.id,
             protocolId = protocol.id,
             sortIndex = sortIndex,
             moduleTemplateId = moduleTemplate.id,
             moduleTemplateCode = moduleTemplate.code,
             moduleTemplateName = moduleTemplate.name,
-            devices = devices
-                .sortedWith(compareBy(Device::sortIndex, Device::id))
-                .map { it.toTreeNode() },
         )
 
     /**
@@ -941,9 +923,13 @@ class ProjectService(
             batchDigitalLength = batchDigitalLength,
             disabled = disabled,
             sortIndex = sortIndex,
+            protocolId = protocol.id,
             deviceTypeId = deviceType.id,
             deviceTypeCode = deviceType.code,
             deviceTypeName = deviceType.name,
+            modules = modules
+                .sortedWith(compareBy(ModuleInstance::sortIndex, ModuleInstance::id))
+                .map { it.toTreeNode() },
             tags = tags
                 .sortedWith(compareBy(Tag::sortIndex, Tag::id))
                 .map {
@@ -1021,6 +1007,25 @@ class ProjectService(
     }
 
     /**
+     * 校验设备下已有模块是否允许迁移到目标协议。
+     *
+     * @param deviceId 设备 ID。
+     * @param targetProtocolTemplateId 目标协议模板 ID。
+     */
+    private fun ensureDeviceModulesMatchProtocol(
+        deviceId: Long,
+        targetProtocolTemplateId: Long,
+    ) {
+        val hasConflict = sql.exists(ModuleInstance::class) {
+            where(table.device.id eq deviceId)
+            where(table.moduleTemplate.protocolTemplate.id ne targetProtocolTemplateId)
+        }
+        if (hasConflict) {
+            throw ConflictException("Existing modules do not match target protocol template")
+        }
+    }
+
+    /**
      * 重排项目。
      *
      * @param projectId 项目 ID。
@@ -1062,14 +1067,23 @@ class ProjectService(
      * 移动模块。
      *
      * @param moduleId 模块 ID。
+     * @param currentDeviceId 当前设备 ID。
+     * @param targetDeviceId 目标设备 ID。
      * @param currentProtocolId 当前协议 ID。
      * @param targetProtocolId 目标协议 ID。
      * @param sortIndex 目标排序序号。
      */
-    private fun moveModule(moduleId: Long, currentProtocolId: Long, targetProtocolId: Long, sortIndex: Int) {
-        if (currentProtocolId == targetProtocolId) {
+    private fun moveModule(
+        moduleId: Long,
+        currentDeviceId: Long,
+        targetDeviceId: Long,
+        currentProtocolId: Long,
+        targetProtocolId: Long,
+        sortIndex: Int,
+    ) {
+        if (currentDeviceId == targetDeviceId) {
             val orderedIds = reorderIds(
-                queryIds("SELECT id FROM module_instance WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC", currentProtocolId),
+                queryIds("SELECT id FROM host_config_module_instance WHERE device_id = ? ORDER BY sort_index ASC, id ASC", currentDeviceId),
                 moduleId,
                 sortIndex,
             )
@@ -1079,80 +1093,41 @@ class ProjectService(
 
         val now = now()
         executeUpdate(
-            "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE id = ?",
+            "UPDATE host_config_module_instance SET device_id = ?, protocol_id = ?, updated_at = ? WHERE id = ?",
+            targetDeviceId,
             targetProtocolId,
             now,
             moduleId,
         )
         val oldIds = queryIds(
-            "SELECT id FROM host_config_module_instance WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC",
-            currentProtocolId,
+            "SELECT id FROM host_config_module_instance WHERE device_id = ? ORDER BY sort_index ASC, id ASC",
+            currentDeviceId,
         )
         val newIds = reorderIds(
-            queryIds("SELECT id FROM host_config_module_instance WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC", targetProtocolId),
+            queryIds("SELECT id FROM host_config_module_instance WHERE device_id = ? ORDER BY sort_index ASC, id ASC", targetDeviceId),
             moduleId,
             sortIndex,
         )
         batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
         batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
-    }
-
-    /**
-     * 移动模块in项目树。
-     *
-     * @param moduleId 模块 ID。
-     * @param currentProtocolId 当前协议 ID。
-     * @param targetProtocolId 目标协议 ID。
-     * @param sourceProjectId 来源项目 ID。
-     * @param targetProjectId 目标项目 ID。
-     * @param sortIndex 目标排序序号。
-     */
-    private fun moveModuleInProjectTree(
-        moduleId: Long,
-        currentProtocolId: Long,
-        targetProtocolId: Long,
-        sourceProjectId: Long,
-        targetProjectId: Long,
-        sortIndex: Int,
-    ) {
-        if (sourceProjectId == targetProjectId) {
-            if (currentProtocolId != targetProtocolId) {
-                executeUpdate(
-                    "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE id = ?",
-                    targetProtocolId,
-                    now(),
-                    moduleId,
-                )
-            }
-            val orderedIds = reorderIds(listProjectModuleIds(targetProjectId), moduleId, sortIndex)
-            batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
-            return
+        if (currentProtocolId != targetProtocolId) {
+            normalizeProtocolModules(currentProtocolId)
+            normalizeProtocolModules(targetProtocolId)
         }
-
-        val oldIds = listProjectModuleIds(sourceProjectId).filterNot { it == moduleId }.toMutableList()
-        executeUpdate(
-            "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE id = ?",
-            targetProtocolId,
-            now(),
-            moduleId,
-        )
-        val newIds = reorderIds(listProjectModuleIds(targetProjectId), moduleId, sortIndex)
-        batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
-        batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
     }
 
     /**
      * 移动设备。
      *
      * @param deviceId 设备 ID。
-     * @param currentModuleId 当前模块 ID。
-     * @param targetModuleId 目标模块 ID。
+     * @param currentProtocolId 当前协议 ID。
+     * @param targetProtocolId 目标协议 ID。
      * @param sortIndex 目标排序序号。
      */
-    private fun moveDevice(deviceId: Long, currentModuleId: Long, targetModuleId: Long, sortIndex: Int) {
-        if (currentModuleId == targetModuleId) {
+    private fun moveDevice(deviceId: Long, currentProtocolId: Long, targetProtocolId: Long, sortIndex: Int) {
+        if (currentProtocolId == targetProtocolId) {
             val orderedIds = reorderIds(
-                queryIds("SELECT id FROM host_config_device WHERE module_id = ? ORDER BY sort_index ASC, id ASC", currentModuleId),
+                queryIds("SELECT id FROM host_config_device WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC", currentProtocolId),
                 deviceId,
                 sortIndex,
             )
@@ -1162,22 +1137,30 @@ class ProjectService(
 
         val now = now()
         executeUpdate(
-            "UPDATE host_config_device SET module_id = ?, updated_at = ? WHERE id = ?",
-            targetModuleId,
+            "UPDATE host_config_device SET protocol_id = ?, updated_at = ? WHERE id = ?",
+            targetProtocolId,
+            now,
+            deviceId,
+        )
+        executeUpdate(
+            "UPDATE host_config_module_instance SET protocol_id = ?, updated_at = ? WHERE device_id = ?",
+            targetProtocolId,
             now,
             deviceId,
         )
         val oldIds = queryIds(
-            "SELECT id FROM host_config_device WHERE module_id = ? ORDER BY sort_index ASC, id ASC",
-            currentModuleId,
+            "SELECT id FROM host_config_device WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC",
+            currentProtocolId,
         )
         val newIds = reorderIds(
-            queryIds("SELECT id FROM host_config_device WHERE module_id = ? ORDER BY sort_index ASC, id ASC", targetModuleId),
+            queryIds("SELECT id FROM host_config_device WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC", targetProtocolId),
             deviceId,
             sortIndex,
         )
         batchUpdateSort("UPDATE host_config_device SET sort_index = ?, updated_at = ? WHERE id = ?", oldIds)
         batchUpdateSort("UPDATE host_config_device SET sort_index = ?, updated_at = ? WHERE id = ?", newIds)
+        normalizeProtocolModules(currentProtocolId)
+        normalizeProtocolModules(targetProtocolId)
     }
 
     /**
@@ -1220,6 +1203,22 @@ class ProjectService(
     private fun normalizeProtocolLinks(projectId: Long) {
         val orderedIds = queryIds("SELECT id FROM host_config_project_protocol WHERE project_id = ? ORDER BY sort_index ASC, id ASC", projectId)
         batchUpdateSort("UPDATE host_config_project_protocol SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
+    }
+
+    /**
+     * 规范化协议下模块排序。
+     *
+     * 设备成为模块父级后，这里只负责把同一协议内的模块排序收敛到稳定值，
+     * 便于聚合导出和项目级列表保持可预测顺序。
+     *
+     * @param protocolId 协议 ID。
+     */
+    private fun normalizeProtocolModules(protocolId: Long) {
+        val orderedIds = queryIds(
+            "SELECT id FROM host_config_module_instance WHERE protocol_id = ? ORDER BY sort_index ASC, id ASC",
+            protocolId,
+        )
+        batchUpdateSort("UPDATE host_config_module_instance SET sort_index = ?, updated_at = ? WHERE id = ?", orderedIds)
     }
 
     /**
@@ -1270,67 +1269,6 @@ class ProjectService(
         mapper: (ResultSet) -> T,
     ): List<T> = jdbc.withTransaction { _ ->
         jdbc.query(sql, *args, mapper = mapper)
-    }
-
-    /**
-     * 列出项目模块 ID。
-     *
-     * @param projectId 项目 ID。
-     */
-    private fun listProjectModuleIds(projectId: Long): MutableList<Long> =
-        queryIds(
-            """
-            SELECT DISTINCT m.id
-            FROM host_config_module_instance m
-            JOIN host_config_project_protocol pp ON pp.protocol_id = m.protocol_id
-            WHERE pp.project_id = ?
-            ORDER BY m.sort_index ASC, m.id ASC
-            """.trimIndent(),
-            projectId,
-        )
-
-    /**
-     * 根据项目和协议模板解析协议 ID。
-     *
-     * @param projectId 项目 ID。
-     * @param protocolTemplateId 协议模板 ID。
-     */
-    private fun resolveProjectProtocolId(projectId: Long, protocolTemplateId: Long): Long {
-        val protocolIds = query(
-            """
-            SELECT pp.protocol_id
-            FROM host_config_project_protocol pp
-            JOIN host_config_protocol_instance pi ON pi.id = pp.protocol_id
-            WHERE pp.project_id = ? AND pi.protocol_template_id = ?
-            ORDER BY pp.sort_index ASC, pp.id ASC
-            LIMIT 2
-            """.trimIndent(),
-            projectId,
-            protocolTemplateId,
-        ) { rs -> rs.getLong(1) }
-        return when (protocolIds.size) {
-            0 -> throw ConflictException("Please link a matching protocol before creating or moving the module")
-            1 -> protocolIds.first()
-            else -> throw ConflictException("Multiple matching protocols are linked to the project. Please choose the target protocol explicitly")
-        }
-    }
-
-    /**
-     * 根据协议解析所属项目 ID。
-     *
-     * @param protocolId 协议 ID。
-     */
-    private fun resolveProjectIdByProtocol(protocolId: Long): Long {
-        return query(
-            """
-            SELECT project_id
-            FROM host_config_project_protocol
-            WHERE protocol_id = ?
-            ORDER BY sort_index ASC, id ASC
-            LIMIT 1
-            """.trimIndent(),
-            protocolId,
-        ) { rs -> rs.getLong(1) }.firstOrNull() ?: throw NotFoundException("Protocol relation not found")
     }
 
     /**

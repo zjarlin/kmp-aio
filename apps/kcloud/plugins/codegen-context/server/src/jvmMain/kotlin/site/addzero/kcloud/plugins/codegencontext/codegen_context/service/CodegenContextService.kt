@@ -3,9 +3,6 @@ package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
 import java.sql.Connection
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import org.babyfish.jimmer.sql.kt.KSqlClient
 import org.babyfish.jimmer.sql.kt.ast.expression.asc
 import org.babyfish.jimmer.sql.kt.ast.expression.eq
@@ -44,8 +41,6 @@ class CodegenContextService(
         val IDENTIFIER_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*")
         val CODE_PATTERN = Regex("[A-Za-z][A-Za-z0-9_]*")
         val PACKAGE_PATTERN = Regex("[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*")
-        val SQLITE_DATE_TIME_FORMATTER: DateTimeFormatter =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
         val JSON = Json { ignoreUnknownKeys = true }
         const val MODBUS_FIELD_DEFINITION_CODE = "MODBUS_FIELD"
         const val FIELD_TRANSPORT_TYPE_PARAM = "transportType"
@@ -190,8 +185,8 @@ class CodegenContextService(
                                 mqtt_qos,
                                 mqtt_timeout_ms,
                                 mqtt_retries,
-                                create_time,
-                                update_time
+                                created_at,
+                                updated_at
                             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """.trimIndent(),
                             normalized.code,
@@ -292,7 +287,7 @@ class CodegenContextService(
                                 mqtt_qos = ?,
                                 mqtt_timeout_ms = ?,
                                 mqtt_retries = ?,
-                                update_time = ?
+                                updated_at = ?
                             WHERE id = ?
                             """.trimIndent(),
                             normalized.code,
@@ -455,8 +450,8 @@ class CodegenContextService(
                         class_kind,
                         class_name,
                         package_name,
-                        create_time,
-                        update_time
+                        created_at,
+                        updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """.trimIndent(),
                     contextId,
@@ -489,8 +484,8 @@ class CodegenContextService(
                             method_name,
                             request_class_name,
                             response_class_name,
-                            create_time,
-                            update_time
+                            created_at,
+                            updated_at
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """.trimIndent(),
                         classId,
@@ -525,8 +520,8 @@ class CodegenContextService(
                             type_name,
                             nullable,
                             default_literal,
-                            create_time,
-                            update_time
+                            created_at,
+                            updated_at
                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """.trimIndent(),
                         classId,
@@ -583,8 +578,8 @@ class CodegenContextService(
                         owner_method_id,
                         owner_property_id,
                         sort_index,
-                        create_time,
-                        update_time
+                        created_at,
+                        updated_at
                     ) VALUES (?, ?, ?, ?, ?, ?, ?)
                     """.trimIndent(),
                     requireNotNull(definition.id),
@@ -604,8 +599,8 @@ class CodegenContextService(
                         binding_id,
                         param_definition_id,
                         value,
-                        create_time,
-                        update_time
+                        created_at,
+                        updated_at
                     ) VALUES (?, ?, ?, ?, ?)
                     """.trimIndent(),
                     bindingId,
@@ -1631,8 +1626,8 @@ class CodegenContextService(
     /**
      * 处理当前时间sql值。
      */
-    private fun nowSqlValue(): String {
-        return SQLITE_DATE_TIME_FORMATTER.format(Instant.now().atZone(ZoneId.systemDefault()).toLocalDateTime())
+    private fun nowSqlValue(): Long {
+        return System.currentTimeMillis()
     }
 
     /**

@@ -131,21 +131,13 @@ class ProjectController(
         projectService.deleteProtocol(projectId, protocolId)
     }
 
-    /** 在协议下直接创建模块，兼容老宿主配置的操作入口。 */
-    @PostMapping("/protocols/{protocolId}/modules")
+    /** 在设备下创建模块。 */
+    @PostMapping("/devices/{deviceId}/modules")
     @ResponseStatus(HttpStatus.CREATED)
     fun createModule(
-        @PathVariable protocolId: Long,
+        @PathVariable deviceId: Long,
         @RequestBody request: ModuleCreateRequest,
-    ): ModuleResponse = projectService.createModule(protocolId, request)
-
-    /** 在工程树上下文里创建模块，由服务端自动解析目标协议。 */
-    @PostMapping("/projects/{projectId}/modules")
-    @ResponseStatus(HttpStatus.CREATED)
-    fun createProjectModule(
-        @PathVariable projectId: Long,
-        @RequestBody request: ModuleCreateRequest,
-    ): ModuleResponse = projectService.createProjectModule(projectId, request)
+    ): ModuleResponse = projectService.createModule(deviceId, request)
 
     /** 更新模块通讯参数与模板映射。 */
     @PutMapping("/modules/{moduleId}")
@@ -154,7 +146,7 @@ class ProjectController(
         @RequestBody request: ModuleUpdateRequest,
     ): ModuleResponse = projectService.updateModule(moduleId, request)
 
-    /** 调整模块在协议或工程树中的目标位置。 */
+    /** 调整模块在设备内的顺序或移动到其他设备。 */
     @PutMapping("/modules/{moduleId}/position")
     fun updateModulePosition(
         @PathVariable moduleId: Long,
@@ -170,13 +162,13 @@ class ProjectController(
         projectService.deleteModule(moduleId)
     }
 
-    /** 在模块下创建设备节点。 */
-    @PostMapping("/modules/{moduleId}/devices")
+    /** 在协议下创建设备节点。 */
+    @PostMapping("/protocols/{protocolId}/devices")
     @ResponseStatus(HttpStatus.CREATED)
     fun createDevice(
-        @PathVariable moduleId: Long,
+        @PathVariable protocolId: Long,
         @RequestBody request: DeviceCreateRequest,
-    ): DeviceResponse = projectService.createDevice(moduleId, request)
+    ): DeviceResponse = projectService.createDevice(protocolId, request)
 
     /** 更新设备参数，保持与旧宿主配置的字段兼容。 */
     @PutMapping("/devices/{deviceId}")
@@ -185,7 +177,7 @@ class ProjectController(
         @RequestBody request: DeviceUpdateRequest,
     ): DeviceResponse = projectService.updateDevice(deviceId, request)
 
-    /** 调整设备在模块内的顺序或移动到其他模块。 */
+    /** 调整设备在协议内的顺序或移动到其他协议。 */
     @PutMapping("/devices/{deviceId}/position")
     fun updateDevicePosition(
         @PathVariable deviceId: Long,

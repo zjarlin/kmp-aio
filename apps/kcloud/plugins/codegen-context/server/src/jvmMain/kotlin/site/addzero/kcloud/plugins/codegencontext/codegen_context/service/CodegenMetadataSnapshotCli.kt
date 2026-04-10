@@ -26,7 +26,7 @@ private const val MCU_CONSOLE_CONTEXT_CODE = "MCU_DEVICE_DEFAULT"
 private const val MCU_CONSOLE_CONTEXT_NAME = "MCU 默认协议桥接"
 private const val MCU_CONSOLE_PROTOCOL_TEMPLATE_CODE = "MODBUS_RTU_CLIENT"
 private const val MCU_DEVICE_PACKAGE = "site.addzero.kcloud.plugins.mcuconsole.modbus.device"
-private const val SNAPSHOT_UPDATED_AT = "2026-04-09 00:00:00.000"
+private const val SNAPSHOT_UPDATED_AT = 1775692800000L
 
 fun main(args: Array<String>) {
     val output =
@@ -60,7 +60,7 @@ internal fun writeDefaultCodegenContextSqliteSnapshot(
                     transport TEXT NOT NULL,
                     selected INTEGER NOT NULL DEFAULT 0,
                     payload TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    updated_at INTEGER NOT NULL
                 )
                 """.trimIndent(),
             )
@@ -96,7 +96,7 @@ internal fun writeDefaultCodegenContextSqliteSnapshot(
             statement.setString(7, ModbusTransportKind.RTU.transportId)
             statement.setInt(8, 1)
             statement.setString(9, ModbusMetadataJsonCodec.encodeServices(buildDefaultMcuConsoleSnapshotServices()))
-            statement.setString(10, SNAPSHOT_UPDATED_AT)
+            statement.setLong(10, SNAPSHOT_UPDATED_AT)
             statement.executeUpdate()
         }
     }

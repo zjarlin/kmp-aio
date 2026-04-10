@@ -10,6 +10,322 @@ import site.addzero.starter.AppStarter
 
 private const val CODEGEN_CONTEXT_SQLITE_SCHEMA_RESOURCE = "/db/sqlite/codegen-context-local-schema.sql"
 
+private val CODEGEN_CONTEXT_LEGACY_TIMESTAMP_MIGRATIONS =
+    listOf(
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_context",
+            legacyTableName = "codegen_context_context_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                code,
+                name,
+                description,
+                enabled,
+                consumer_target,
+                protocol_template_id,
+                external_c_output_root,
+                server_output_root,
+                shared_output_root,
+                gateway_output_root,
+                api_client_output_root,
+                api_client_package_name,
+                spring_route_output_root,
+                c_output_root,
+                markdown_output_root,
+                kotlin_client_transports,
+                c_expose_transports,
+                artifact_kinds,
+                c_output_project_dir,
+                bridge_impl_path,
+                keil_uvprojx_path,
+                keil_target_name,
+                keil_group_name,
+                mxproject_path,
+                rtu_port_path,
+                rtu_unit_id,
+                rtu_baud_rate,
+                rtu_data_bits,
+                rtu_stop_bits,
+                rtu_parity,
+                rtu_timeout_ms,
+                rtu_retries,
+                tcp_host,
+                tcp_port,
+                tcp_unit_id,
+                tcp_timeout_ms,
+                tcp_retries,
+                mqtt_broker_url,
+                mqtt_client_id,
+                mqtt_request_topic,
+                mqtt_response_topic,
+                mqtt_qos,
+                mqtt_timeout_ms,
+                mqtt_retries,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                code,
+                name,
+                description,
+                enabled,
+                consumer_target,
+                protocol_template_id,
+                external_c_output_root,
+                server_output_root,
+                shared_output_root,
+                gateway_output_root,
+                api_client_output_root,
+                api_client_package_name,
+                spring_route_output_root,
+                c_output_root,
+                markdown_output_root,
+                kotlin_client_transports,
+                c_expose_transports,
+                artifact_kinds,
+                c_output_project_dir,
+                bridge_impl_path,
+                keil_uvprojx_path,
+                keil_target_name,
+                keil_group_name,
+                mxproject_path,
+                rtu_port_path,
+                rtu_unit_id,
+                rtu_baud_rate,
+                rtu_data_bits,
+                rtu_stop_bits,
+                rtu_parity,
+                rtu_timeout_ms,
+                rtu_retries,
+                tcp_host,
+                tcp_port,
+                tcp_unit_id,
+                tcp_timeout_ms,
+                tcp_retries,
+                mqtt_broker_url,
+                mqtt_client_id,
+                mqtt_request_topic,
+                mqtt_response_topic,
+                mqtt_qos,
+                mqtt_timeout_ms,
+                mqtt_retries,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_class",
+            legacyTableName = "codegen_context_class_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                context_id,
+                name,
+                description,
+                sort_index,
+                class_kind,
+                class_name,
+                package_name,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                context_id,
+                name,
+                description,
+                sort_index,
+                class_kind,
+                class_name,
+                package_name,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_method",
+            legacyTableName = "codegen_context_method_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                owner_class_id,
+                name,
+                description,
+                sort_index,
+                method_name,
+                request_class_name,
+                response_class_name,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                owner_class_id,
+                name,
+                description,
+                sort_index,
+                method_name,
+                request_class_name,
+                response_class_name,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_property",
+            legacyTableName = "codegen_context_property_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                owner_class_id,
+                name,
+                description,
+                sort_index,
+                property_name,
+                type_name,
+                nullable,
+                default_literal,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                owner_class_id,
+                name,
+                description,
+                sort_index,
+                property_name,
+                type_name,
+                nullable,
+                default_literal,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_definition",
+            legacyTableName = "codegen_context_definition_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                protocol_template_id,
+                code,
+                name,
+                description,
+                sort_index,
+                target_kind,
+                binding_target_mode,
+                source_kind,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                protocol_template_id,
+                code,
+                name,
+                description,
+                sort_index,
+                target_kind,
+                binding_target_mode,
+                source_kind,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_param_definition",
+            legacyTableName = "codegen_context_param_definition_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                definition_id,
+                code,
+                name,
+                description,
+                sort_index,
+                value_type,
+                required,
+                default_value,
+                enum_options,
+                placeholder,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                definition_id,
+                code,
+                name,
+                description,
+                sort_index,
+                value_type,
+                required,
+                default_value,
+                enum_options,
+                placeholder,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_binding",
+            legacyTableName = "codegen_context_binding_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                definition_id,
+                owner_class_id,
+                owner_method_id,
+                owner_property_id,
+                sort_index,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                definition_id,
+                owner_class_id,
+                owner_method_id,
+                owner_property_id,
+                sort_index,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+        SqliteLegacyTableMigration(
+            tableName = "codegen_context_binding_value",
+            legacyTableName = "codegen_context_binding_value_legacy_timestamp",
+            insertColumns =
+                """
+                id,
+                binding_id,
+                param_definition_id,
+                value,
+                created_at,
+                updated_at
+                """.trimIndent(),
+            selectColumns =
+                """
+                id,
+                binding_id,
+                param_definition_id,
+                value,
+                ${sqliteEpochMillisExpression("create_time")},
+                COALESCE(${sqliteEpochMillisExpression("update_time")}, ${sqliteEpochMillisExpression("create_time")})
+                """.trimIndent(),
+        ),
+    )
+
 @Named("codegenContextSqliteSchemaBootstrap")
 @Single
 class CodegenContextSqliteSchemaBootstrap(
@@ -36,19 +352,84 @@ internal fun ensureCodegenContextSqliteSchema(
         connection.createStatement().use { statement ->
             statement.execute("PRAGMA foreign_keys = ON")
         }
+        migrateLegacyCodegenContextTimestampSchema(connection)
         executeSqliteSchemaScript(
             owner = CodegenContextSqliteSchemaBootstrap::class.java,
             connection = connection,
             resourcePath = CODEGEN_CONTEXT_SQLITE_SCHEMA_RESOURCE,
         )
+        connection.createStatement().use { statement ->
+            statement.execute("PRAGMA foreign_keys = ON")
+        }
     }
     return true
+}
+
+private data class SqliteLegacyTableMigration(
+    val tableName: String,
+    val legacyTableName: String,
+    val insertColumns: String,
+    val selectColumns: String,
+) {
+    fun copySql(): String {
+        return """
+            INSERT INTO $tableName (
+                $insertColumns
+            )
+            SELECT
+                $selectColumns
+            FROM $legacyTableName
+        """.trimIndent()
+    }
+}
+
+private fun migrateLegacyCodegenContextTimestampSchema(
+    connection: Connection,
+) {
+    val migrations =
+        CODEGEN_CONTEXT_LEGACY_TIMESTAMP_MIGRATIONS.filter { migration ->
+            connection.tableHasColumn(migration.tableName, "create_time")
+        }
+    if (migrations.isEmpty()) {
+        return
+    }
+    val previousAutoCommit = connection.autoCommit
+    connection.autoCommit = false
+    try {
+        connection.createStatement().use { statement ->
+            statement.execute("PRAGMA foreign_keys = OFF")
+            migrations.forEach { migration ->
+                statement.execute("ALTER TABLE ${migration.tableName} RENAME TO ${migration.legacyTableName}")
+            }
+        }
+        executeSqliteSchemaScript(
+            owner = CodegenContextSqliteSchemaBootstrap::class.java,
+            connection = connection,
+            resourcePath = CODEGEN_CONTEXT_SQLITE_SCHEMA_RESOURCE,
+            filter = { sql -> sql.startsWith("CREATE TABLE", ignoreCase = true) },
+        )
+        connection.createStatement().use { statement ->
+            migrations.forEach { migration ->
+                statement.execute(migration.copySql())
+            }
+            migrations.asReversed().forEach { migration ->
+                statement.execute("DROP TABLE IF EXISTS ${migration.legacyTableName}")
+            }
+        }
+        connection.commit()
+    } catch (throwable: Throwable) {
+        connection.rollback()
+        throw throwable
+    } finally {
+        connection.autoCommit = previousAutoCommit
+    }
 }
 
 private fun executeSqliteSchemaScript(
     owner: Class<*>,
     connection: Connection,
     resourcePath: String,
+    filter: (String) -> Boolean = { true },
 ) {
     val script =
         checkNotNull(owner.getResource(resourcePath)) {
@@ -58,8 +439,37 @@ private fun executeSqliteSchemaScript(
         script.splitToSequence(';')
             .map(String::trim)
             .filter(String::isNotBlank)
+            .filter(filter)
             .forEach(statement::execute)
     }
 }
 
 private fun Connection.isSqliteConnection(): Boolean = metaData.url.startsWith("jdbc:sqlite:")
+
+private fun Connection.tableHasColumn(
+    tableName: String,
+    columnName: String,
+): Boolean {
+    createStatement().use { statement ->
+        statement.executeQuery("PRAGMA table_info($tableName)").use { resultSet ->
+            while (resultSet.next()) {
+                if (resultSet.getString("name").equals(columnName, ignoreCase = true)) {
+                    return true
+                }
+            }
+        }
+    }
+    return false
+}
+
+private fun sqliteEpochMillisExpression(
+    columnName: String,
+): String {
+    return """
+        CASE
+            WHEN $columnName IS NULL THEN NULL
+            WHEN typeof($columnName) IN ('integer', 'real') THEN CAST($columnName AS INTEGER)
+            ELSE CAST(strftime('%s', $columnName) AS INTEGER) * 1000
+        END
+    """.trimIndent()
+}

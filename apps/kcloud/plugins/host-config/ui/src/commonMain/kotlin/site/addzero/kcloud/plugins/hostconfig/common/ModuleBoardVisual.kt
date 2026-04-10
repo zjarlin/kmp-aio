@@ -174,7 +174,7 @@ internal fun resolveModuleBoardModel(
         templateName = module.moduleTemplateName,
         family = family,
         channelCount = (template?.channelCount ?: family.defaultChannelCount).coerceAtLeast(1),
-        deviceCount = module.devices.size,
+        deviceCount = 1,
         runtime = runtime?.takeIf { it.hasAnyData },
     )
 }
@@ -392,7 +392,7 @@ private fun ModuleBoardHero(
                     modifier = Modifier.weight(1f),
                 )
                 ModuleBoardMetricChip(
-                    title = "设备",
+                    title = "归属",
                     value = model.deviceCount.toString(),
                     palette = palette,
                     modifier = Modifier.weight(1f),

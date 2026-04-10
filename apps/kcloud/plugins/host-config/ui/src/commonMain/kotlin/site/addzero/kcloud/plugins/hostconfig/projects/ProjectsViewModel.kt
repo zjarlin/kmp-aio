@@ -356,39 +356,19 @@ class ProjectsViewModel(
     }
 
     /**
-     * 创建模块under协议。
+     * 在设备下创建模块。
      *
      * @param projectId 项目 ID。
-     * @param protocolId 协议 ID。
+     * @param deviceId 设备 ID。
      * @param request 请求参数。
      */
-    fun createModuleUnderProtocol(
+    fun createModule(
         projectId: Long,
-        protocolId: Long,
+        deviceId: Long,
         request: ModuleCreateRequest,
     ) {
         mutate("模块已创建") {
-            val created = projectApi.createModule(protocolId, request)
-            loadPage(
-                preferredProjectId = projectId,
-                preferredNodeId = buildModuleNodeId(projectId, created.id),
-                noticeMessage = "模块已创建",
-            )
-        }
-    }
-
-    /**
-     * 创建模块under项目。
-     *
-     * @param projectId 项目 ID。
-     * @param request 请求参数。
-     */
-    fun createModuleUnderProject(
-        projectId: Long,
-        request: ModuleCreateRequest,
-    ) {
-        mutate("模块已创建") {
-            val created = projectApi.createProjectModule(projectId, request)
+            val created = projectApi.createModule(deviceId, request)
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildModuleNodeId(projectId, created.id),
@@ -420,61 +400,30 @@ class ProjectsViewModel(
     }
 
     /**
-     * 移动模块to协议。
+     * 移动模块到设备。
      *
      * @param projectId 项目 ID。
      * @param moduleId 模块 ID。
-     * @param protocolId 协议 ID。
+     * @param deviceId 设备 ID。
      * @param sortIndex 目标排序序号。
      */
-    fun moveModuleToProtocol(
+    fun moveModule(
         projectId: Long,
         moduleId: Long,
-        protocolId: Long,
+        deviceId: Long,
         sortIndex: Int,
     ) {
         mutate("模块位置已更新") {
             projectApi.updateModulePosition(
                 moduleId = moduleId,
                 request = ModulePositionUpdateRequest(
-                    protocolId = protocolId,
+                    deviceId = deviceId,
                     sortIndex = sortIndex,
                 ),
             )
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildModuleNodeId(projectId, moduleId),
-                noticeMessage = "模块位置已更新",
-            )
-        }
-    }
-
-    /**
-     * 移动模块to项目。
-     *
-     * @param sourceProjectId 来源项目 ID。
-     * @param targetProjectId 目标项目 ID。
-     * @param moduleId 模块 ID。
-     * @param sortIndex 目标排序序号。
-     */
-    fun moveModuleToProject(
-        sourceProjectId: Long,
-        targetProjectId: Long,
-        moduleId: Long,
-        sortIndex: Int,
-    ) {
-        mutate("模块位置已更新") {
-            projectApi.updateModulePosition(
-                moduleId = moduleId,
-                request = ModulePositionUpdateRequest(
-                    projectId = targetProjectId,
-                    sourceProjectId = sourceProjectId,
-                    sortIndex = sortIndex,
-                ),
-            )
-            loadPage(
-                preferredProjectId = targetProjectId,
-                preferredNodeId = buildModuleNodeId(targetProjectId, moduleId),
                 noticeMessage = "模块位置已更新",
             )
         }
@@ -501,19 +450,19 @@ class ProjectsViewModel(
     }
 
     /**
-     * 创建设备。
+     * 在协议下创建设备。
      *
      * @param projectId 项目 ID。
-     * @param moduleId 模块 ID。
+     * @param protocolId 协议 ID。
      * @param request 请求参数。
      */
     fun createDevice(
         projectId: Long,
-        moduleId: Long,
+        protocolId: Long,
         request: DeviceCreateRequest,
     ) {
         mutate("设备已创建") {
-            val created = projectApi.createDevice(moduleId, request)
+            val created = projectApi.createDevice(protocolId, request)
             loadPage(
                 preferredProjectId = projectId,
                 preferredNodeId = buildDeviceNodeId(projectId, created.id),
@@ -549,20 +498,20 @@ class ProjectsViewModel(
      *
      * @param projectId 项目 ID。
      * @param deviceId 设备 ID。
-     * @param moduleId 模块 ID。
+     * @param protocolId 协议 ID。
      * @param sortIndex 目标排序序号。
      */
     fun moveDevice(
         projectId: Long,
         deviceId: Long,
-        moduleId: Long,
+        protocolId: Long,
         sortIndex: Int,
     ) {
         mutate("设备位置已更新") {
             projectApi.updateDevicePosition(
                 deviceId = deviceId,
                 request = DevicePositionUpdateRequest(
-                    moduleId = moduleId,
+                    protocolId = protocolId,
                     sortIndex = sortIndex,
                 ),
             )
@@ -1104,43 +1053,49 @@ class ProjectsViewModel(
                 parentEntityId = project.id,
                 label = protocol.displayName(),
                 caption = protocol.protocolTemplateName,
-                children = buildModuleNodes(
+                children = buildDeviceNodes(
                     projectId = project.id,
-                    modules = protocol.modules,
+                    devices = protocol.devices,
                 ),
             )
         }
     }
 
     /**
-     * 构建模块nodes。
+     * 构建设备nodes。
      *
      * @param projectId 项目 ID。
-     * @param modules 模块。
+     * @param devices 设备。
      */
-    private fun buildModuleNodes(
+    private fun buildDeviceNodes(
         projectId: Long,
-        modules: List<ModuleTreeNode>,
+        devices: List<site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode>,
     ): List<HostConfigTreeNode> {
-        return modules.map { module ->
+        return devices.map { device ->
             HostConfigTreeNode(
-                id = buildModuleNodeId(projectId, module.id),
-                kind = HostConfigNodeKind.MODULE,
+                id = buildDeviceNodeId(projectId, device.id),
+                kind = HostConfigNodeKind.DEVICE,
                 projectId = projectId,
-                entityId = module.id,
-                parentEntityId = module.protocolId,
-                label = module.name,
-                caption = module.moduleTemplateName,
-                children = module.devices.map { device ->
-                    HostConfigTreeNode(
-                        id = buildDeviceNodeId(projectId, device.id),
-                        kind = HostConfigNodeKind.DEVICE,
-                        projectId = projectId,
-                        entityId = device.id,
-                        parentEntityId = module.id,
-                        label = device.name,
-                        caption = device.deviceTypeName,
-                        children = device.tags.map { tag ->
+                entityId = device.id,
+                parentEntityId = device.protocolId,
+                label = device.name,
+                caption = device.deviceTypeName,
+                children = buildList {
+                    device.modules.forEach { module ->
+                        add(
+                            HostConfigTreeNode(
+                                id = buildModuleNodeId(projectId, module.id),
+                                kind = HostConfigNodeKind.MODULE,
+                                projectId = projectId,
+                                entityId = module.id,
+                                parentEntityId = device.id,
+                                label = module.name,
+                                caption = module.moduleTemplateName,
+                            ),
+                        )
+                    }
+                    device.tags.forEach { tag ->
+                        add(
                             HostConfigTreeNode(
                                 id = buildTagNodeId(projectId, device.id, tag.id),
                                 kind = HostConfigNodeKind.TAG,
@@ -1148,9 +1103,9 @@ class ProjectsViewModel(
                                 entityId = tag.id,
                                 parentEntityId = device.id,
                                 label = tag.name,
-                            )
-                        },
-                    )
+                            ),
+                        )
+                    }
                 },
             )
         }

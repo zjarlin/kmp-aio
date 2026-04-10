@@ -18,7 +18,8 @@ class ProjectSqliteTransferServiceTest {
             ProjectServiceTestFixture().use { fixture ->
                 val project = fixture.createProject("导出测试工程")
                 val protocol = fixture.createProtocol(project.id, "导出协议")
-                fixture.createModule(protocol.id, "导出模块")
+                val device = fixture.createDevice(protocol.id, "导出设备")
+                fixture.createModule(device.id, "导出模块")
 
                 val service = ProjectSqliteTransferService(fixture.jdbc)
                 val response = service.exportProjectSqlite(project.id)

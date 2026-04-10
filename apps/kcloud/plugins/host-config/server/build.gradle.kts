@@ -59,7 +59,7 @@ kotlin {
             implementation(project(":lib:ktor:starter:starter-statuspages"))
             implementation(libs.findLibrary("site-addzero-tool-sql-executor").get())
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())
-            implementation("site.addzero:spec-iot:2026.03.13")
+            implementation(libs.findLibrary("spec-iot").get())
         }
         jvmTest.dependencies {
             implementation(libs.findLibrary("org-xerial-sqlite-jdbc-v3").get())

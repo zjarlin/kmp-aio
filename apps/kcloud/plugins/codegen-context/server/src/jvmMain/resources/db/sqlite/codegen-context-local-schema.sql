@@ -44,8 +44,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_context (
     mqtt_qos INTEGER NOT NULL DEFAULT 1,
     mqtt_timeout_ms INTEGER NOT NULL DEFAULT 1000,
     mqtt_retries INTEGER NOT NULL DEFAULT 2,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(code),
     FOREIGN KEY (protocol_template_id) REFERENCES host_config_protocol_template(id)
 );
@@ -74,8 +74,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_class (
     class_kind TEXT NOT NULL,
     class_name TEXT NOT NULL,
     package_name TEXT,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(context_id, class_name),
     FOREIGN KEY (context_id) REFERENCES codegen_context_context(id) ON DELETE CASCADE
 );
@@ -89,8 +89,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_method (
     method_name TEXT NOT NULL,
     request_class_name TEXT,
     response_class_name TEXT,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(owner_class_id, method_name),
     FOREIGN KEY (owner_class_id) REFERENCES codegen_context_class(id) ON DELETE CASCADE
 );
@@ -105,8 +105,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_property (
     type_name TEXT NOT NULL,
     nullable INTEGER NOT NULL DEFAULT 0,
     default_literal TEXT,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(owner_class_id, property_name),
     FOREIGN KEY (owner_class_id) REFERENCES codegen_context_class(id) ON DELETE CASCADE
 );
@@ -121,8 +121,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_definition (
     target_kind TEXT NOT NULL,
     binding_target_mode TEXT NOT NULL,
     source_kind TEXT NOT NULL,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(protocol_template_id, code),
     FOREIGN KEY (protocol_template_id) REFERENCES host_config_protocol_template(id) ON DELETE CASCADE
 );
@@ -139,8 +139,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_param_definition (
     default_value TEXT,
     enum_options TEXT,
     placeholder TEXT,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(definition_id, code),
     FOREIGN KEY (definition_id) REFERENCES codegen_context_definition(id) ON DELETE CASCADE
 );
@@ -152,8 +152,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_binding (
     owner_method_id INTEGER,
     owner_property_id INTEGER,
     sort_index INTEGER NOT NULL DEFAULT 0,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     FOREIGN KEY (definition_id) REFERENCES codegen_context_definition(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_class_id) REFERENCES codegen_context_class(id) ON DELETE CASCADE,
     FOREIGN KEY (owner_method_id) REFERENCES codegen_context_method(id) ON DELETE CASCADE,
@@ -165,8 +165,8 @@ CREATE TABLE IF NOT EXISTS codegen_context_binding_value (
     binding_id INTEGER NOT NULL,
     param_definition_id INTEGER NOT NULL,
     value TEXT,
-    create_time TEXT NOT NULL,
-    update_time TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
     UNIQUE(binding_id, param_definition_id),
     FOREIGN KEY (binding_id) REFERENCES codegen_context_binding(id) ON DELETE CASCADE,
     FOREIGN KEY (param_definition_id) REFERENCES codegen_context_param_definition(id) ON DELETE CASCADE
@@ -181,8 +181,8 @@ INSERT INTO codegen_context_definition (
     target_kind,
     binding_target_mode,
     source_kind,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     template.id,
@@ -193,8 +193,8 @@ SELECT
     'METHOD',
     'SINGLE',
     'BUILTIN',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM host_config_protocol_template template
 WHERE template.code IN ('MODBUS_RTU_CLIENT', 'MODBUS_TCP_CLIENT')
   AND NOT EXISTS (
@@ -213,8 +213,8 @@ INSERT INTO codegen_context_definition (
     target_kind,
     binding_target_mode,
     source_kind,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     template.id,
@@ -225,8 +225,8 @@ SELECT
     'FIELD',
     'SINGLE',
     'BUILTIN',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM host_config_protocol_template template
 WHERE template.code IN ('MODBUS_RTU_CLIENT', 'MODBUS_TCP_CLIENT')
   AND NOT EXISTS (
@@ -247,8 +247,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -261,8 +261,8 @@ SELECT
     'READ',
     '["READ","WRITE"]',
     NULL,
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_OPERATION'
   AND NOT EXISTS (
@@ -283,8 +283,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -297,8 +297,8 @@ SELECT
     NULL,
     '["READ_COILS","READ_DISCRETE_INPUTS","READ_INPUT_REGISTERS","READ_HOLDING_REGISTERS","WRITE_SINGLE_COIL","WRITE_MULTIPLE_COILS","WRITE_SINGLE_REGISTER","WRITE_MULTIPLE_REGISTERS"]',
     NULL,
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_OPERATION'
   AND NOT EXISTS (
@@ -319,8 +319,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -333,8 +333,8 @@ SELECT
     '0',
     NULL,
     '例如 200',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_OPERATION'
   AND NOT EXISTS (
@@ -355,8 +355,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -369,8 +369,8 @@ SELECT
     NULL,
     '["BOOL_COIL","U16","U32_BE","STRING_ASCII","STRING_UTF8"]',
     NULL,
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD'
   AND NOT EXISTS (
@@ -391,8 +391,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -405,8 +405,8 @@ SELECT
     '0',
     NULL,
     '例如 0',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD'
   AND NOT EXISTS (
@@ -427,8 +427,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -441,8 +441,8 @@ SELECT
     '0',
     NULL,
     '例如 0',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD'
   AND NOT EXISTS (
@@ -463,8 +463,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -477,8 +477,8 @@ SELECT
     '1',
     NULL,
     '例如 4',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD'
   AND NOT EXISTS (
@@ -499,8 +499,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -513,8 +513,8 @@ SELECT
     NULL,
     NULL,
     '例如 FlashConfig.magic_word',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD'
   AND NOT EXISTS (
@@ -535,8 +535,8 @@ INSERT INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -549,8 +549,8 @@ SELECT
     NULL,
     NULL,
     '例如 0x5A5A5A5A',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD'
   AND NOT EXISTS (
@@ -569,8 +569,8 @@ INSERT OR IGNORE INTO codegen_context_definition (
     target_kind,
     binding_target_mode,
     source_kind,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     template.id,
@@ -581,8 +581,8 @@ SELECT
     'METHOD',
     'SINGLE',
     'BUILTIN',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM host_config_protocol_template template
 WHERE template.code IN ('MODBUS_RTU_CLIENT', 'MODBUS_TCP_CLIENT');
 
@@ -595,8 +595,8 @@ INSERT OR IGNORE INTO codegen_context_definition (
     target_kind,
     binding_target_mode,
     source_kind,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     template.id,
@@ -607,8 +607,8 @@ SELECT
     'FIELD',
     'SINGLE',
     'BUILTIN',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM host_config_protocol_template template
 WHERE template.code IN ('MODBUS_RTU_CLIENT', 'MODBUS_TCP_CLIENT');
 
@@ -623,8 +623,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -637,8 +637,8 @@ SELECT
     'READ',
     '["READ","WRITE"]',
     NULL,
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_OPERATION';
 
@@ -653,8 +653,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -667,8 +667,8 @@ SELECT
     NULL,
     '["READ_COILS","READ_DISCRETE_INPUTS","READ_INPUT_REGISTERS","READ_HOLDING_REGISTERS","WRITE_SINGLE_COIL","WRITE_MULTIPLE_COILS","WRITE_SINGLE_REGISTER","WRITE_MULTIPLE_REGISTERS"]',
     NULL,
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_OPERATION';
 
@@ -683,8 +683,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -697,8 +697,8 @@ SELECT
     '0',
     NULL,
     '例如 200',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_OPERATION';
 
@@ -713,8 +713,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -727,8 +727,8 @@ SELECT
     NULL,
     '["BOOL_COIL","U16","U32_BE","STRING_ASCII","STRING_UTF8"]',
     NULL,
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD';
 
@@ -743,8 +743,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -757,8 +757,8 @@ SELECT
     '0',
     NULL,
     '例如 0',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD';
 
@@ -773,8 +773,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -787,8 +787,8 @@ SELECT
     '0',
     NULL,
     '例如 0',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD';
 
@@ -803,8 +803,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -817,8 +817,8 @@ SELECT
     '1',
     NULL,
     '例如 4',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD';
 
@@ -833,8 +833,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -847,8 +847,8 @@ SELECT
     NULL,
     NULL,
     '例如 FlashConfig.magic_word',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD';
 
@@ -863,8 +863,8 @@ INSERT OR IGNORE INTO codegen_context_param_definition (
     default_value,
     enum_options,
     placeholder,
-    create_time,
-    update_time
+    created_at,
+    updated_at
 )
 SELECT
     definition.id,
@@ -877,7 +877,7 @@ SELECT
     NULL,
     NULL,
     '例如 0x5A5A5A5A',
-    '2026-04-09 00:00:00',
-    '2026-04-09 00:00:00'
+    1775692800000,
+    1775692800000
 FROM codegen_context_definition definition
 WHERE definition.code = 'MODBUS_FIELD';

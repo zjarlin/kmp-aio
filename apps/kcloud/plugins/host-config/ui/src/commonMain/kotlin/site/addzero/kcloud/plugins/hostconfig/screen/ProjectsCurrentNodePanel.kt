@@ -17,6 +17,8 @@ import site.addzero.kcloud.plugins.hostconfig.common.orDash
 import site.addzero.kcloud.plugins.hostconfig.common.resolveModuleBoardModel
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
+import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
+import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 import site.addzero.kcloud.plugins.hostconfig.model.enums.Parity
 import site.addzero.kcloud.plugins.hostconfig.common.label
 
@@ -90,8 +92,9 @@ internal fun CurrentNodePanel(
                 val projectTree = state.selectedProjectTree
                 val modules = projectTree?.allModules().orEmpty()
                 val protocolCount = projectTree?.protocols?.size ?: 0
-                val deviceCount = modules.sumOf { module -> module.devices.size }
-                val tagCount = modules.sumOf { module -> module.devices.sumOf { device -> device.tags.size } }
+                val devices = projectTree?.protocols?.flatMap { protocol -> protocol.devices }.orEmpty()
+                val deviceCount = devices.size
+                val tagCount = devices.sumOf { device -> device.tags.size }
 
                 HostConfigNodeSummary(
                     title = project?.name.orDash(),
@@ -158,7 +161,7 @@ internal fun CurrentNodePanel(
                     kind = nodeKind,
                     badges = listOfNotNull(transportConfig?.transportType?.label()),
                     metrics = listOf(
-                        NodeMetricItem("模块", protocol?.modules?.size?.toString() ?: "0"),
+                        NodeMetricItem("设备", protocol?.devices?.size?.toString() ?: "0"),
                         NodeMetricItem("轮询", protocol?.pollingIntervalMs?.let { "${it}ms" } ?: "-"),
                         NodeMetricItem("链路", transportConfig?.toSummary(templateMetadata) ?: "未配置"),
                     ),
@@ -189,7 +192,7 @@ internal fun CurrentNodePanel(
                             "模板编码" to protocol?.protocolTemplateCode.orDash(),
                             "轮询间隔(ms)" to (protocol?.pollingIntervalMs?.toString() ?: "-"),
                             "排序" to (protocol?.sortIndex?.toString() ?: "-"),
-                            "模块数量" to (protocol?.modules?.size?.toString() ?: "0"),
+                            "设备数量" to (protocol?.devices?.size?.toString() ?: "0"),
                         ),
                     )
                     HostConfigDenseInfoSection(
@@ -203,6 +206,7 @@ internal fun CurrentNodePanel(
             HostConfigNodeKind.MODULE -> {
                 val module = state.selectedModule
                 val moduleProtocol = state.selectedModuleProtocol
+                val moduleDevice = module?.let { state.projectTrees.findDevice(it.deviceId) }
                 val moduleProtocolMetadata = moduleProtocol?.let { protocol ->
                     resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId)
                 }
@@ -220,10 +224,11 @@ internal fun CurrentNodePanel(
                     badges = listOfNotNull(
                         module?.moduleTemplateCode?.takeIf { it.isNotBlank() },
                         moduleProtocol?.displayName()?.takeIf { it.isNotBlank() }?.let { "协议 $it" },
+                        moduleDevice?.name?.takeIf { it.isNotBlank() }?.let { "设备 $it" },
                     ),
                     metrics = listOf(
                         NodeMetricItem("通道", boardModel?.channelCount?.toString() ?: "-"),
-                        NodeMetricItem("设备", module?.devices?.size?.toString() ?: "0"),
+                        NodeMetricItem("设备", if (module == null) "-" else "1"),
                         NodeMetricItem("排序", module?.sortIndex?.toString() ?: "-"),
                     ),
                 )
@@ -241,7 +246,7 @@ internal fun CurrentNodePanel(
                         ModuleEditorForm(
                             protocolName = moduleProtocol.displayName(),
                             protocolTemplateName = moduleProtocol.protocolTemplateName,
-                            templates = resolveModuleTemplatesForProtocol(state, moduleProtocol.protocolTemplateId).map { item ->
+                            templates = resolveModuleTemplatesForProtocol(state, moduleProtocol.id).map { item ->
                                 CupertinoOption(item.id, item.name, item.description)
                             },
                             draft = draft,
@@ -268,8 +273,9 @@ internal fun CurrentNodePanel(
                             "模块模板" to module?.moduleTemplateName.orDash(),
                             "模板编码" to module?.moduleTemplateCode.orDash(),
                             "所属协议" to moduleProtocol?.displayName().orDash(),
+                            "所属设备" to moduleDevice?.name.orDash(),
                             "排序" to (module?.sortIndex?.toString() ?: "-"),
-                            "设备数量" to (module?.devices?.size?.toString() ?: "0"),
+                            "设备数量" to (if (module == null) "-" else "1"),
                         ),
                     )
                     HostConfigDenseInfoSection(
@@ -288,10 +294,12 @@ internal fun CurrentNodePanel(
                     kind = nodeKind,
                     badges = listOfNotNull(
                         device?.deviceTypeCode?.takeIf { it.isNotBlank() },
+                        device?.let { item -> state.projectTrees.findProtocol(item.protocolId)?.displayName() }?.takeIf { it.isNotBlank() }?.let { "协议 $it" },
                         if (device?.disabled == true) "已禁用" else "已启用",
                     ),
                     metrics = listOf(
                         NodeMetricItem("站号", device?.stationNo?.toString() ?: "-"),
+                        NodeMetricItem("模块", device?.modules?.size?.toString() ?: "0"),
                         NodeMetricItem("标签", device?.tags?.size?.toString() ?: "0"),
                         NodeMetricItem("排序", device?.sortIndex?.toString() ?: "-"),
                     ),
@@ -322,10 +330,12 @@ internal fun CurrentNodePanel(
                             "设备名称" to device?.name.orDash(),
                             "设备类型" to device?.deviceTypeName.orDash(),
                             "类型编码" to device?.deviceTypeCode.orDash(),
+                            "所属协议" to device?.let { item -> state.projectTrees.findProtocol(item.protocolId)?.displayName() }.orDash(),
                             "站号" to (device?.stationNo?.toString() ?: "-"),
                             "请求间隔(ms)" to (device?.requestIntervalMs?.toString() ?: "-"),
                             "写值间隔(ms)" to (device?.writeIntervalMs?.toString() ?: "-"),
                             "禁用" to if (device?.disabled == true) "是" else "否",
+                            "模块数量" to (device?.modules?.size?.toString() ?: "0"),
                             "标签数量" to (device?.tags?.size?.toString() ?: "0"),
                         ),
                     )

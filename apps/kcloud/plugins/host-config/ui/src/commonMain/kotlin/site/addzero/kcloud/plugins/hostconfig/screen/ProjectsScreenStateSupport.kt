@@ -51,40 +51,45 @@ internal fun resolveCurrentCreateSpec(
     )
     return when (selectedNode.kind) {
         HostConfigNodeKind.PROJECT -> {
-            val candidates = resolveModuleProtocolCandidates(state, selectedNode.projectId)
+            val candidates = resolveProjectProtocolCandidates(state, selectedNode.projectId)
             CurrentCreateSpec(
                 node = selectedNode,
-                actionType = NodeActionType.CREATE_MODULE,
+                actionType = NodeActionType.CREATE_DEVICE,
                 enabled = candidates.isNotEmpty(),
-                hint = if (candidates.isEmpty()) "当前工程还没有可承载模块的协议，请先关联协议。" else null,
+                hint = if (candidates.isEmpty()) "当前工程还没有可承载设备的协议，请先关联协议。" else null,
             )
         }
 
         HostConfigNodeKind.PROTOCOL -> {
-            val protocol = state.projectTrees.findProtocol(selectedNode.entityId)
-            val hasTemplates = protocol != null &&
-                resolveModuleTemplatesForProtocol(state, protocol.protocolTemplateId).isNotEmpty()
             CurrentCreateSpec(
                 node = selectedNode,
-                actionType = NodeActionType.CREATE_MODULE,
-                enabled = hasTemplates,
-                hint = if (hasTemplates) null else "当前协议模板下没有模块模板。",
+                actionType = NodeActionType.CREATE_DEVICE,
+                enabled = true,
             )
         }
 
-        HostConfigNodeKind.MODULE -> CurrentCreateSpec(
-            node = selectedNode,
-            actionType = NodeActionType.CREATE_DEVICE,
-            enabled = true,
-        )
+        HostConfigNodeKind.DEVICE -> {
+            val selectedDevice = state.selectedDevice
+            val availableTemplates = selectedDevice?.let { device ->
+                resolveModuleTemplatesForProtocol(state, device.protocolId)
+            }.orEmpty()
+            CurrentCreateSpec(
+                node = selectedNode,
+                actionType = NodeActionType.CREATE_MODULE,
+                enabled = availableTemplates.isNotEmpty(),
+                hint = when {
+                    selectedDevice == null -> "当前设备上下文尚未加载完成。"
+                    availableTemplates.isEmpty() -> "当前协议还没有可用模块模板。"
+                    else -> null
+                },
+            )
+        }
 
-        HostConfigNodeKind.DEVICE,
+        HostConfigNodeKind.MODULE,
         HostConfigNodeKind.TAG,
         -> CurrentCreateSpec(
-            node = selectedNode,
-            actionType = NodeActionType.CREATE_TAG,
-            enabled = state.activeDeviceId != null,
-            hint = if (state.activeDeviceId == null) "当前还没有可用的设备上下文。" else null,
+            enabled = false,
+            hint = "当前节点没有默认的新建动作，请使用节点操作菜单。",
         )
     }
 }
@@ -101,14 +106,14 @@ internal fun resolveNodeActionMenu(
 ): NodeActionMenuSeed {
     val items = when (node.kind) {
         HostConfigNodeKind.PROJECT -> {
-            val moduleCandidates = resolveModuleProtocolCandidates(state, node.projectId)
+            val protocolCandidates = resolveProjectProtocolCandidates(state, node.projectId)
             val linkableProtocols = resolveLinkableProtocolTemplates(state, node.projectId)
             listOf(
                 NodeActionItem(
-                    type = NodeActionType.CREATE_MODULE,
-                    title = "新建模块",
-                    enabled = moduleCandidates.isNotEmpty(),
-                    note = if (moduleCandidates.isEmpty()) "请先关联协议" else null,
+                    type = NodeActionType.CREATE_DEVICE,
+                    title = "新建设备",
+                    enabled = protocolCandidates.isNotEmpty(),
+                    note = if (protocolCandidates.isEmpty()) "请先关联协议" else null,
                 ),
                 NodeActionItem(
                     type = NodeActionType.LINK_PROTOCOL,
@@ -121,15 +126,10 @@ internal fun resolveNodeActionMenu(
         }
 
         HostConfigNodeKind.PROTOCOL -> {
-            val protocol = state.projectTrees.findProtocol(node.entityId)
-            val hasTemplates = protocol != null &&
-                resolveModuleTemplatesForProtocol(state, protocol.protocolTemplateId).isNotEmpty()
             listOf(
                 NodeActionItem(
-                    type = NodeActionType.CREATE_MODULE,
-                    title = "新建模块",
-                    enabled = hasTemplates,
-                    note = if (hasTemplates) null else "当前协议模板下没有模块模板",
+                    type = NodeActionType.CREATE_DEVICE,
+                    title = "新建设备",
                 ),
                 NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
                 NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
@@ -137,12 +137,12 @@ internal fun resolveNodeActionMenu(
         }
 
         HostConfigNodeKind.MODULE -> listOf(
-            NodeActionItem(type = NodeActionType.CREATE_DEVICE, title = "新建设备"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
         )
 
         HostConfigNodeKind.DEVICE -> listOf(
+            NodeActionItem(type = NodeActionType.CREATE_MODULE, title = "新建模块"),
             NodeActionItem(type = NodeActionType.CREATE_TAG, title = "新建标签"),
             NodeActionItem(type = NodeActionType.MOVE, title = "变更上级"),
             NodeActionItem(type = NodeActionType.DELETE, title = "删除", destructive = true),
@@ -191,7 +191,7 @@ internal fun HostConfigNodeKind.summaryAccentColor(): Color {
  */
 internal fun ProjectTreeResponse?.allModules(): List<ModuleTreeNode> {
     val project = this ?: return emptyList()
-    return (project.modules + project.protocols.flatMap { protocol -> protocol.modules })
+    return (project.modules + project.protocols.flatMap { protocol -> protocol.devices.flatMap { device -> device.modules } })
         .distinctBy { module -> module.id }
         .sortedWith(compareBy<ModuleTreeNode> { module -> module.sortIndex }.thenBy { module -> module.name })
 }
@@ -221,41 +221,43 @@ internal data class LinkProtocolSeed(
  */
 internal data class CreateModuleSeed(
     val projectId: Long,
-    val protocolId: Long? = null,
+    val deviceId: Long,
     val availableTemplates: List<ModuleTemplateOptionResponse> = emptyList(),
+    val deviceName: String = "",
+    val protocolId: Long,
     val protocolName: String = "",
     val protocolTemplateName: String = "",
 )
 
 /**
- * 表示choose模块协议seed。
+ * 表示选择协议 seed。
  *
  * @property projectId 项目 ID。
  * @property projectName 项目名称。
  * @property candidates candidates。
  */
-internal data class ChooseModuleProtocolSeed(
+internal data class ChooseProtocolSeed(
     val projectId: Long,
     val projectName: String,
-    val candidates: List<ModuleProtocolCandidate>,
+    val title: String,
+    val subtitle: String,
+    val candidates: List<ProtocolCandidate>,
 )
 
 /**
- * 表示模块协议candidate。
+ * 表示协议候选项。
  *
  * @property protocolId 协议 ID。
  * @property protocolName 协议名称。
  * @property protocolTemplateId 协议模板 ID。
  * @property protocolTemplateName 协议模板名称。
- * @property availableTemplateCount 可用模板count。
  * @property transportSummary 传输摘要。
  */
-internal data class ModuleProtocolCandidate(
+internal data class ProtocolCandidate(
     val protocolId: Long,
     val protocolName: String,
     val protocolTemplateId: Long,
     val protocolTemplateName: String,
-    val availableTemplateCount: Int,
     val transportSummary: String?,
 )
 
@@ -263,11 +265,13 @@ internal data class ModuleProtocolCandidate(
  * 表示创建设备seed。
  *
  * @property projectId 项目 ID。
- * @property moduleId 模块 ID。
+ * @property protocolId 协议 ID。
  */
 internal data class CreateDeviceSeed(
     val projectId: Long,
-    val moduleId: Long,
+    val protocolId: Long,
+    val protocolName: String = "",
+    val protocolTemplateName: String = "",
 )
 
 /**

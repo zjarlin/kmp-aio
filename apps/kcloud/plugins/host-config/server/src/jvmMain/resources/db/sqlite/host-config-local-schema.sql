@@ -196,6 +196,7 @@ CREATE TABLE IF NOT EXISTS host_config_project_protocol (
 CREATE TABLE IF NOT EXISTS host_config_module_instance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     protocol_id INTEGER NOT NULL,
+    device_id INTEGER NOT NULL,
     module_template_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     port_name TEXT,
@@ -207,14 +208,15 @@ CREATE TABLE IF NOT EXISTS host_config_module_instance (
     sort_index INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
-    UNIQUE(protocol_id, name),
+    UNIQUE(device_id, name),
     FOREIGN KEY (protocol_id) REFERENCES host_config_protocol_instance(id) ON DELETE CASCADE,
+    FOREIGN KEY (device_id) REFERENCES host_config_device(id) ON DELETE CASCADE,
     FOREIGN KEY (module_template_id) REFERENCES host_config_module_template(id)
 );
 
 CREATE TABLE IF NOT EXISTS host_config_device (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    module_id INTEGER NOT NULL,
+    protocol_id INTEGER NOT NULL,
     device_type_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     station_no INTEGER NOT NULL,
@@ -231,8 +233,8 @@ CREATE TABLE IF NOT EXISTS host_config_device (
     sort_index INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
-    UNIQUE(module_id, name),
-    FOREIGN KEY (module_id) REFERENCES host_config_module_instance(id) ON DELETE CASCADE,
+    UNIQUE(protocol_id, name),
+    FOREIGN KEY (protocol_id) REFERENCES host_config_protocol_instance(id) ON DELETE CASCADE,
     FOREIGN KEY (device_type_id) REFERENCES host_config_device_type(id)
 );
 

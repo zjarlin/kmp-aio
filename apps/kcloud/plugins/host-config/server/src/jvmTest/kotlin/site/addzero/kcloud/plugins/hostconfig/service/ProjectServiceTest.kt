@@ -3,6 +3,7 @@ package site.addzero.kcloud.plugins.hostconfig.service
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import site.addzero.kcloud.plugins.hostconfig.api.project.DevicePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModulePositionUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleUpdateRequest
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolPositionUpdateRequest
@@ -21,7 +22,8 @@ class ProjectServiceTest {
         ProjectServiceTestFixture().use { fixture ->
             val project = fixture.createProject("测试工程A")
             val protocol = fixture.createProtocol(project.id, "测试协议A")
-            val module = fixture.createModule(protocol.id, "测试模块A")
+            val device = fixture.createDevice(protocol.id, "测试设备A")
+            val module = fixture.createModule(device.id, "测试模块A")
 
             val updated =
                 fixture.service.updateModule(
@@ -36,6 +38,7 @@ class ProjectServiceTest {
 
             assertEquals(module.id, updated.id)
             assertEquals("模块1", updated.name)
+            assertEquals(device.id, updated.deviceId)
             assertEquals(protocol.id, updated.protocolId)
             assertEquals(0, updated.sortIndex)
         }
@@ -43,30 +46,29 @@ class ProjectServiceTest {
 
     @Test
     /**
-     * 处理should移动模块across项目withoutunloaded模块模板协议模板。
+     * 处理should移动设备across项目withoutunloaded协议模板。
      */
-    fun shouldMoveModuleAcrossProjectsWithoutUnloadedModuleTemplateProtocolTemplate() {
+    fun shouldMoveDeviceAcrossProjectsWithoutUnloadedProtocolTemplate() {
         ProjectServiceTestFixture().use { fixture ->
             val sourceProject = fixture.createProject("测试工程源")
             val targetProject = fixture.createProject("测试工程目标")
             val sourceProtocol = fixture.createProtocol(sourceProject.id, "测试协议源")
             val targetProtocol = fixture.createProtocol(targetProject.id, "测试协议目标")
-            val module = fixture.createModule(sourceProtocol.id, "测试模块迁移")
+            val device = fixture.createDevice(sourceProtocol.id, "测试设备迁移")
+            fixture.createModule(device.id, "测试模块迁移")
 
             val moved =
-                fixture.service.updateModulePosition(
-                    moduleId = module.id,
+                fixture.service.updateDevicePosition(
+                    deviceId = device.id,
                     request =
-                        ModulePositionUpdateRequest(
-                            projectId = targetProject.id,
-                            sourceProjectId = sourceProject.id,
+                        DevicePositionUpdateRequest(
+                            protocolId = targetProtocol.id,
                             sortIndex = 0,
                         ),
                 )
 
-            assertEquals(module.id, moved.id)
+            assertEquals(device.id, moved.id)
             assertEquals(targetProtocol.id, moved.protocolId)
-            assertEquals(1L, moved.moduleTemplateId)
             assertEquals(0, moved.sortIndex)
         }
     }

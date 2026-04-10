@@ -83,15 +83,21 @@ interface Device : EpochBaseEntity {
 
     @ManyToOne
     /**
-     * 模块。
-     */
-    val module: ModuleInstance
-
-    @ManyToOne
-    /**
      * 设备类型。
      */
     val deviceType: DeviceType
+
+    @ManyToOne
+    /**
+     * 协议。
+     */
+    val protocol: ProtocolInstance
+
+    @OneToMany(mappedBy = "device")
+    /**
+     * 模块。
+     */
+    val modules: List<ModuleInstance>
 
     @OneToMany(mappedBy = "device")
     /**

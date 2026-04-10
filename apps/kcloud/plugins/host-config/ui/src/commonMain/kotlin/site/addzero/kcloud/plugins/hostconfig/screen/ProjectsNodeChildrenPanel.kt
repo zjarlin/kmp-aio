@@ -94,7 +94,7 @@ internal fun NodeChildrenPanel(
                         },
                     ) {
                         CupertinoKeyValueRow("轮询间隔(ms)", protocol.pollingIntervalMs.toString())
-                        CupertinoKeyValueRow("承载模块", protocol.modules.size.toString())
+                        CupertinoKeyValueRow("承载设备", protocol.devices.size.toString())
                         CupertinoKeyValueRow("排序", protocol.sortIndex.toString())
                         renderTransportConfigRows(protocol.transportConfig, templateMetadata)
                     }
@@ -104,11 +104,52 @@ internal fun NodeChildrenPanel(
             HostConfigNodeKind.PROTOCOL -> {
                 val projectId = state.selectedProjectId ?: return@CupertinoPanel
                 val protocol = state.selectedProtocol
-                if (protocol == null || protocol.modules.isEmpty()) {
-                    CupertinoStatusStrip("当前协议还没有下级模块。")
+                if (protocol == null || protocol.devices.isEmpty()) {
+                    CupertinoStatusStrip("当前协议还没有下级设备。")
                     return@CupertinoPanel
                 }
-                protocol.modules.forEach { module ->
+                protocol.devices.forEach { device ->
+                    ChildNodeCard(
+                        title = device.name,
+                        subtitle = device.deviceTypeName,
+                        onClick = {
+                            onSelectNode(ProjectsViewModel.buildDeviceNodeId(projectId, device.id))
+                        },
+                    ) {
+                        CupertinoKeyValueRow("模块数量", device.modules.size.toString())
+                        CupertinoKeyValueRow("标签数量", device.tags.size.toString())
+                        CupertinoKeyValueRow("站号", device.stationNo.toString())
+                        CupertinoKeyValueRow("排序", device.sortIndex.toString())
+                    }
+                }
+            }
+
+            HostConfigNodeKind.MODULE -> {
+                val module = state.selectedModule
+                if (module == null) {
+                    CupertinoStatusStrip("当前模块详情尚未加载完成。")
+                    return@CupertinoPanel
+                }
+                CupertinoStatusStrip("模块是设备下的叶子节点，标签继续挂在设备上。")
+                HostConfigModuleBoard(
+                    model = resolveModuleBoardModel(module = module, moduleTemplates = state.moduleTemplates),
+                    compact = true,
+                )
+            }
+
+            HostConfigNodeKind.DEVICE -> {
+                val projectId = state.selectedProjectId ?: return@CupertinoPanel
+                val deviceId = state.activeDeviceId ?: return@CupertinoPanel
+                val device = state.selectedDevice
+                if (device == null) {
+                    CupertinoStatusStrip("当前设备详情尚未加载完成。")
+                    return@CupertinoPanel
+                }
+                if (device.modules.isEmpty() && state.tagPage.d.isEmpty()) {
+                    CupertinoStatusStrip("当前设备还没有模块和标签。")
+                    return@CupertinoPanel
+                }
+                device.modules.forEach { module ->
                     ChildNodeCard(
                         title = module.name,
                         subtitle = "${module.moduleTemplateName} · ${module.moduleTemplateCode}",
@@ -120,42 +161,10 @@ internal fun NodeChildrenPanel(
                             model = resolveModuleBoardModel(module = module, moduleTemplates = state.moduleTemplates),
                             compact = true,
                         )
-                        CupertinoKeyValueRow("设备数量", module.devices.size.toString())
                         CupertinoKeyValueRow("排序", module.sortIndex.toString())
                     }
                 }
-            }
-
-            HostConfigNodeKind.MODULE -> {
-                val projectId = state.selectedProjectId ?: return@CupertinoPanel
-                val module = state.selectedModule
-                if (module == null || module.devices.isEmpty()) {
-                    CupertinoStatusStrip("当前模块还没有下级设备。")
-                    return@CupertinoPanel
-                }
-                module.devices.forEach { device ->
-                    ChildNodeCard(
-                        title = device.name,
-                        subtitle = device.deviceTypeName,
-                        onClick = {
-                            onSelectNode(ProjectsViewModel.buildDeviceNodeId(projectId, device.id))
-                        },
-                    ) {
-                        CupertinoKeyValueRow("站号", device.stationNo.toString())
-                        CupertinoKeyValueRow("标签数量", device.tags.size.toString())
-                        CupertinoKeyValueRow("禁用", if (device.disabled) "是" else "否")
-                    }
-                }
-            }
-
-            HostConfigNodeKind.DEVICE -> {
-                val projectId = state.selectedProjectId ?: return@CupertinoPanel
-                val deviceId = state.activeDeviceId ?: return@CupertinoPanel
-                CupertinoKeyValueRow("分页状态", "偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条")
-                if (state.tagPage.d.isEmpty()) {
-                    CupertinoStatusStrip("当前设备还没有标签。")
-                    return@CupertinoPanel
-                }
+                CupertinoKeyValueRow("标签分页", "偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条")
                 state.tagPage.d.forEach { tag ->
                     ChildNodeCard(
                         title = tag.name,
@@ -297,7 +306,7 @@ internal fun ProjectModuleRack(
                             color = CupertinoTheme.colorScheme.secondaryLabel,
                         )
                         CupertinoText(
-                            text = "${module.devices.size} 台设备",
+                            text = "挂在 1 台设备下",
                             style = CupertinoTheme.typography.caption2,
                             color = CupertinoTheme.colorScheme.tertiaryLabel,
                         )

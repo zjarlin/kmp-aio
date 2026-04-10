@@ -81,7 +81,7 @@ data class ProjectPositionUpdateRequest(
  * @property remark 备注。
  * @property sortIndex 排序序号。
  * @property protocols 协议。
- * @property modules 模块。
+ * @property modules 模块聚合视图。
  */
 data class ProjectTreeResponse(
     val id: Long,
@@ -131,7 +131,7 @@ data class ProtocolTransportConfig(
  * @property protocolTemplateCode 协议模板编码。
  * @property protocolTemplateName 协议模板名称。
  * @property transportConfig 传输配置。
- * @property modules 模块。
+ * @property devices 设备。
  */
 data class ProtocolTreeNode(
     val id: Long,
@@ -142,7 +142,7 @@ data class ProtocolTreeNode(
     val protocolTemplateCode: String,
     val protocolTemplateName: String,
     val transportConfig: ProtocolTransportConfig? = null,
-    val modules: List<ModuleTreeNode>,
+    val devices: List<DeviceTreeNode>,
 )
 
 @Serializable
@@ -151,22 +151,22 @@ data class ProtocolTreeNode(
  *
  * @property id 主键 ID。
  * @property name 名称。
+ * @property deviceId 设备 ID。
  * @property protocolId 协议 ID。
  * @property sortIndex 排序序号。
  * @property moduleTemplateId 模块模板 ID。
  * @property moduleTemplateCode 模块模板编码。
  * @property moduleTemplateName 模块模板名称。
- * @property devices 设备。
  */
 data class ModuleTreeNode(
     val id: Long,
     val name: String,
+    val deviceId: Long,
     val protocolId: Long,
     val sortIndex: Int,
     val moduleTemplateId: Long,
     val moduleTemplateCode: String,
     val moduleTemplateName: String,
-    val devices: List<DeviceTreeNode>,
 )
 
 @Serializable
@@ -187,9 +187,11 @@ data class ModuleTreeNode(
  * @property batchDigitalLength batchdigitallength。
  * @property disabled disabled。
  * @property sortIndex 排序序号。
+ * @property protocolId 协议 ID。
  * @property deviceTypeId 设备类型 ID。
  * @property deviceTypeCode 设备类型编码。
  * @property deviceTypeName 设备类型名称。
+ * @property modules 模块。
  * @property tags 标签。
  */
 data class DeviceTreeNode(
@@ -207,9 +209,11 @@ data class DeviceTreeNode(
     val batchDigitalLength: Int?,
     val disabled: Boolean,
     val sortIndex: Int,
+    val protocolId: Long,
     val deviceTypeId: Long,
     val deviceTypeCode: String,
     val deviceTypeName: String,
+    val modules: List<ModuleTreeNode>,
     val tags: List<TagTreeNode>,
 )
 
@@ -365,6 +369,7 @@ data class ModuleUpdateRequest(
  *
  * @property id 主键 ID。
  * @property name 名称。
+ * @property deviceId 设备 ID。
  * @property protocolId 协议 ID。
  * @property sortIndex 排序序号。
  * @property moduleTemplateId 模块模板 ID。
@@ -372,6 +377,7 @@ data class ModuleUpdateRequest(
 data class ModuleResponse(
     val id: Long,
     val name: String,
+    val deviceId: Long,
     val protocolId: Long,
     val sortIndex: Int,
     val moduleTemplateId: Long,
@@ -381,15 +387,11 @@ data class ModuleResponse(
 /**
  * 表示模块位置更新请求参数。
  *
- * @property protocolId 协议 ID。
- * @property projectId 项目 ID。
- * @property sourceProjectId 来源项目 ID。
+ * @property deviceId 设备 ID。
  * @property sortIndex 排序序号。
  */
 data class ModulePositionUpdateRequest(
-    val protocolId: Long? = null,
-    val projectId: Long? = null,
-    val sourceProjectId: Long? = null,
+    val deviceId: Long,
     val sortIndex: Int = 0,
 )
 
@@ -483,6 +485,7 @@ data class DeviceUpdateRequest(
  * @property batchDigitalLength batchdigitallength。
  * @property disabled disabled。
  * @property sortIndex 排序序号。
+ * @property protocolId 协议 ID。
  * @property deviceTypeId 设备类型 ID。
  */
 data class DeviceResponse(
@@ -500,6 +503,7 @@ data class DeviceResponse(
     val batchDigitalLength: Int?,
     val disabled: Boolean,
     val sortIndex: Int,
+    val protocolId: Long,
     val deviceTypeId: Long,
 )
 
@@ -507,10 +511,10 @@ data class DeviceResponse(
 /**
  * 表示设备位置更新请求参数。
  *
- * @property moduleId 模块 ID。
+ * @property protocolId 协议 ID。
  * @property sortIndex 排序序号。
  */
 data class DevicePositionUpdateRequest(
-    val moduleId: Long,
+    val protocolId: Long,
     val sortIndex: Int = 0,
 )

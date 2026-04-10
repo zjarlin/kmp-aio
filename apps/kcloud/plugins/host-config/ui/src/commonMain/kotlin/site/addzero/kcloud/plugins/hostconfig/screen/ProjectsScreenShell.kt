@@ -323,7 +323,7 @@ private fun HostConfigTreeNode.filterByKeyword(
  * @param moveSeed 移动seed。
  * @param onDismissCreateProject ondismiss创建项目。
  * @param onDismissLinkProtocol ondismiss关联协议。
- * @param onDismissChooseModuleProtocol ondismisschoose模块协议。
+ * @param onDismissChooseProtocol ondismisschoose协议。
  * @param onDismissCreateModule ondismiss创建模块。
  * @param onDismissCreateDevice ondismiss创建设备。
  * @param onDismissCreateTag ondismiss创建标签。
@@ -335,19 +335,20 @@ internal fun ProjectsDialogHost(
     viewModel: ProjectsViewModel,
     createProject: Boolean,
     linkProtocolSeed: LinkProtocolSeed?,
-    chooseModuleProtocolSeed: ChooseModuleProtocolSeed?,
+    chooseProtocolSeed: ChooseProtocolSeed?,
     createModuleSeed: CreateModuleSeed?,
     createDeviceSeed: CreateDeviceSeed?,
     createTagSeed: CreateTagSeed?,
     moveSeed: MoveNodeSeed?,
     onDismissCreateProject: () -> Unit,
     onDismissLinkProtocol: () -> Unit,
-    onDismissChooseModuleProtocol: () -> Unit,
+    onDismissChooseProtocol: () -> Unit,
     onDismissCreateModule: () -> Unit,
     onDismissCreateDevice: () -> Unit,
     onDismissCreateTag: () -> Unit,
     onDismissMoveNode: () -> Unit,
-    onOpenCreateModule: (Long, site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode) -> Unit,
+    onOpenCreateModule: (Long, site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode) -> Unit,
+    onOpenCreateDevice: (Long, site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode) -> Unit,
 ) {
     if (createProject) {
         CreateProjectDialog(
@@ -375,30 +376,31 @@ internal fun ProjectsDialogHost(
         )
     }
 
-    chooseModuleProtocolSeed?.let { seed ->
-        ChooseModuleProtocolDialog(
+    chooseProtocolSeed?.let { seed ->
+        ChooseProtocolDialog(
             seed = seed,
             saving = state.busy,
-            onDismissRequest = onDismissChooseModuleProtocol,
+            onDismissRequest = onDismissChooseProtocol,
             onSave = { protocolId ->
-                val protocol = state.projectTrees.findProtocol(protocolId) ?: return@ChooseModuleProtocolDialog
-                onOpenCreateModule(seed.projectId, protocol)
-                onDismissChooseModuleProtocol()
+                val protocol = state.projectTrees.findProtocol(protocolId) ?: return@ChooseProtocolDialog
+                onOpenCreateDevice(seed.projectId, protocol)
+                onDismissChooseProtocol()
             },
         )
     }
 
     createModuleSeed?.let { seed ->
         CreateModuleDialog(
+            deviceName = seed.deviceName,
             protocolName = seed.protocolName,
             protocolTemplateName = seed.protocolTemplateName,
             templates = seed.availableTemplates.map { item -> CupertinoOption(item.id, item.name, item.description) },
             saving = state.busy,
             onDismissRequest = onDismissCreateModule,
             onSave = { draft ->
-                viewModel.createModuleUnderProtocol(
+                viewModel.createModule(
                     projectId = seed.projectId,
-                    protocolId = seed.protocolId ?: return@CreateModuleDialog,
+                    deviceId = seed.deviceId,
                     request = draft.toModuleCreateRequest(),
                 )
                 onDismissCreateModule()
@@ -408,11 +410,13 @@ internal fun ProjectsDialogHost(
 
     createDeviceSeed?.let { seed ->
         CreateDeviceDialog(
+            protocolName = seed.protocolName,
+            protocolTemplateName = seed.protocolTemplateName,
             deviceTypes = state.deviceTypes.map { item -> CupertinoOption(item.id, item.name, item.description) },
             saving = state.busy,
             onDismissRequest = onDismissCreateDevice,
             onSave = { draft ->
-                viewModel.createDevice(seed.projectId, seed.moduleId, draft.toDeviceCreateRequest())
+                viewModel.createDevice(seed.projectId, seed.protocolId, draft.toDeviceCreateRequest())
                 onDismissCreateDevice()
             },
         )
@@ -452,15 +456,15 @@ internal fun ProjectsDialogHost(
                     HostConfigNodeKind.MODULE -> {
                         val parts = targetKey.split(":")
                         val targetProjectId = parts.getOrNull(1)?.toLongOrNull() ?: return@MoveNodeDialog
-                        val targetProtocolId = parts.getOrNull(2)?.toLongOrNull() ?: return@MoveNodeDialog
-                        viewModel.moveModuleToProtocol(targetProjectId, seed.node.entityId, targetProtocolId, sortIndex)
+                        val targetDeviceId = parts.getOrNull(2)?.toLongOrNull() ?: return@MoveNodeDialog
+                        viewModel.moveModule(targetProjectId, seed.node.entityId, targetDeviceId, sortIndex)
                     }
 
                     HostConfigNodeKind.DEVICE -> {
                         val parts = targetKey.split(":")
                         val targetProjectId = parts.getOrNull(1)?.toLongOrNull() ?: return@MoveNodeDialog
-                        val targetModuleId = parts.getOrNull(2)?.toLongOrNull() ?: return@MoveNodeDialog
-                        viewModel.moveDevice(targetProjectId, seed.node.entityId, targetModuleId, sortIndex)
+                        val targetProtocolId = parts.getOrNull(2)?.toLongOrNull() ?: return@MoveNodeDialog
+                        viewModel.moveDevice(targetProjectId, seed.node.entityId, targetProtocolId, sortIndex)
                     }
 
                     HostConfigNodeKind.TAG -> {

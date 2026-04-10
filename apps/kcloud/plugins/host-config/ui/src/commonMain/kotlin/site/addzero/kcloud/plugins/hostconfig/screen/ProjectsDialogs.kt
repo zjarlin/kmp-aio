@@ -143,22 +143,22 @@ internal fun LinkProtocolDialog(
 
 @Composable
 /**
- * 处理choose模块协议dialog。
+ * 处理choose协议dialog。
  *
  * @param seed seed。
  * @param saving saving。
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
-internal fun ChooseModuleProtocolDialog(
-    seed: ChooseModuleProtocolSeed,
+internal fun ChooseProtocolDialog(
+    seed: ChooseProtocolSeed,
     saving: Boolean,
     onDismissRequest: () -> Unit,
     onSave: (Long) -> Unit,
 ) {
     var selectedProtocolId by remember(seed) { mutableStateOf(seed.candidates.firstOrNull()?.protocolId) }
     CupertinoDialog(
-        title = "选择承载协议",
+        title = seed.title,
         onDismissRequest = onDismissRequest,
         actions = {
             WorkbenchActionButton("取消", onDismissRequest, variant = WorkbenchButtonVariant.Outline)
@@ -169,10 +169,10 @@ internal fun ChooseModuleProtocolDialog(
             )
         },
     ) {
-        CupertinoStatusStrip("工程 ${seed.projectName.ifBlank { "当前工程" }} 下有多个可承载协议，请先明确模块归属。")
+        CupertinoStatusStrip("工程 ${seed.projectName.ifBlank { "当前工程" }} 下有多个候选协议，请先明确归属。")
         CupertinoFormSection(
             title = "承载协议",
-            subtitle = "先选协议，再决定允许的模块模板集合。",
+            subtitle = seed.subtitle,
         ) {
             item {
                 CupertinoSelectionField(
@@ -190,9 +190,8 @@ internal fun ChooseModuleProtocolDialog(
             }
         }
         seed.candidates.firstOrNull { it.protocolId == selectedProtocolId }?.let { candidate ->
-            CupertinoPanel(title = "协议预览", subtitle = "模块模板只会展示这个协议模板下允许的模块。") {
+            CupertinoPanel(title = "协议预览", subtitle = "确认协议模板与通信摘要。") {
                 CupertinoKeyValueRow("协议模板", candidate.protocolTemplateName)
-                CupertinoKeyValueRow("模块模板数", candidate.availableTemplateCount.toString())
                 candidate.transportSummary?.let { CupertinoKeyValueRow("通信摘要", it) }
             }
         }
@@ -203,6 +202,7 @@ internal fun ChooseModuleProtocolDialog(
 /**
  * 处理创建模块dialog。
  *
+ * @param deviceName 设备名称。
  * @param protocolName 协议名称。
  * @param protocolTemplateName 协议模板名称。
  * @param templates 模板。
@@ -211,6 +211,7 @@ internal fun ChooseModuleProtocolDialog(
  * @param onSave on保存。
  */
 internal fun CreateModuleDialog(
+    deviceName: String,
     protocolName: String,
     protocolTemplateName: String,
     templates: List<CupertinoOption<Long>>,
@@ -232,6 +233,7 @@ internal fun CreateModuleDialog(
             )
         },
     ) {
+        CupertinoStatusStrip("模块将挂载到设备 ${deviceName.ifBlank { "当前设备" }} 下，通信协议沿用 ${protocolName.ifBlank { protocolTemplateName }}。")
         ModuleEditorForm(
             protocolName = protocolName,
             protocolTemplateName = protocolTemplateName,
@@ -246,12 +248,16 @@ internal fun CreateModuleDialog(
 /**
  * 处理创建设备dialog。
  *
+ * @param protocolName 协议名称。
+ * @param protocolTemplateName 协议模板名称。
  * @param deviceTypes 设备类型。
  * @param saving saving。
  * @param onDismissRequest ondismiss请求。
  * @param onSave on保存。
  */
 internal fun CreateDeviceDialog(
+    protocolName: String,
+    protocolTemplateName: String,
     deviceTypes: List<CupertinoOption<Long>>,
     saving: Boolean,
     onDismissRequest: () -> Unit,
@@ -271,6 +277,7 @@ internal fun CreateDeviceDialog(
             )
         },
     ) {
+        CupertinoStatusStrip("设备将直接挂到协议 ${protocolName.ifBlank { protocolTemplateName }} 下，模块后续再在设备内创建。")
         DeviceEditorForm(deviceTypes = deviceTypes, draft = draft, onDraftChange = { draft = it })
     }
 }
@@ -629,12 +636,13 @@ private fun ProtocolTransportConfig.displayFieldValue(
  * 解析模块模板for协议。
  *
  * @param state 状态。
- * @param protocolTemplateId 协议模板 ID。
+ * @param protocolId 协议 ID。
  */
 internal fun resolveModuleTemplatesForProtocol(
     state: ProjectsScreenState,
-    protocolTemplateId: Long,
+    protocolId: Long,
 ): List<ModuleTemplateOptionResponse> {
+    val protocolTemplateId = state.projectTrees.findProtocol(protocolId)?.protocolTemplateId ?: return emptyList()
     return state.moduleTemplateCatalog[protocolTemplateId].orEmpty()
 }
 
@@ -673,27 +681,22 @@ internal fun resolveProtocolTemplateMetadata(
 }
 
 /**
- * 解析模块协议candidates。
+ * 解析项目协议candidates。
  *
  * @param state 状态。
  * @param projectId 项目 ID。
  */
-internal fun resolveModuleProtocolCandidates(
+internal fun resolveProjectProtocolCandidates(
     state: ProjectsScreenState,
     projectId: Long,
-): List<ModuleProtocolCandidate> {
+): List<ProtocolCandidate> {
     val projectTree = state.projectTrees.firstOrNull { it.id == projectId } ?: return emptyList()
-    return projectTree.protocols.mapNotNull { protocol ->
-        val availableTemplates = resolveModuleTemplatesForProtocol(state, protocol.protocolTemplateId)
-        if (availableTemplates.isEmpty()) {
-            return@mapNotNull null
-        }
-        ModuleProtocolCandidate(
+    return projectTree.protocols.map { protocol ->
+        ProtocolCandidate(
             protocolId = protocol.id,
             protocolName = protocol.displayName(),
             protocolTemplateId = protocol.protocolTemplateId,
             protocolTemplateName = protocol.protocolTemplateName,
-            availableTemplateCount = availableTemplates.size,
             transportSummary = protocol.transportConfig?.toSummary(
                 resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId),
             ),
@@ -732,41 +735,50 @@ internal fun resolveMoveOptions(
         }
 
         HostConfigNodeKind.MODULE -> {
-            val currentProtocol = state.projectTrees.findModule(node.entityId)?.let { module ->
-                state.projectTrees.findProtocol(module.protocolId)
-            }
+            val currentModule = state.projectTrees.findModule(node.entityId)
+            val currentProtocol = currentModule?.let { module -> state.projectTrees.findProtocol(module.protocolId) }
             state.projectTrees.flatMap { project ->
-                project.protocols
-                    .filter { protocol ->
-                        currentProtocol == null || protocol.protocolTemplateId == currentProtocol.protocolTemplateId
-                    }
-                    .map { protocol ->
-                        CupertinoOption(
-                            value = "protocol:${project.id}:${protocol.id}",
-                            label = "${project.name} / ${protocol.displayName()}",
-                            caption = protocol.protocolTemplateName,
-                        )
-                    }
+                project.protocols.flatMap { protocol ->
+                    protocol.devices
+                        .filter { device ->
+                            currentProtocol == null || protocol.protocolTemplateId == currentProtocol.protocolTemplateId
+                        }
+                        .map { device ->
+                            CupertinoOption(
+                                value = "device:${project.id}:${device.id}",
+                                label = "${project.name} / ${protocol.displayName()} / ${device.name}",
+                                caption = device.deviceTypeName,
+                            )
+                        }
+                }
             }
         }
 
         HostConfigNodeKind.DEVICE -> state.projectTrees.flatMap { project ->
-            project.allModules().map { module ->
-                CupertinoOption(
-                    value = "module:${project.id}:${module.id}",
-                    label = "${project.name} / ${module.name}",
-                )
+            val currentProtocol = state.projectTrees.findDevice(node.entityId)?.let { device ->
+                state.projectTrees.findProtocol(device.protocolId)
             }
+            project.protocols
+                .filter { protocol ->
+                    currentProtocol == null || protocol.protocolTemplateId == currentProtocol.protocolTemplateId
+                }
+                .map { protocol ->
+                    CupertinoOption(
+                        value = "protocol:${project.id}:${protocol.id}",
+                        label = "${project.name} / ${protocol.displayName()}",
+                        caption = protocol.protocolTemplateName,
+                    )
+                }
         }
 
         HostConfigNodeKind.TAG -> state.projectTrees.flatMap { project ->
             buildList {
-                project.allModules().forEach { module ->
-                    module.devices.forEach { device ->
+                project.protocols.forEach { protocol ->
+                    protocol.devices.forEach { device ->
                         add(
                             CupertinoOption(
                                 value = "device:${project.id}:${device.id}",
-                                label = "${project.name} / ${module.name} / ${device.name}",
+                                label = "${project.name} / ${protocol.displayName()} / ${device.name}",
                             ),
                         )
                     }

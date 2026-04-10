@@ -19,6 +19,7 @@ import site.addzero.component.tree.rememberTreeViewModel
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.projects.displayName
+import site.addzero.kcloud.plugins.hostconfig.projects.findDevice
 import site.addzero.kcloud.plugins.hostconfig.projects.findProtocol
 import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsViewModel
 
@@ -49,7 +50,7 @@ fun ProjectsScreen() {
     var createProject by remember { mutableStateOf(false) }
     var linkProtocolSeed by remember { mutableStateOf<LinkProtocolSeed?>(null) }
     var createModuleSeed by remember { mutableStateOf<CreateModuleSeed?>(null) }
-    var chooseModuleProtocolSeed by remember { mutableStateOf<ChooseModuleProtocolSeed?>(null) }
+    var chooseProtocolSeed by remember { mutableStateOf<ChooseProtocolSeed?>(null) }
     var createDeviceSeed by remember { mutableStateOf<CreateDeviceSeed?>(null) }
     var createTagSeed by remember { mutableStateOf<CreateTagSeed?>(null) }
     var moveSeed by remember { mutableStateOf<MoveNodeSeed?>(null) }
@@ -64,46 +65,69 @@ fun ProjectsScreen() {
     }
 
     /**
-     * 处理打开创建模块。
+     * 处理打开创建设备。
      *
      * @param projectId 项目 ID。
      * @param protocol 协议。
      */
-    fun openCreateModule(
+    fun openCreateDevice(
         projectId: Long,
         protocol: site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTreeNode,
     ) {
-        createModuleSeed = CreateModuleSeed(
+        createDeviceSeed = CreateDeviceSeed(
             projectId = projectId,
             protocolId = protocol.id,
-            availableTemplates = resolveModuleTemplatesForProtocol(state, protocol.protocolTemplateId),
             protocolName = protocol.displayName(),
             protocolTemplateName = protocol.protocolTemplateName,
         )
     }
 
     /**
-     * 处理打开创建模块from项目。
+     * 处理打开创建设备from项目。
      *
      * @param projectId 项目 ID。
      */
-    fun openCreateModuleFromProject(projectId: Long) {
-        val candidates = resolveModuleProtocolCandidates(state, projectId)
+    fun openCreateDeviceFromProject(projectId: Long) {
+        val candidates = resolveProjectProtocolCandidates(state, projectId)
         when (candidates.size) {
             0 -> Unit
             1 -> {
                 val protocol = state.projectTrees.findProtocol(candidates.first().protocolId) ?: return
-                openCreateModule(projectId, protocol)
+                openCreateDevice(projectId, protocol)
             }
 
             else -> {
-                chooseModuleProtocolSeed = ChooseModuleProtocolSeed(
+                chooseProtocolSeed = ChooseProtocolSeed(
                     projectId = projectId,
                     projectName = state.projectTrees.firstOrNull { it.id == projectId }?.name.orEmpty(),
+                    title = "选择承载协议",
+                    subtitle = "设备直接挂在协议下，先选择协议再录入设备参数。",
                     candidates = candidates,
                 )
             }
         }
+    }
+
+    /**
+     * 处理打开创建模块。
+     *
+     * @param projectId 项目 ID。
+     * @param device 设备。
+     */
+    fun openCreateModule(
+        projectId: Long,
+        device: site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode,
+    ) {
+        val protocol = state.projectTrees.findProtocol(device.protocolId) ?: return
+        createModuleSeed = CreateModuleSeed(
+            projectId = projectId,
+            deviceId = device.id,
+            availableTemplates = resolveModuleTemplatesForProtocol(state, device.protocolId),
+            deviceName = device.name,
+            protocolId = protocol.id,
+            protocolName = protocol.displayName(),
+            protocolTemplateName = protocol.protocolTemplateName,
+        )
     }
 
     /**
@@ -138,10 +162,9 @@ fun ProjectsScreen() {
         when (actionType) {
             NodeActionType.CREATE_MODULE -> {
                 when (node.kind) {
-                    HostConfigNodeKind.PROJECT -> openCreateModuleFromProject(node.projectId)
-                    HostConfigNodeKind.PROTOCOL -> {
-                        val protocol = state.projectTrees.findProtocol(node.entityId) ?: return
-                        openCreateModule(node.projectId, protocol)
+                    HostConfigNodeKind.DEVICE -> {
+                        val device = state.projectTrees.findDevice(node.entityId) ?: return
+                        openCreateModule(node.projectId, device)
                     }
 
                     else -> Unit
@@ -149,7 +172,17 @@ fun ProjectsScreen() {
             }
 
             NodeActionType.LINK_PROTOCOL -> linkProtocolSeed = LinkProtocolSeed(node.projectId)
-            NodeActionType.CREATE_DEVICE -> createDeviceSeed = CreateDeviceSeed(node.projectId, node.entityId)
+            NodeActionType.CREATE_DEVICE -> {
+                when (node.kind) {
+                    HostConfigNodeKind.PROJECT -> openCreateDeviceFromProject(node.projectId)
+                    HostConfigNodeKind.PROTOCOL -> {
+                        val protocol = state.projectTrees.findProtocol(node.entityId) ?: return
+                        openCreateDevice(node.projectId, protocol)
+                    }
+
+                    else -> Unit
+                }
+            }
             NodeActionType.CREATE_TAG -> {
                 val deviceId = when (node.kind) {
                     HostConfigNodeKind.DEVICE -> node.entityId
@@ -249,18 +282,19 @@ fun ProjectsScreen() {
         viewModel = viewModel,
         createProject = createProject,
         linkProtocolSeed = linkProtocolSeed,
-        chooseModuleProtocolSeed = chooseModuleProtocolSeed,
+        chooseProtocolSeed = chooseProtocolSeed,
         createModuleSeed = createModuleSeed,
         createDeviceSeed = createDeviceSeed,
         createTagSeed = createTagSeed,
         moveSeed = moveSeed,
         onDismissCreateProject = { createProject = false },
         onDismissLinkProtocol = { linkProtocolSeed = null },
-        onDismissChooseModuleProtocol = { chooseModuleProtocolSeed = null },
+        onDismissChooseProtocol = { chooseProtocolSeed = null },
         onDismissCreateModule = { createModuleSeed = null },
         onDismissCreateDevice = { createDeviceSeed = null },
         onDismissCreateTag = { createTagSeed = null },
         onDismissMoveNode = { moveSeed = null },
         onOpenCreateModule = ::openCreateModule,
+        onOpenCreateDevice = ::openCreateDevice,
     )
 }

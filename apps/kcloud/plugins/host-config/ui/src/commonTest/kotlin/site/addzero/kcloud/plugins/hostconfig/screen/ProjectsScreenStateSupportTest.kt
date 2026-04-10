@@ -2,6 +2,8 @@ package site.addzero.kcloud.plugins.hostconfig.screen
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectTreeResponse
@@ -14,6 +16,7 @@ import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFiel
 import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFormMetadataResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
+import site.addzero.kcloud.plugins.hostconfig.projects.findModule
 
 /**
  * 验证项目界面状态辅助逻辑。
@@ -29,12 +32,35 @@ class ProjectsScreenStateSupportTest {
             ModuleTreeNode(
                 id = 11,
                 name = "模块1",
+                deviceId = 12,
                 protocolId = 21,
                 sortIndex = 0,
                 moduleTemplateId = 31,
                 moduleTemplateCode = "template-1",
                 moduleTemplateName = "模板1",
-                devices = emptyList(),
+            )
+        val device =
+            DeviceTreeNode(
+                id = 12,
+                name = "设备1",
+                stationNo = 1,
+                requestIntervalMs = null,
+                writeIntervalMs = null,
+                byteOrder2 = null,
+                byteOrder4 = null,
+                floatOrder = null,
+                batchAnalogStart = null,
+                batchAnalogLength = null,
+                batchDigitalStart = null,
+                batchDigitalLength = null,
+                disabled = false,
+                sortIndex = 0,
+                protocolId = 21,
+                deviceTypeId = 51,
+                deviceTypeCode = "device-type-1",
+                deviceTypeName = "设备类型1",
+                modules = listOf(repeatedModule),
+                tags = emptyList(),
             )
         val project =
             ProjectTreeResponse(
@@ -57,7 +83,7 @@ class ProjectsScreenStateSupportTest {
                                 ProtocolTransportConfig(
                                     transportType = TransportType.TCP,
                                 ),
-                            modules = listOf(repeatedModule),
+                            devices = listOf(device),
                         ),
                     ),
                 modules = listOf(repeatedModule),
@@ -67,6 +93,79 @@ class ProjectsScreenStateSupportTest {
 
         assertEquals(1, modules.size)
         assertEquals(11, modules.single().id)
+    }
+
+    @Test
+    /**
+     * 处理should从设备层级找到模块。
+     */
+    fun shouldFindModuleThroughDeviceHierarchy() {
+        val module =
+            ModuleTreeNode(
+                id = 31,
+                name = "模块A",
+                deviceId = 21,
+                protocolId = 11,
+                sortIndex = 0,
+                moduleTemplateId = 41,
+                moduleTemplateCode = "template-a",
+                moduleTemplateName = "模板A",
+            )
+        val device =
+            DeviceTreeNode(
+                id = 21,
+                name = "设备A",
+                stationNo = 1,
+                requestIntervalMs = null,
+                writeIntervalMs = null,
+                byteOrder2 = null,
+                byteOrder4 = null,
+                floatOrder = null,
+                batchAnalogStart = null,
+                batchAnalogLength = null,
+                batchDigitalStart = null,
+                batchDigitalLength = null,
+                disabled = false,
+                sortIndex = 0,
+                protocolId = 11,
+                deviceTypeId = 51,
+                deviceTypeCode = "device-type-a",
+                deviceTypeName = "设备类型A",
+                modules = listOf(module),
+                tags = emptyList(),
+            )
+        val projectTrees =
+            listOf(
+                ProjectTreeResponse(
+                    id = 1,
+                    name = "工程A",
+                    description = null,
+                    remark = null,
+                    sortIndex = 0,
+                    protocols =
+                        listOf(
+                            ProtocolTreeNode(
+                                id = 11,
+                                name = "协议A",
+                                pollingIntervalMs = 1000,
+                                sortIndex = 0,
+                                protocolTemplateId = 61,
+                                protocolTemplateCode = "protocol-template-a",
+                                protocolTemplateName = "协议模板A",
+                                transportConfig = ProtocolTransportConfig(transportType = TransportType.TCP),
+                                devices = listOf(device),
+                            ),
+                        ),
+                    modules = emptyList(),
+                ),
+            )
+
+        val found = projectTrees.findModule(module.id)
+
+        assertNotNull(found)
+        assertEquals(module.id, found.id)
+        assertEquals(device.id, found.deviceId)
+        assertEquals(device.protocolId, found.protocolId)
     }
 
     @Test
