@@ -113,22 +113,13 @@ internal fun ProjectsWorkbenchContent(
                 onSelectNode(node.id)
                 onOpenNodeActionMenu(node)
             },
-            modifier = Modifier.fillMaxHeight().widthIn(min = 256.dp, max = 300.dp),
+            modifier = Modifier.fillMaxHeight().widthIn(min = 240.dp, max = 288.dp),
             metrics = compactTreeMetrics,
             searchEnabled = false,
             treeViewModel = treeViewModel,
             header = {
                 state.errorMessage?.let { CupertinoStatusStrip(it) }
                 state.noticeMessage?.let { CupertinoStatusStrip(it) }
-                ProjectsSidebarActionGrid(
-                    loading = state.loading,
-                    busy = state.busy,
-                    hasSelectedProject = state.selectedProjectId != null,
-                    onCreateProject = onCreateProject,
-                    onExportProjectSqlite = onExportProjectSqlite,
-                    onImportProjectSqlite = onImportProjectSqlite,
-                    onRefresh = onRefresh,
-                )
                 AddSearchBar(
                     keyword = treeQuery,
                     onKeyWordChanged = { query -> treeQuery = query },
@@ -138,6 +129,15 @@ internal fun ProjectsWorkbenchContent(
                     fieldHeight = compactTreeMetrics.searchFieldHeight,
                     horizontalSpacing = compactTreeMetrics.searchFieldSpacing,
                     showRefreshButton = !compactTreeMetrics.searchFieldCompactRefreshHidden,
+                )
+                ProjectsSidebarActionGrid(
+                    loading = state.loading,
+                    busy = state.busy,
+                    hasSelectedProject = state.selectedProjectId != null,
+                    onCreateProject = onCreateProject,
+                    onExportProjectSqlite = onExportProjectSqlite,
+                    onImportProjectSqlite = onImportProjectSqlite,
+                    onRefresh = onRefresh,
                 )
             },
             getId = { it.id },
@@ -215,11 +215,11 @@ private fun ProjectsSidebarActionGrid(
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             WorkbenchActionButton(
                 text = "新建工程",
@@ -239,7 +239,7 @@ private fun ProjectsSidebarActionGrid(
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             WorkbenchActionButton(
                 text = "导入 SQLite",
@@ -266,20 +266,20 @@ private fun rememberCompactProjectTreeMetrics(): WorkbenchMetrics {
     val metrics = currentWorkbenchMetrics()
     return remember(metrics) {
         metrics.copy(
-            sidebarOuterPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-            sidebarPanelInnerPadding = PaddingValues(horizontal = 10.dp, vertical = 10.dp),
-            sidebarSectionGap = 8.dp,
-            sidebarTreePanelPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp),
-            searchFieldHeight = 42.dp,
-            searchFieldSpacing = 6.dp,
+            sidebarOuterPadding = PaddingValues(horizontal = 6.dp, vertical = 6.dp),
+            sidebarPanelInnerPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+            sidebarSectionGap = 6.dp,
+            sidebarTreePanelPadding = PaddingValues(horizontal = 2.dp, vertical = 2.dp),
+            searchFieldHeight = 38.dp,
+            searchFieldSpacing = 4.dp,
             treeMetrics = metrics.treeMetrics.copy(
-                rowMinHeight = 36.dp,
-                rowVerticalPadding = 6.dp,
-                rowSpacing = 3.dp,
-                levelIndent = 20.dp,
+                rowMinHeight = 34.dp,
+                rowVerticalPadding = 5.dp,
+                rowSpacing = 2.dp,
+                levelIndent = 18.dp,
                 iconSize = 18.dp,
                 expandIconSize = 16.dp,
-                selectedIndicatorHeight = 20.dp,
+                selectedIndicatorHeight = 18.dp,
             ),
         )
     }

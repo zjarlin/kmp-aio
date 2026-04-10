@@ -89,6 +89,60 @@ interface CodegenContext : BaseEntity, CodegenNamed, ProtocolScoped {
 
     @Column(name = "kotlin_client_transports")
     /**
+     * Kotlin 调用侧 transport 集合。
+     */
+    val kotlinClientTransports: String?
+
+    @Column(name = "c_expose_transports")
+    /**
+     * C 暴露侧 transport 集合。
+     */
+    val cExposeTransports: String?
+
+    @Column(name = "artifact_kinds")
+    /**
+     * 导出产物类型集合。
+     */
+    val artifactKinds: String?
+
+    @Column(name = "c_output_project_dir")
+    /**
+     * C 工程根目录。
+     */
+    val cOutputProjectDir: String?
+
+    @Column(name = "bridge_impl_path")
+    /**
+     * bridge 实现路径。
+     */
+    val bridgeImplPath: String?
+
+    @Column(name = "keil_uvprojx_path")
+    /**
+     * Keil uvprojx 路径。
+     */
+    val keilUvprojxPath: String?
+
+    @Column(name = "keil_target_name")
+    /**
+     * Keil target 名称。
+     */
+    val keilTargetName: String?
+
+    @Column(name = "keil_group_name")
+    /**
+     * Keil group 名称。
+     */
+    val keilGroupName: String?
+
+    @Column(name = "mxproject_path")
+    /**
+     * mxproject 路径。
+     */
+    val mxprojectPath: String?
+
+    @Column(name = "kotlin_client_transports")
+    /**
      * Kotlin 调用侧启用的传输集合。
      */
     val kotlinClientTransports: String?

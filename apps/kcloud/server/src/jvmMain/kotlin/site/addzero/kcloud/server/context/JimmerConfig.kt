@@ -9,8 +9,10 @@ import site.addzero.kcloud.server.context.KCLOUD_SERVER_SQLITE_FILE
 import site.addzero.kcloud.server.context.kcloudServerLocalDataDirectory
 import kotlin.collections.listOf
 
+/** 家目录 */
 private val KCLOUD_SERVER_LOCAL_DIRECTORY = File(System.getProperty("user.home"), ".kcloud/local")
 
+/**文件名  */
 private val KCLOUD_SERVER_SQLITE_FILE = File(KCLOUD_SERVER_LOCAL_DIRECTORY, "kcloud-server.sqlite")
 
 fun kcloudServerLocalDataDirectory(): File {
