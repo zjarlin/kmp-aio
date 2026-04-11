@@ -116,4 +116,7 @@ tasks.matching { task ->
 }.configureEach {
     outputs.dir(generatedApiRootDir)
     dependsOn(cleanMcuConsoleGeneratedApis)
+    if (generateMcuConsoleContractsEnabled) {
+        dependsOn(generateMcuConsoleContractsTask)
+    }
 }

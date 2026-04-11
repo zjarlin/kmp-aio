@@ -927,9 +927,42 @@ private fun ModbusTransportType.kotlinQualifiedTypeName(): String =
  * 处理string。
  */
 internal fun String.normalizeGeneratedKotlin(): String =
-    lineSequence()
+    ensureGeneratedKoinConfigurationAnnotation()
+        .lineSequence()
         .joinToString("\n") { line -> line.trimEnd() }
         .trimEnd() + "\n"
+
+/**
+ * 给生成的 Koin module 补齐 @Configuration。
+ */
+private fun String.ensureGeneratedKoinConfigurationAnnotation(): String {
+    if (!contains("import org.koin.core.annotation.Module")) {
+        return this
+    }
+    if (!contains("class GeneratedModbus") || !contains("KoinModule")) {
+        return this
+    }
+    if (contains("import org.koin.core.annotation.Configuration") && contains("@Configuration")) {
+        return this
+    }
+
+    var content = this
+    if (!content.contains("import org.koin.core.annotation.Configuration")) {
+        content =
+            content.replace(
+                "import org.koin.core.annotation.Module",
+                "import org.koin.core.annotation.Configuration\nimport org.koin.core.annotation.Module",
+            )
+    }
+    if (!content.contains("@Configuration")) {
+        content =
+            content.replace(
+                "@Module\nclass GeneratedModbus",
+                "@Module\n@Configuration\nclass GeneratedModbus",
+            )
+    }
+    return content
+}
 
 /**
  * 处理string。

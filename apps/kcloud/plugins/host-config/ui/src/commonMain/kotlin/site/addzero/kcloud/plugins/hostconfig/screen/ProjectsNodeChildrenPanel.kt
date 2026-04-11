@@ -298,7 +298,7 @@ private fun ChildNodeTableSection(
             headerHeightDp = 50f,
             rowHeightDp = 54f,
             defaultColumnWidthDp = 148f,
-            enableAutoWidth = true,
+            enableAutoWidth = false,
             autoWidthMinDp = 88f,
             autoWidthMaxDp = 240f,
         )
@@ -357,6 +357,9 @@ private fun ChildNodeTableSection(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        },
+        getCellText = { row, column ->
+            row.cells[column.key].orEmpty()
         },
         rowActionSlot = if (hasRowAction) {
             { row ->
