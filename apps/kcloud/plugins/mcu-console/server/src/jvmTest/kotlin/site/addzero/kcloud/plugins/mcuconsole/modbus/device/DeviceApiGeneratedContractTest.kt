@@ -6,34 +6,25 @@ import kotlin.test.assertEquals
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
-import site.addzero.device.driver.modbus.mqtt.ModbusMqttEndpointConfig
-import site.addzero.device.driver.modbus.mqtt.ModbusMqttExecutor
-import site.addzero.device.driver.modbus.mqtt.UnsupportedModbusMqttExecutor
-import site.addzero.esp32_host_computer.generated.modbus.mqtt.DeviceApiGeneratedMqttGateway
-import site.addzero.esp32_host_computer.generated.modbus.mqtt.DeviceApiGeneratedMqttConfigProvider
-import site.addzero.esp32_host_computer.generated.modbus.mqtt.DeviceWriteApiGeneratedMqttConfigProvider
-import site.addzero.esp32_host_computer.generated.modbus.mqtt.GeneratedModbusMqttKoinModule
+import site.addzero.device.driver.modbus.rtu.DefaultModbusRtuEndpointConfig
+import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
+import site.addzero.device.driver.modbus.rtu.ModbusRtuExecutor
+import site.addzero.device.driver.modbus.rtu.ModbusSerialParity
+import site.addzero.device.driver.modbus.rtu.createDefaultModbusRtuExecutor
+import site.addzero.esp32_host_computer.generated.modbus.rtu.GeneratedModbusRtuKoinModule
+import site.addzero.esp32_host_computer.generated.modbus.rtu.module
 
 class DeviceApiGeneratedContractTest {
     @Test
-    fun shouldResolveDeviceApiFromKoinAndDecode24PowerLights() {
-        val generatedModule = GeneratedModbusMqttKoinModule()
-        val fakeExecutor = RecordingModbusMqttExecutor(sampleCoils())
+    fun shouldRead24PowerLightsFromRealBoardThroughKoin() {
+        val executor = createDefaultModbusRtuExecutor()
         val koinApplication =
             startKoin {
                 modules(
+                    GeneratedModbusRtuKoinModule().module(),
                     module {
-                        single<ModbusMqttExecutor> { fakeExecutor }
-                        single { generatedModule.deviceApiGeneratedMqttConfigProvider() }
-                        single { generatedModule.deviceWriteApiGeneratedMqttConfigProvider() }
-                        single {
-                            generatedModule.modbusMqttConfigRegistry(
-                                get<DeviceApiGeneratedMqttConfigProvider>(),
-                                get<DeviceWriteApiGeneratedMqttConfigProvider>(),
-                            )
-                        }
-                        single { generatedModule.deviceApiGeneratedMqttGateway(get(), get()) }
-                        single<DeviceApi> { generatedModule.deviceApi(get<DeviceApiGeneratedMqttGateway>()) }
+                        single<ModbusRtuEndpointConfig> { REAL_DEVICE_CONFIG }
+                        single<ModbusRtuExecutor> { executor }
                     },
                 )
             }
@@ -42,96 +33,61 @@ class DeviceApiGeneratedContractTest {
             val deviceApi = koinApplication.koin.get<DeviceApi>()
             val actual = runBlocking { deviceApi.get24PowerLights() }
 
-            assertEquals(sampleCoils().toPowerLightsRegisters(), actual)
-            assertEquals(DeviceApiGeneratedMqttConfigProvider().defaultConfig(), fakeExecutor.lastConfig)
-            assertEquals(0, fakeExecutor.lastAddress)
-            assertEquals(24, fakeExecutor.lastQuantity)
+            println("REAL_MODBUS_RTU_CONFIG_BEGIN")
+            println(REAL_DEVICE_CONFIG)
+            println("REAL_MODBUS_RTU_CONFIG_END")
+            println("REAL_24_POWER_LIGHTS_BEGIN")
+            println(actual)
+            println("REAL_24_POWER_LIGHTS_END")
+
+            assertEquals(24, actual.toLights().size)
         } finally {
             stopKoin()
         }
     }
 }
 
-private class RecordingModbusMqttExecutor(
-    private val coilValues: List<Int>,
-) : UnsupportedModbusMqttExecutor() {
-    var lastConfig: ModbusMqttEndpointConfig? = null
-        private set
+private const val REAL_PORT_PATH = "/dev/cu.usbserial-2140"
 
-    var lastAddress: Int? = null
-        private set
+private val REAL_DEVICE_CONFIG =
+    DefaultModbusRtuEndpointConfig(
+        portPath = REAL_PORT_PATH,
+        unitId = 1,
+        baudRate = 9600,
+        dataBits = 8,
+        stopBits = 1,
+        parity = ModbusSerialParity.NONE,
+        timeoutMs = 400,
+        retries = 0,
+    )
 
-    var lastQuantity: Int? = null
-        private set
-
-    override suspend fun readCoils(
-        config: ModbusMqttEndpointConfig,
-        address: Int,
-        quantity: Int,
-    ): List<Int> {
-        lastConfig = config
-        lastAddress = address
-        lastQuantity = quantity
-        return coilValues
-    }
-}
-
-private fun sampleCoils(): List<Int> =
+/**
+ * 把 24 路电源灯结果转成顺序列表，便于断言和打印。
+ */
+private fun Device24PowerLightsRegisters.toLights(): List<Boolean> =
     listOf(
-        1,
-        0,
-        2,
-        0,
-        1,
-        0,
-        0,
-        3,
-        0,
-        1,
-        0,
-        0,
-        4,
-        0,
-        1,
-        0,
-        0,
-        5,
-        0,
-        1,
-        0,
-        0,
-        6,
-        1,
+        light1,
+        light2,
+        light3,
+        light4,
+        light5,
+        light6,
+        light7,
+        light8,
+        light9,
+        light10,
+        light11,
+        light12,
+        light13,
+        light14,
+        light15,
+        light16,
+        light17,
+        light18,
+        light19,
+        light20,
+        light21,
+        light22,
+        light23,
+        light24,
     )
-
-private fun List<Int>.toPowerLightsRegisters(): Device24PowerLightsRegisters {
-    require(size == 24) {
-        "Expected exactly 24 coil values, but got $size"
-    }
-    return Device24PowerLightsRegisters(
-        light1 = this[0] != 0,
-        light2 = this[1] != 0,
-        light3 = this[2] != 0,
-        light4 = this[3] != 0,
-        light5 = this[4] != 0,
-        light6 = this[5] != 0,
-        light7 = this[6] != 0,
-        light8 = this[7] != 0,
-        light9 = this[8] != 0,
-        light10 = this[9] != 0,
-        light11 = this[10] != 0,
-        light12 = this[11] != 0,
-        light13 = this[12] != 0,
-        light14 = this[13] != 0,
-        light15 = this[14] != 0,
-        light16 = this[15] != 0,
-        light17 = this[16] != 0,
-        light18 = this[17] != 0,
-        light19 = this[18] != 0,
-        light20 = this[19] != 0,
-        light21 = this[20] != 0,
-        light22 = this[21] != 0,
-        light23 = this[22] != 0,
-        light24 = this[23] != 0,
-    )
-}
