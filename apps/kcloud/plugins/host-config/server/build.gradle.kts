@@ -62,7 +62,7 @@ ksp {
 }
 
 dependencies {
-    add("kspJvm", libs.findLibrary("site-addzero-controller2iso2dataprovider-processor").get())
+    add("kspJvm", project(":lib:ksp:controller2iso2dataprovider-processor-local"))
 }
 
 kotlin {
