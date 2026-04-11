@@ -6,6 +6,7 @@ import kotlin.test.assertEquals
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
 import org.koin.dsl.module
+import org.koin.plugin.module.dsl.withConfiguration
 import site.addzero.device.driver.modbus.rtu.DefaultModbusRtuEndpointConfig
 import site.addzero.device.driver.modbus.rtu.ModbusRtuEndpointConfig
 import site.addzero.device.driver.modbus.rtu.ModbusRtuExecutor
@@ -20,7 +21,9 @@ class DeviceApiGeneratedContractTest {
         val executor = createDefaultModbusRtuExecutor()
         val koinApplication =
             startKoin {
+                withConfiguration<>()
                 modules(
+                    w
                     GeneratedModbusRtuKoinModule().module(),
                     module {
                         single<ModbusRtuEndpointConfig> { REAL_DEVICE_CONFIG }
