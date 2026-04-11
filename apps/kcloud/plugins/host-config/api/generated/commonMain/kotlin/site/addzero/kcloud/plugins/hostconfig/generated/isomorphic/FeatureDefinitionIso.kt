@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 /**
  * 功能定义实体。
- *
  * 这一层描述资产主节点可调用的功能，
  * 例如控制指令、动作触发以及其入参与出参结构。
  */

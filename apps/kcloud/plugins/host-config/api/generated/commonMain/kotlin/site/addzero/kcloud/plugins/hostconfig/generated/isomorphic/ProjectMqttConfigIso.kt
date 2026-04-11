@@ -1,6 +1,5 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.isomorphic
 
-import java.math.BigDecimal
 import kotlinx.serialization.Serializable
 
 /**
@@ -28,7 +27,7 @@ data class ProjectMqttConfigIso(
     val keepAliveSec: Int? = null,
     val qos: Int? = null,
     val reportPeriodSec: Int? = null,
-    val precision: BigDecimal? = null,
+    val precision: String? = null,
     val valueChangeRatioEnabled: Boolean = false,
     val cloudControlDisabled: Boolean = false,
     val project: ProjectIso = ProjectIso()

@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 /**
  * 产品定义实体。
- *
  * 这一层描述物联网产品目录中的产品级模板信息，
  * 负责承载型号、供应商、分类以及其下挂的设备定义。
  */

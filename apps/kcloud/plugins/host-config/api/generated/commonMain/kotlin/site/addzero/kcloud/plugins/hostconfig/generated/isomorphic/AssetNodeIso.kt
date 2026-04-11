@@ -5,7 +5,6 @@ import site.addzero.kcloud.plugins.hostconfig.model.enums.AssetNodeType
 
 /**
  * 统一资产主树节点实体。
- *
  * 这里只承载产品、设备、模块这三类主节点，
  * 物模型、功能、标签等明细能力都通过独立表围绕 `nodeId` 关联。
  */

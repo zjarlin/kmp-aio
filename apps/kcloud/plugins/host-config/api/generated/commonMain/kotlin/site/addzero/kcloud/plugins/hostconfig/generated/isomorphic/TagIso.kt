@@ -1,6 +1,5 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.isomorphic
 
-import java.math.BigDecimal
 import kotlinx.serialization.Serializable
 import site.addzero.kcloud.plugins.hostconfig.model.enums.PointType
 
@@ -22,11 +21,11 @@ data class TagIso(
     val debounceMs: Int? = null,
     val sortIndex: Int = 0,
     val scalingEnabled: Boolean = false,
-    val scalingOffset: BigDecimal? = null,
-    val rawMin: BigDecimal? = null,
-    val rawMax: BigDecimal? = null,
-    val engMin: BigDecimal? = null,
-    val engMax: BigDecimal? = null,
+    val scalingOffset: String? = null,
+    val rawMin: String? = null,
+    val rawMax: String? = null,
+    val engMin: String? = null,
+    val engMax: String? = null,
     val forwardEnabled: Boolean = false,
     val forwardRegisterAddress: Int? = null,
     val device: DeviceIso = DeviceIso(),

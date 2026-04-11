@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 /**
  * 标签定义实体。
- *
  * 标签用于给资产主树做语义分类，
  * 例如行业、协议能力、交付形态等维度。
  */

@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 /**
  * 属性定义实体。
- *
  * 用于描述资产主节点下的遥测、状态或可写属性，
  * 同时为 spec-iot 视图提供底层源数据。
  */

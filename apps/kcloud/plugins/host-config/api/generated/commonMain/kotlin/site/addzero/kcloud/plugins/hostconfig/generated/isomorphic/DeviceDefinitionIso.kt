@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 
 /**
  * 设备定义实体。
- *
  * 一个产品下可以声明多个设备型号定义，
  * 用来描述该型号支持的属性、功能和设备类型归属。
  */

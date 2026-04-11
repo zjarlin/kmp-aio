@@ -6,6 +6,13 @@ plugins {
 
 val libs = versionCatalogs.named("libs")
 
+configurations.matching { configuration ->
+    configuration.name == "kspJvm"
+}.configureEach {
+    exclude(group = "site.addzero", module = "entity2iso-processor")
+    exclude(group = "site.addzero", module = "entity2iso-processor-jvm")
+}
+
 val hostConfigApiProject = project(":apps:kcloud:plugins:host-config:api")
 val hostConfigApiProjectDir = layout.projectDirectory.dir("../api")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
@@ -63,6 +70,7 @@ ksp {
 
 dependencies {
     add("kspJvm", project(":lib:ksp:controller2iso2dataprovider-processor-local"))
+    add("kspJvm", project(":lib:ksp:entity2iso-processor-local"))
 }
 
 kotlin {
