@@ -21,9 +21,8 @@ class DeviceApiGeneratedContractTest {
         val executor = createDefaultModbusRtuExecutor()
         val koinApplication =
             startKoin {
-                withConfiguration<>()
                 modules(
-                    w
+//                    w
                     GeneratedModbusRtuKoinModule().module(),
                     module {
                         single<ModbusRtuEndpointConfig> { REAL_DEVICE_CONFIG }
@@ -50,11 +49,9 @@ class DeviceApiGeneratedContractTest {
     }
 }
 
-private const val REAL_PORT_PATH = "/dev/cu.usbserial-2140"
-
 private val REAL_DEVICE_CONFIG =
     DefaultModbusRtuEndpointConfig(
-        portPath = REAL_PORT_PATH,
+        portPath = "/dev/cu.usbserial-2140",
         unitId = 1,
         baudRate = 9600,
         dataBits = 8,

@@ -22,6 +22,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(libs.findLibrary("com-google-devtools-ksp-symbol-processing-api").get())
+            implementation(libs.findLibrary("site-addzero-lsi-core").get())
             implementation(libs.findLibrary("jimmer-entity-spi").get())
         }
     }

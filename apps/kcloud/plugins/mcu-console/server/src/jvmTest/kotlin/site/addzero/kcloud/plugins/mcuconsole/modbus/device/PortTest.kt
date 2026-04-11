@@ -15,7 +15,8 @@ import kotlin.test.Test
 class PortTest {
     @Test
     fun listVisiblePorts() {
-        println(SerialPortTool.listPorts())
+        val message = SerialPortTool.listPorts()
+        println(message)
     }
 
     @Test
