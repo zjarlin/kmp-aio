@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS codegen_context_context (
     name TEXT NOT NULL,
     description TEXT,
     enabled INTEGER NOT NULL DEFAULT 1,
+    node_id TEXT,
     consumer_target TEXT NOT NULL,
     protocol_template_id INTEGER NOT NULL,
     external_c_output_root TEXT,

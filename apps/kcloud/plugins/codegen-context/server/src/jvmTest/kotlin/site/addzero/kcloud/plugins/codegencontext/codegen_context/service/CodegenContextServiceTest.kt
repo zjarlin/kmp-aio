@@ -1,10 +1,7 @@
 package site.addzero.kcloud.plugins.codegencontext.codegen_context.service
 
-import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.createDirectories
-import kotlin.io.path.readText
-import kotlin.io.path.writeText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -642,26 +639,27 @@ class CodegenContextServiceTest {
                 val response = fixture.service.generateContracts(saved.id!!)
 
                 assertEquals(saved.id, response.contextId)
-                assertContains(response.message, "metadata snapshot")
+                assertContains(response.message, "外部产物")
                 assertTrue(response.generatedFiles.isNotEmpty())
+                assertTrue(response.generatedFiles.any { file -> file.endsWith("/Core/Src/generated/modbus/rtu/transport/modbus_rtu_dispatch.c") })
                 assertTrue(response.generatedFiles.any { file -> file.endsWith("/Core/Src/generated/modbus/tcp/transport/modbus_tcp_dispatch.c") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith("/Core/Src/generated/modbus/mqtt/transport/modbus_mqtt_dispatch.c") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith(".rtu.protocol.md") })
                 assertTrue(response.generatedFiles.any { file -> file.endsWith(".tcp.protocol.md") })
+                assertTrue(response.generatedFiles.any { file -> file.endsWith(".mqtt.protocol.md") })
                 assertTrue(response.generatedFiles.none { file -> file.endsWith(".kt") })
                 fixture.dataSource.connection.use { connection ->
                     connection.prepareStatement(
                         """
-                        SELECT selected, payload
+                        SELECT COUNT(*)
                         FROM codegen_context_modbus_contract
-                        WHERE context_id = ? AND transport = 'rtu'
+                        WHERE context_id = ?
                         """.trimIndent(),
                     ).use { statement ->
                         statement.setLong(1, saved.id!!)
                         statement.executeQuery().use { resultSet ->
                             assertTrue(resultSet.next())
-                            assertEquals(1, resultSet.getInt("selected"))
-                            val payload = resultSet.getString("payload")
-                            assertContains(payload, "\"interfaceSimpleName\":\"DeviceApi\"")
-                            assertContains(payload, "\"interfaceSimpleName\":\"DeviceWriteApi\"")
+                            assertEquals(0, resultSet.getInt(1))
                         }
                     }
                 }

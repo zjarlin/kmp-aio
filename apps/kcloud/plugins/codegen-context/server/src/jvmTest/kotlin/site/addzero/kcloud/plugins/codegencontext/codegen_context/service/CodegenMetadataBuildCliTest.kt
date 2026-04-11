@@ -7,6 +7,9 @@ import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
+import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind
+import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
 
 /**
  * 验证代码生成metadata构建命令行相关场景。
@@ -31,9 +34,14 @@ class CodegenMetadataBuildCliTest {
             val workspaceRoot = createGeneratorWorkspace()
 
             try {
-                withRepoRoot(workspaceRoot) {
-                    fixture.service.generateContracts(saved.id!!)
-                }
+                fixture.generator.export(
+                    context = saved,
+                    exportSettings =
+                        CodegenMetadataExportSettingsDto(
+                            artifactKinds = setOf(CodegenMetadataArtifactKind.METADATA_SNAPSHOT),
+                            kotlinClientTransports = setOf(CodegenMetadataTransportKind.RTU),
+                        ),
+                )
 
                 val serverOutputRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/server/generated/jvmMain/kotlin")
                 val sharedOutputRoot = workspaceRoot.resolve("apps/kcloud/plugins/mcu-console/shared/generated/commonMain/kotlin")

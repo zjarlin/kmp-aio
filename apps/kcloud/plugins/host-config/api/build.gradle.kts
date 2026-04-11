@@ -7,7 +7,7 @@ plugins {
 }
 
 val generatedApiSourceDir = layout.buildDirectory.dir("generated/source/controller2api/commonMain/kotlin")
-val generatedKspSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val generatedKspSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
 val generateHostConfigApiTaskPath = ":apps:kcloud:plugins:host-config:server:kspKotlinJvm"
 
 kotlin {

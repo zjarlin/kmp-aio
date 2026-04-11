@@ -76,6 +76,7 @@ kotlin {
     sourceSets {
         jvmMain.dependencies {
             implementation(project(":apps:kcloud:plugins:codegen-context:shared"))
+            implementation(project(":apps:kcloud:plugins:host-config:shared"))
             implementation(project(":apps:kcloud:plugins:host-config:server"))
             implementation(project(":lib:ktor:plugin:ktor-jimmer-plugin"))
             implementation(project(":lib:ktor:starter:starter-spi"))

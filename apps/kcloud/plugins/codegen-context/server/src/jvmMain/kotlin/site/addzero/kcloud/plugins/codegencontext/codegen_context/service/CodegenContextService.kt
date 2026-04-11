@@ -9,6 +9,7 @@ import org.babyfish.jimmer.sql.kt.ast.expression.eq
 import org.koin.core.annotation.Single
 import kotlinx.serialization.json.Json
 import site.addzero.kcloud.jimmer.di.insertAndReturnId
+import site.addzero.kcloud.jimmer.di.query
 import site.addzero.kcloud.jimmer.di.queryCount
 import site.addzero.kcloud.jimmer.di.update
 import site.addzero.kcloud.jimmer.di.withTransaction
@@ -84,7 +85,7 @@ class CodegenContextService(
     ): CodegenMetadataDraftDto {
         val detail = getContext(contextId)
         val availableDefinitions = loadContextDefinitions(detail.protocolTemplateId)
-        return detail.toMetadataDraft(availableDefinitions)
+        return resolveNodeScopedDefaults(detail.toMetadataDraft(availableDefinitions))
     }
 
     /**
@@ -107,14 +108,15 @@ class CodegenContextService(
     fun previewContextDraft(
         request: CodegenMetadataDraftDto,
     ): CodegenMetadataPreviewDto {
+        val resolvedDraft = resolveNodeScopedDefaults(request)
         val availableDefinitions =
-            if (request.protocolTemplateId > 0L) {
-                ensureSupportedTemplate(loadProtocolTemplate(request.protocolTemplateId))
-                loadContextDefinitions(request.protocolTemplateId)
+            if (resolvedDraft.protocolTemplateId > 0L) {
+                ensureSupportedTemplate(loadProtocolTemplate(resolvedDraft.protocolTemplateId))
+                loadContextDefinitions(resolvedDraft.protocolTemplateId)
             } else {
                 emptyList()
             }
-        return request.toMetadataPreview(availableDefinitions)
+        return resolvedDraft.toMetadataPreview(availableDefinitions)
     }
 
     /**
@@ -146,6 +148,7 @@ class CodegenContextService(
                                 name,
                                 description,
                                 enabled,
+                                node_id,
                                 consumer_target,
                                 protocol_template_id,
                                 external_c_output_root,
@@ -188,12 +191,13 @@ class CodegenContextService(
                                 mqtt_retries,
                                 created_at,
                                 updated_at
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                             """.trimIndent(),
                             normalized.code,
                             normalized.name,
                             normalized.description,
                             if (normalized.enabled) 1 else 0,
+                            normalized.nodeId,
                             CodegenConsumerTarget.MCU_CONSOLE.name,
                             normalized.protocolTemplateId,
                             normalized.externalCOutputRoot,
@@ -248,6 +252,7 @@ class CodegenContextService(
                                 name = ?,
                                 description = ?,
                                 enabled = ?,
+                                node_id = ?,
                                 consumer_target = ?,
                                 protocol_template_id = ?,
                                 external_c_output_root = ?,
@@ -295,6 +300,7 @@ class CodegenContextService(
                             normalized.name,
                             normalized.description,
                             if (normalized.enabled) 1 else 0,
+                            normalized.nodeId,
                             CodegenConsumerTarget.MCU_CONSOLE.name,
                             normalized.protocolTemplateId,
                             normalized.externalCOutputRoot,
@@ -360,14 +366,14 @@ class CodegenContextService(
     fun saveContextDraft(
         request: CodegenMetadataDraftDto,
     ): CodegenMetadataDraftDto {
-        if (request.protocolTemplateId <= 0L) {
-            request.validateDraftOrThrow(emptyList())
+        val resolvedDraft = resolveNodeScopedDefaults(request)
+        if (resolvedDraft.protocolTemplateId <= 0L) {
+            throw BusinessValidationException("必须先选择协议模板。")
         }
-        ensureSupportedTemplate(loadProtocolTemplate(request.protocolTemplateId))
-        val availableDefinitions = loadContextDefinitions(request.protocolTemplateId)
-        request.validateDraftOrThrow(availableDefinitions)
-        val saved = saveContext(request.toGenericContextDetail(availableDefinitions))
-        return saved.toMetadataDraft(loadContextDefinitions(saved.protocolTemplateId))
+        ensureSupportedTemplate(loadProtocolTemplate(resolvedDraft.protocolTemplateId))
+        val availableDefinitions = loadContextDefinitions(resolvedDraft.protocolTemplateId)
+        val saved = saveContext(resolvedDraft.toGenericContextDetail(availableDefinitions))
+        return resolveNodeScopedDefaults(saved.toMetadataDraft(loadContextDefinitions(saved.protocolTemplateId)))
     }
 
     /**
@@ -1130,6 +1136,483 @@ class CodegenContextService(
     }
 
     /**
+     * 按 host-config 节点信息补齐元数据草稿默认参数。
+     *
+     * 这里优先把 nodeId 解析成项目/协议/设备上下文，再使用节点关联的协议配置、
+     * 项目级 Modbus 配置与 MQTT 配置补齐默认值。
+     * 如果调用方已经显式改过某个字段，则保留用户值，不强行覆盖。
+     */
+    private fun resolveNodeScopedDefaults(
+        draft: CodegenMetadataDraftDto,
+    ): CodegenMetadataDraftDto {
+        val nodeRef = parseHostConfigNodeRef(draft.nodeId) ?: return draft
+        val defaults = loadNodeScopedDefaults(nodeRef) ?: return draft
+        return draft.copy(
+            exportSettings =
+                draft.exportSettings.copy(
+                    rtuDefaults = mergeRtuDefaults(draft.exportSettings.rtuDefaults, defaults),
+                    tcpDefaults = mergeTcpDefaults(draft.exportSettings.tcpDefaults, defaults),
+                    mqttDefaults = mergeMqttDefaults(draft.exportSettings.mqttDefaults, defaults),
+                ),
+        )
+    }
+
+    /**
+     * 解析 host-config 树节点 ID。
+     */
+    private fun parseHostConfigNodeRef(
+        nodeId: String,
+    ): HostConfigNodeRef? {
+        val normalized = nodeId.cleanNullable() ?: return null
+        val segments = normalized.split('/')
+        val projectId = segments.getOrNull(1)?.toLongOrNull() ?: return null
+        return when (segments.firstOrNull()) {
+            "project" ->
+                if (segments.size == 2) {
+                    HostConfigNodeRef(projectId = projectId)
+                } else {
+                    null
+                }
+
+            "protocol" ->
+                if (segments.size == 3) {
+                    segments[2].toLongOrNull()?.let { protocolId ->
+                        HostConfigNodeRef(projectId = projectId, protocolId = protocolId)
+                    }
+                } else {
+                    null
+                }
+
+            "device" ->
+                if (segments.size == 3) {
+                    segments[2].toLongOrNull()?.let { deviceId ->
+                        HostConfigNodeRef(projectId = projectId, deviceId = deviceId)
+                    }
+                } else {
+                    null
+                }
+
+            "module" ->
+                if (segments.size == 3) {
+                    segments[2].toLongOrNull()?.let { moduleId ->
+                        HostConfigNodeRef(projectId = projectId, moduleId = moduleId)
+                    }
+                } else {
+                    null
+                }
+
+            "tag" ->
+                if (segments.size == 4) {
+                    val deviceId = segments[2].toLongOrNull()
+                    val tagId = segments[3].toLongOrNull()
+                    if (deviceId == null || tagId == null) {
+                        null
+                    } else {
+                        HostConfigNodeRef(
+                            projectId = projectId,
+                            deviceId = deviceId,
+                            tagId = tagId,
+                        )
+                    }
+                } else {
+                    null
+                }
+
+            else -> null
+        }
+    }
+
+    /**
+     * 加载节点关联的默认参数来源。
+     */
+    private fun loadNodeScopedDefaults(
+        nodeRef: HostConfigNodeRef,
+    ): HostConfigNodeDefaults? {
+        val protocol = resolveProtocolForNode(nodeRef)
+        val device = resolveDeviceForNode(nodeRef)
+        val mqttConfig = loadProjectMqttConfig(nodeRef.projectId)
+        val rtuProjectConfig = loadProjectModbusConfig(nodeRef.projectId, "RTU")
+        val tcpProjectConfig = loadProjectModbusConfig(nodeRef.projectId, "TCP")
+        if (protocol == null && device == null && mqttConfig == null && rtuProjectConfig == null && tcpProjectConfig == null) {
+            return null
+        }
+        return HostConfigNodeDefaults(
+            protocol = protocol,
+            device = device,
+            mqttConfig = mqttConfig,
+            rtuProjectConfig = rtuProjectConfig,
+            tcpProjectConfig = tcpProjectConfig,
+        )
+    }
+
+    /**
+     * 解析节点关联的协议。
+     */
+    private fun resolveProtocolForNode(
+        nodeRef: HostConfigNodeRef,
+    ): HostConfigProtocolDefaults? {
+        nodeRef.protocolId?.let(::loadProtocolDefaults)?.let { protocol ->
+            return protocol
+        }
+        nodeRef.moduleId?.let(::loadModuleDefaults)?.protocol?.let { protocol ->
+            return protocol
+        }
+        nodeRef.deviceId?.let(::loadDeviceDefaults)?.protocol?.let { protocol ->
+            return protocol
+        }
+        nodeRef.tagId?.let(::loadTagDefaults)?.protocol?.let { protocol ->
+            return protocol
+        }
+        return null
+    }
+
+    /**
+     * 解析节点关联的设备。
+     */
+    private fun resolveDeviceForNode(
+        nodeRef: HostConfigNodeRef,
+    ): HostConfigDeviceDefaults? {
+        nodeRef.deviceId?.let(::loadDeviceDefaults)?.device?.let { device ->
+            return device
+        }
+        nodeRef.moduleId?.let(::loadModuleDefaults)?.device?.let { device ->
+            return device
+        }
+        nodeRef.tagId?.let(::loadTagDefaults)?.device?.let { device ->
+            return device
+        }
+        return null
+    }
+
+    /**
+     * 合并 RTU 默认参数。
+     */
+    private fun mergeRtuDefaults(
+        current: CodegenMetadataRtuDefaultsDraftDto,
+        defaults: HostConfigNodeDefaults,
+    ): CodegenMetadataRtuDefaultsDraftDto {
+        val protocol = defaults.protocol.takeIf { it?.transportType == "RTU" }
+        val project = defaults.rtuProjectConfig
+        val device = defaults.device
+        val standard = CodegenMetadataRtuDefaultsDraftDto()
+        return current.copy(
+            portPath =
+                current.portPath.takeNodeDefault(
+                    nodeValue = protocol?.portName ?: project?.portName,
+                    standardValue = standard.portPath,
+                ),
+            unitId =
+                current.unitId.takeNodeDefault(
+                    nodeValue = (device?.stationNo ?: project?.stationNo)?.toString(),
+                    standardValue = standard.unitId,
+                ),
+            baudRate =
+                current.baudRate.takeNodeDefault(
+                    nodeValue = (protocol?.baudRate ?: project?.baudRate)?.toString(),
+                    standardValue = standard.baudRate,
+                ),
+            dataBits =
+                current.dataBits.takeNodeDefault(
+                    nodeValue = (protocol?.dataBits ?: project?.dataBits)?.toString(),
+                    standardValue = standard.dataBits,
+                ),
+            stopBits =
+                current.stopBits.takeNodeDefault(
+                    nodeValue = (protocol?.stopBits ?: project?.stopBits)?.toString(),
+                    standardValue = standard.stopBits,
+                ),
+            parity =
+                current.parity.takeNodeDefault(
+                    nodeValue = (protocol?.parity ?: project?.parity)?.lowercase(),
+                    standardValue = standard.parity,
+                ),
+            timeoutMs =
+                current.timeoutMs.takeNodeDefault(
+                    nodeValue = protocol?.responseTimeoutMs?.toString(),
+                    standardValue = standard.timeoutMs,
+                ),
+        )
+    }
+
+    /**
+     * 合并 TCP 默认参数。
+     */
+    private fun mergeTcpDefaults(
+        current: CodegenMetadataTcpDefaultsDraftDto,
+        defaults: HostConfigNodeDefaults,
+    ): CodegenMetadataTcpDefaultsDraftDto {
+        val protocol = defaults.protocol
+        val project = defaults.tcpProjectConfig
+        val device = defaults.device
+        val standard = CodegenMetadataTcpDefaultsDraftDto()
+        return current.copy(
+            host =
+                current.host.takeNodeDefault(
+                    nodeValue = protocol?.host,
+                    standardValue = standard.host,
+                ),
+            port =
+                current.port.takeNodeDefault(
+                    nodeValue = (protocol?.tcpPort ?: project?.tcpPort)?.toString(),
+                    standardValue = standard.port,
+                ),
+            unitId =
+                current.unitId.takeNodeDefault(
+                    nodeValue = (device?.stationNo ?: project?.stationNo)?.toString(),
+                    standardValue = standard.unitId,
+                ),
+            timeoutMs =
+                current.timeoutMs.takeNodeDefault(
+                    nodeValue = protocol?.responseTimeoutMs?.toString(),
+                    standardValue = standard.timeoutMs,
+                ),
+        )
+    }
+
+    /**
+     * 合并 MQTT 默认参数。
+     */
+    private fun mergeMqttDefaults(
+        current: CodegenMetadataMqttDefaultsDraftDto,
+        defaults: HostConfigNodeDefaults,
+    ): CodegenMetadataMqttDefaultsDraftDto {
+        val mqttConfig = defaults.mqttConfig
+        val standard = CodegenMetadataMqttDefaultsDraftDto()
+        val topicRoot = mqttConfig?.topic.cleanNullable()
+        return current.copy(
+            brokerUrl =
+                current.brokerUrl.takeNodeDefault(
+                    nodeValue = mqttConfig.toBrokerUrl(),
+                    standardValue = standard.brokerUrl,
+                ),
+            clientId =
+                current.clientId.takeNodeDefault(
+                    nodeValue = mqttConfig?.clientId.cleanNullable() ?: mqttConfig?.gatewayId.cleanNullable(),
+                    standardValue = standard.clientId,
+                ),
+            requestTopic =
+                current.requestTopic.takeNodeDefault(
+                    nodeValue = topicRoot?.let { "$it/request" },
+                    standardValue = standard.requestTopic,
+                ),
+            responseTopic =
+                current.responseTopic.takeNodeDefault(
+                    nodeValue = topicRoot?.let { "$it/response" },
+                    standardValue = standard.responseTopic,
+                ),
+            qos =
+                current.qos.takeNodeDefault(
+                    nodeValue = mqttConfig?.qos?.toString(),
+                    standardValue = standard.qos,
+                ),
+        )
+    }
+
+    /**
+     * 读取协议实例。
+     */
+    private fun loadProtocolDefaults(
+        protocolId: Long?,
+    ): HostConfigProtocolDefaults? {
+        if (protocolId == null) {
+            return null
+        }
+        return sql.query(
+            """
+            SELECT
+                transport_type,
+                host,
+                tcp_port,
+                port_name,
+                baud_rate,
+                data_bits,
+                stop_bits,
+                parity,
+                response_timeout_ms
+            FROM host_config_protocol_instance
+            WHERE id = ?
+            """.trimIndent(),
+            protocolId,
+        ) { resultSet ->
+            HostConfigProtocolDefaults(
+                transportType = resultSet.getString("transport_type")?.trim(),
+                host = resultSet.getString("host")?.trim(),
+                tcpPort = resultSet.getIntOrNull("tcp_port"),
+                portName = resultSet.getString("port_name")?.trim(),
+                baudRate = resultSet.getIntOrNull("baud_rate"),
+                dataBits = resultSet.getIntOrNull("data_bits"),
+                stopBits = resultSet.getIntOrNull("stop_bits"),
+                parity = resultSet.getString("parity")?.trim(),
+                responseTimeoutMs = resultSet.getIntOrNull("response_timeout_ms"),
+            )
+        }.firstOrNull()
+    }
+
+    /**
+     * 读取设备实例。
+     */
+    private fun loadDeviceDefaults(
+        deviceId: Long?,
+    ): HostConfigDeviceLink? {
+        if (deviceId == null) {
+            return null
+        }
+        return sql.query(
+            """
+            SELECT
+                d.station_no,
+                p.transport_type,
+                p.host,
+                p.tcp_port,
+                p.port_name,
+                p.baud_rate,
+                p.data_bits,
+                p.stop_bits,
+                p.parity,
+                p.response_timeout_ms
+            FROM host_config_device d
+            JOIN host_config_protocol_instance p ON p.id = d.protocol_id
+            WHERE d.id = ?
+            """.trimIndent(),
+            deviceId,
+        ) { resultSet ->
+            resultSet.toDeviceLink()
+        }.firstOrNull()
+    }
+
+    /**
+     * 读取模块实例。
+     */
+    private fun loadModuleDefaults(
+        moduleId: Long?,
+    ): HostConfigDeviceLink? {
+        if (moduleId == null) {
+            return null
+        }
+        return sql.query(
+            """
+            SELECT
+                d.station_no,
+                p.transport_type,
+                p.host,
+                p.tcp_port,
+                p.port_name,
+                p.baud_rate,
+                p.data_bits,
+                p.stop_bits,
+                p.parity,
+                p.response_timeout_ms
+            FROM host_config_module_instance m
+            JOIN host_config_device d ON d.id = m.device_id
+            JOIN host_config_protocol_instance p ON p.id = m.protocol_id
+            WHERE m.id = ?
+            """.trimIndent(),
+            moduleId,
+        ) { resultSet ->
+            resultSet.toDeviceLink()
+        }.firstOrNull()
+    }
+
+    /**
+     * 读取标签实例。
+     */
+    private fun loadTagDefaults(
+        tagId: Long?,
+    ): HostConfigDeviceLink? {
+        if (tagId == null) {
+            return null
+        }
+        return sql.query(
+            """
+            SELECT
+                d.station_no,
+                p.transport_type,
+                p.host,
+                p.tcp_port,
+                p.port_name,
+                p.baud_rate,
+                p.data_bits,
+                p.stop_bits,
+                p.parity,
+                p.response_timeout_ms
+            FROM host_config_tag t
+            JOIN host_config_device d ON d.id = t.device_id
+            JOIN host_config_protocol_instance p ON p.id = d.protocol_id
+            WHERE t.id = ?
+            """.trimIndent(),
+            tagId,
+        ) { resultSet ->
+            resultSet.toDeviceLink()
+        }.firstOrNull()
+    }
+
+    /**
+     * 读取项目 MQTT 配置。
+     */
+    private fun loadProjectMqttConfig(
+        projectId: Long,
+    ): HostConfigMqttDefaults? =
+        sql.query(
+            """
+            SELECT
+                host,
+                port,
+                topic,
+                gateway_id,
+                client_id,
+                qos,
+                tls_enabled
+            FROM host_config_project_mqtt_config
+            WHERE project_id = ?
+            """.trimIndent(),
+            projectId,
+        ) { resultSet ->
+            HostConfigMqttDefaults(
+                host = resultSet.getString("host")?.trim(),
+                port = resultSet.getIntOrNull("port"),
+                topic = resultSet.getString("topic")?.trim(),
+                gatewayId = resultSet.getString("gateway_id")?.trim(),
+                clientId = resultSet.getString("client_id")?.trim(),
+                qos = resultSet.getIntOrNull("qos"),
+                tlsEnabled = resultSet.getBoolean("tls_enabled"),
+            )
+        }.firstOrNull()
+
+    /**
+     * 读取项目 Modbus 配置。
+     */
+    private fun loadProjectModbusConfig(
+        projectId: Long,
+        transportType: String,
+    ): HostConfigModbusDefaults? =
+        sql.query(
+            """
+            SELECT
+                tcp_port,
+                port_name,
+                baud_rate,
+                data_bits,
+                stop_bits,
+                parity,
+                station_no
+            FROM host_config_project_modbus_server_config
+            WHERE project_id = ? AND transport_type = ?
+            """.trimIndent(),
+            projectId,
+            transportType,
+        ) { resultSet ->
+            HostConfigModbusDefaults(
+                tcpPort = resultSet.getIntOrNull("tcp_port"),
+                portName = resultSet.getString("port_name")?.trim(),
+                baudRate = resultSet.getIntOrNull("baud_rate"),
+                dataBits = resultSet.getIntOrNull("data_bits"),
+                stopBits = resultSet.getIntOrNull("stop_bits"),
+                parity = resultSet.getString("parity")?.trim(),
+                stationNo = resultSet.getIntOrNull("station_no"),
+            )
+        }.firstOrNull()
+
+    /**
      * 处理代码生成上下文。
      */
     private fun CodegenContext.toSummaryDto(): CodegenContextSummaryDto {
@@ -1156,6 +1639,7 @@ class CodegenContextService(
             name = name,
             description = description,
             enabled = enabled,
+            nodeId = nodeId,
             consumerTarget = consumerTarget,
             protocolTemplateId = protocolTemplate.id,
             protocolTemplateCode = protocolTemplate.code,
@@ -1641,5 +2125,147 @@ class CodegenContextService(
         }.getOrDefault(
             raw.split('\n').map(String::trim).filter(String::isNotBlank),
         )
+    }
+}
+
+/**
+ * 表示从 host-config 树节点解析出的定位信息。
+ */
+private data class HostConfigNodeRef(
+    val projectId: Long,
+    val protocolId: Long? = null,
+    val deviceId: Long? = null,
+    val moduleId: Long? = null,
+    val tagId: Long? = null,
+)
+
+/**
+ * 表示节点关联的默认参数来源集合。
+ */
+private data class HostConfigNodeDefaults(
+    val protocol: HostConfigProtocolDefaults? = null,
+    val device: HostConfigDeviceDefaults? = null,
+    val mqttConfig: HostConfigMqttDefaults? = null,
+    val rtuProjectConfig: HostConfigModbusDefaults? = null,
+    val tcpProjectConfig: HostConfigModbusDefaults? = null,
+)
+
+/**
+ * 仅在当前值为空或仍是模板默认值时，使用节点推导值覆盖。
+ */
+private fun String.takeNodeDefault(
+    nodeValue: String?,
+    standardValue: String,
+): String {
+    val resolvedNodeValue = nodeValue.cleanNullable() ?: return this
+    val normalizedCurrent = trim()
+    if (normalizedCurrent.isBlank() || normalizedCurrent == standardValue) {
+        return resolvedNodeValue
+    }
+    return this
+}
+
+/**
+ * 把项目 MQTT 配置转换为 broker URL。
+ */
+private fun HostConfigMqttDefaults?.toBrokerUrl(): String? {
+    val config = this ?: return null
+    val host = config.host.cleanNullable() ?: return null
+    val port = config.port ?: return null
+    val scheme = if (config.tlsEnabled) "ssl" else "tcp"
+    return "$scheme://$host:$port"
+}
+
+/**
+ * 表示节点协议默认值来源。
+ */
+private data class HostConfigProtocolDefaults(
+    val transportType: String? = null,
+    val host: String? = null,
+    val tcpPort: Int? = null,
+    val portName: String? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: String? = null,
+    val responseTimeoutMs: Int? = null,
+)
+
+/**
+ * 表示节点设备默认值来源。
+ */
+private data class HostConfigDeviceDefaults(
+    val stationNo: Int? = null,
+)
+
+/**
+ * 表示节点设备与协议的联合查询结果。
+ */
+private data class HostConfigDeviceLink(
+    val device: HostConfigDeviceDefaults,
+    val protocol: HostConfigProtocolDefaults,
+)
+
+/**
+ * 表示项目 MQTT 默认值来源。
+ */
+private data class HostConfigMqttDefaults(
+    val host: String? = null,
+    val port: Int? = null,
+    val topic: String? = null,
+    val gatewayId: String? = null,
+    val clientId: String? = null,
+    val qos: Int? = null,
+    val tlsEnabled: Boolean = false,
+)
+
+/**
+ * 表示项目 Modbus 默认值来源。
+ */
+private data class HostConfigModbusDefaults(
+    val tcpPort: Int? = null,
+    val portName: String? = null,
+    val baudRate: Int? = null,
+    val dataBits: Int? = null,
+    val stopBits: Int? = null,
+    val parity: String? = null,
+    val stationNo: Int? = null,
+)
+
+/**
+ * 把查询结果转换成设备与协议默认值。
+ */
+private fun java.sql.ResultSet.toDeviceLink(): HostConfigDeviceLink {
+    return HostConfigDeviceLink(
+        device =
+            HostConfigDeviceDefaults(
+                stationNo = getIntOrNull("station_no"),
+            ),
+        protocol =
+            HostConfigProtocolDefaults(
+                transportType = getString("transport_type")?.trim(),
+                host = getString("host")?.trim(),
+                tcpPort = getIntOrNull("tcp_port"),
+                portName = getString("port_name")?.trim(),
+                baudRate = getIntOrNull("baud_rate"),
+                dataBits = getIntOrNull("data_bits"),
+                stopBits = getIntOrNull("stop_bits"),
+                parity = getString("parity")?.trim(),
+                responseTimeoutMs = getIntOrNull("response_timeout_ms"),
+            ),
+    )
+}
+
+/**
+ * 安全读取可空整数。
+ */
+private fun java.sql.ResultSet.getIntOrNull(
+    columnLabel: String,
+): Int? {
+    val value = getInt(columnLabel)
+    return if (wasNull()) {
+        null
+    } else {
+        value
     }
 }

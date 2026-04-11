@@ -22,6 +22,7 @@ private val CODEGEN_CONTEXT_LEGACY_TIMESTAMP_MIGRATIONS =
                 name,
                 description,
                 enabled,
+                node_id,
                 consumer_target,
                 protocol_template_id,
                 external_c_output_root,
@@ -72,6 +73,7 @@ private val CODEGEN_CONTEXT_LEGACY_TIMESTAMP_MIGRATIONS =
                 name,
                 description,
                 enabled,
+                NULL,
                 consumer_target,
                 protocol_template_id,
                 external_c_output_root,
@@ -358,6 +360,12 @@ internal fun ensureCodegenContextSqliteSchema(
             connection = connection,
             resourcePath = CODEGEN_CONTEXT_SQLITE_SCHEMA_RESOURCE,
         )
+        ensureSqliteColumn(
+            connection = connection,
+            tableName = "codegen_context_context",
+            columnName = "node_id",
+            columnDefinition = "TEXT",
+        )
         connection.createStatement().use { statement ->
             statement.execute("PRAGMA foreign_keys = ON")
         }
@@ -490,6 +498,20 @@ private fun Connection.tableColumnNames(
         }
     }
     return columnNames
+}
+
+private fun ensureSqliteColumn(
+    connection: Connection,
+    tableName: String,
+    columnName: String,
+    columnDefinition: String,
+) {
+    if (connection.tableHasColumn(tableName, columnName)) {
+        return
+    }
+    connection.createStatement().use { statement ->
+        statement.execute("ALTER TABLE $tableName ADD COLUMN $columnName $columnDefinition")
+    }
 }
 
 private fun resolveLegacyColumnProjection(

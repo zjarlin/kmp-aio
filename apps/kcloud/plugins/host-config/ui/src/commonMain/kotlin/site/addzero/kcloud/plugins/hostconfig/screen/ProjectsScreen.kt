@@ -185,17 +185,11 @@ fun ProjectsScreen() {
                 }
             }
             NodeActionType.CREATE_TAG -> {
-                val deviceId = when (node.kind) {
-                    HostConfigNodeKind.MODULE -> {
-                        val module = state.projectTrees.findModule(node.entityId) ?: return
-                        module.deviceId
-                    }
-
-                    HostConfigNodeKind.DEVICE -> node.entityId
-                    HostConfigNodeKind.TAG -> node.parentEntityId
-                    else -> null
-                } ?: return
-                createTagSeed = CreateTagSeed(node.projectId, deviceId)
+                if (node.kind != HostConfigNodeKind.MODULE) {
+                    return
+                }
+                val module = state.projectTrees.findModule(node.entityId) ?: return
+                createTagSeed = CreateTagSeed(node.projectId, module.deviceId)
             }
 
             NodeActionType.MOVE -> moveSeed = MoveNodeSeed(node)

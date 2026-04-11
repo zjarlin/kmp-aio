@@ -336,6 +336,7 @@ data class CodegenContextDetailDto(
     val name: String,
     val description: String? = null,
     val enabled: Boolean = true,
+    val nodeId: String? = null,
     val consumerTarget: CodegenConsumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
     val protocolTemplateId: Long,
     val protocolTemplateCode: String? = null,

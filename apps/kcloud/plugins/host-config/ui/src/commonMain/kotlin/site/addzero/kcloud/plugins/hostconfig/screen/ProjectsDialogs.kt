@@ -782,7 +782,7 @@ internal fun resolveMoveOptions(
     state: ProjectsScreenState,
     node: HostConfigTreeNode,
 ): List<CupertinoOption<String>> {
-    return when (node.kind) {
+    val options = when (node.kind) {
         HostConfigNodeKind.PROJECT -> emptyList()
         HostConfigNodeKind.PROTOCOL -> {
             val currentProtocol = state.projectTrees.findProtocol(node.entityId)
@@ -854,4 +854,5 @@ internal fun resolveMoveOptions(
             }
         }
     }
+    return options.distinctBy { option -> option.value }
 }

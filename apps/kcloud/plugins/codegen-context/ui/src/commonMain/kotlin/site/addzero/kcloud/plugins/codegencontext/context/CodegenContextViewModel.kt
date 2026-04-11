@@ -14,15 +14,10 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDev
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportSettingsDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataFirmwareSyncDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataMqttDefaultsDraftDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataRtuDefaultsDraftDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataTcpDefaultsDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataThingPropertyDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.ProtocolTemplateOptionDto
 import site.addzero.kcloud.plugins.codegencontext.api.external.generated.CodegenContextApi
 import site.addzero.kcloud.plugins.codegencontext.api.external.generated.CodegenTemplateApi
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataArtifactKind
-import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenMetadataTransportKind
 import site.addzero.kcloud.plugins.codegencontext.model.enums.CodegenNodeKind
 
 @KoinViewModel
@@ -47,7 +42,6 @@ class CodegenContextViewModel(
                     loading = true,
                     errorMessage = null,
                     statusMessage = null,
-                    preview = null,
                     exportResult = null,
                 )
             runCatching {
@@ -70,7 +64,7 @@ class CodegenContextViewModel(
                 screenState =
                     screenState.copy(
                         loading = false,
-                        errorMessage = throwable.message ?: "加载元数据页面失败。",
+                        errorMessage = throwable.message ?: "加载建模页面失败。",
                     )
             }
         }
@@ -88,7 +82,6 @@ class CodegenContextViewModel(
                         selectedContextId = contextId,
                         availableContextDefinitions = definitions,
                         draft = draft,
-                        preview = null,
                         exportResult = null,
                         errorMessage = null,
                         statusMessage = null,
@@ -103,12 +96,11 @@ class CodegenContextViewModel(
         viewModelScope.launch {
             val template = screenState.protocolTemplates.firstOrNull()
             val definitions = loadDefinitions(template?.id ?: 0L)
-                screenState =
+            screenState =
                 screenState.copy(
                     selectedContextId = null,
                     availableContextDefinitions = definitions,
                     draft = createEmptyDraft(template),
-                    preview = null,
                     exportResult = null,
                     errorMessage = null,
                     statusMessage = "已创建新的建模配置。",
@@ -143,32 +135,6 @@ class CodegenContextViewModel(
                     screenState.copy(
                         saving = false,
                         errorMessage = throwable.message ?: "保存建模配置失败。",
-                    )
-            }
-        }
-    }
-
-    fun preview() {
-        viewModelScope.launch {
-            screenState =
-                screenState.copy(
-                    previewing = true,
-                    errorMessage = null,
-                    statusMessage = null,
-                )
-            runCatching {
-                val preview = contextApi.previewContext(screenState.draft)
-                screenState =
-                    screenState.copy(
-                        previewing = false,
-                        preview = preview,
-                        statusMessage = "预检已更新。",
-                    )
-            }.onFailure { throwable ->
-                screenState =
-                    screenState.copy(
-                        previewing = false,
-                        errorMessage = throwable.message ?: "预检失败。",
                     )
             }
         }
@@ -232,7 +198,6 @@ class CodegenContextViewModel(
                         selectedContextId = nextSelectedId,
                         availableContextDefinitions = definitions,
                         draft = nextDraft,
-                        preview = null,
                         exportResult = null,
                         statusMessage = "建模配置已删除。",
                     )
@@ -252,7 +217,6 @@ class CodegenContextViewModel(
         screenState =
             screenState.copy(
                 draft = transform(screenState.draft),
-                preview = null,
                 exportResult = null,
                 errorMessage = null,
             )
@@ -273,19 +237,7 @@ class CodegenContextViewModel(
                                 protocolTemplateId = protocolTemplateId ?: 0L,
                                 protocolTemplateCode = template?.code,
                                 protocolTemplateName = template?.name,
-                                exportSettings =
-                                    screenState.draft.exportSettings.let { settings ->
-                                        if (settings.kotlinClientTransports.isNotEmpty() || template == null) {
-                                            settings
-                                        } else {
-                                            settings.copy(
-                                                kotlinClientTransports =
-                                                    setOf(template.code.toDefaultKotlinTransport()),
-                                            )
-                                        }
-                                    },
                             ),
-                        preview = null,
                         exportResult = null,
                         errorMessage = null,
                     )
@@ -431,65 +383,11 @@ class CodegenContextViewModel(
         }
     }
 
-    fun toggleKotlinClientTransport(
-        transport: CodegenMetadataTransportKind,
-    ) {
-        updateExportSettings { settings ->
-            settings.copy(
-                kotlinClientTransports = settings.kotlinClientTransports.toggle(transport),
-            )
-        }
-    }
-
-    fun toggleCExposeTransport(
-        transport: CodegenMetadataTransportKind,
-    ) {
-        updateExportSettings { settings ->
-            settings.copy(
-                cExposeTransports = settings.cExposeTransports.toggle(transport),
-            )
-        }
-    }
-
-    fun toggleArtifactKind(
-        artifactKind: CodegenMetadataArtifactKind,
-    ) {
-        updateExportSettings { settings ->
-            settings.copy(
-                artifactKinds = settings.artifactKinds.toggle(artifactKind),
-            )
-        }
-    }
-
     fun updateFirmwareSync(
         transform: (CodegenMetadataFirmwareSyncDto) -> CodegenMetadataFirmwareSyncDto,
     ) {
         updateExportSettings { settings ->
             settings.copy(firmwareSync = transform(settings.firmwareSync))
-        }
-    }
-
-    fun updateRtuDefaults(
-        transform: (CodegenMetadataRtuDefaultsDraftDto) -> CodegenMetadataRtuDefaultsDraftDto,
-    ) {
-        updateExportSettings { settings ->
-            settings.copy(rtuDefaults = transform(settings.rtuDefaults))
-        }
-    }
-
-    fun updateTcpDefaults(
-        transform: (CodegenMetadataTcpDefaultsDraftDto) -> CodegenMetadataTcpDefaultsDraftDto,
-    ) {
-        updateExportSettings { settings ->
-            settings.copy(tcpDefaults = transform(settings.tcpDefaults))
-        }
-    }
-
-    fun updateMqttDefaults(
-        transform: (CodegenMetadataMqttDefaultsDraftDto) -> CodegenMetadataMqttDefaultsDraftDto,
-    ) {
-        updateExportSettings { settings ->
-            settings.copy(mqttDefaults = transform(settings.mqttDefaults))
         }
     }
 
@@ -517,15 +415,6 @@ class CodegenContextViewModel(
             protocolTemplateId = template?.id ?: 0L,
             protocolTemplateCode = template?.code,
             protocolTemplateName = template?.name,
-            exportSettings =
-                CodegenMetadataExportSettingsDto(
-                    kotlinClientTransports =
-                        template
-                            ?.code
-                            ?.toDefaultKotlinTransport()
-                            ?.let { transport -> setOf(transport) }
-                            .orEmpty(),
-                ),
         )
 
     private fun methodDefinitions(): List<CodegenContextDefinitionDto> =
@@ -610,18 +499,3 @@ private fun updateBindingValue(
         binding.copy(sortIndex = index)
     }
 }
-
-private fun <T> Set<T>.toggle(
-    value: T,
-): Set<T> =
-    if (value in this) {
-        this - value
-    } else {
-        this + value
-    }
-
-private fun String.toDefaultKotlinTransport(): CodegenMetadataTransportKind =
-    when (this) {
-        "MODBUS_TCP_CLIENT" -> CodegenMetadataTransportKind.TCP
-        else -> CodegenMetadataTransportKind.RTU
-    }

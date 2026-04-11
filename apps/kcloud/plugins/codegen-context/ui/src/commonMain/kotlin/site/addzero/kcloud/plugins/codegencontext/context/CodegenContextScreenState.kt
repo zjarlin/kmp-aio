@@ -4,16 +4,14 @@ import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextDefi
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextSummaryDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataDraftDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataExportResultDto
-import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenMetadataPreviewDto
 import site.addzero.kcloud.plugins.codegencontext.api.context.ProtocolTemplateOptionDto
 
 /**
- * 表示元数据管理页面状态。
+ * 表示元数据建模页面状态。
  */
 data class CodegenContextScreenState(
     val loading: Boolean = true,
     val saving: Boolean = false,
-    val previewing: Boolean = false,
     val exporting: Boolean = false,
     val deleting: Boolean = false,
     val errorMessage: String? = null,
@@ -24,6 +22,5 @@ data class CodegenContextScreenState(
     val selectedWorkbenchTab: CodegenContextWorkbenchTab = CodegenContextWorkbenchTab.DEVICE_FUNCTIONS,
     val availableContextDefinitions: List<CodegenContextDefinitionDto> = emptyList(),
     val draft: CodegenMetadataDraftDto = CodegenMetadataDraftDto(),
-    val preview: CodegenMetadataPreviewDto? = null,
     val exportResult: CodegenMetadataExportResultDto? = null,
 )

@@ -40,7 +40,7 @@ internal fun WorkbenchTabsPanel(
         )
     CupertinoPanel(
         title = "建模工作区",
-        subtitle = "设备功能和物模型字段改为显式 tab 展示，一次只聚焦一个维度编辑。",
+        subtitle = "这里只编辑设备功能和物模型字段两个维度，不再混入生成参数配置。",
     ) {
         tabSwitchSpi.Render(
             tabs = tabs,
@@ -63,7 +63,7 @@ internal fun DeviceFunctionsPanel(
     val methodDefinitions = definitions.filter { definition -> definition.targetKind == CodegenNodeKind.METHOD }
     CupertinoPanel(
         title = "设备功能",
-        subtitle = "这里只维护中文语义、字段绑定和协议上下文；方法名与请求/响应模型统一由后端 preview 决定。",
+        subtitle = "这里只维护功能定义、字段关联和协议上下文；命名推导与导出细节交给后端。",
         actions = {
             headerActionsSpi.Render(viewModel = viewModel)
         },
@@ -151,7 +151,7 @@ internal fun ThingPropertiesPanel(
     val propertyDefinitions = definitions.filter { definition -> definition.targetKind == CodegenNodeKind.FIELD }
     CupertinoPanel(
         title = "物模型字段",
-        subtitle = "字段只维护原始草稿和绑定上下文；属性名、类型推导全部由后端处理。",
+        subtitle = "这里只维护字段定义和协议绑定；属性命名与类型推导全部由后端处理。",
         actions = {
             headerActionsSpi.Render(viewModel = viewModel)
         },

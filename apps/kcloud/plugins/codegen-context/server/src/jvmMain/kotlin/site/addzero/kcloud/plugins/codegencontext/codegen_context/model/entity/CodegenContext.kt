@@ -28,6 +28,12 @@ interface CodegenContext : BaseEntity, CodegenNamed, ProtocolScoped {
      */
     val enabled: Boolean
 
+    @Column(name = "node_id")
+    /**
+     * 关联的 host-config 树节点 ID。
+     */
+    val nodeId: String?
+
     /**
      * 消费目标。
      */

@@ -60,6 +60,7 @@ internal fun CodegenContextDetailDto.normalizeGenericDetail(): CodegenContextDet
         name = name.trim(),
         description = description.cleanNullable(),
         enabled = enabled,
+        nodeId = nodeId.cleanNullable(),
         consumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
         externalCOutputRoot = externalCOutputRoot.cleanNullable(),
         generationSettings = generationSettings.normalizedGenerationSettings(),

@@ -9,7 +9,7 @@ val libs = versionCatalogs.named("libs")
 val hostConfigApiProject = project(":apps:kcloud:plugins:host-config:api")
 val hostConfigApiProjectDir = layout.projectDirectory.dir("../api")
 val hostConfigSharedProjectDir = layout.projectDirectory.dir("../shared")
-val hostConfigUiProject = project(":apps:kcloud:plugins:host-config:ui")
+val hostConfigUiProjectDir = layout.projectDirectory.dir("../ui")
 val generatedApiRootDir =
     hostConfigApiProject.layout.buildDirectory.dir("generated/source/controller2api/commonMain/kotlin")
 
@@ -23,22 +23,20 @@ val generatedApiOutputDir =
 val sharedSourceDir =
     hostConfigSharedProjectDir.dir("src/commonMain/kotlin")
 
+/** 同构体生成源码目录。 */
+val generatedIsoSourceDir =
+    hostConfigApiProjectDir.dir("generated/commonMain/kotlin")
+
 /** 同构体生成包。 */
 val generatedIsoPackage = "site.addzero.kcloud.plugins.hostconfig.generated.isomorphic"
 
-/** 同构体生成目录。 */
+/** 同构体生成源码输出目录。 */
 val generatedIsoOutputDir =
-    hostConfigApiProject
-        .layout
-        .buildDirectory
-        .dir("generated/ksp/commonMain/kotlin")
+    generatedIsoSourceDir.dir("site/addzero/kcloud/plugins/hostconfig/generated/isomorphic")
 
-/** 前端生成源码目录。 */
-val sharedComposeSourceDir =
-    hostConfigUiProject
-        .layout
-        .buildDirectory
-        .dir("generated/ksp/commonMain/kotlin")
+/** 前端表单生成源码目录。 */
+val generatedUiFormSourceDir =
+    hostConfigUiProjectDir.dir("generated/commonMain/kotlin")
 
 /** 当前 server 源码目录。 */
 val backendServerSourceDir = layout.projectDirectory.dir("src/jvmMain/kotlin")
@@ -47,11 +45,11 @@ ksp {
     arg("apiClientPackageName", "site.addzero.kcloud.plugins.hostconfig.api.external.generated")
     arg("apiClientOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
     arg("apiClientAggregatorOutputDir", generatedApiOutputDir.get().asFile.absolutePath)
-    arg("sharedSourceDir", sharedSourceDir.asFile.absolutePath)
-    arg("sharedComposeSourceDir", sharedComposeSourceDir.get().asFile.absolutePath)
+    arg("sharedSourceDir", generatedIsoSourceDir.asFile.absolutePath)
+    arg("sharedComposeSourceDir", generatedUiFormSourceDir.asFile.absolutePath)
     arg("backendServerSourceDir", backendServerSourceDir.asFile.absolutePath)
     arg("isomorphicPkg", generatedIsoPackage)
-    arg("isomorphicGenDir", generatedIsoOutputDir.get().asFile.absolutePath)
+    arg("isomorphicGenDir", generatedIsoOutputDir.asFile.absolutePath)
     arg("isomorphicPackageName", generatedIsoPackage)
     arg("isomorphicClassSuffix", "Iso")
     arg("isomorphicSerializableEnabled", "true")
@@ -92,13 +90,15 @@ kotlin {
 
 val cleanHostConfigGeneratedApis by tasks.registering(Delete::class) {
     delete(generatedApiRootDir.get().asFile)
-    delete(generatedIsoOutputDir.get().asFile)
-    delete(sharedComposeSourceDir.get().asFile)
+    delete(generatedIsoSourceDir.asFile)
+    delete(generatedUiFormSourceDir.asFile)
 }
 
 tasks.matching { task ->
     task.name == "kspKotlinJvm"
 }.configureEach {
     outputs.dir(generatedApiRootDir)
+    outputs.dir(generatedIsoSourceDir)
+    outputs.dir(generatedUiFormSourceDir)
     dependsOn(cleanHostConfigGeneratedApis)
 }

@@ -1,6 +1,5 @@
 @file:OptIn(ExperimentalKotlinGradlePluginApi::class)
 
-import org.gradle.platform.base.internal.DefaultBinaryNamingScheme.component
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 
 plugins {
@@ -17,7 +16,11 @@ val routeOwnerModuleDir =
     gradle.gradleUserHomeDir
         .resolve("addzero/route-owner/${rootProject.name}/apps-kcloud-ui/commonMain/kotlin")
         .absolutePath
-val generatedKspSourceDir = layout.buildDirectory.dir("generated/ksp/commonMain/kotlin")
+val addzeroComposeTableSourceDir =
+    "/Users/zjarlin/IdeaProjects/addzero-lib-jvm/lib/compose/compose-native-component-table/src/commonMain/kotlin"
+val addzeroComposeTableCoreSourceDir =
+    "/Users/zjarlin/IdeaProjects/addzero-lib-jvm/lib/compose/compose-native-component-table-core/src/commonMain/kotlin"
+val generatedKspSourceDir = layout.projectDirectory.dir("generated/commonMain/kotlin")
 val generateHostConfigUiFormsTaskPath = ":apps:kcloud:plugins:host-config:server:kspKotlinJvm"
 
 ksp {
@@ -53,6 +56,8 @@ kotlin {
 
     sourceSets {
         commonMain {
+            kotlin.srcDir(addzeroComposeTableSourceDir)
+            kotlin.srcDir(addzeroComposeTableCoreSourceDir)
             kotlin.srcDir(generatedKspSourceDir)
         }
     }

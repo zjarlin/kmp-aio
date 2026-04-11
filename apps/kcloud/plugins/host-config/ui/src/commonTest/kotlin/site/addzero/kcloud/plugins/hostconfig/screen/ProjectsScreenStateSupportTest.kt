@@ -3,6 +3,7 @@ package site.addzero.kcloud.plugins.hostconfig.screen
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import site.addzero.kcloud.plugins.hostconfig.api.project.ProjectResponse
 import site.addzero.kcloud.plugins.hostconfig.api.project.DeviceTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ModuleTreeNode
 import site.addzero.kcloud.plugins.hostconfig.api.project.ProtocolTransportConfig
@@ -15,8 +16,11 @@ import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFiel
 import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFieldWidget
 import site.addzero.kcloud.plugins.hostconfig.api.template.ProtocolTransportFormMetadataResponse
 import site.addzero.kcloud.plugins.hostconfig.api.template.TemplateOptionResponse
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
+import site.addzero.kcloud.plugins.hostconfig.common.HostConfigTreeNode
 import site.addzero.kcloud.plugins.hostconfig.model.enums.TransportType
 import site.addzero.kcloud.plugins.hostconfig.projects.findModule
+import site.addzero.kcloud.plugins.hostconfig.projects.ProjectsScreenState
 
 /**
  * 验证项目界面状态辅助逻辑。
@@ -231,6 +235,104 @@ class ProjectsScreenStateSupportTest {
         val summary = config.toSummary(buildRtuMetadata())
 
         assertEquals("COM4 / 9600 / -", summary)
+    }
+
+    @Test
+    /**
+     * 处理标签创建入口只保留在模块节点。
+     */
+    fun shouldOnlyExposeCreateTagActionOnModuleNode() {
+        val moduleNode =
+            HostConfigTreeNode(
+                id = "module:31",
+                kind = HostConfigNodeKind.MODULE,
+                projectId = 1,
+                entityId = 31,
+                parentEntityId = 21,
+                label = "模块A",
+            )
+        val deviceNode =
+            HostConfigTreeNode(
+                id = "device:21",
+                kind = HostConfigNodeKind.DEVICE,
+                projectId = 1,
+                entityId = 21,
+                parentEntityId = 11,
+                label = "设备A",
+            )
+        val state =
+            ProjectsScreenState(
+                treeNodes = listOf(moduleNode, deviceNode),
+                selectedNodeId = moduleNode.id,
+            )
+
+        val createSpec = resolveCurrentCreateSpec(state)
+        val moduleMenu = resolveNodeActionMenu(state, moduleNode)
+        val deviceMenu = resolveNodeActionMenu(state, deviceNode)
+
+        assertEquals(NodeActionType.CREATE_TAG, createSpec.actionType)
+        assertEquals(true, createSpec.enabled)
+        assertEquals(true, moduleMenu.items.any { item -> item.type == NodeActionType.CREATE_TAG })
+        assertEquals(false, deviceMenu.items.any { item -> item.type == NodeActionType.CREATE_TAG })
+    }
+
+    @Test
+    /**
+     * 处理移动上级候选按目标值去重。
+     */
+    fun shouldDeduplicateMoveOptionsByTargetValue() {
+        val currentProtocol =
+            ProtocolTreeNode(
+                id = 11,
+                name = "协议A",
+                pollingIntervalMs = 1000,
+                sortIndex = 0,
+                protocolTemplateId = 101,
+                protocolTemplateCode = "protocol-a",
+                protocolTemplateName = "协议模板A",
+                transportConfig = ProtocolTransportConfig(transportType = TransportType.TCP),
+                devices = emptyList(),
+            )
+        val state =
+            ProjectsScreenState(
+                projects = listOf(
+                    ProjectResponse(1, "工程A", null, null, 0, 0, 0),
+                    ProjectResponse(2, "工程B", null, null, 0, 0, 0),
+                    ProjectResponse(2, "工程B", null, null, 0, 0, 0),
+                ),
+                projectTrees = listOf(
+                    ProjectTreeResponse(
+                        id = 1,
+                        name = "工程A",
+                        description = null,
+                        remark = null,
+                        sortIndex = 0,
+                        protocols = listOf(currentProtocol),
+                        modules = emptyList(),
+                    ),
+                    ProjectTreeResponse(
+                        id = 2,
+                        name = "工程B",
+                        description = null,
+                        remark = null,
+                        sortIndex = 0,
+                        protocols = emptyList(),
+                        modules = emptyList(),
+                    ),
+                ),
+            )
+        val node =
+            HostConfigTreeNode(
+                id = "protocol:11",
+                kind = HostConfigNodeKind.PROTOCOL,
+                projectId = 1,
+                entityId = 11,
+                label = "协议A",
+            )
+
+        val options = resolveMoveOptions(state, node)
+
+        assertEquals(listOf("project:1", "project:2"), options.map { option -> option.value })
     }
 }
 

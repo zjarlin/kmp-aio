@@ -143,6 +143,7 @@ data class CodegenMetadataDraftDto(
     val name: String = "",
     val description: String? = null,
     val enabled: Boolean = true,
+    val nodeId: String = "",
     val consumerTarget: CodegenConsumerTarget = CodegenConsumerTarget.MCU_CONSOLE,
     val protocolTemplateId: Long = 0,
     val protocolTemplateCode: String? = null,

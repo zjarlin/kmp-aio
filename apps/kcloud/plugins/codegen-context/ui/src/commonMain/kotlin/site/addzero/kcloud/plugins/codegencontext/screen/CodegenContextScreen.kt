@@ -29,7 +29,7 @@ import site.addzero.kcloud.plugins.codegencontext.context.CodegenContextViewMode
 import site.addzero.kcloud.plugins.codegencontext.screen.contexts.CodegenContextSidebarHeaderSpi
 
 @Route(
-    title = "元数据管理",
+    title = "元数据建模与导出",
     routePath = "codegen-context/contexts",
     icon = "Code",
     order = 40.0,
@@ -54,7 +54,7 @@ fun CodegenContextScreen() {
             selectedId = state.selectedContextId,
             onNodeClick = { viewModel.selectContext(it.id) },
             modifier = Modifier.fillMaxHeight().weight(0.26f),
-            searchPlaceholder = "搜索元数据草稿",
+            searchPlaceholder = "搜索建模配置",
             getId = { it.id },
             getLabel = { it.name.ifBlank { it.code } },
             getChildren = { emptyList() },

@@ -8,12 +8,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -23,14 +21,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.robinpcrd.cupertino.CupertinoText
 import io.github.robinpcrd.cupertino.theme.CupertinoTheme
+import org.koin.compose.koinInject
+import site.addzero.component.table.original.TableOriginal
+import site.addzero.component.table.original.entity.ColumnConfig
+import site.addzero.component.table.original.entity.TableLayoutConfig
+import site.addzero.cupertino.workbench.button.WorkbenchActionButton
+import site.addzero.cupertino.workbench.button.WorkbenchButtonVariant
 import site.addzero.cupertino.workbench.components.panel.CupertinoPanel
 import site.addzero.cupertino.workbench.components.panel.CupertinoSectionTitle
 import site.addzero.cupertino.workbench.components.panel.CupertinoStatusStrip
-import org.koin.compose.koinInject
 import site.addzero.kcloud.plugins.hostconfig.api.template.ModuleTemplateOptionResponse
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigModuleBoard
 import site.addzero.kcloud.plugins.hostconfig.common.HostConfigNodeKind
@@ -59,7 +61,6 @@ internal fun NodeChildrenPanel(
     onNextTagPage: () -> Unit,
 ) {
     val panelActionsSpi = koinInject<ProjectsNodeChildrenPanelActionsSpi>()
-    val interactiveSurfaceSpi = koinInject<ProjectsInteractiveSurfaceSpi>()
     val nodeKind = resolveSelectedNodeKind(state)
     val actions = remember(onPrevTagPage, onNextTagPage) {
         ProjectsNodeChildrenPanelActions(
@@ -88,26 +89,33 @@ internal fun NodeChildrenPanel(
                 }
                 ChildNodeTableSection(
                     title = "协议",
-                    columns = listOf("协议", "模板", "轮询(ms)", "设备数", "通信摘要", "排序"),
+                    columns = listOf(
+                        ChildNodeTableColumn("protocol", "协议", 188f),
+                        ChildNodeTableColumn("template", "模板", 150f),
+                        ChildNodeTableColumn("polling", "轮询(ms)", 116f),
+                        ChildNodeTableColumn("deviceCount", "设备数", 96f),
+                        ChildNodeTableColumn("summary", "通信摘要", 220f),
+                        ChildNodeTableColumn("sortIndex", "排序", 88f),
+                    ),
                     rows = projectTree.protocols.map { protocol ->
                         ChildNodeTableRow(
-                            cells = listOf(
-                                protocol.displayName(),
-                                protocol.protocolTemplateName,
-                                protocol.pollingIntervalMs.toString(),
-                                protocol.devices.size.toString(),
-                                protocol.transportConfig
+                            id = protocol.id.toString(),
+                            cells = mapOf(
+                                "protocol" to protocol.displayName(),
+                                "template" to protocol.protocolTemplateName,
+                                "polling" to protocol.pollingIntervalMs.toString(),
+                                "deviceCount" to protocol.devices.size.toString(),
+                                "summary" to protocol.transportConfig
                                     ?.toSummary(resolveProtocolTemplateMetadata(state, protocol.protocolTemplateId))
                                     .orEmpty()
                                     .ifBlank { "-" },
-                                protocol.sortIndex.toString(),
+                                "sortIndex" to protocol.sortIndex.toString(),
                             ),
                             onClick = {
                                 onSelectNode(ProjectsViewModel.buildProtocolNodeId(projectTree.id, protocol.id))
                             },
                         )
                     },
-                    interactiveSurfaceSpi = interactiveSurfaceSpi,
                 )
             }
 
@@ -120,23 +128,30 @@ internal fun NodeChildrenPanel(
                 }
                 ChildNodeTableSection(
                     title = "设备",
-                    columns = listOf("设备", "类型", "站号", "模块数", "标签数", "排序"),
+                    columns = listOf(
+                        ChildNodeTableColumn("name", "设备", 176f),
+                        ChildNodeTableColumn("deviceType", "类型", 132f),
+                        ChildNodeTableColumn("stationNo", "站号", 92f),
+                        ChildNodeTableColumn("moduleCount", "模块数", 92f),
+                        ChildNodeTableColumn("tagCount", "标签数", 92f),
+                        ChildNodeTableColumn("sortIndex", "排序", 88f),
+                    ),
                     rows = protocol.devices.map { device ->
                         ChildNodeTableRow(
-                            cells = listOf(
-                                device.name,
-                                device.deviceTypeName,
-                                device.stationNo.toString(),
-                                device.modules.size.toString(),
-                                device.tags.size.toString(),
-                                device.sortIndex.toString(),
+                            id = device.id.toString(),
+                            cells = mapOf(
+                                "name" to device.name,
+                                "deviceType" to device.deviceTypeName,
+                                "stationNo" to device.stationNo.toString(),
+                                "moduleCount" to device.modules.size.toString(),
+                                "tagCount" to device.tags.size.toString(),
+                                "sortIndex" to device.sortIndex.toString(),
                             ),
                             onClick = {
                                 onSelectNode(ProjectsViewModel.buildDeviceNodeId(projectId, device.id))
                             },
                         )
                     },
-                    interactiveSurfaceSpi = interactiveSurfaceSpi,
                 )
             }
 
@@ -159,38 +174,52 @@ internal fun NodeChildrenPanel(
                 if (device.modules.isNotEmpty()) {
                     ChildNodeTableSection(
                         title = "模块",
-                        columns = listOf("模块", "模板", "模板编码", "排序"),
+                        columns = listOf(
+                            ChildNodeTableColumn("name", "模块", 176f),
+                            ChildNodeTableColumn("templateName", "模板", 164f),
+                            ChildNodeTableColumn("templateCode", "模板编码", 176f),
+                            ChildNodeTableColumn("sortIndex", "排序", 88f),
+                        ),
                         rows = device.modules.map { module ->
                             ChildNodeTableRow(
-                                cells = listOf(
-                                    module.name,
-                                    module.moduleTemplateName,
-                                    module.moduleTemplateCode,
-                                    module.sortIndex.toString(),
+                                id = module.id.toString(),
+                                cells = mapOf(
+                                    "name" to module.name,
+                                    "templateName" to module.moduleTemplateName,
+                                    "templateCode" to module.moduleTemplateCode,
+                                    "sortIndex" to module.sortIndex.toString(),
                                 ),
                                 onClick = {
                                     onSelectNode(ProjectsViewModel.buildModuleNodeId(projectId, module.id))
                                 },
                             )
                         },
-                        interactiveSurfaceSpi = interactiveSurfaceSpi,
                     )
                 }
                 if (state.tagPage.d.isNotEmpty()) {
                     ChildNodeTableSection(
                         title = "标签",
                         subtitle = "分页偏移 ${state.tagOffset} / 共 ${state.tagPage.t} 条",
-                        columns = listOf("点名", "开关", "寄存器类型", "寄存器地址", "数据类型", "BACnet类型", "BACnet地址"),
+                        columns = listOf(
+                            ChildNodeTableColumn("name", "点名", 188f),
+                            ChildNodeTableColumn("enabled", "开关", 88f),
+                            ChildNodeTableColumn("registerType", "寄存器类型", 132f),
+                            ChildNodeTableColumn("registerAddress", "寄存器地址", 132f),
+                            ChildNodeTableColumn("dataType", "数据类型", 132f),
+                            ChildNodeTableColumn("forwardRegisterType", "BACnet类型", 148f),
+                            ChildNodeTableColumn("forwardRegisterAddress", "BACnet地址", 148f),
+                        ),
                         rows = state.tagPage.d.map { tag ->
                             ChildNodeTableRow(
-                                cells = listOf(
-                                    tag.name,
-                                    if (tag.enabled) "开" else "关",
-                                    tag.registerTypeName,
-                                    tag.registerAddress.toString(),
-                                    tag.dataTypeName,
-                                    tag.forwardRegisterTypeName ?: "-",
-                                    tag.forwardRegisterAddress?.toString() ?: "-",
+                                id = tag.id.toString(),
+                                cells = mapOf(
+                                    "name" to tag.name,
+                                    "enabled" to if (tag.enabled) "开" else "关",
+                                    "registerType" to tag.registerTypeName,
+                                    "registerAddress" to tag.registerAddress.toString(),
+                                    "dataType" to tag.dataTypeName,
+                                    "forwardRegisterType" to (tag.forwardRegisterTypeName ?: "-"),
+                                    "forwardRegisterAddress" to (tag.forwardRegisterAddress?.toString() ?: "-"),
                                 ),
                                 onClick = {
                                     onSelectNode(
@@ -203,7 +232,6 @@ internal fun NodeChildrenPanel(
                                 },
                             )
                         },
-                        interactiveSurfaceSpi = interactiveSurfaceSpi,
                     )
                 }
             }
@@ -220,39 +248,77 @@ internal fun NodeChildrenPanel(
                 }
                 ChildNodeTableSection(
                     title = "值文本",
-                    columns = listOf("显示文本", "原始值", "排序"),
+                    columns = listOf(
+                        ChildNodeTableColumn("displayText", "显示文本", 188f),
+                        ChildNodeTableColumn("rawValue", "原始值", 148f),
+                        ChildNodeTableColumn("sortIndex", "排序", 88f),
+                    ),
                     rows = tag.valueTexts.map { item ->
                         ChildNodeTableRow(
-                            cells = listOf(
-                                item.displayText,
-                                item.rawValue,
-                                item.sortIndex.toString(),
+                            id = item.id.toString(),
+                            cells = mapOf(
+                                "displayText" to item.displayText,
+                                "rawValue" to item.rawValue,
+                                "sortIndex" to item.sortIndex.toString(),
                             ),
                         )
                     },
-                    interactiveSurfaceSpi = interactiveSurfaceSpi,
                 )
             }
         }
     }
 }
 
+private data class ChildNodeTableColumn(
+    val key: String,
+    val label: String,
+    val widthDp: Float = 148f,
+)
+
 private data class ChildNodeTableRow(
-    val cells: List<String>,
+    val id: String,
+    val cells: Map<String, String>,
     val onClick: (() -> Unit)? = null,
 )
 
 @Composable
 private fun ChildNodeTableSection(
     title: String,
-    columns: List<String>,
+    columns: List<ChildNodeTableColumn>,
     rows: List<ChildNodeTableRow>,
-    interactiveSurfaceSpi: ProjectsInteractiveSurfaceSpi,
     subtitle: String? = null,
 ) {
-    val horizontalScrollState = rememberScrollState()
-    val tableShape = RoundedCornerShape(16.dp)
-    val columnWidth = 156.dp
+    val hasRowAction = rows.any { row ->
+        row.onClick != null
+    }
+    val layoutConfig = remember(hasRowAction) {
+        TableLayoutConfig(
+            indexColumnWidthDp = 56f,
+            actionColumnWidthDp = 112f,
+            headerHeightDp = 50f,
+            rowHeightDp = 54f,
+            defaultColumnWidthDp = 148f,
+            enableAutoWidth = true,
+            autoWidthMinDp = 88f,
+            autoWidthMaxDp = 240f,
+        )
+    }
+    val columnConfigs = remember(columns) {
+        columns.mapIndexed { index, column ->
+            ColumnConfig(
+                key = column.key,
+                comment = column.label,
+                width = column.widthDp,
+                order = index,
+                showFilter = false,
+                showSort = false,
+            )
+        }
+    }
+    val tableHeight = remember(rows.size, layoutConfig) {
+        val visibleRowCount = rows.size.coerceIn(1, 6)
+        (layoutConfig.headerHeightDp + (layoutConfig.rowHeightDp * visibleRowCount) + 2f).dp
+    }
 
     CupertinoSectionTitle(title)
     subtitle?.takeIf { it.isNotBlank() }?.let { text ->
@@ -263,88 +329,54 @@ private fun ChildNodeTableSection(
         )
         Spacer(modifier = Modifier.height(6.dp))
     }
-    Row(
+    TableOriginal(
+        data = rows,
+        columns = columns,
+        getColumnKey = { column ->
+            column.key
+        },
+        getRowId = { row ->
+            row.id
+        },
+        columnConfigs = columnConfigs,
+        layoutConfig = layoutConfig,
+        getColumnLabel = { column ->
+            CupertinoText(
+                text = column.label,
+                style = CupertinoTheme.typography.subhead,
+                color = CupertinoTheme.colorScheme.label,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        getCellContent = { row, column ->
+            CupertinoText(
+                text = row.cells[column.key].orEmpty(),
+                style = CupertinoTheme.typography.footnote,
+                color = CupertinoTheme.colorScheme.secondaryLabel,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+        rowActionSlot = if (hasRowAction) {
+            { row ->
+                val onClick = row.onClick
+                if (onClick != null) {
+                    WorkbenchActionButton(
+                        text = "查看",
+                        onClick = onClick,
+                        variant = WorkbenchButtonVariant.Outline,
+                    )
+                } else {
+                    Spacer(modifier = Modifier.width(1.dp))
+                }
+            }
+        } else {
+            null
+        },
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(horizontalScrollState)
-            .clip(tableShape)
-            .border(
-                width = 1.dp,
-                color = CupertinoTheme.colorScheme.separator.copy(alpha = 0.28f),
-                shape = tableShape,
-            ),
-    ) {
-        Column(
-            modifier = Modifier
-                .widthIn(min = columnWidth * columns.size)
-                .background(CupertinoTheme.colorScheme.secondarySystemGroupedBackground),
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CupertinoTheme.colorScheme.tertiarySystemGroupedBackground)
-                    .padding(horizontal = 8.dp, vertical = 10.dp),
-            ) {
-                columns.forEach { column ->
-                    ChildNodeTableCell(
-                        text = column,
-                        width = columnWidth,
-                        emphasis = true,
-                    )
-                }
-            }
-            rows.forEachIndexed { index, row ->
-                interactiveSurfaceSpi.Render(
-                    modifier = Modifier.fillMaxWidth(),
-                    actions = remember(row.onClick) {
-                        ProjectsInteractiveSurfaceActions(onClick = row.onClick)
-                    },
-                ) { interactiveModifier ->
-                    Row(
-                        modifier = interactiveModifier
-                            .fillMaxWidth()
-                            .background(
-                                if (index % 2 == 0) {
-                                    CupertinoTheme.colorScheme.secondarySystemGroupedBackground
-                                } else {
-                                    CupertinoTheme.colorScheme.systemGroupedBackground
-                                },
-                            )
-                            .padding(horizontal = 8.dp, vertical = 10.dp),
-                    ) {
-                        row.cells.forEach { cell ->
-                            ChildNodeTableCell(
-                                text = cell,
-                                width = columnWidth,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChildNodeTableCell(
-    text: String,
-    width: Dp,
-    emphasis: Boolean = false,
-) {
-    CupertinoText(
-        text = text,
-        modifier = Modifier
-            .width(width)
-            .defaultMinSize(minHeight = 24.dp)
-            .padding(horizontal = 8.dp),
-        style = if (emphasis) CupertinoTheme.typography.subhead else CupertinoTheme.typography.body,
-        color = if (emphasis) {
-            CupertinoTheme.colorScheme.label
-        } else {
-            CupertinoTheme.colorScheme.secondaryLabel
-        },
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
+            .height(tableHeight),
     )
 }
 
