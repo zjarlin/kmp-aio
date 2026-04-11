@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -61,9 +38,7 @@ object TagFormProps {
     const val forwardRegisterType = "forwardRegisterType"
     const val valueTexts = "valueTexts"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "name", "description", "registerAddress", "enabled", "defaultValue", "exceptionValue", "pointType", "debounceMs", "sortIndex", "scalingEnabled", "scalingOffset", "rawMin", "rawMax", "engMin", "engMax", "forwardEnabled", "forwardRegisterAddress", "device", "dataType", "registerType", "forwardRegisterType", "valueTexts")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "name", "description", "registerAddress", "enabled", "defaultValue", "exceptionValue", "pointType", "debounceMs", "sortIndex", "scalingEnabled", "scalingOffset", "rawMin", "rawMax", "engMin", "engMax", "forwardEnabled", "forwardRegisterAddress", "device", "dataType", "registerType", "forwardRegisterType", "valueTexts")
 }
 
 @Composable
@@ -98,8 +73,11 @@ fun TagFormOriginal(
         TagFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -108,8 +86,11 @@ fun TagFormOriginal(
         TagFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -118,8 +99,8 @@ fun TagFormOriginal(
         TagFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -128,8 +109,8 @@ fun TagFormOriginal(
         TagFormProps.description to {
             AddTextField(
                 value = state.value.description?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(description = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(description = value.ifEmpty { null })
                 },
                 label = "description",
                 isRequired = false
@@ -138,28 +119,28 @@ fun TagFormOriginal(
         TagFormProps.registerAddress to {
             AddTextField(
                 value = state.value.registerAddress?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(registerAddress = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(registerAddress = parsed)
+                    }
                 },
                 label = "registerAddress",
                 isRequired = true
             )
         },
         TagFormProps.enabled to {
-            AddTextField(
-                value = state.value.enabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(enabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "enabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.enabled ?: false,
+                onValueChange = { state.value = state.value.copy(enabled = it) },
+                label = "enabled"
             )
         },
         TagFormProps.defaultValue to {
             AddTextField(
                 value = state.value.defaultValue?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(defaultValue = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(defaultValue = value.ifEmpty { null })
                 },
                 label = "defaultValue",
                 isRequired = false
@@ -168,8 +149,8 @@ fun TagFormOriginal(
         TagFormProps.exceptionValue to {
             AddTextField(
                 value = state.value.exceptionValue?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(exceptionValue = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(exceptionValue = value.ifEmpty { null })
                 },
                 label = "exceptionValue",
                 isRequired = false
@@ -178,8 +159,12 @@ fun TagFormOriginal(
         TagFormProps.pointType to {
             AddTextField(
                 value = state.value.pointType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(pointType = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = PointType.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(pointType = null)
+                        parsed != null -> state.value = state.value.copy(pointType = parsed)
+                    }
                 },
                 label = "pointType",
                 isRequired = false
@@ -188,8 +173,12 @@ fun TagFormOriginal(
         TagFormProps.debounceMs to {
             AddTextField(
                 value = state.value.debounceMs?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(debounceMs = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(debounceMs = null)
+                        parsed != null -> state.value = state.value.copy(debounceMs = parsed)
+                    }
                 },
                 label = "debounceMs",
                 isRequired = false
@@ -198,28 +187,28 @@ fun TagFormOriginal(
         TagFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
             )
         },
         TagFormProps.scalingEnabled to {
-            AddTextField(
-                value = state.value.scalingEnabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(scalingEnabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "scalingEnabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.scalingEnabled ?: false,
+                onValueChange = { state.value = state.value.copy(scalingEnabled = it) },
+                label = "scalingEnabled"
             )
         },
         TagFormProps.scalingOffset to {
             AddTextField(
                 value = state.value.scalingOffset?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(scalingOffset = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(scalingOffset = value.ifEmpty { null })
                 },
                 label = "scalingOffset",
                 isRequired = false
@@ -228,8 +217,8 @@ fun TagFormOriginal(
         TagFormProps.rawMin to {
             AddTextField(
                 value = state.value.rawMin?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(rawMin = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(rawMin = value.ifEmpty { null })
                 },
                 label = "rawMin",
                 isRequired = false
@@ -238,8 +227,8 @@ fun TagFormOriginal(
         TagFormProps.rawMax to {
             AddTextField(
                 value = state.value.rawMax?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(rawMax = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(rawMax = value.ifEmpty { null })
                 },
                 label = "rawMax",
                 isRequired = false
@@ -248,8 +237,8 @@ fun TagFormOriginal(
         TagFormProps.engMin to {
             AddTextField(
                 value = state.value.engMin?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(engMin = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(engMin = value.ifEmpty { null })
                 },
                 label = "engMin",
                 isRequired = false
@@ -258,28 +247,29 @@ fun TagFormOriginal(
         TagFormProps.engMax to {
             AddTextField(
                 value = state.value.engMax?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(engMax = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(engMax = value.ifEmpty { null })
                 },
                 label = "engMax",
                 isRequired = false
             )
         },
         TagFormProps.forwardEnabled to {
-            AddTextField(
-                value = state.value.forwardEnabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(forwardEnabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "forwardEnabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.forwardEnabled ?: false,
+                onValueChange = { state.value = state.value.copy(forwardEnabled = it) },
+                label = "forwardEnabled"
             )
         },
         TagFormProps.forwardRegisterAddress to {
             AddTextField(
                 value = state.value.forwardRegisterAddress?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(forwardRegisterAddress = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(forwardRegisterAddress = null)
+                        parsed != null -> state.value = state.value.copy(forwardRegisterAddress = parsed)
+                    }
                 },
                 label = "forwardRegisterAddress",
                 isRequired = false
@@ -288,82 +278,66 @@ fun TagFormOriginal(
         TagFormProps.device to {
             AddTextField(
                 value = state.value.device?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(device = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "device",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         TagFormProps.dataType to {
             AddTextField(
                 value = state.value.dataType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(dataType = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "dataType",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         TagFormProps.registerType to {
             AddTextField(
                 value = state.value.registerType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(registerType = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "registerType",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         TagFormProps.forwardRegisterType to {
             AddTextField(
                 value = state.value.forwardRegisterType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(forwardRegisterType = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "forwardRegisterType",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         TagFormProps.valueTexts to {
             AddTextField(
                 value = state.value.valueTexts?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(valueTexts = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "valueTexts",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class TagFormDsl(
     val state: MutableState<TagIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -388,10 +362,7 @@ class TagFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -413,10 +384,7 @@ class TagFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun name(
@@ -438,10 +406,7 @@ class TagFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun description(
@@ -463,10 +428,7 @@ class TagFormDsl(
                 renderMap.remove("description")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("description", orderValue)
-        }
+        order?.let { updateFieldOrder("description", it) }
     }
 
     fun registerAddress(
@@ -488,10 +450,7 @@ class TagFormDsl(
                 renderMap.remove("registerAddress")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("registerAddress", orderValue)
-        }
+        order?.let { updateFieldOrder("registerAddress", it) }
     }
 
     fun enabled(
@@ -513,10 +472,7 @@ class TagFormDsl(
                 renderMap.remove("enabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("enabled", orderValue)
-        }
+        order?.let { updateFieldOrder("enabled", it) }
     }
 
     fun defaultValue(
@@ -538,10 +494,7 @@ class TagFormDsl(
                 renderMap.remove("defaultValue")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("defaultValue", orderValue)
-        }
+        order?.let { updateFieldOrder("defaultValue", it) }
     }
 
     fun exceptionValue(
@@ -563,10 +516,7 @@ class TagFormDsl(
                 renderMap.remove("exceptionValue")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("exceptionValue", orderValue)
-        }
+        order?.let { updateFieldOrder("exceptionValue", it) }
     }
 
     fun pointType(
@@ -588,10 +538,7 @@ class TagFormDsl(
                 renderMap.remove("pointType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("pointType", orderValue)
-        }
+        order?.let { updateFieldOrder("pointType", it) }
     }
 
     fun debounceMs(
@@ -613,10 +560,7 @@ class TagFormDsl(
                 renderMap.remove("debounceMs")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("debounceMs", orderValue)
-        }
+        order?.let { updateFieldOrder("debounceMs", it) }
     }
 
     fun sortIndex(
@@ -638,10 +582,7 @@ class TagFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun scalingEnabled(
@@ -663,10 +604,7 @@ class TagFormDsl(
                 renderMap.remove("scalingEnabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("scalingEnabled", orderValue)
-        }
+        order?.let { updateFieldOrder("scalingEnabled", it) }
     }
 
     fun scalingOffset(
@@ -688,10 +626,7 @@ class TagFormDsl(
                 renderMap.remove("scalingOffset")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("scalingOffset", orderValue)
-        }
+        order?.let { updateFieldOrder("scalingOffset", it) }
     }
 
     fun rawMin(
@@ -713,10 +648,7 @@ class TagFormDsl(
                 renderMap.remove("rawMin")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("rawMin", orderValue)
-        }
+        order?.let { updateFieldOrder("rawMin", it) }
     }
 
     fun rawMax(
@@ -738,10 +670,7 @@ class TagFormDsl(
                 renderMap.remove("rawMax")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("rawMax", orderValue)
-        }
+        order?.let { updateFieldOrder("rawMax", it) }
     }
 
     fun engMin(
@@ -763,10 +692,7 @@ class TagFormDsl(
                 renderMap.remove("engMin")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("engMin", orderValue)
-        }
+        order?.let { updateFieldOrder("engMin", it) }
     }
 
     fun engMax(
@@ -788,10 +714,7 @@ class TagFormDsl(
                 renderMap.remove("engMax")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("engMax", orderValue)
-        }
+        order?.let { updateFieldOrder("engMax", it) }
     }
 
     fun forwardEnabled(
@@ -813,10 +736,7 @@ class TagFormDsl(
                 renderMap.remove("forwardEnabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("forwardEnabled", orderValue)
-        }
+        order?.let { updateFieldOrder("forwardEnabled", it) }
     }
 
     fun forwardRegisterAddress(
@@ -838,10 +758,7 @@ class TagFormDsl(
                 renderMap.remove("forwardRegisterAddress")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("forwardRegisterAddress", orderValue)
-        }
+        order?.let { updateFieldOrder("forwardRegisterAddress", it) }
     }
 
     fun device(
@@ -863,10 +780,7 @@ class TagFormDsl(
                 renderMap.remove("device")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("device", orderValue)
-        }
+        order?.let { updateFieldOrder("device", it) }
     }
 
     fun dataType(
@@ -888,10 +802,7 @@ class TagFormDsl(
                 renderMap.remove("dataType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("dataType", orderValue)
-        }
+        order?.let { updateFieldOrder("dataType", it) }
     }
 
     fun registerType(
@@ -913,10 +824,7 @@ class TagFormDsl(
                 renderMap.remove("registerType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("registerType", orderValue)
-        }
+        order?.let { updateFieldOrder("registerType", it) }
     }
 
     fun forwardRegisterType(
@@ -938,10 +846,7 @@ class TagFormDsl(
                 renderMap.remove("forwardRegisterType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("forwardRegisterType", orderValue)
-        }
+        order?.let { updateFieldOrder("forwardRegisterType", it) }
     }
 
     fun valueTexts(
@@ -963,10 +868,7 @@ class TagFormDsl(
                 renderMap.remove("valueTexts")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("valueTexts", orderValue)
-        }
+        order?.let { updateFieldOrder("valueTexts", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -976,26 +878,6 @@ class TagFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(TagFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(TagFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -1011,7 +893,6 @@ class TagFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

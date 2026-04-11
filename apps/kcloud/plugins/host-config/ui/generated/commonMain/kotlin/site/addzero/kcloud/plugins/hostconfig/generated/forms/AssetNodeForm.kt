@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -57,9 +34,7 @@ object AssetNodeFormProps {
     const val properties = "properties"
     const val features = "features"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "nodeType", "code", "name", "description", "enabled", "sortIndex", "vendor", "category", "supportsTelemetry", "supportsControl", "parent", "protocolTemplate", "deviceType", "moduleTemplate", "children", "labelLinks", "properties", "features")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "nodeType", "code", "name", "description", "enabled", "sortIndex", "vendor", "category", "supportsTelemetry", "supportsControl", "parent", "protocolTemplate", "deviceType", "moduleTemplate", "children", "labelLinks", "properties", "features")
 }
 
 @Composable
@@ -94,8 +69,11 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -104,8 +82,11 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -114,8 +95,11 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.nodeType to {
             AddTextField(
                 value = state.value.nodeType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(nodeType = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = AssetNodeType.entries.firstOrNull { entry -> entry.name == value }
+                    if (parsed != null) {
+                        state.value = state.value.copy(nodeType = parsed)
+                    }
                 },
                 label = "nodeType",
                 isRequired = true
@@ -124,8 +108,8 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.code to {
             AddTextField(
                 value = state.value.code?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(code = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(code = value)
                 },
                 label = "code",
                 isRequired = true
@@ -134,8 +118,8 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -144,28 +128,28 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.description to {
             AddTextField(
                 value = state.value.description?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(description = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(description = value.ifEmpty { null })
                 },
                 label = "description",
                 isRequired = false
             )
         },
         AssetNodeFormProps.enabled to {
-            AddTextField(
-                value = state.value.enabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(enabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "enabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.enabled ?: false,
+                onValueChange = { state.value = state.value.copy(enabled = it) },
+                label = "enabled"
             )
         },
         AssetNodeFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -174,8 +158,8 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.vendor to {
             AddTextField(
                 value = state.value.vendor?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(vendor = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(vendor = value.ifEmpty { null })
                 },
                 label = "vendor",
                 isRequired = false
@@ -184,142 +168,117 @@ fun AssetNodeFormOriginal(
         AssetNodeFormProps.category to {
             AddTextField(
                 value = state.value.category?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(category = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(category = value.ifEmpty { null })
                 },
                 label = "category",
                 isRequired = false
             )
         },
         AssetNodeFormProps.supportsTelemetry to {
-            AddTextField(
-                value = state.value.supportsTelemetry?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(supportsTelemetry = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "supportsTelemetry",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.supportsTelemetry ?: false,
+                onValueChange = { state.value = state.value.copy(supportsTelemetry = it) },
+                label = "supportsTelemetry"
             )
         },
         AssetNodeFormProps.supportsControl to {
-            AddTextField(
-                value = state.value.supportsControl?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(supportsControl = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "supportsControl",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.supportsControl ?: false,
+                onValueChange = { state.value = state.value.copy(supportsControl = it) },
+                label = "supportsControl"
             )
         },
         AssetNodeFormProps.parent to {
             AddTextField(
                 value = state.value.parent?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(parent = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "parent",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         AssetNodeFormProps.protocolTemplate to {
             AddTextField(
                 value = state.value.protocolTemplate?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(protocolTemplate = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "protocolTemplate",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         AssetNodeFormProps.deviceType to {
             AddTextField(
                 value = state.value.deviceType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(deviceType = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "deviceType",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         AssetNodeFormProps.moduleTemplate to {
             AddTextField(
                 value = state.value.moduleTemplate?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(moduleTemplate = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "moduleTemplate",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         AssetNodeFormProps.children to {
             AddTextField(
                 value = state.value.children?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(children = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "children",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         AssetNodeFormProps.labelLinks to {
             AddTextField(
                 value = state.value.labelLinks?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(labelLinks = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "labelLinks",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         AssetNodeFormProps.properties to {
             AddTextField(
                 value = state.value.properties?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(properties = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "properties",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         AssetNodeFormProps.features to {
             AddTextField(
                 value = state.value.features?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(features = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "features",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class AssetNodeFormDsl(
     val state: MutableState<AssetNodeIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -344,10 +303,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -369,10 +325,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun nodeType(
@@ -394,10 +347,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("nodeType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("nodeType", orderValue)
-        }
+        order?.let { updateFieldOrder("nodeType", it) }
     }
 
     fun code(
@@ -419,10 +369,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("code")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("code", orderValue)
-        }
+        order?.let { updateFieldOrder("code", it) }
     }
 
     fun name(
@@ -444,10 +391,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun description(
@@ -469,10 +413,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("description")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("description", orderValue)
-        }
+        order?.let { updateFieldOrder("description", it) }
     }
 
     fun enabled(
@@ -494,10 +435,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("enabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("enabled", orderValue)
-        }
+        order?.let { updateFieldOrder("enabled", it) }
     }
 
     fun sortIndex(
@@ -519,10 +457,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun vendor(
@@ -544,10 +479,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("vendor")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("vendor", orderValue)
-        }
+        order?.let { updateFieldOrder("vendor", it) }
     }
 
     fun category(
@@ -569,10 +501,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("category")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("category", orderValue)
-        }
+        order?.let { updateFieldOrder("category", it) }
     }
 
     fun supportsTelemetry(
@@ -594,10 +523,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("supportsTelemetry")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("supportsTelemetry", orderValue)
-        }
+        order?.let { updateFieldOrder("supportsTelemetry", it) }
     }
 
     fun supportsControl(
@@ -619,10 +545,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("supportsControl")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("supportsControl", orderValue)
-        }
+        order?.let { updateFieldOrder("supportsControl", it) }
     }
 
     fun parent(
@@ -644,10 +567,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("parent")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("parent", orderValue)
-        }
+        order?.let { updateFieldOrder("parent", it) }
     }
 
     fun protocolTemplate(
@@ -669,10 +589,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("protocolTemplate")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("protocolTemplate", orderValue)
-        }
+        order?.let { updateFieldOrder("protocolTemplate", it) }
     }
 
     fun deviceType(
@@ -694,10 +611,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("deviceType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("deviceType", orderValue)
-        }
+        order?.let { updateFieldOrder("deviceType", it) }
     }
 
     fun moduleTemplate(
@@ -719,10 +633,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("moduleTemplate")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("moduleTemplate", orderValue)
-        }
+        order?.let { updateFieldOrder("moduleTemplate", it) }
     }
 
     fun children(
@@ -744,10 +655,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("children")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("children", orderValue)
-        }
+        order?.let { updateFieldOrder("children", it) }
     }
 
     fun labelLinks(
@@ -769,10 +677,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("labelLinks")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("labelLinks", orderValue)
-        }
+        order?.let { updateFieldOrder("labelLinks", it) }
     }
 
     fun properties(
@@ -794,10 +699,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("properties")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("properties", orderValue)
-        }
+        order?.let { updateFieldOrder("properties", it) }
     }
 
     fun features(
@@ -819,10 +721,7 @@ class AssetNodeFormDsl(
                 renderMap.remove("features")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("features", orderValue)
-        }
+        order?.let { updateFieldOrder("features", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -832,26 +731,6 @@ class AssetNodeFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(AssetNodeFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(AssetNodeFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -867,7 +746,6 @@ class AssetNodeFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

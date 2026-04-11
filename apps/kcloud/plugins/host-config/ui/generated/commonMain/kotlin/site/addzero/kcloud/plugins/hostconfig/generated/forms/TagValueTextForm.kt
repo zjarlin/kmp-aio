@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -43,9 +20,7 @@ object TagValueTextFormProps {
     const val sortIndex = "sortIndex"
     const val tag = "tag"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "rawValue", "displayText", "sortIndex", "tag")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "rawValue", "displayText", "sortIndex", "tag")
 }
 
 @Composable
@@ -80,8 +55,11 @@ fun TagValueTextFormOriginal(
         TagValueTextFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -90,8 +68,11 @@ fun TagValueTextFormOriginal(
         TagValueTextFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -100,8 +81,8 @@ fun TagValueTextFormOriginal(
         TagValueTextFormProps.rawValue to {
             AddTextField(
                 value = state.value.rawValue?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(rawValue = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(rawValue = value)
                 },
                 label = "rawValue",
                 isRequired = true
@@ -110,8 +91,8 @@ fun TagValueTextFormOriginal(
         TagValueTextFormProps.displayText to {
             AddTextField(
                 value = state.value.displayText?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(displayText = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(displayText = value)
                 },
                 label = "displayText",
                 isRequired = true
@@ -120,8 +101,11 @@ fun TagValueTextFormOriginal(
         TagValueTextFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -130,42 +114,30 @@ fun TagValueTextFormOriginal(
         TagValueTextFormProps.tag to {
             AddTextField(
                 value = state.value.tag?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(tag = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "tag",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class TagValueTextFormDsl(
     val state: MutableState<TagValueTextIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -190,10 +162,7 @@ class TagValueTextFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -215,10 +184,7 @@ class TagValueTextFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun rawValue(
@@ -240,10 +206,7 @@ class TagValueTextFormDsl(
                 renderMap.remove("rawValue")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("rawValue", orderValue)
-        }
+        order?.let { updateFieldOrder("rawValue", it) }
     }
 
     fun displayText(
@@ -265,10 +228,7 @@ class TagValueTextFormDsl(
                 renderMap.remove("displayText")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("displayText", orderValue)
-        }
+        order?.let { updateFieldOrder("displayText", it) }
     }
 
     fun sortIndex(
@@ -290,10 +250,7 @@ class TagValueTextFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun tag(
@@ -315,10 +272,7 @@ class TagValueTextFormDsl(
                 renderMap.remove("tag")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("tag", orderValue)
-        }
+        order?.let { updateFieldOrder("tag", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -328,26 +282,6 @@ class TagValueTextFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(TagValueTextFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(TagValueTextFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -363,7 +297,6 @@ class TagValueTextFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

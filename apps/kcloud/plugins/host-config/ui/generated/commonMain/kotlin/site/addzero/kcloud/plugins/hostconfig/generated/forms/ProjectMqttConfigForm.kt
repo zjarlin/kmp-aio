@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -60,9 +37,7 @@ object ProjectMqttConfigFormProps {
     const val cloudControlDisabled = "cloudControlDisabled"
     const val project = "project"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "enabled", "breakpointResume", "gatewayName", "vendor", "host", "port", "topic", "gatewayId", "authEnabled", "username", "passwordEncrypted", "tlsEnabled", "certFileRef", "clientId", "keepAliveSec", "qos", "reportPeriodSec", "precision", "valueChangeRatioEnabled", "cloudControlDisabled", "project")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "enabled", "breakpointResume", "gatewayName", "vendor", "host", "port", "topic", "gatewayId", "authEnabled", "username", "passwordEncrypted", "tlsEnabled", "certFileRef", "clientId", "keepAliveSec", "qos", "reportPeriodSec", "precision", "valueChangeRatioEnabled", "cloudControlDisabled", "project")
 }
 
 @Composable
@@ -97,8 +72,11 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -107,38 +85,35 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
             )
         },
         ProjectMqttConfigFormProps.enabled to {
-            AddTextField(
-                value = state.value.enabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(enabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "enabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.enabled ?: false,
+                onValueChange = { state.value = state.value.copy(enabled = it) },
+                label = "enabled"
             )
         },
         ProjectMqttConfigFormProps.breakpointResume to {
-            AddTextField(
-                value = state.value.breakpointResume?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(breakpointResume = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "breakpointResume",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.breakpointResume ?: false,
+                onValueChange = { state.value = state.value.copy(breakpointResume = it) },
+                label = "breakpointResume"
             )
         },
         ProjectMqttConfigFormProps.gatewayName to {
             AddTextField(
                 value = state.value.gatewayName?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(gatewayName = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(gatewayName = value.ifEmpty { null })
                 },
                 label = "gatewayName",
                 isRequired = false
@@ -147,8 +122,8 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.vendor to {
             AddTextField(
                 value = state.value.vendor?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(vendor = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(vendor = value.ifEmpty { null })
                 },
                 label = "vendor",
                 isRequired = false
@@ -157,8 +132,8 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.host to {
             AddTextField(
                 value = state.value.host?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(host = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(host = value.ifEmpty { null })
                 },
                 label = "host",
                 isRequired = false
@@ -167,8 +142,12 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.port to {
             AddTextField(
                 value = state.value.port?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(port = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(port = null)
+                        parsed != null -> state.value = state.value.copy(port = parsed)
+                    }
                 },
                 label = "port",
                 isRequired = false
@@ -177,8 +156,8 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.topic to {
             AddTextField(
                 value = state.value.topic?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(topic = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(topic = value.ifEmpty { null })
                 },
                 label = "topic",
                 isRequired = false
@@ -187,28 +166,25 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.gatewayId to {
             AddTextField(
                 value = state.value.gatewayId?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(gatewayId = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(gatewayId = value.ifEmpty { null })
                 },
                 label = "gatewayId",
                 isRequired = false
             )
         },
         ProjectMqttConfigFormProps.authEnabled to {
-            AddTextField(
-                value = state.value.authEnabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(authEnabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "authEnabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.authEnabled ?: false,
+                onValueChange = { state.value = state.value.copy(authEnabled = it) },
+                label = "authEnabled"
             )
         },
         ProjectMqttConfigFormProps.username to {
             AddTextField(
                 value = state.value.username?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(username = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(username = value.ifEmpty { null })
                 },
                 label = "username",
                 isRequired = false
@@ -217,28 +193,25 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.passwordEncrypted to {
             AddTextField(
                 value = state.value.passwordEncrypted?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(passwordEncrypted = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(passwordEncrypted = value.ifEmpty { null })
                 },
                 label = "passwordEncrypted",
                 isRequired = false
             )
         },
         ProjectMqttConfigFormProps.tlsEnabled to {
-            AddTextField(
-                value = state.value.tlsEnabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(tlsEnabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "tlsEnabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.tlsEnabled ?: false,
+                onValueChange = { state.value = state.value.copy(tlsEnabled = it) },
+                label = "tlsEnabled"
             )
         },
         ProjectMqttConfigFormProps.certFileRef to {
             AddTextField(
                 value = state.value.certFileRef?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(certFileRef = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(certFileRef = value.ifEmpty { null })
                 },
                 label = "certFileRef",
                 isRequired = false
@@ -247,8 +220,8 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.clientId to {
             AddTextField(
                 value = state.value.clientId?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(clientId = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(clientId = value.ifEmpty { null })
                 },
                 label = "clientId",
                 isRequired = false
@@ -257,8 +230,12 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.keepAliveSec to {
             AddTextField(
                 value = state.value.keepAliveSec?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(keepAliveSec = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(keepAliveSec = null)
+                        parsed != null -> state.value = state.value.copy(keepAliveSec = parsed)
+                    }
                 },
                 label = "keepAliveSec",
                 isRequired = false
@@ -267,8 +244,12 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.qos to {
             AddTextField(
                 value = state.value.qos?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(qos = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(qos = null)
+                        parsed != null -> state.value = state.value.copy(qos = parsed)
+                    }
                 },
                 label = "qos",
                 isRequired = false
@@ -277,8 +258,12 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.reportPeriodSec to {
             AddTextField(
                 value = state.value.reportPeriodSec?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(reportPeriodSec = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(reportPeriodSec = null)
+                        parsed != null -> state.value = state.value.copy(reportPeriodSec = parsed)
+                    }
                 },
                 label = "reportPeriodSec",
                 isRequired = false
@@ -287,72 +272,54 @@ fun ProjectMqttConfigFormOriginal(
         ProjectMqttConfigFormProps.precision to {
             AddTextField(
                 value = state.value.precision?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(precision = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(precision = value.ifEmpty { null })
                 },
                 label = "precision",
                 isRequired = false
             )
         },
         ProjectMqttConfigFormProps.valueChangeRatioEnabled to {
-            AddTextField(
-                value = state.value.valueChangeRatioEnabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(valueChangeRatioEnabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "valueChangeRatioEnabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.valueChangeRatioEnabled ?: false,
+                onValueChange = { state.value = state.value.copy(valueChangeRatioEnabled = it) },
+                label = "valueChangeRatioEnabled"
             )
         },
         ProjectMqttConfigFormProps.cloudControlDisabled to {
-            AddTextField(
-                value = state.value.cloudControlDisabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(cloudControlDisabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "cloudControlDisabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.cloudControlDisabled ?: false,
+                onValueChange = { state.value = state.value.copy(cloudControlDisabled = it) },
+                label = "cloudControlDisabled"
             )
         },
         ProjectMqttConfigFormProps.project to {
             AddTextField(
                 value = state.value.project?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(project = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "project",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class ProjectMqttConfigFormDsl(
     val state: MutableState<ProjectMqttConfigIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -377,10 +344,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -402,10 +366,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun enabled(
@@ -427,10 +388,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("enabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("enabled", orderValue)
-        }
+        order?.let { updateFieldOrder("enabled", it) }
     }
 
     fun breakpointResume(
@@ -452,10 +410,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("breakpointResume")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("breakpointResume", orderValue)
-        }
+        order?.let { updateFieldOrder("breakpointResume", it) }
     }
 
     fun gatewayName(
@@ -477,10 +432,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("gatewayName")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("gatewayName", orderValue)
-        }
+        order?.let { updateFieldOrder("gatewayName", it) }
     }
 
     fun vendor(
@@ -502,10 +454,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("vendor")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("vendor", orderValue)
-        }
+        order?.let { updateFieldOrder("vendor", it) }
     }
 
     fun host(
@@ -527,10 +476,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("host")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("host", orderValue)
-        }
+        order?.let { updateFieldOrder("host", it) }
     }
 
     fun port(
@@ -552,10 +498,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("port")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("port", orderValue)
-        }
+        order?.let { updateFieldOrder("port", it) }
     }
 
     fun topic(
@@ -577,10 +520,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("topic")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("topic", orderValue)
-        }
+        order?.let { updateFieldOrder("topic", it) }
     }
 
     fun gatewayId(
@@ -602,10 +542,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("gatewayId")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("gatewayId", orderValue)
-        }
+        order?.let { updateFieldOrder("gatewayId", it) }
     }
 
     fun authEnabled(
@@ -627,10 +564,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("authEnabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("authEnabled", orderValue)
-        }
+        order?.let { updateFieldOrder("authEnabled", it) }
     }
 
     fun username(
@@ -652,10 +586,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("username")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("username", orderValue)
-        }
+        order?.let { updateFieldOrder("username", it) }
     }
 
     fun passwordEncrypted(
@@ -677,10 +608,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("passwordEncrypted")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("passwordEncrypted", orderValue)
-        }
+        order?.let { updateFieldOrder("passwordEncrypted", it) }
     }
 
     fun tlsEnabled(
@@ -702,10 +630,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("tlsEnabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("tlsEnabled", orderValue)
-        }
+        order?.let { updateFieldOrder("tlsEnabled", it) }
     }
 
     fun certFileRef(
@@ -727,10 +652,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("certFileRef")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("certFileRef", orderValue)
-        }
+        order?.let { updateFieldOrder("certFileRef", it) }
     }
 
     fun clientId(
@@ -752,10 +674,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("clientId")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("clientId", orderValue)
-        }
+        order?.let { updateFieldOrder("clientId", it) }
     }
 
     fun keepAliveSec(
@@ -777,10 +696,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("keepAliveSec")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("keepAliveSec", orderValue)
-        }
+        order?.let { updateFieldOrder("keepAliveSec", it) }
     }
 
     fun qos(
@@ -802,10 +718,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("qos")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("qos", orderValue)
-        }
+        order?.let { updateFieldOrder("qos", it) }
     }
 
     fun reportPeriodSec(
@@ -827,10 +740,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("reportPeriodSec")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("reportPeriodSec", orderValue)
-        }
+        order?.let { updateFieldOrder("reportPeriodSec", it) }
     }
 
     fun precision(
@@ -852,10 +762,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("precision")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("precision", orderValue)
-        }
+        order?.let { updateFieldOrder("precision", it) }
     }
 
     fun valueChangeRatioEnabled(
@@ -877,10 +784,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("valueChangeRatioEnabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("valueChangeRatioEnabled", orderValue)
-        }
+        order?.let { updateFieldOrder("valueChangeRatioEnabled", it) }
     }
 
     fun cloudControlDisabled(
@@ -902,10 +806,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("cloudControlDisabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("cloudControlDisabled", orderValue)
-        }
+        order?.let { updateFieldOrder("cloudControlDisabled", it) }
     }
 
     fun project(
@@ -927,10 +828,7 @@ class ProjectMqttConfigFormDsl(
                 renderMap.remove("project")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("project", orderValue)
-        }
+        order?.let { updateFieldOrder("project", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -940,26 +838,6 @@ class ProjectMqttConfigFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProjectMqttConfigFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProjectMqttConfigFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -975,7 +853,6 @@ class ProjectMqttConfigFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

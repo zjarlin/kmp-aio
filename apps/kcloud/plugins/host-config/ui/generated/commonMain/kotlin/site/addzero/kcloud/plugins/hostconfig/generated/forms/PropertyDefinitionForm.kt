@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -53,9 +30,7 @@ object PropertyDefinitionFormProps {
     const val node = "node"
     const val dataType = "dataType"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "identifier", "name", "description", "unit", "required", "writable", "telemetry", "nullable", "length", "attributesJson", "sortIndex", "deviceDefinition", "node", "dataType")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "identifier", "name", "description", "unit", "required", "writable", "telemetry", "nullable", "length", "attributesJson", "sortIndex", "deviceDefinition", "node", "dataType")
 }
 
 @Composable
@@ -90,8 +65,11 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -100,8 +78,11 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -110,8 +91,8 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.identifier to {
             AddTextField(
                 value = state.value.identifier?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(identifier = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(identifier = value)
                 },
                 label = "identifier",
                 isRequired = true
@@ -120,8 +101,8 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -130,8 +111,8 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.description to {
             AddTextField(
                 value = state.value.description?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(description = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(description = value.ifEmpty { null })
                 },
                 label = "description",
                 isRequired = false
@@ -140,58 +121,50 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.unit to {
             AddTextField(
                 value = state.value.unit?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(unit = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(unit = value.ifEmpty { null })
                 },
                 label = "unit",
                 isRequired = false
             )
         },
         PropertyDefinitionFormProps.required to {
-            AddTextField(
-                value = state.value.required?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(required = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "required",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.required ?: false,
+                onValueChange = { state.value = state.value.copy(required = it) },
+                label = "required"
             )
         },
         PropertyDefinitionFormProps.writable to {
-            AddTextField(
-                value = state.value.writable?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(writable = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "writable",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.writable ?: false,
+                onValueChange = { state.value = state.value.copy(writable = it) },
+                label = "writable"
             )
         },
         PropertyDefinitionFormProps.telemetry to {
-            AddTextField(
-                value = state.value.telemetry?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(telemetry = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "telemetry",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.telemetry ?: false,
+                onValueChange = { state.value = state.value.copy(telemetry = it) },
+                label = "telemetry"
             )
         },
         PropertyDefinitionFormProps.nullable to {
-            AddTextField(
-                value = state.value.nullable?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(nullable = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "nullable",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.nullable ?: false,
+                onValueChange = { state.value = state.value.copy(nullable = it) },
+                label = "nullable"
             )
         },
         PropertyDefinitionFormProps.length to {
             AddTextField(
                 value = state.value.length?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(length = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(length = null)
+                        parsed != null -> state.value = state.value.copy(length = parsed)
+                    }
                 },
                 label = "length",
                 isRequired = false
@@ -200,8 +173,8 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.attributesJson to {
             AddTextField(
                 value = state.value.attributesJson?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(attributesJson = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(attributesJson = value.ifEmpty { null })
                 },
                 label = "attributesJson",
                 isRequired = false
@@ -210,8 +183,11 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -220,62 +196,48 @@ fun PropertyDefinitionFormOriginal(
         PropertyDefinitionFormProps.deviceDefinition to {
             AddTextField(
                 value = state.value.deviceDefinition?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(deviceDefinition = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "deviceDefinition",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         PropertyDefinitionFormProps.node to {
             AddTextField(
                 value = state.value.node?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(node = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "node",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         PropertyDefinitionFormProps.dataType to {
             AddTextField(
                 value = state.value.dataType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(dataType = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "dataType",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class PropertyDefinitionFormDsl(
     val state: MutableState<PropertyDefinitionIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -300,10 +262,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -325,10 +284,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun identifier(
@@ -350,10 +306,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("identifier")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("identifier", orderValue)
-        }
+        order?.let { updateFieldOrder("identifier", it) }
     }
 
     fun name(
@@ -375,10 +328,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun description(
@@ -400,10 +350,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("description")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("description", orderValue)
-        }
+        order?.let { updateFieldOrder("description", it) }
     }
 
     fun unit(
@@ -425,10 +372,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("unit")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("unit", orderValue)
-        }
+        order?.let { updateFieldOrder("unit", it) }
     }
 
     fun required(
@@ -450,10 +394,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("required")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("required", orderValue)
-        }
+        order?.let { updateFieldOrder("required", it) }
     }
 
     fun writable(
@@ -475,10 +416,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("writable")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("writable", orderValue)
-        }
+        order?.let { updateFieldOrder("writable", it) }
     }
 
     fun telemetry(
@@ -500,10 +438,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("telemetry")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("telemetry", orderValue)
-        }
+        order?.let { updateFieldOrder("telemetry", it) }
     }
 
     fun nullable(
@@ -525,10 +460,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("nullable")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("nullable", orderValue)
-        }
+        order?.let { updateFieldOrder("nullable", it) }
     }
 
     fun length(
@@ -550,10 +482,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("length")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("length", orderValue)
-        }
+        order?.let { updateFieldOrder("length", it) }
     }
 
     fun attributesJson(
@@ -575,10 +504,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("attributesJson")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("attributesJson", orderValue)
-        }
+        order?.let { updateFieldOrder("attributesJson", it) }
     }
 
     fun sortIndex(
@@ -600,10 +526,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun deviceDefinition(
@@ -625,10 +548,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("deviceDefinition")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("deviceDefinition", orderValue)
-        }
+        order?.let { updateFieldOrder("deviceDefinition", it) }
     }
 
     fun node(
@@ -650,10 +570,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("node")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("node", orderValue)
-        }
+        order?.let { updateFieldOrder("node", it) }
     }
 
     fun dataType(
@@ -675,10 +592,7 @@ class PropertyDefinitionFormDsl(
                 renderMap.remove("dataType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("dataType", orderValue)
-        }
+        order?.let { updateFieldOrder("dataType", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -688,26 +602,6 @@ class PropertyDefinitionFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(PropertyDefinitionFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(PropertyDefinitionFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -723,7 +617,6 @@ class PropertyDefinitionFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

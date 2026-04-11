@@ -85,6 +85,7 @@ fun CodegenContextScreen() {
                 state = state,
                 viewModel = viewModel,
             )
+            MetadataPreviewSummaryPanel(state = state)
             when (state.selectedWorkbenchTab) {
                 CodegenContextWorkbenchTab.DEVICE_FUNCTIONS ->
                     DeviceFunctionsPanel(

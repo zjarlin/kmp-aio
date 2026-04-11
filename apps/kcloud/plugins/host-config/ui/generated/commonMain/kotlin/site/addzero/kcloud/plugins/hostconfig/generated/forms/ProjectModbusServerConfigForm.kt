@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -49,9 +26,7 @@ object ProjectModbusServerConfigFormProps {
     const val stationNo = "stationNo"
     const val project = "project"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "transportType", "enabled", "tcpPort", "portName", "baudRate", "dataBits", "stopBits", "parity", "stationNo", "project")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "transportType", "enabled", "tcpPort", "portName", "baudRate", "dataBits", "stopBits", "parity", "stationNo", "project")
 }
 
 @Composable
@@ -86,8 +61,11 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -96,8 +74,11 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -106,28 +87,32 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.transportType to {
             AddTextField(
                 value = state.value.transportType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(transportType = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = TransportType.entries.firstOrNull { entry -> entry.name == value }
+                    if (parsed != null) {
+                        state.value = state.value.copy(transportType = parsed)
+                    }
                 },
                 label = "transportType",
                 isRequired = true
             )
         },
         ProjectModbusServerConfigFormProps.enabled to {
-            AddTextField(
-                value = state.value.enabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(enabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "enabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.enabled ?: false,
+                onValueChange = { state.value = state.value.copy(enabled = it) },
+                label = "enabled"
             )
         },
         ProjectModbusServerConfigFormProps.tcpPort to {
             AddTextField(
                 value = state.value.tcpPort?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(tcpPort = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(tcpPort = null)
+                        parsed != null -> state.value = state.value.copy(tcpPort = parsed)
+                    }
                 },
                 label = "tcpPort",
                 isRequired = false
@@ -136,8 +121,8 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.portName to {
             AddTextField(
                 value = state.value.portName?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(portName = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(portName = value.ifEmpty { null })
                 },
                 label = "portName",
                 isRequired = false
@@ -146,8 +131,12 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.baudRate to {
             AddTextField(
                 value = state.value.baudRate?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(baudRate = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(baudRate = null)
+                        parsed != null -> state.value = state.value.copy(baudRate = parsed)
+                    }
                 },
                 label = "baudRate",
                 isRequired = false
@@ -156,8 +145,12 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.dataBits to {
             AddTextField(
                 value = state.value.dataBits?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(dataBits = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(dataBits = null)
+                        parsed != null -> state.value = state.value.copy(dataBits = parsed)
+                    }
                 },
                 label = "dataBits",
                 isRequired = false
@@ -166,8 +159,12 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.stopBits to {
             AddTextField(
                 value = state.value.stopBits?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(stopBits = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(stopBits = null)
+                        parsed != null -> state.value = state.value.copy(stopBits = parsed)
+                    }
                 },
                 label = "stopBits",
                 isRequired = false
@@ -176,8 +173,12 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.parity to {
             AddTextField(
                 value = state.value.parity?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(parity = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = Parity.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(parity = null)
+                        parsed != null -> state.value = state.value.copy(parity = parsed)
+                    }
                 },
                 label = "parity",
                 isRequired = false
@@ -186,8 +187,12 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.stationNo to {
             AddTextField(
                 value = state.value.stationNo?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(stationNo = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(stationNo = null)
+                        parsed != null -> state.value = state.value.copy(stationNo = parsed)
+                    }
                 },
                 label = "stationNo",
                 isRequired = false
@@ -196,42 +201,30 @@ fun ProjectModbusServerConfigFormOriginal(
         ProjectModbusServerConfigFormProps.project to {
             AddTextField(
                 value = state.value.project?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(project = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "project",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class ProjectModbusServerConfigFormDsl(
     val state: MutableState<ProjectModbusServerConfigIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -256,10 +249,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -281,10 +271,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun transportType(
@@ -306,10 +293,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("transportType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("transportType", orderValue)
-        }
+        order?.let { updateFieldOrder("transportType", it) }
     }
 
     fun enabled(
@@ -331,10 +315,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("enabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("enabled", orderValue)
-        }
+        order?.let { updateFieldOrder("enabled", it) }
     }
 
     fun tcpPort(
@@ -356,10 +337,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("tcpPort")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("tcpPort", orderValue)
-        }
+        order?.let { updateFieldOrder("tcpPort", it) }
     }
 
     fun portName(
@@ -381,10 +359,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("portName")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("portName", orderValue)
-        }
+        order?.let { updateFieldOrder("portName", it) }
     }
 
     fun baudRate(
@@ -406,10 +381,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("baudRate")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("baudRate", orderValue)
-        }
+        order?.let { updateFieldOrder("baudRate", it) }
     }
 
     fun dataBits(
@@ -431,10 +403,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("dataBits")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("dataBits", orderValue)
-        }
+        order?.let { updateFieldOrder("dataBits", it) }
     }
 
     fun stopBits(
@@ -456,10 +425,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("stopBits")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("stopBits", orderValue)
-        }
+        order?.let { updateFieldOrder("stopBits", it) }
     }
 
     fun parity(
@@ -481,10 +447,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("parity")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("parity", orderValue)
-        }
+        order?.let { updateFieldOrder("parity", it) }
     }
 
     fun stationNo(
@@ -506,10 +469,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("stationNo")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("stationNo", orderValue)
-        }
+        order?.let { updateFieldOrder("stationNo", it) }
     }
 
     fun project(
@@ -531,10 +491,7 @@ class ProjectModbusServerConfigFormDsl(
                 renderMap.remove("project")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("project", orderValue)
-        }
+        order?.let { updateFieldOrder("project", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -544,26 +501,6 @@ class ProjectModbusServerConfigFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProjectModbusServerConfigFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProjectModbusServerConfigFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -579,7 +516,6 @@ class ProjectModbusServerConfigFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

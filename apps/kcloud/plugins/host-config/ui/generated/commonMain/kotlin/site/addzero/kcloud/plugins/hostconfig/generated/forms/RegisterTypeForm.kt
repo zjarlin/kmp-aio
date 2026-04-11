@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -43,9 +20,7 @@ object RegisterTypeFormProps {
     const val description = "description"
     const val sortIndex = "sortIndex"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "code", "name", "description", "sortIndex")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "code", "name", "description", "sortIndex")
 }
 
 @Composable
@@ -80,8 +55,11 @@ fun RegisterTypeFormOriginal(
         RegisterTypeFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -90,8 +68,11 @@ fun RegisterTypeFormOriginal(
         RegisterTypeFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -100,8 +81,8 @@ fun RegisterTypeFormOriginal(
         RegisterTypeFormProps.code to {
             AddTextField(
                 value = state.value.code?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(code = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(code = value)
                 },
                 label = "code",
                 isRequired = true
@@ -110,8 +91,8 @@ fun RegisterTypeFormOriginal(
         RegisterTypeFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -120,8 +101,8 @@ fun RegisterTypeFormOriginal(
         RegisterTypeFormProps.description to {
             AddTextField(
                 value = state.value.description?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(description = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(description = value.ifEmpty { null })
                 },
                 label = "description",
                 isRequired = false
@@ -130,8 +111,11 @@ fun RegisterTypeFormOriginal(
         RegisterTypeFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -140,32 +124,21 @@ fun RegisterTypeFormOriginal(
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class RegisterTypeFormDsl(
     val state: MutableState<RegisterTypeIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -190,10 +163,7 @@ class RegisterTypeFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -215,10 +185,7 @@ class RegisterTypeFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun code(
@@ -240,10 +207,7 @@ class RegisterTypeFormDsl(
                 renderMap.remove("code")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("code", orderValue)
-        }
+        order?.let { updateFieldOrder("code", it) }
     }
 
     fun name(
@@ -265,10 +229,7 @@ class RegisterTypeFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun description(
@@ -290,10 +251,7 @@ class RegisterTypeFormDsl(
                 renderMap.remove("description")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("description", orderValue)
-        }
+        order?.let { updateFieldOrder("description", it) }
     }
 
     fun sortIndex(
@@ -315,10 +273,7 @@ class RegisterTypeFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -328,26 +283,6 @@ class RegisterTypeFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(RegisterTypeFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(RegisterTypeFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -363,7 +298,6 @@ class RegisterTypeFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

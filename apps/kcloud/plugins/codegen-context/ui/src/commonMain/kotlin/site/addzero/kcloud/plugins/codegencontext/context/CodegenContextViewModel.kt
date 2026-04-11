@@ -5,6 +5,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.core.annotation.KoinViewModel
 import site.addzero.kcloud.plugins.codegencontext.api.context.CodegenContextBindingDto
@@ -26,6 +28,7 @@ class CodegenContextViewModel(
     private val templateApi: CodegenTemplateApi,
 ) : ViewModel() {
     private var draftKeySeed = 0
+    private var previewJob: Job? = null
 
     var screenState by mutableStateOf(CodegenContextScreenState())
         private set
@@ -36,6 +39,7 @@ class CodegenContextViewModel(
 
     fun refresh() {
         viewModelScope.launch {
+            previewJob?.cancel()
             val currentSelection = screenState.selectedContextId
             screenState =
                 screenState.copy(
@@ -51,6 +55,7 @@ class CodegenContextViewModel(
                 val draft =
                     selectedId?.let { id -> contextApi.getContext(id) } ?: createEmptyDraft(templates.firstOrNull())
                 val definitions = loadDefinitions(draft.protocolTemplateId)
+                val preview = previewDraft(draft)
                 screenState =
                     screenState.copy(
                         loading = false,
@@ -59,6 +64,9 @@ class CodegenContextViewModel(
                         selectedContextId = selectedId,
                         availableContextDefinitions = definitions,
                         draft = draft,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
                     )
             }.onFailure { throwable ->
                 screenState =
@@ -74,14 +82,19 @@ class CodegenContextViewModel(
         contextId: Long,
     ) {
         viewModelScope.launch {
+            previewJob?.cancel()
             runCatching {
                 val draft = contextApi.getContext(contextId)
                 val definitions = loadDefinitions(draft.protocolTemplateId)
+                val preview = previewDraft(draft)
                 screenState =
                     screenState.copy(
                         selectedContextId = contextId,
                         availableContextDefinitions = definitions,
                         draft = draft,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
                         exportResult = null,
                         errorMessage = null,
                         statusMessage = null,
@@ -94,22 +107,37 @@ class CodegenContextViewModel(
 
     fun newContext() {
         viewModelScope.launch {
-            val template = screenState.protocolTemplates.firstOrNull()
-            val definitions = loadDefinitions(template?.id ?: 0L)
-            screenState =
-                screenState.copy(
-                    selectedContextId = null,
-                    availableContextDefinitions = definitions,
-                    draft = createEmptyDraft(template),
-                    exportResult = null,
-                    errorMessage = null,
-                    statusMessage = "已创建新的建模配置。",
-                )
+            previewJob?.cancel()
+            runCatching {
+                val template = screenState.protocolTemplates.firstOrNull()
+                val definitions = loadDefinitions(template?.id ?: 0L)
+                val draft = createEmptyDraft(template)
+                val preview = previewDraft(draft)
+                screenState =
+                    screenState.copy(
+                        selectedContextId = null,
+                        availableContextDefinitions = definitions,
+                        draft = draft,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
+                        exportResult = null,
+                        errorMessage = null,
+                        statusMessage = "已创建新的建模配置。",
+                    )
+            }.onFailure { throwable ->
+                screenState =
+                    screenState.copy(
+                        previewing = false,
+                        previewErrorMessage = throwable.message ?: "创建建模配置失败。",
+                    )
+            }
         }
     }
 
     fun save() {
         viewModelScope.launch {
+            previewJob?.cancel()
             screenState =
                 screenState.copy(
                     saving = true,
@@ -121,6 +149,7 @@ class CodegenContextViewModel(
                 val saved = contextApi.saveContext(screenState.draft)
                 val contexts = contextApi.listContexts()
                 val definitions = loadDefinitions(saved.protocolTemplateId)
+                val preview = previewDraft(saved)
                 screenState =
                     screenState.copy(
                         saving = false,
@@ -128,6 +157,9 @@ class CodegenContextViewModel(
                         selectedContextId = saved.id,
                         availableContextDefinitions = definitions,
                         draft = saved,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
                         statusMessage = "建模配置已保存。",
                     )
             }.onFailure { throwable ->
@@ -142,6 +174,7 @@ class CodegenContextViewModel(
 
     fun exportSelected() {
         viewModelScope.launch {
+            previewJob?.cancel()
             screenState =
                 screenState.copy(
                     exporting = true,
@@ -153,6 +186,7 @@ class CodegenContextViewModel(
                 val exportResult = contextApi.exportContext(requireNotNull(saved.id))
                 val contexts = contextApi.listContexts()
                 val definitions = loadDefinitions(saved.protocolTemplateId)
+                val preview = previewDraft(saved)
                 screenState =
                     screenState.copy(
                         exporting = false,
@@ -160,6 +194,9 @@ class CodegenContextViewModel(
                         selectedContextId = saved.id,
                         availableContextDefinitions = definitions,
                         draft = saved,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
                         exportResult = exportResult,
                         statusMessage = exportResult.message,
                     )
@@ -176,6 +213,7 @@ class CodegenContextViewModel(
     fun deleteSelected() {
         val selectedId = screenState.selectedContextId ?: return
         viewModelScope.launch {
+            previewJob?.cancel()
             screenState =
                 screenState.copy(
                     deleting = true,
@@ -191,6 +229,7 @@ class CodegenContextViewModel(
                         contextApi.getContext(id)
                     } ?: createEmptyDraft(screenState.protocolTemplates.firstOrNull())
                 val definitions = loadDefinitions(nextDraft.protocolTemplateId)
+                val preview = previewDraft(nextDraft)
                 screenState =
                     screenState.copy(
                         deleting = false,
@@ -198,6 +237,9 @@ class CodegenContextViewModel(
                         selectedContextId = nextSelectedId,
                         availableContextDefinitions = definitions,
                         draft = nextDraft,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
                         exportResult = null,
                         statusMessage = "建模配置已删除。",
                     )
@@ -217,27 +259,36 @@ class CodegenContextViewModel(
         screenState =
             screenState.copy(
                 draft = transform(screenState.draft),
+                previewing = true,
+                previewErrorMessage = null,
                 exportResult = null,
                 errorMessage = null,
             )
+        schedulePreview()
     }
 
     fun selectProtocolTemplate(
         protocolTemplateId: Long?,
     ) {
         viewModelScope.launch {
+            previewJob?.cancel()
             runCatching {
                 val template = screenState.protocolTemplates.firstOrNull { item -> item.id == protocolTemplateId }
                 val definitions = loadDefinitions(protocolTemplateId ?: 0L)
+                val draft =
+                    screenState.draft.copy(
+                        protocolTemplateId = protocolTemplateId ?: 0L,
+                        protocolTemplateCode = template?.code,
+                        protocolTemplateName = template?.name,
+                    )
+                val preview = previewDraft(draft)
                 screenState =
                     screenState.copy(
                         availableContextDefinitions = definitions,
-                        draft =
-                            screenState.draft.copy(
-                                protocolTemplateId = protocolTemplateId ?: 0L,
-                                protocolTemplateCode = template?.code,
-                                protocolTemplateName = template?.name,
-                            ),
+                        draft = draft,
+                        preview = preview,
+                        previewing = false,
+                        previewErrorMessage = null,
                         exportResult = null,
                         errorMessage = null,
                     )
@@ -398,6 +449,40 @@ class CodegenContextViewModel(
             draft.copy(exportSettings = transform(draft.exportSettings))
         }
     }
+
+    private fun schedulePreview() {
+        val draft = screenState.draft
+        previewJob?.cancel()
+        previewJob =
+            viewModelScope.launch {
+                delay(250)
+                runCatching {
+                    previewDraft(draft)
+                }.onSuccess { preview ->
+                    if (screenState.draft == draft) {
+                        screenState =
+                            screenState.copy(
+                                preview = preview,
+                                previewing = false,
+                                previewErrorMessage = null,
+                            )
+                    }
+                }.onFailure { throwable ->
+                    if (screenState.draft == draft) {
+                        screenState =
+                            screenState.copy(
+                                preview = null,
+                                previewing = false,
+                                previewErrorMessage = throwable.message ?: "预览解析失败。",
+                            )
+                    }
+                }
+            }
+    }
+
+    private suspend fun previewDraft(
+        draft: CodegenMetadataDraftDto,
+    ) = contextApi.previewContext(draft)
 
     private suspend fun loadDefinitions(
         protocolTemplateId: Long,

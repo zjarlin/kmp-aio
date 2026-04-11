@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -48,9 +25,7 @@ object FeatureDefinitionFormProps {
     const val deviceDefinition = "deviceDefinition"
     const val node = "node"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "identifier", "name", "description", "inputSchema", "outputSchema", "asynchronous", "sortIndex", "deviceDefinition", "node")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "identifier", "name", "description", "inputSchema", "outputSchema", "asynchronous", "sortIndex", "deviceDefinition", "node")
 }
 
 @Composable
@@ -85,8 +60,11 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -95,8 +73,11 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -105,8 +86,8 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.identifier to {
             AddTextField(
                 value = state.value.identifier?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(identifier = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(identifier = value)
                 },
                 label = "identifier",
                 isRequired = true
@@ -115,8 +96,8 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -125,8 +106,8 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.description to {
             AddTextField(
                 value = state.value.description?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(description = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(description = value.ifEmpty { null })
                 },
                 label = "description",
                 isRequired = false
@@ -135,8 +116,8 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.inputSchema to {
             AddTextField(
                 value = state.value.inputSchema?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(inputSchema = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(inputSchema = value.ifEmpty { null })
                 },
                 label = "inputSchema",
                 isRequired = false
@@ -145,28 +126,28 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.outputSchema to {
             AddTextField(
                 value = state.value.outputSchema?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(outputSchema = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(outputSchema = value.ifEmpty { null })
                 },
                 label = "outputSchema",
                 isRequired = false
             )
         },
         FeatureDefinitionFormProps.asynchronous to {
-            AddTextField(
-                value = state.value.asynchronous?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(asynchronous = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "asynchronous",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.asynchronous ?: false,
+                onValueChange = { state.value = state.value.copy(asynchronous = it) },
+                label = "asynchronous"
             )
         },
         FeatureDefinitionFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -175,52 +156,39 @@ fun FeatureDefinitionFormOriginal(
         FeatureDefinitionFormProps.deviceDefinition to {
             AddTextField(
                 value = state.value.deviceDefinition?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(deviceDefinition = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "deviceDefinition",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         FeatureDefinitionFormProps.node to {
             AddTextField(
                 value = state.value.node?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(node = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "node",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class FeatureDefinitionFormDsl(
     val state: MutableState<FeatureDefinitionIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -245,10 +213,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -270,10 +235,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun identifier(
@@ -295,10 +257,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("identifier")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("identifier", orderValue)
-        }
+        order?.let { updateFieldOrder("identifier", it) }
     }
 
     fun name(
@@ -320,10 +279,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun description(
@@ -345,10 +301,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("description")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("description", orderValue)
-        }
+        order?.let { updateFieldOrder("description", it) }
     }
 
     fun inputSchema(
@@ -370,10 +323,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("inputSchema")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("inputSchema", orderValue)
-        }
+        order?.let { updateFieldOrder("inputSchema", it) }
     }
 
     fun outputSchema(
@@ -395,10 +345,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("outputSchema")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("outputSchema", orderValue)
-        }
+        order?.let { updateFieldOrder("outputSchema", it) }
     }
 
     fun asynchronous(
@@ -420,10 +367,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("asynchronous")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("asynchronous", orderValue)
-        }
+        order?.let { updateFieldOrder("asynchronous", it) }
     }
 
     fun sortIndex(
@@ -445,10 +389,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun deviceDefinition(
@@ -470,10 +411,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("deviceDefinition")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("deviceDefinition", orderValue)
-        }
+        order?.let { updateFieldOrder("deviceDefinition", it) }
     }
 
     fun node(
@@ -495,10 +433,7 @@ class FeatureDefinitionFormDsl(
                 renderMap.remove("node")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("node", orderValue)
-        }
+        order?.let { updateFieldOrder("node", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -508,26 +443,6 @@ class FeatureDefinitionFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(FeatureDefinitionFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(FeatureDefinitionFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -543,7 +458,6 @@ class FeatureDefinitionFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

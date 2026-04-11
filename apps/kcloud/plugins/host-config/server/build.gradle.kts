@@ -9,6 +9,8 @@ val libs = versionCatalogs.named("libs")
 configurations.matching { configuration ->
     configuration.name == "kspJvm"
 }.configureEach {
+    exclude(group = "site.addzero", module = "entity2form-processor")
+    exclude(group = "site.addzero", module = "entity2form-processor-jvm")
     exclude(group = "site.addzero", module = "entity2iso-processor")
     exclude(group = "site.addzero", module = "entity2iso-processor-jvm")
 }
@@ -70,6 +72,7 @@ ksp {
 
 dependencies {
     add("kspJvm", project(":lib:ksp:controller2iso2dataprovider-processor-local"))
+    add("kspJvm", project(":lib:ksp:entity2form-processor-local"))
     add("kspJvm", project(":lib:ksp:entity2iso-processor-local"))
 }
 

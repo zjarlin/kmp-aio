@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -47,9 +24,7 @@ object ProjectFormProps {
     const val mqttConfig = "mqttConfig"
     const val modbusServerConfigs = "modbusServerConfigs"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "name", "description", "remark", "sortIndex", "protocolLinks", "protocols", "mqttConfig", "modbusServerConfigs")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "name", "description", "remark", "sortIndex", "protocolLinks", "protocols", "mqttConfig", "modbusServerConfigs")
 }
 
 @Composable
@@ -84,8 +59,11 @@ fun ProjectFormOriginal(
         ProjectFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -94,8 +72,11 @@ fun ProjectFormOriginal(
         ProjectFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -104,8 +85,8 @@ fun ProjectFormOriginal(
         ProjectFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -114,8 +95,8 @@ fun ProjectFormOriginal(
         ProjectFormProps.description to {
             AddTextField(
                 value = state.value.description?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(description = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(description = value.ifEmpty { null })
                 },
                 label = "description",
                 isRequired = false
@@ -124,8 +105,8 @@ fun ProjectFormOriginal(
         ProjectFormProps.remark to {
             AddTextField(
                 value = state.value.remark?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(remark = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(remark = value.ifEmpty { null })
                 },
                 label = "remark",
                 isRequired = false
@@ -134,8 +115,11 @@ fun ProjectFormOriginal(
         ProjectFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -144,72 +128,57 @@ fun ProjectFormOriginal(
         ProjectFormProps.protocolLinks to {
             AddTextField(
                 value = state.value.protocolLinks?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(protocolLinks = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "protocolLinks",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         ProjectFormProps.protocols to {
             AddTextField(
                 value = state.value.protocols?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(protocols = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "protocols",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         ProjectFormProps.mqttConfig to {
             AddTextField(
                 value = state.value.mqttConfig?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(mqttConfig = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "mqttConfig",
-                isRequired = false
+                isRequired = false,
+                disable = true
             )
         },
         ProjectFormProps.modbusServerConfigs to {
             AddTextField(
                 value = state.value.modbusServerConfigs?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(modbusServerConfigs = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "modbusServerConfigs",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class ProjectFormDsl(
     val state: MutableState<ProjectIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -234,10 +203,7 @@ class ProjectFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -259,10 +225,7 @@ class ProjectFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun name(
@@ -284,10 +247,7 @@ class ProjectFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun description(
@@ -309,10 +269,7 @@ class ProjectFormDsl(
                 renderMap.remove("description")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("description", orderValue)
-        }
+        order?.let { updateFieldOrder("description", it) }
     }
 
     fun remark(
@@ -334,10 +291,7 @@ class ProjectFormDsl(
                 renderMap.remove("remark")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("remark", orderValue)
-        }
+        order?.let { updateFieldOrder("remark", it) }
     }
 
     fun sortIndex(
@@ -359,10 +313,7 @@ class ProjectFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun protocolLinks(
@@ -384,10 +335,7 @@ class ProjectFormDsl(
                 renderMap.remove("protocolLinks")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("protocolLinks", orderValue)
-        }
+        order?.let { updateFieldOrder("protocolLinks", it) }
     }
 
     fun protocols(
@@ -409,10 +357,7 @@ class ProjectFormDsl(
                 renderMap.remove("protocols")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("protocols", orderValue)
-        }
+        order?.let { updateFieldOrder("protocols", it) }
     }
 
     fun mqttConfig(
@@ -434,10 +379,7 @@ class ProjectFormDsl(
                 renderMap.remove("mqttConfig")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("mqttConfig", orderValue)
-        }
+        order?.let { updateFieldOrder("mqttConfig", it) }
     }
 
     fun modbusServerConfigs(
@@ -459,10 +401,7 @@ class ProjectFormDsl(
                 renderMap.remove("modbusServerConfigs")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("modbusServerConfigs", orderValue)
-        }
+        order?.let { updateFieldOrder("modbusServerConfigs", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -472,26 +411,6 @@ class ProjectFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProjectFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProjectFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -507,7 +426,6 @@ class ProjectFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

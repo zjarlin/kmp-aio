@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -54,9 +31,7 @@ object ProtocolInstanceFormProps {
     const val projects = "projects"
     const val devices = "devices"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "name", "pollingIntervalMs", "transportType", "host", "tcpPort", "portName", "baudRate", "dataBits", "stopBits", "parity", "responseTimeoutMs", "protocolTemplate", "projectLinks", "projects", "devices")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "name", "pollingIntervalMs", "transportType", "host", "tcpPort", "portName", "baudRate", "dataBits", "stopBits", "parity", "responseTimeoutMs", "protocolTemplate", "projectLinks", "projects", "devices")
 }
 
 @Composable
@@ -91,8 +66,11 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -101,8 +79,11 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -111,8 +92,8 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -121,8 +102,11 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.pollingIntervalMs to {
             AddTextField(
                 value = state.value.pollingIntervalMs?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(pollingIntervalMs = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(pollingIntervalMs = parsed)
+                    }
                 },
                 label = "pollingIntervalMs",
                 isRequired = true
@@ -131,8 +115,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.transportType to {
             AddTextField(
                 value = state.value.transportType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(transportType = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = TransportType.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(transportType = null)
+                        parsed != null -> state.value = state.value.copy(transportType = parsed)
+                    }
                 },
                 label = "transportType",
                 isRequired = false
@@ -141,8 +129,8 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.host to {
             AddTextField(
                 value = state.value.host?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(host = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(host = value.ifEmpty { null })
                 },
                 label = "host",
                 isRequired = false
@@ -151,8 +139,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.tcpPort to {
             AddTextField(
                 value = state.value.tcpPort?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(tcpPort = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(tcpPort = null)
+                        parsed != null -> state.value = state.value.copy(tcpPort = parsed)
+                    }
                 },
                 label = "tcpPort",
                 isRequired = false
@@ -161,8 +153,8 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.portName to {
             AddTextField(
                 value = state.value.portName?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(portName = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(portName = value.ifEmpty { null })
                 },
                 label = "portName",
                 isRequired = false
@@ -171,8 +163,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.baudRate to {
             AddTextField(
                 value = state.value.baudRate?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(baudRate = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(baudRate = null)
+                        parsed != null -> state.value = state.value.copy(baudRate = parsed)
+                    }
                 },
                 label = "baudRate",
                 isRequired = false
@@ -181,8 +177,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.dataBits to {
             AddTextField(
                 value = state.value.dataBits?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(dataBits = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(dataBits = null)
+                        parsed != null -> state.value = state.value.copy(dataBits = parsed)
+                    }
                 },
                 label = "dataBits",
                 isRequired = false
@@ -191,8 +191,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.stopBits to {
             AddTextField(
                 value = state.value.stopBits?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(stopBits = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(stopBits = null)
+                        parsed != null -> state.value = state.value.copy(stopBits = parsed)
+                    }
                 },
                 label = "stopBits",
                 isRequired = false
@@ -201,8 +205,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.parity to {
             AddTextField(
                 value = state.value.parity?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(parity = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = Parity.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(parity = null)
+                        parsed != null -> state.value = state.value.copy(parity = parsed)
+                    }
                 },
                 label = "parity",
                 isRequired = false
@@ -211,8 +219,12 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.responseTimeoutMs to {
             AddTextField(
                 value = state.value.responseTimeoutMs?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(responseTimeoutMs = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(responseTimeoutMs = null)
+                        parsed != null -> state.value = state.value.copy(responseTimeoutMs = parsed)
+                    }
                 },
                 label = "responseTimeoutMs",
                 isRequired = false
@@ -221,72 +233,57 @@ fun ProtocolInstanceFormOriginal(
         ProtocolInstanceFormProps.protocolTemplate to {
             AddTextField(
                 value = state.value.protocolTemplate?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(protocolTemplate = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "protocolTemplate",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         ProtocolInstanceFormProps.projectLinks to {
             AddTextField(
                 value = state.value.projectLinks?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(projectLinks = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "projectLinks",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         ProtocolInstanceFormProps.projects to {
             AddTextField(
                 value = state.value.projects?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(projects = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "projects",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         ProtocolInstanceFormProps.devices to {
             AddTextField(
                 value = state.value.devices?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(devices = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "devices",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class ProtocolInstanceFormDsl(
     val state: MutableState<ProtocolInstanceIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -311,10 +308,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -336,10 +330,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun name(
@@ -361,10 +352,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun pollingIntervalMs(
@@ -386,10 +374,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("pollingIntervalMs")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("pollingIntervalMs", orderValue)
-        }
+        order?.let { updateFieldOrder("pollingIntervalMs", it) }
     }
 
     fun transportType(
@@ -411,10 +396,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("transportType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("transportType", orderValue)
-        }
+        order?.let { updateFieldOrder("transportType", it) }
     }
 
     fun host(
@@ -436,10 +418,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("host")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("host", orderValue)
-        }
+        order?.let { updateFieldOrder("host", it) }
     }
 
     fun tcpPort(
@@ -461,10 +440,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("tcpPort")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("tcpPort", orderValue)
-        }
+        order?.let { updateFieldOrder("tcpPort", it) }
     }
 
     fun portName(
@@ -486,10 +462,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("portName")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("portName", orderValue)
-        }
+        order?.let { updateFieldOrder("portName", it) }
     }
 
     fun baudRate(
@@ -511,10 +484,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("baudRate")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("baudRate", orderValue)
-        }
+        order?.let { updateFieldOrder("baudRate", it) }
     }
 
     fun dataBits(
@@ -536,10 +506,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("dataBits")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("dataBits", orderValue)
-        }
+        order?.let { updateFieldOrder("dataBits", it) }
     }
 
     fun stopBits(
@@ -561,10 +528,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("stopBits")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("stopBits", orderValue)
-        }
+        order?.let { updateFieldOrder("stopBits", it) }
     }
 
     fun parity(
@@ -586,10 +550,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("parity")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("parity", orderValue)
-        }
+        order?.let { updateFieldOrder("parity", it) }
     }
 
     fun responseTimeoutMs(
@@ -611,10 +572,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("responseTimeoutMs")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("responseTimeoutMs", orderValue)
-        }
+        order?.let { updateFieldOrder("responseTimeoutMs", it) }
     }
 
     fun protocolTemplate(
@@ -636,10 +594,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("protocolTemplate")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("protocolTemplate", orderValue)
-        }
+        order?.let { updateFieldOrder("protocolTemplate", it) }
     }
 
     fun projectLinks(
@@ -661,10 +616,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("projectLinks")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("projectLinks", orderValue)
-        }
+        order?.let { updateFieldOrder("projectLinks", it) }
     }
 
     fun projects(
@@ -686,10 +638,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("projects")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("projects", orderValue)
-        }
+        order?.let { updateFieldOrder("projects", it) }
     }
 
     fun devices(
@@ -711,10 +660,7 @@ class ProtocolInstanceFormDsl(
                 renderMap.remove("devices")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("devices", orderValue)
-        }
+        order?.let { updateFieldOrder("devices", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -724,26 +670,6 @@ class ProtocolInstanceFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProtocolInstanceFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(ProtocolInstanceFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -759,7 +685,6 @@ class ProtocolInstanceFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }

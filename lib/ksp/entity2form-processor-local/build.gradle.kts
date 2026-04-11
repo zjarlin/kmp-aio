@@ -1,0 +1,28 @@
+plugins {
+    id("site.addzero.buildlogic.kmp.kmp-ksp")
+    id("site.addzero.gradle.plugin.processor-buddy") version "+"
+}
+
+val libs = versionCatalogs.named("libs")
+
+processorBuddy {
+    packageName.set("site.addzero.entity2form.processor.context")
+    mustMap.set(
+        mapOf(
+            "sharedComposeSourceDir" to "",
+            "formPackageName" to "site.addzero.generated.forms",
+            "iso2DataProviderPackage" to "site.addzero.generated.forms.dataprovider",
+            "isomorphicPackageName" to "site.addzero.generated.isomorphic",
+            "enumOutputPackage" to "site.addzero.generated.enums",
+        ),
+    )
+}
+
+kotlin {
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.findLibrary("com-google-devtools-ksp-symbol-processing-api").get())
+            implementation(libs.findLibrary("jimmer-entity-spi").get())
+        }
+    }
+}

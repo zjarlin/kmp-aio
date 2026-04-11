@@ -1,35 +1,12 @@
 package site.addzero.kcloud.plugins.hostconfig.generated.forms
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import site.addzero.component.high_level.AddMultiColumnContainer
 import site.addzero.component.drawer.AddDrawer
-import site.addzero.component.form.*
-import site.addzero.component.form.number.AddMoneyField
-import site.addzero.component.form.number.AddNumberField
-import site.addzero.component.form.number.AddIntegerField
-import site.addzero.component.form.number.AddDecimalField
-import site.addzero.component.form.number.AddPercentageField
-import site.addzero.component.form.text.AddTextField
-import site.addzero.component.form.text.AddPasswordField
-import site.addzero.component.form.text.AddEmailField
-import site.addzero.component.form.text.AddPhoneField
-import site.addzero.component.form.text.AddUrlField
-import site.addzero.component.form.text.AddUsernameField
-import site.addzero.component.form.text.AddIdCardField
-import site.addzero.component.form.text.AddBankCardField
 import site.addzero.component.form.date.AddDateField
-import site.addzero.component.form.date.DateType
 import site.addzero.component.form.switch.AddSwitchField
-import site.addzero.component.form.selector.AddGenericSingleSelector
-import site.addzero.component.form.selector.AddGenericMultiSelector
-import site.addzero.core.ext.parseObjectByKtx
-import site.addzero.core.validation.RegexEnum
+import site.addzero.component.form.text.AddTextField
 import site.addzero.kcloud.plugins.hostconfig.generated.isomorphic.*
-import site.addzero.kcloud.plugins.hostconfig.generated.forms.dataprovider.Iso2DataProvider
 import site.addzero.kcloud.plugins.hostconfig.model.enums.*
 
 /**
@@ -56,9 +33,7 @@ object DeviceFormProps {
     const val modules = "modules"
     const val tags = "tags"
 
-    fun getAllFields(): List<String> {
-        return listOf("createdAt", "updatedAt", "name", "stationNo", "requestIntervalMs", "writeIntervalMs", "byteOrder2", "byteOrder4", "floatOrder", "batchAnalogStart", "batchAnalogLength", "batchDigitalStart", "batchDigitalLength", "disabled", "sortIndex", "deviceType", "protocol", "modules", "tags")
-    }
+    fun getAllFields(): List<String> = listOf("createdAt", "updatedAt", "name", "stationNo", "requestIntervalMs", "writeIntervalMs", "byteOrder2", "byteOrder4", "floatOrder", "batchAnalogStart", "batchAnalogLength", "batchDigitalStart", "batchDigitalLength", "disabled", "sortIndex", "deviceType", "protocol", "modules", "tags")
 }
 
 @Composable
@@ -93,8 +68,11 @@ fun DeviceFormOriginal(
         DeviceFormProps.createdAt to {
             AddTextField(
                 value = state.value.createdAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(createdAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(createdAt = parsed)
+                    }
                 },
                 label = "createdAt",
                 isRequired = true
@@ -103,8 +81,11 @@ fun DeviceFormOriginal(
         DeviceFormProps.updatedAt to {
             AddTextField(
                 value = state.value.updatedAt?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(updatedAt = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toLongOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(updatedAt = parsed)
+                    }
                 },
                 label = "updatedAt",
                 isRequired = true
@@ -113,8 +94,8 @@ fun DeviceFormOriginal(
         DeviceFormProps.name to {
             AddTextField(
                 value = state.value.name?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(name = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    state.value = state.value.copy(name = value)
                 },
                 label = "name",
                 isRequired = true
@@ -123,8 +104,11 @@ fun DeviceFormOriginal(
         DeviceFormProps.stationNo to {
             AddTextField(
                 value = state.value.stationNo?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(stationNo = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(stationNo = parsed)
+                    }
                 },
                 label = "stationNo",
                 isRequired = true
@@ -133,8 +117,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.requestIntervalMs to {
             AddTextField(
                 value = state.value.requestIntervalMs?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(requestIntervalMs = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(requestIntervalMs = null)
+                        parsed != null -> state.value = state.value.copy(requestIntervalMs = parsed)
+                    }
                 },
                 label = "requestIntervalMs",
                 isRequired = false
@@ -143,8 +131,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.writeIntervalMs to {
             AddTextField(
                 value = state.value.writeIntervalMs?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(writeIntervalMs = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(writeIntervalMs = null)
+                        parsed != null -> state.value = state.value.copy(writeIntervalMs = parsed)
+                    }
                 },
                 label = "writeIntervalMs",
                 isRequired = false
@@ -153,8 +145,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.byteOrder2 to {
             AddTextField(
                 value = state.value.byteOrder2?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(byteOrder2 = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = ByteOrder2.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(byteOrder2 = null)
+                        parsed != null -> state.value = state.value.copy(byteOrder2 = parsed)
+                    }
                 },
                 label = "byteOrder2",
                 isRequired = false
@@ -163,8 +159,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.byteOrder4 to {
             AddTextField(
                 value = state.value.byteOrder4?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(byteOrder4 = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = ByteOrder4.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(byteOrder4 = null)
+                        parsed != null -> state.value = state.value.copy(byteOrder4 = parsed)
+                    }
                 },
                 label = "byteOrder4",
                 isRequired = false
@@ -173,8 +173,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.floatOrder to {
             AddTextField(
                 value = state.value.floatOrder?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(floatOrder = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = FloatOrder.entries.firstOrNull { entry -> entry.name == value }
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(floatOrder = null)
+                        parsed != null -> state.value = state.value.copy(floatOrder = parsed)
+                    }
                 },
                 label = "floatOrder",
                 isRequired = false
@@ -183,8 +187,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.batchAnalogStart to {
             AddTextField(
                 value = state.value.batchAnalogStart?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(batchAnalogStart = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(batchAnalogStart = null)
+                        parsed != null -> state.value = state.value.copy(batchAnalogStart = parsed)
+                    }
                 },
                 label = "batchAnalogStart",
                 isRequired = false
@@ -193,8 +201,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.batchAnalogLength to {
             AddTextField(
                 value = state.value.batchAnalogLength?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(batchAnalogLength = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(batchAnalogLength = null)
+                        parsed != null -> state.value = state.value.copy(batchAnalogLength = parsed)
+                    }
                 },
                 label = "batchAnalogLength",
                 isRequired = false
@@ -203,8 +215,12 @@ fun DeviceFormOriginal(
         DeviceFormProps.batchDigitalStart to {
             AddTextField(
                 value = state.value.batchDigitalStart?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(batchDigitalStart = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(batchDigitalStart = null)
+                        parsed != null -> state.value = state.value.copy(batchDigitalStart = parsed)
+                    }
                 },
                 label = "batchDigitalStart",
                 isRequired = false
@@ -213,28 +229,32 @@ fun DeviceFormOriginal(
         DeviceFormProps.batchDigitalLength to {
             AddTextField(
                 value = state.value.batchDigitalLength?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(batchDigitalLength = if (it.isNullOrEmpty()) null else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    when {
+                        value.isEmpty() -> state.value = state.value.copy(batchDigitalLength = null)
+                        parsed != null -> state.value = state.value.copy(batchDigitalLength = parsed)
+                    }
                 },
                 label = "batchDigitalLength",
                 isRequired = false
             )
         },
         DeviceFormProps.disabled to {
-            AddTextField(
-                value = state.value.disabled?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(disabled = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
-                label = "disabled",
-                isRequired = true
+            AddSwitchField(
+                value = state.value.disabled ?: false,
+                onValueChange = { state.value = state.value.copy(disabled = it) },
+                label = "disabled"
             )
         },
         DeviceFormProps.sortIndex to {
             AddTextField(
                 value = state.value.sortIndex?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(sortIndex = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
+                onValueChange = { value ->
+                    val parsed = value.toIntOrNull()
+                    if (parsed != null) {
+                        state.value = state.value.copy(sortIndex = parsed)
+                    }
                 },
                 label = "sortIndex",
                 isRequired = true
@@ -243,72 +263,57 @@ fun DeviceFormOriginal(
         DeviceFormProps.deviceType to {
             AddTextField(
                 value = state.value.deviceType?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(deviceType = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "deviceType",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         DeviceFormProps.protocol to {
             AddTextField(
                 value = state.value.protocol?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(protocol = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "protocol",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         DeviceFormProps.modules to {
             AddTextField(
                 value = state.value.modules?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(modules = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "modules",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         },
         DeviceFormProps.tags to {
             AddTextField(
                 value = state.value.tags?.toString() ?: "",
-                onValueChange = {
-                    state.value = state.value.copy(tags = if (it.isNullOrEmpty()) "" else it.parseObjectByKtx())
-                },
+                onValueChange = {},
                 label = "tags",
-                isRequired = true
+                isRequired = true,
+                disable = true
             )
         }
     )
 
     val finalItems = remember(renderMap, dsl.hiddenFields, dsl.fieldOrder) {
-        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) {
-            dsl.fieldOrder
-        } else {
-            defaultRenderMap.keys.toList()
-        }
-
+        val orderedFieldNames = if (dsl.fieldOrder.isNotEmpty()) dsl.fieldOrder else defaultRenderMap.keys.toList()
         orderedFieldNames
-            .filter { fieldName -> fieldName !in dsl.hiddenFields }
-            .mapNotNull { fieldName ->
-                when {
-                    renderMap.containsKey(fieldName) -> renderMap[fieldName]
-                    defaultRenderMap.containsKey(fieldName) -> defaultRenderMap[fieldName]
-                    else -> null
-                }
-            }
+            .filterNot { it in dsl.hiddenFields }
+            .mapNotNull { fieldName -> renderMap[fieldName] ?: defaultRenderMap[fieldName] }
     }
 
     AddMultiColumnContainer(
         howMuchColumn = 2,
-        items = finalItems
+        items = finalItems,
     )
 }
 
 class DeviceFormDsl(
     val state: MutableState<DeviceIso>,
-    private val renderMap: MutableMap<String, @Composable () -> Unit>
+    private val renderMap: MutableMap<String, @Composable () -> Unit>,
 ) {
     val hiddenFields = mutableSetOf<String>()
     val fieldOrder = mutableListOf<String>()
@@ -333,10 +338,7 @@ class DeviceFormDsl(
                 renderMap.remove("createdAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("createdAt", orderValue)
-        }
+        order?.let { updateFieldOrder("createdAt", it) }
     }
 
     fun updatedAt(
@@ -358,10 +360,7 @@ class DeviceFormDsl(
                 renderMap.remove("updatedAt")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("updatedAt", orderValue)
-        }
+        order?.let { updateFieldOrder("updatedAt", it) }
     }
 
     fun name(
@@ -383,10 +382,7 @@ class DeviceFormDsl(
                 renderMap.remove("name")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("name", orderValue)
-        }
+        order?.let { updateFieldOrder("name", it) }
     }
 
     fun stationNo(
@@ -408,10 +404,7 @@ class DeviceFormDsl(
                 renderMap.remove("stationNo")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("stationNo", orderValue)
-        }
+        order?.let { updateFieldOrder("stationNo", it) }
     }
 
     fun requestIntervalMs(
@@ -433,10 +426,7 @@ class DeviceFormDsl(
                 renderMap.remove("requestIntervalMs")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("requestIntervalMs", orderValue)
-        }
+        order?.let { updateFieldOrder("requestIntervalMs", it) }
     }
 
     fun writeIntervalMs(
@@ -458,10 +448,7 @@ class DeviceFormDsl(
                 renderMap.remove("writeIntervalMs")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("writeIntervalMs", orderValue)
-        }
+        order?.let { updateFieldOrder("writeIntervalMs", it) }
     }
 
     fun byteOrder2(
@@ -483,10 +470,7 @@ class DeviceFormDsl(
                 renderMap.remove("byteOrder2")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("byteOrder2", orderValue)
-        }
+        order?.let { updateFieldOrder("byteOrder2", it) }
     }
 
     fun byteOrder4(
@@ -508,10 +492,7 @@ class DeviceFormDsl(
                 renderMap.remove("byteOrder4")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("byteOrder4", orderValue)
-        }
+        order?.let { updateFieldOrder("byteOrder4", it) }
     }
 
     fun floatOrder(
@@ -533,10 +514,7 @@ class DeviceFormDsl(
                 renderMap.remove("floatOrder")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("floatOrder", orderValue)
-        }
+        order?.let { updateFieldOrder("floatOrder", it) }
     }
 
     fun batchAnalogStart(
@@ -558,10 +536,7 @@ class DeviceFormDsl(
                 renderMap.remove("batchAnalogStart")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("batchAnalogStart", orderValue)
-        }
+        order?.let { updateFieldOrder("batchAnalogStart", it) }
     }
 
     fun batchAnalogLength(
@@ -583,10 +558,7 @@ class DeviceFormDsl(
                 renderMap.remove("batchAnalogLength")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("batchAnalogLength", orderValue)
-        }
+        order?.let { updateFieldOrder("batchAnalogLength", it) }
     }
 
     fun batchDigitalStart(
@@ -608,10 +580,7 @@ class DeviceFormDsl(
                 renderMap.remove("batchDigitalStart")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("batchDigitalStart", orderValue)
-        }
+        order?.let { updateFieldOrder("batchDigitalStart", it) }
     }
 
     fun batchDigitalLength(
@@ -633,10 +602,7 @@ class DeviceFormDsl(
                 renderMap.remove("batchDigitalLength")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("batchDigitalLength", orderValue)
-        }
+        order?.let { updateFieldOrder("batchDigitalLength", it) }
     }
 
     fun disabled(
@@ -658,10 +624,7 @@ class DeviceFormDsl(
                 renderMap.remove("disabled")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("disabled", orderValue)
-        }
+        order?.let { updateFieldOrder("disabled", it) }
     }
 
     fun sortIndex(
@@ -683,10 +646,7 @@ class DeviceFormDsl(
                 renderMap.remove("sortIndex")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("sortIndex", orderValue)
-        }
+        order?.let { updateFieldOrder("sortIndex", it) }
     }
 
     fun deviceType(
@@ -708,10 +668,7 @@ class DeviceFormDsl(
                 renderMap.remove("deviceType")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("deviceType", orderValue)
-        }
+        order?.let { updateFieldOrder("deviceType", it) }
     }
 
     fun protocol(
@@ -733,10 +690,7 @@ class DeviceFormDsl(
                 renderMap.remove("protocol")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("protocol", orderValue)
-        }
+        order?.let { updateFieldOrder("protocol", it) }
     }
 
     fun modules(
@@ -758,10 +712,7 @@ class DeviceFormDsl(
                 renderMap.remove("modules")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("modules", orderValue)
-        }
+        order?.let { updateFieldOrder("modules", it) }
     }
 
     fun tags(
@@ -783,10 +734,7 @@ class DeviceFormDsl(
                 renderMap.remove("tags")
             }
         }
-
-        order?.let { orderValue ->
-            updateFieldOrder("tags", orderValue)
-        }
+        order?.let { updateFieldOrder("tags", it) }
     }
 
     fun hide(vararg fields: String) {
@@ -796,26 +744,6 @@ class DeviceFormDsl(
     fun order(vararg fields: String) {
         fieldOrder.clear()
         fieldOrder.addAll(fields)
-    }
-
-    fun insertBefore(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(DeviceFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index, newFields.toList())
-        }
-    }
-
-    fun insertAfter(targetField: String, vararg newFields: String) {
-        if (fieldOrder.isEmpty()) {
-            fieldOrder.addAll(DeviceFormProps.getAllFields())
-        }
-        val index = fieldOrder.indexOf(targetField)
-        if (index >= 0) {
-            fieldOrder.addAll(index + 1, newFields.toList())
-        }
     }
 
     private fun updateFieldOrder(fieldName: String, orderValue: Int) {
@@ -831,7 +759,6 @@ class DeviceFormDsl(
                 else -> allFields.indexOf(field1).compareTo(allFields.indexOf(field2))
             }
         }
-
         fieldOrder.clear()
         fieldOrder.addAll(sortedFields)
     }
